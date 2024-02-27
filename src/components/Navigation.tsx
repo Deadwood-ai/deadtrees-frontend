@@ -11,6 +11,10 @@ const navigation = [
     label: <Link to="/">Home</Link>,
   },
   {
+    key: "/datasets",
+    label: <Link to="/datasets">Datasets</Link>,
+  },
+  {
     key: "/profile",
     label: <Link to="/profile">Profile</Link>,
   },
