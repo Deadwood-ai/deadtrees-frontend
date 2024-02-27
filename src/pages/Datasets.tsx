@@ -1,6 +1,7 @@
 import { Col, Input, Row } from "antd";
 import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
+import Map from "../components/Map";
 
 export default function Datasets() {
   const { data } = useData();
@@ -28,7 +29,15 @@ export default function Datasets() {
         <Input.Search placeholder="Search" />
         {data ? <DataList data={data} /> : <div>Loading...</div>}
       </Col>
-      <Col>Map</Col>
+      <Col
+        style={{
+          flex: 1, // Make the column fill the remaining space
+          //   display: "flex", // This makes its children (the map) also try to fill the available space
+          //   flexDirection: "column",
+        }}
+      >
+        <Map lat={37.7749} lng={-7.4194} />
+      </Col>
     </Row>
   );
 }
