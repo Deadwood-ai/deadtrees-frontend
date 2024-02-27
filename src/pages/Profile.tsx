@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { Avatar, Col, Flex, Row, Space, Typography, theme } from "antd";
+import { Avatar, Col, Divider, Flex, Row, Space, Typography, theme } from "antd";
 import { supabase } from "../components/useSupabase";
 import { useAuth } from "../state/AuthProvider";
 import DataTable from "../components/DataTable";
@@ -22,7 +22,7 @@ export default function ProfilePage() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "100vh",
+          height: "100%",
         }}
       >
         <div
@@ -53,14 +53,7 @@ export default function ProfilePage() {
   } else {
     return (
       //   <div
-      <Content
-        style={{
-          padding: "24px",
-          margin: "0 auto",
-          width: "1200px",
-          height: "100vh",
-        }}
-      >
+      <div>
         <Row align={"middle"} style={{ paddingBottom: 48, paddingTop: 48 }}>
           <Col>
             <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
@@ -78,7 +71,7 @@ export default function ProfilePage() {
           </Flex>
           <DataTable supabase={supabase} /> {/* Use the new DataTable component */}
         </Space>
-      </Content>
+      </div>
     );
   }
 }
