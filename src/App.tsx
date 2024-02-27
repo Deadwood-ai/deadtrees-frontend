@@ -16,10 +16,10 @@ export default function App() {
     return (
       <Layout
         style={{
-          maxWidth: 1200,
+          // maxWidth: 1200,
           margin: "0 auto",
           height: "100vh",
-          padding: 0,
+          padding: 24,
         }}
       >
         <Navigation />
