@@ -5,7 +5,8 @@ import { theme } from "antd";
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/Home";
 import ProfilePage from "./pages/Profile";
-import Datasets from "./pages/Datasets";
+import Dataset from "./pages/Dataset";
+import DatasetDetails from "./pages/DatasetDetails";
 
 const { Content } = Layout;
 
@@ -37,7 +38,8 @@ export default function App() {
           <Route path="/" element={<LayoutWrapper />}>
             <Route path="/" element={<HomePage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="datasets" element={<Datasets />} />
+            <Route path="dataset" element={<Dataset />} />
+            <Route path="dataset/:id" element={<DatasetDetails />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -11,8 +11,8 @@ const navigation = [
     label: <Link to="/">Home</Link>,
   },
   {
-    key: "/datasets",
-    label: <Link to="/datasets">Datasets</Link>,
+    key: "/dataset",
+    label: <Link to="/dataset">Dataset</Link>,
   },
   {
     key: "/profile",
