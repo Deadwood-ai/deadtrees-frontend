@@ -1,4 +1,4 @@
-interface Dataset {
+export interface Dataset {
   aquisition_date: string;
   bbox: unknown | null;
   compress_time: number | null;
@@ -9,13 +9,30 @@ interface Dataset {
   file_name: string;
   file_size: number;
   id: number;
-  license: Dataset["public"]["Enums"]["License"];
-  platform: Dataset["public"]["Enums"]["Platform"];
+  license: License;
+  platform: Platform;
   sha256: string;
-  status: Dataset["public"]["Enums"]["Status"];
+  status: Status;
   target_path: string;
   upload_date: string;
   user_id: string;
   uuid: string;
   wms_source: string | null;
+}
+enum License {
+  "cc-by",
+  "cc-by-sa",
+}
+enum Platform {
+  "drone",
+  "airborne",
+  "sattelfite",
+}
+enum Status {
+  "pending",
+  "processing",
+  "errored",
+  "processed",
+  "audited",
+  "audit_failed",
 }
