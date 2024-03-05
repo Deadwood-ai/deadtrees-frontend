@@ -23,7 +23,7 @@ export default function DataList({ data }: { data: Database }) {
             key={index}
             className="flex p-3 bg-gray-200 rounded-md hover:bg-gray-300 transition duration-150 ease-in-out"
             // onMouseEnter={() => {}}
-            onClick={() => navigate(`/dataset/${item.id}`)}
+            onClick={() => navigate(`/dataset/${item.uuid}`)}
           >
             <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
             <div
