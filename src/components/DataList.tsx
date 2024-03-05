@@ -2,11 +2,11 @@ import { Avatar, List, Space, Typography, Button } from "antd";
 import { useState } from "react";
 import { Database } from "../types/supabase";
 import { DownloadOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 export default function DataList({ data }: { data: Database }) {
-  const [hovered, setHovered] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState(0);
   const { Text, Link } = Typography;
+  const navigate = useNavigate();
 
   return (
     <List
@@ -21,28 +21,20 @@ export default function DataList({ data }: { data: Database }) {
         >
           <div
             key={index}
-            style={{
-              padding: "12px",
-              // border: `1px solid`,
-              backgroundColor: `${hovered && hoveredIndex === index ? "gray" : "lightgray"}`,
-              borderRadius: "4px",
-              display: "flex",
-            }}
-            onMouseEnter={() => {
-              setHovered(true);
-              setHoveredIndex(index);
-            }}
-            onMouseLeave={() => setHovered(false)}
+            className="flex p-3 bg-gray-200 rounded-md hover:bg-gray-300 transition duration-150 ease-in-out"
+            // onMouseEnter={() => {}}
+            onClick={() => navigate(`/dataset/${item.id}`)}
           >
             <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
             <div
-              style={{
-                paddingLeft: "12px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                flex: 1,
-              }}
+              className="flex flex-1 flex-col justify-between pl-3"
+              // style={{
+              //   paddingLeft: "12px",
+              //   display: "flex",
+              //   flexDirection: "column",
+              //   justifyContent: "space-between",
+              //   flex: 1,
+              // }}
             >
               <Text strong>{item.file_name}</Text>
               <div>
@@ -56,14 +48,7 @@ export default function DataList({ data }: { data: Database }) {
                 </Space>
               </div>
             </div>
-            <div
-              style={{
-                paddingLeft: "12px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
+            <div className="flex flex-col justify-between p-3">
               <Button type="default" size="small" icon={<DownloadOutlined />}>
                 {/* {item.platform} */}
               </Button>
