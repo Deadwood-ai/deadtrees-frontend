@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../components/useSupabase";
-import { Database } from "../types/supabase";
+import { Dataset } from "../types/dataset";
 
 interface DataProviderProps {
   children: React.ReactNode;
 }
 
 type DataContextType = {
-  data: Database | null;
+  data: Dataset[] | null;
 };
 
 const DataContext = createContext<DataContextType>({
