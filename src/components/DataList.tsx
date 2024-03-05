@@ -1,10 +1,10 @@
 import { Avatar, List, Space, Typography, Button } from "antd";
 import { useState } from "react";
-import { Database } from "../types/supabase";
+import { Dataset } from "../types/dataset";
 import { DownloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-export default function DataList({ data }: { data: Database }) {
+export default function DataList({ data }: { data: Dataset }) {
   const { Text, Link } = Typography;
   const navigate = useNavigate();
 
