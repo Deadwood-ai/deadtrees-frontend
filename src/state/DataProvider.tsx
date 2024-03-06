@@ -8,14 +8,19 @@ interface DataProviderProps {
 
 type DataContextType = {
   data: Dataset[] | null;
+  filter: string;
+  setFilter: (filter: string) => void;
 };
 
 const DataContext = createContext<DataContextType>({
   data: null,
+  filter: "",
+  setFilter: () => {},
 });
 
 const DataProvider = (props: DataProviderProps) => {
   const [data, setData] = useState<string>("");
+  const [filter, setFilter] = useState<string>("");
 
   const fetchData = async () => {
     const { data, error } = await supabase.from("upload_files_dev").select("*");
@@ -49,6 +54,8 @@ const DataProvider = (props: DataProviderProps) => {
 
   const value = {
     data,
+    filter,
+    setFilter,
   };
   return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
 };

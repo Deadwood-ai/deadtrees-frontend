@@ -1,12 +1,20 @@
 import { Avatar, List, Space, Typography, Button } from "antd";
-import { useState } from "react";
 import { Dataset } from "../types/dataset";
 import { DownloadOutlined, HeartOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
+import { useData } from "../state/DataProvider";
+
 export default function DataList({ data }: { data: Dataset }) {
   const { Text, Link } = Typography;
   const navigate = useNavigate();
+  const { setFilter } = useData();
+
+  const onClickFilterHandler = (e: React.ChangeEvent, filter: string) => {
+    setFilter(filter);
+    console.log(filter);
+    e.stopPropagation();
+  };
 
   return (
     <List
@@ -24,10 +32,10 @@ export default function DataList({ data }: { data: Dataset }) {
               <Text strong>{item.file_name}</Text>
               <div>
                 <Space size="small">
-                  <Button type="default" size="small">
+                  <Button type="default" size="small" onClick={(e) => onClickFilterHandler(e, item.content_type)}>
                     {item.content_type}
                   </Button>
-                  <Button type="default" size="small">
+                  <Button type="default" size="small" onClick={(e) => onClickFilterHandler(e, item.license)}>
                     {item.license}
                   </Button>
                 </Space>
