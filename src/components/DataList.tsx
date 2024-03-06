@@ -12,8 +12,8 @@ export default function DataList({ data }: { data: Dataset }) {
 
   const onClickFilterHandler = (e: React.ChangeEvent, filter: string) => {
     setFilter(filter);
-    console.log(filter);
     e.stopPropagation();
+    console.log(filter);
   };
 
   return (
