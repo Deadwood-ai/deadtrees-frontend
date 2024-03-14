@@ -2,8 +2,8 @@ import { Button, Col, Row, Tag, Typography } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 
-import Map from "../components/Map";
 import { ArrowLeftOutlined, BackwardFilled, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
+import DatasetDetailsMap from "../components/DatasetDetailsMap";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -81,7 +81,7 @@ export default function DatasetDetails() {
         )}
       </Col>
       <Col className="flex-1">
-        <Map lat={37.7749} lng={-7.4194} />
+        <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>
   );
