@@ -1,6 +1,6 @@
 export interface Dataset {
   aquisition_date: string;
-  bbox: unknown | null;
+  bbox: string | null;
   compress_time: number | null;
   content_type: string;
   copy_time: number;
@@ -11,6 +11,8 @@ export interface Dataset {
   id: number;
   license: License;
   platform: Platform;
+  processed_path: string;
+  raw_path: string;
   sha256: string;
   status: Status;
   target_path: string;
