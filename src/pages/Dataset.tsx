@@ -1,7 +1,7 @@
 import { Col, Input, Row, Tag } from "antd";
 import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
-import Map from "../components/Map";
+import Map from "../components/DatasetMap";
 
 export default function Dataset() {
   const { data, filter } = useData();
