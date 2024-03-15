@@ -20,7 +20,7 @@ export default function Dataset() {
         {data ? <DataList data={data} /> : <div>Loading...</div>}
       </Col>
       <Col className="flex-1">
-        <Map lat={37.7749} lng={-7.4194} />
+        <Map data={data} />
       </Col>
     </Row>
   );

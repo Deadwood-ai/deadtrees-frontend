@@ -4,9 +4,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { Dataset } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 
-// Assuming your Mapbox access token is correctly set
-// mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN!;
-
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
 
