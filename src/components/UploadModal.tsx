@@ -33,7 +33,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         message.success("Upload successful");
         onClose(); // Invoke the onClose callback to close the modal
       } else {
-        message.error("Upload failed");
+        -message.error("Upload failed");
       }
     } catch (error) {
       console.error("Upload error:", error);

@@ -1,5 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme } from "antd";
+import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } from "antd";
 import { Link } from "react-router-dom";
 const { Header } = Layout;
 
@@ -37,8 +37,9 @@ export default function Navigation() {
         zIndex: 1,
       }}
     >
-      <Space size={24}>
-        <PlusOutlined />
+      <Space size={12}>
+        <Image src="public/assets/tree-icon.png" alt="deadtrees.earth" width={32} height={32} />
+        {/* <PlusOutlined /> */}
         <Typography.Title level={4} style={{ margin: 0 }}>
           deadtrees.earth
         </Typography.Title>
