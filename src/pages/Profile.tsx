@@ -17,14 +17,7 @@ export default function ProfilePage() {
 
   if (!session) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
-        }}
-      >
+      <div className="flex justify-center items-center h-full max-w-7xl m-auto">
         <div
           style={{
             width: "100%",
@@ -52,25 +45,18 @@ export default function ProfilePage() {
     );
   } else {
     return (
-      //   <div
-      <div>
-        <Row align={"middle"} style={{ paddingBottom: 48, paddingTop: 48 }}>
-          <Col>
-            <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
-          </Col>
-          <Col style={{ paddingLeft: 24 }}>
-            <Typography.Title level={2} style={{ margin: 0 }}>
-              Profile
-            </Typography.Title>
-            <Typography.Text type="secondary">{user?.email}</Typography.Text>
-          </Col>
-        </Row>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Flex vertical align="end">
+      <div className=" h-full max-w-6xl m-auto">
+        <div className="w-full pt-16">
+          <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
+          <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
+          <Typography.Text type="secondary">{user?.email}</Typography.Text>
+        </div>
+        <div className=" w-full">
+          <div className="flex justify-end mb-4">
             <UploadButton />
-          </Flex>
+          </div>
           <DataTable supabase={supabase} /> {/* Use the new DataTable component */}
-        </Space>
+        </div>
       </div>
     );
   }
