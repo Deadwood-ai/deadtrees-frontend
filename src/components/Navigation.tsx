@@ -1,5 +1,14 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } from "antd";
+import {
+  Breadcrumb,
+  Button,
+  Layout,
+  Menu,
+  Space,
+  Typography,
+  theme,
+  Image,
+} from "antd";
 import { Link } from "react-router-dom";
 const { Header } = Layout;
 
@@ -35,10 +44,16 @@ export default function Navigation() {
         position: "sticky",
         top: 0,
         zIndex: 1,
+        borderRadius: "0 0 8px 8px",
       }}
     >
       <Space size={12}>
-        <Image src="public/assets/tree-icon.png" alt="deadtrees.earth" width={32} height={32} />
+        <Image
+          src="public/assets/tree-icon.png"
+          alt="deadtrees.earth"
+          width={32}
+          height={32}
+        />
         {/* <PlusOutlined /> */}
         <Typography.Title level={4} style={{ margin: 0 }}>
           deadtrees.earth
@@ -48,7 +63,12 @@ export default function Navigation() {
         mode="horizontal"
         defaultSelectedKeys={["1"]}
         items={navigation}
-        style={{ justifyContent: "end", flex: 1, minWidth: 0, borderBottom: "none" }}
+        style={{
+          justifyContent: "end",
+          flex: 1,
+          minWidth: 0,
+          borderBottom: "none",
+        }}
       />
       <Button
         style={{
