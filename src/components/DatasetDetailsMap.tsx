@@ -10,15 +10,16 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   useEffect(() => {
     if (mapContainer.current && data) {
       // Ensure the container and data are available
+      console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
-      console.log(bounds);
+      console.log("bounds", bounds);
       // const wmsSourceUrl =
       //   "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=62fd732e-9209-4efb-826c-ae30486fdb09_uavforsat_KAB003_ortho.tif&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
       const wmsSource =
         "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=" +
         data.file_id +
         "&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
-      console.log(wmsSource);
+      console.log("wms", wmsSource);
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11",
@@ -48,7 +49,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
             source: "wms-test-source",
             paint: {},
           },
-          "building"
+          "building",
         ); // Place layer under labels, roads, and buildings.
       });
     }
