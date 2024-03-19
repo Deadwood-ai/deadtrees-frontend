@@ -54,7 +54,7 @@ export default function ProfilePage() {
     );
   } else {
     return (
-      <div className=" m-auto h-full max-w-6xl">
+      <div className=" m-auto h-full max-w-7xl">
         <div className="w-full pt-16">
           <Avatar
             size={64}

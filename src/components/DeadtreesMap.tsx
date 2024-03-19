@@ -22,7 +22,8 @@ const DeadtreesMap = () => {
       //   const wms_full = wms + "?requestedEpsg=3857&request=getMap&";
       const map = new mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/mapbox/satellite-v9",
+        // style: "mapbox://styles/mapbox/satellite-v9",
+        style: "mapbox://styles/mapbox/streets-v11",
         center: [8.7982700000000008, 48.5131999999999977],
         zoom: 7,
       });
