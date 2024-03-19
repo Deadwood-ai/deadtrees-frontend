@@ -7,6 +7,7 @@ import HomePage from "./pages/Home";
 import ProfilePage from "./pages/Profile";
 import Dataset from "./pages/Dataset";
 import DatasetDetails from "./pages/DatasetDetails";
+import Deadtrees from "./pages/Deadtrees";
 
 const { Content } = Layout;
 
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="dataset" element={<Dataset />} />
             <Route path="dataset/:id" element={<DatasetDetails />} />
+            <Route path="deadtrees" element={<Deadtrees />} />
           </Route>
         </Routes>
       </BrowserRouter>
