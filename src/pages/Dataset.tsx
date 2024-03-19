@@ -9,22 +9,16 @@ export default function Dataset() {
   const processedData = data?.filter((d) => d.status === "processed");
 
   return (
-    <Row
-      style={{
-        width: "100%",
-        height: "100%",
-      }}
-    >
-      <Col className="flex w-96 flex-col p-3  pr-4 align-middle ">
-        <div>
-          {filter && <h4>Filtered by: {<Tag color="blue">{filter}</Tag>}</h4>}
-        </div>
+    <div className="flex h-full ">
+      <div className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
+        {filter && <h4>Filtered by: {<Tag color="blue">{filter}</Tag>}</h4>}
+
         <Input.Search placeholder="Search" />
         {data ? <DataList data={processedData} /> : <div>Loading...</div>}
-      </Col>
-      <Col className="flex-1">
+      </div>
+      <div className="flex-1 py-4">
         <Map data={processedData} />
-      </Col>
-    </Row>
+      </div>
+    </div>
   );
 }

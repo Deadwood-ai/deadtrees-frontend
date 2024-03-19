@@ -12,17 +12,17 @@ const Hero = () => {
             COMING SOON
           </p>
         </div>
-        <Typography.Title className="m-0" level={1}>
+        <h1 className="m-0 pb-4 text-5xl font-semibold text-gray-800">
           deadtrees.earth
-        </Typography.Title>
-        <Typography.Text type="secondary" className="max-w-xs">
+        </h1>
+        <p className="m-0 max-w-md text-lg text-gray-500">
           An open database for accessing, contributing, analyzing, and
           visualizing remote sensing-based tree mortality data.
-        </Typography.Text>
+        </p>
         <div className="pt-8">
-          <Typography.Text type="secondary">
+          <p className="m-0 pb-1 text-sm text-gray-500">
             Get notified as soon as the service is up and running.
-          </Typography.Text>
+          </p>
           <div className="flex pt-2">
             <Input
               className="max-w-xs"

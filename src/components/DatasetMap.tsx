@@ -20,6 +20,9 @@ const Map = ({ data }: { data: Dataset[] }) => {
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v11",
     });
+    // map.on("render", () => {
+    //   map.resize();
+    // });
 
     map.on("load", () => {
       map.loadImage(
@@ -136,7 +139,13 @@ const Map = ({ data }: { data: Dataset[] }) => {
     });
   }, [data, navigate]);
 
-  return <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div
+      // className="h-full w-full"
+      ref={mapContainer}
+      style={{ width: "100%", height: "100%" }}
+    />
+  );
 };
 
 export default Map;
