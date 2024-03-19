@@ -5,21 +5,21 @@ import Slider from "react-slick";
 
 const Hero = () => {
   return (
-    <div className="flex h-3/4 items-center">
-      <div className="flex-1 p-8">
+    <div className="flex items-center">
+      <div className="t-16 flex-1">
         <div>
           <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
             COMING SOON
           </p>
         </div>
-        <h1 className="m-0 pb-4 text-5xl font-semibold text-gray-800">
+        <h1 className="m-0 inline-block bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-5xl font-bold text-gray-800 text-transparent">
           deadtrees.earth
         </h1>
         <p className="m-0 max-w-md text-lg text-gray-500">
           An open database for accessing, contributing, analyzing, and
           visualizing remote sensing-based tree mortality data.
         </p>
-        <div className="pt-8">
+        <div className="pt-16">
           <p className="m-0 pb-1 text-sm text-gray-500">
             Get notified as soon as the service is up and running.
           </p>
@@ -56,23 +56,25 @@ const Stat = ({
   unit: string;
 }) => {
   return (
-    <div className="pt-16">
+    <div className="m-auto rounded-xl bg-white px-6 py-6">
       <div className="flex items-baseline justify-center">
-        <p className="m-0 text-2xl font-medium text-blue-600">{value}</p>
-        <p className="m-0 pl-1 text-lg font-medium text-blue-500">{unit}</p>
+        <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
+        <p className="m-0 pl-1 text-lg font-medium capitalize text-blue-500">
+          {unit}
+        </p>
       </div>
-      <p className="m-0 p-3 text-base">{title}</p>
+      <p className="m-0 p-3 text-sm font-medium uppercase">{title}</p>
     </div>
   );
 };
 
 const Stats = () => {
   return (
-    <div className="mt-24">
+    <div className="pt-24">
       <div className="text-center">
-        <p className="text-base font-semibold text-blue-600">CURRENT STATS</p>
+        <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
       </div>
-      <div className="flex justify-around">
+      <div className="flex justify-around pt-8">
         <Stat title="Area covered" value="24 555" unit="ha" />
         <Stat title="Orthophotos" value="421" unit="" />
         <Stat title="Countries" value="16" unit="" />
@@ -87,13 +89,13 @@ const Gallery = () => {
     // dots: true,
     infinite: true,
     speed: 500,
-    slidesToShow: 3,
+    slidesToShow: 4,
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 2000,
   };
   return (
-    <div className="m-auto p-24">
+    <div className="m-auto pt-48">
       <Slider {...settings}>
         {[
           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -138,14 +140,14 @@ const Feature = ({
 
 const Features = () => {
   return (
-    <div className="text-center">
-      <p className="text-base font-semibold text-blue-600">
+    <div className="pt-36 text-center">
+      <p className="text-lg font-semibold text-blue-600">
         OUR SERVICES TO THE COMMUNITY
       </p>
       <p className="text-4xl font-semibold">
         Revealing tree mortality patterns
       </p>
-      <p className="m-auto max-w-4xl text-lg text-gray-500">
+      <p className="m-auto max-w-4xl text-left text-lg text-gray-500">
         By integrating Earth observation, machine learning, and ground-based
         data sources, this initiative aims to bridge the existing gaps in
         understanding global tree mortality dynamics, fostering a comprehensive
