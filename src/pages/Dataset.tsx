@@ -5,8 +5,9 @@ import Map from "../components/DatasetMap";
 
 export default function Dataset() {
   const { data, filter } = useData();
+  // filter for elements of data with status "processed"
+  const processedData = data?.filter((d) => d.status === "processed");
 
-  // console.log(data);
   return (
     <Row
       style={{
@@ -14,13 +15,15 @@ export default function Dataset() {
         height: "100%",
       }}
     >
-      <Col className="flex flex-col align-middle p-3  w-96 pr-4 ">
-        <div>{filter && <h4>Filtered by: {<Tag color="blue">{filter}</Tag>}</h4>}</div>
+      <Col className="flex w-96 flex-col p-3  pr-4 align-middle ">
+        <div>
+          {filter && <h4>Filtered by: {<Tag color="blue">{filter}</Tag>}</h4>}
+        </div>
         <Input.Search placeholder="Search" />
-        {data ? <DataList data={data} /> : <div>Loading...</div>}
+        {data ? <DataList data={processedData} /> : <div>Loading...</div>}
       </Col>
       <Col className="flex-1">
-        <Map data={data} />
+        <Map data={processedData} />
       </Col>
     </Row>
   );
