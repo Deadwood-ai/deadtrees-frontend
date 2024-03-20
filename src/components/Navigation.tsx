@@ -21,7 +21,7 @@ const navigation = [
   },
   {
     key: "/deadtrees",
-    label: <Link to="/deadtrees">Deadtrees</Link>,
+    label: <Link to="/deadtrees">Map</Link>,
   },
   {
     key: "/dataset",
