@@ -20,9 +20,6 @@ const Map = ({ data }: { data: Dataset[] }) => {
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v11",
     });
-    // map.on("render", () => {
-    //   map.resize();
-    // });
 
     map.on("load", () => {
       map.loadImage(
@@ -74,6 +71,8 @@ const Map = ({ data }: { data: Dataset[] }) => {
             source: "datasets",
             layout: {
               "icon-image": "custom-marker",
+              // allow overlapping icons
+              "icon-allow-overlap": true,
             },
           });
 

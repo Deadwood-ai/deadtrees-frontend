@@ -24,25 +24,42 @@ export default function DataList({ data }: { data: Dataset }) {
         <List.Item key={index}>
           <div
             key={index}
-            className="flex p-3 bg-white rounded-md hover:bg-gray-200 transition duration-150 ease-in-out"
+            className="flex rounded-md bg-white p-3 transition duration-150 ease-in-out hover:bg-gray-200"
             onClick={() => navigate(`/dataset/${item.uuid}`)}
           >
-            <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
+            <Avatar
+              size={64}
+              src="https://avatars.githubusercontent.com/u/8186664?v=7"
+            />
             <div className="flex flex-1 flex-col justify-between pl-3">
-              <Text strong>{item.file_name}</Text>
+              <p className="m-0 font-semibold">
+                {item.file_name.replace(".tif", "")}
+              </p>
               <div>
                 <Space size="small">
-                  <Button type="default" size="small" onClick={(e) => onClickFilterHandler(e, item.content_type)}>
+                  <Button
+                    type="default"
+                    size="small"
+                    onClick={(e) => onClickFilterHandler(e, item.content_type)}
+                  >
                     {item.content_type}
                   </Button>
-                  <Button type="default" size="small" onClick={(e) => onClickFilterHandler(e, item.license)}>
+                  <Button
+                    type="default"
+                    size="small"
+                    onClick={(e) => onClickFilterHandler(e, item.license)}
+                  >
                     {item.license}
                   </Button>
                 </Space>
               </div>
             </div>
             <div className="flex pr-3">
-              <Button type="default" size="small" icon={<HeartOutlined />}></Button>
+              <Button
+                type="default"
+                size="small"
+                icon={<HeartOutlined />}
+              ></Button>
             </div>
           </div>
         </List.Item>

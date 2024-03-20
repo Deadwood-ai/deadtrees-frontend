@@ -27,21 +27,8 @@ export default function ProfilePage() {
   if (!session) {
     return (
       <div className="m-auto flex h-full max-w-7xl items-center justify-center">
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 300,
-          }}
-        >
-          <div
-            style={{
-              marginBottom: 32,
-            }}
-          >
-            <Typography.Title type="secondary" level={2}>
-              Sign in to continue
-            </Typography.Title>
-          </div>
+        <div className="w-96 rounded-md bg-white p-8 ">
+          <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign in</h1>
           <Auth
             redirectTo={window.origin}
             supabaseClient={supabase}
