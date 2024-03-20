@@ -1,12 +1,27 @@
 // UploadModal.js
 
 import { useState } from "react";
-import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker } from "antd";
+import {
+  Button,
+  Form,
+  Radio,
+  Space,
+  Upload,
+  message,
+  Modal,
+  DatePicker,
+} from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../state/AuthProvider";
 
-const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
+const UploadModal = ({
+  isVisible,
+  onClose,
+}: {
+  isVisible: boolean;
+  onClose: () => void;
+}) => {
   const [fileList, setFileList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
@@ -22,15 +37,19 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
     formData.append("aquisition_date", values.aquisition_date.toISOString());
     formData.append("license", values.license);
     try {
-      const response = await fetch("https://data.deadtrees.earth/api/dev/upload", {
-        headers: {
-          Authorization: `Bearer ${session!.access_token}`,
+      const response = await fetch(
+        "https://data.deadtrees.earth/api/dev/upload",
+        {
+          headers: {
+            Authorization: `Bearer ${session!.access_token}`,
+          },
+          method: "POST",
+          body: formData,
         },
-        method: "POST",
-        body: formData,
-      });
+      );
       if (response.ok) {
         message.success("Upload successful");
+        console.log(response);
         onClose(); // Invoke the onClose callback to close the modal
       } else {
         -message.error("Upload failed");
@@ -53,10 +72,29 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   };
 
   return (
-    <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
-      <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
-        <Form.Item label="File" name="file" rules={[{ required: true, message: "Please upload a file" }]}>
-          <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
+    <Modal
+      title="File Upload"
+      open={isVisible}
+      onCancel={onClose}
+      footer={null}
+    >
+      <Form
+        layout="vertical"
+        onFinish={onFormFinish}
+        initialValues={{ platform: "drone", license: "cc-by" }}
+      >
+        <Form.Item
+          label="File"
+          name="file"
+          rules={[{ required: true, message: "Please upload a file" }]}
+        >
+          <Upload
+            fileList={fileList}
+            onChange={onFileChange}
+            beforeUpload={beforeUpload}
+            listType="text"
+            maxCount={1}
+          >
             <Button icon={<UploadOutlined />}>Click to upload</Button>
           </Upload>
         </Form.Item>

@@ -30,6 +30,23 @@ const DataProvider = (props: DataProviderProps) => {
       setData(data);
     }
   };
+  const callWebhook = async (payload: any) => {
+    const webhookURL =
+      "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
+    const webhookResponse = fetch(webhookURL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "INSERT",
+        schema: "public",
+        table: "upload_files_dev",
+        record: payload.new,
+      }),
+    });
+  };
+
   useEffect(() => {
     const channel = supabase
       .channel("upload_files_dev")
@@ -42,8 +59,16 @@ const DataProvider = (props: DataProviderProps) => {
         },
         (payload) => {
           console.log("Change received!", payload);
+          if (
+            payload.eventType === "INSERT" &&
+            payload.new.status === "pending"
+          ) {
+            console.log("calling webhook");
+            const webhookResponse = callWebhook(payload);
+            console.log("webhook res", webhookResponse);
+          }
           fetchData();
-        }
+        },
       )
       .subscribe();
     fetchData();
@@ -57,7 +82,9 @@ const DataProvider = (props: DataProviderProps) => {
     filter,
     setFilter,
   };
-  return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
+  return (
+    <DataContext.Provider value={value}>{props.children}</DataContext.Provider>
+  );
 };
 
 export const useData = () => {
