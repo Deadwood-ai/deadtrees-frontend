@@ -22,119 +22,90 @@ const Map = ({ data }: { data: Dataset[] }) => {
     });
 
     map.on("load", () => {
-      map.loadImage(
-        "https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png",
-        (error, image) => {
-          if (error) throw error;
-          map.addImage("custom-marker", image);
+      map.loadImage("assets/custom_marker.png", (error, image) => {
+        if (error) throw error;
+        map.addImage("custom-marker", image);
 
-          // Convert data to GeoJSON
-          const geojsonData = {
-            type: "FeatureCollection",
-            features: data.map((dataset) => ({
-              type: "Feature",
-              properties: {
-                id: dataset.uuid,
-                title: dataset.file_name,
-              },
-              geometry: {
-                type: "Point",
-                coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
-              },
-            })),
-          };
-          console.log(geojsonData);
-          // fit bounds to geojsonData
-          const bounds = geojsonData.features.reduce(
-            (bounds, feature) => {
-              return bounds.extend(feature.geometry.coordinates);
+        // Convert data to GeoJSON
+        const geojsonData = {
+          type: "FeatureCollection",
+          features: data.map((dataset) => ({
+            type: "Feature",
+            properties: {
+              id: dataset.uuid,
+              title: dataset.file_name,
             },
-            new mapboxgl.LngLatBounds(
-              geojsonData.features[0].geometry.coordinates,
-              geojsonData.features[0].geometry.coordinates,
-            ),
-          );
-          map.fitBounds(bounds, {
-            padding: 100,
-          });
-
-          // Add data as a source
-          map.addSource("datasets", {
-            type: "geojson",
-            data: geojsonData,
-          });
-
-          // Add markers as a layer
-          map.addLayer({
-            id: "markers",
-            type: "symbol",
-            source: "datasets",
-            layout: {
-              "icon-image": "custom-marker",
-              // allow overlapping icons
-              "icon-allow-overlap": true,
+            geometry: {
+              type: "Point",
+              coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
             },
-          });
+          })),
+        };
+        console.log(geojsonData);
+        // fit bounds to geojsonData
+        const bounds = geojsonData.features.reduce(
+          (bounds, feature) => {
+            return bounds.extend(feature.geometry.coordinates);
+          },
+          new mapboxgl.LngLatBounds(
+            geojsonData.features[0].geometry.coordinates,
+            geojsonData.features[0].geometry.coordinates,
+          ),
+        );
+        map.fitBounds(bounds, {
+          padding: 100,
+        });
 
-          // Add markers as a layer with text
-          // map.addLayer({
-          //   id: "markers-with-text",
-          //   type: "symbol",
-          //   source: "datasets",
-          //   layout: {
-          //     "icon-image": "custom-marker",
-          //     "text-field": ["get", "title"],
-          //     "text-offset": [0, 1.25],
-          //     "text-anchor": "top",
-          //     "text-allow-overlap": true,
-          //   },
-          //   paint: {
-          //     "text-opacity": 0, // initially hidden
-          //   },
-          // });
-          // adding point layer
-          // map.addLayer({
-          //   id: "points",
-          //   type: "circle",
-          //   source: "datasets",
-          //   paint: {
-          //     "circle-radius": 10,
-          //     "circle-color": "#007cbf",
-          //   },
-          // });
-          const popup = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-          });
+        // Add data as a source
+        map.addSource("datasets", {
+          type: "geojson",
+          data: geojsonData,
+        });
 
-          // Change cursor to pointer on hover
-          map.on("mouseenter", "markers", (e) => {
-            map.getCanvas().style.cursor = "pointer";
-            const coordinates = e.features[0].geometry.coordinates.slice();
-            const description = e.features[0].properties.title;
+        // Add markers as a layer
+        map.addLayer({
+          id: "markers",
+          type: "symbol",
+          source: "datasets",
+          layout: {
+            "icon-image": "custom-marker",
+            // allow overlapping icons
+            "icon-allow-overlap": true,
+          },
+        });
 
-            // Ensure that if the map is zoomed out such that multiple
-            // copies of the feature are visible, the popup appears
-            // over the copy being pointed to.
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
+        const popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
 
-            popup.setLngLat(coordinates).setHTML(description).addTo(map);
-          });
-          map.on("mouseleave", "markers", () => {
-            map.getCanvas().style.cursor = "";
-            popup.remove();
-          });
+        // Change cursor to pointer on hover
+        map.on("mouseenter", "markers", (e) => {
+          map.getCanvas().style.cursor = "pointer";
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          const description = e.features[0].properties.title;
 
-          // Navigate on click
-          map.on("click", "markers", (e) => {
-            const datasetId = e.features[0].properties.id;
-            console.log(e.features);
-            navigate(`/dataset/${datasetId}`);
-          });
-        },
-      );
+          // Ensure that if the map is zoomed out such that multiple
+          // copies of the feature are visible, the popup appears
+          // over the copy being pointed to.
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          popup.setLngLat(coordinates).setHTML(description).addTo(map);
+        });
+        map.on("mouseleave", "markers", () => {
+          map.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+
+        // Navigate on click
+        map.on("click", "markers", (e) => {
+          const datasetId = e.features[0].properties.id;
+          console.log(e.features);
+          navigate(`/dataset/${datasetId}`);
+        });
+      });
     });
   }, [data, navigate]);
 
