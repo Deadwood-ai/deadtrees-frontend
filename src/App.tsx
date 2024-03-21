@@ -12,8 +12,6 @@ import Deadtrees from "./pages/Deadtrees";
 const { Content } = Layout;
 
 export default function App() {
-  const { token } = theme.useToken();
-
   const LayoutWrapper = () => {
     return (
       <Layout

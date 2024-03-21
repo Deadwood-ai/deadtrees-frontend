@@ -52,7 +52,7 @@ const UploadModal = ({
         console.log(response);
         onClose(); // Invoke the onClose callback to close the modal
       } else {
-        -message.error("Upload failed");
+        message.error("Upload failed");
       }
     } catch (error) {
       console.error("Upload error:", error);
