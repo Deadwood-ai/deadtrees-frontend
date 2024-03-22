@@ -37,7 +37,7 @@ const Hero = () => {
       </div>
       <div className="flex-1 p-8">
         <img
-          src="public/assets/compressed/hero-image.png"
+          src="assets/compressed/hero-image.png"
           alt="deadtrees.earth"
           className="w-4/5 rounded-3xl object-center"
         />

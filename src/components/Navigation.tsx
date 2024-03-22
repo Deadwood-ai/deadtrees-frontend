@@ -53,7 +53,7 @@ export default function Navigation() {
     >
       <Space size={12}>
         <Image
-          src="public/assets/tree-icon.png"
+          src="assets/tree-icon.png"
           alt="deadtrees.earth"
           width={32}
           height={32}

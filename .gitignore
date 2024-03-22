@@ -1,5 +1,6 @@
 .env
 .prettierrc
+.firebase
 # Logs
 logs
 *.log
