@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
+
 // import mapbox-gl-compare
 // import MapboxCompare from "mapbox-gl-compare";
 // import { EllipsisRasterLayer } from "mapboxgljs-ellipsis";
 
 import mapboxgl from "mapbox-gl";
 
-import { Slider } from "antd";
+import { Radio, Slider } from "antd";
 
 const DeadtreesMap = () => {
-  const [sliderValue2021, setSliderValue2021] = useState<number>(1);
-  const [sliderValue2020, setSliderValue2020] = useState<number>(1);
-  const [sliderValue2019, setSliderValue2019] = useState<number>(1);
-  const [sliderValue2018, setSliderValue2018] = useState<number>(1);
-
+  const [sliderValue, setSliderValue] = useState<number>(1);
+  const [selectedYear, setSelectedYear] = useState<string>("2018");
   const mapContainer = useRef<HTMLDivElement | null>(null);
   // const pathId = "c4feee8c-05df-4d73-9094-7c65d95aaeb3";
   // const token =
@@ -31,6 +29,13 @@ const DeadtreesMap = () => {
   const wmsURL2020 = `${baseURL}&layers=waldklick:pred_BW_2020_3035`;
   const wmsURL2019 = `${baseURL}&layers=waldklick:pred_BW_2019_3035`;
   const wmsURL2018 = `${baseURL}&layers=waldklick:pred_BW_2018_3035`;
+
+  const mapLayerList = [
+    "deadtrees_2018_layer",
+    "deadtrees_2019_layer",
+    "deadtrees_2020_layer",
+    "deadtrees_2021_layer",
+  ];
 
   const wmsUrl = useEffect(() => {
     if (mapContainer.current) {
@@ -102,47 +107,28 @@ const DeadtreesMap = () => {
 
   useEffect(() => {
     const mapInstance = mapContainer.current?.mapInstance;
-    if (mapInstance && mapInstance.getLayer("deadtrees_2018_layer")) {
-      mapInstance.setPaintProperty(
-        "deadtrees_2018_layer",
-        "raster-opacity",
-        sliderValue2018,
-      );
-    }
-  }, [sliderValue2018]);
+    mapLayerList.forEach((layer) => {
+      if (mapInstance && mapInstance.getLayer(layer)) {
+        mapInstance.setLayoutProperty(
+          layer,
+          "visibility",
+          selectedYear === layer.split("_")[1] ? "visible" : "none",
+        );
+      }
+    });
+  }, [selectedYear, mapLayerList]);
 
   useEffect(() => {
+    const selectedLayer = `deadtrees_${selectedYear}_layer`;
     const mapInstance = mapContainer.current?.mapInstance;
-    if (mapInstance && mapInstance.getLayer("deadtrees_2019_layer")) {
+    if (mapInstance && mapInstance.getLayer(selectedLayer)) {
       mapInstance.setPaintProperty(
-        "deadtrees_2019_layer",
+        selectedLayer,
         "raster-opacity",
-        sliderValue2019,
+        sliderValue,
       );
     }
-  }, [sliderValue2019]);
-
-  useEffect(() => {
-    const mapInstance = mapContainer.current?.mapInstance;
-    if (mapInstance && mapInstance.getLayer("deadtrees_2020_layer")) {
-      mapInstance.setPaintProperty(
-        "deadtrees_2020_layer",
-        "raster-opacity",
-        sliderValue2020,
-      );
-    }
-  }, [sliderValue2020]);
-
-  useEffect(() => {
-    const mapInstance = mapContainer.current?.mapInstance;
-    if (mapInstance && mapInstance.getLayer("deadtrees_2021_layer")) {
-      mapInstance.setPaintProperty(
-        "deadtrees_2021_layer",
-        "raster-opacity",
-        sliderValue2021,
-      );
-    }
-  }, [sliderValue2021]);
+  }, [sliderValue, selectedYear]);
 
   return (
     <div className="h-full w-full">
@@ -154,43 +140,24 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       />
-      <div className="absolute bottom-24 right-8 w-48 rounded-md bg-white px-3 py-1 shadow-xl">
-        <p className="text-gl m-0 pl-1 pt-1 font-semibold ">2021</p>
+      <div className="absolute bottom-24 right-8  rounded-md bg-white px-3 py-1 shadow-xl">
         <Slider
-          defaultValue={0}
+          defaultValue={1}
           step={0.01}
           max={1}
-          value={sliderValue2021}
-          onChange={(value) => setSliderValue2021(value as number)}
+          value={sliderValue}
+          onChange={(value) => setSliderValue(value as number)}
           min={0}
         />
-        <p className="text-gl m-0 pl-1 pt-1 font-semibold ">2020</p>
-        <Slider
-          defaultValue={0}
-          step={0.01}
-          max={1}
-          value={sliderValue2020}
-          onChange={(value) => setSliderValue2020(value as number)}
-          min={0}
-        />
-        <p className="text-gl m-0 pl-1 pt-1 font-semibold ">2019</p>
-        <Slider
-          defaultValue={0}
-          step={0.01}
-          max={1}
-          value={sliderValue2019}
-          onChange={(value) => setSliderValue2019(value as number)}
-          min={0}
-        />
-        <p className="text-gl m-0 pl-1 pt-1 font-semibold ">2018</p>
-        <Slider
-          defaultValue={0}
-          step={0.01}
-          max={1}
-          value={sliderValue2018}
-          onChange={(value) => setSliderValue2018(value as number)}
-          min={0}
-        />
+        <Radio.Group
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+        >
+          <Radio.Button value="2018">2018</Radio.Button>
+          <Radio.Button value="2019">2019</Radio.Button>
+          <Radio.Button value="2020">2020</Radio.Button>
+          <Radio.Button value="2021">2021</Radio.Button>
+        </Radio.Group>
       </div>
     </div>
   );

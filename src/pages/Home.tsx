@@ -1,6 +1,4 @@
-import { SecurityScanFilled } from "@ant-design/icons";
-import Icon from "@ant-design/icons/lib/components/Icon";
-import { Typography, Image, Input, Button } from "antd";
+import { Input, Button } from "antd";
 import Slider from "react-slick";
 
 const Hero = () => {
