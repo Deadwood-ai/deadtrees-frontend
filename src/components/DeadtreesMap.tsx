@@ -14,15 +14,7 @@ const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  // const pathId = "c4feee8c-05df-4d73-9094-7c65d95aaeb3";
-  // const token =
-  //   "epat_7JMrvKfzqDGPYY6L15ff2Y1ucJVGL9ayVUuX4DffeVwpY2IuxOJmEU1oTq8iJeaA";
-  // const timestampID = "be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad";
-  // const styleID = "1e4d78d9-e224-4b30-bf01-0ee600c591bd";
-  // const layerID = "be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad_1e4d78d9-e224-4b30-bf01-0ee600c591bd";
-  // const wmsUrl = `https://api.ellipsis-drive.com/v3/ogc/wms/c4feee8c-05df-4d73-9094-7c65d95aaeb3/epat_34voDOkIxnajNSwzYTgoxSEyJ5FCEv7ESLn07RWLClxasA8nmiSR1MomhmxvSxT4?SERVICE=WMS&VERSION=1.1.1&LAYERS=${layerID}&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256`;
-  // const wmsUrl =
-  // "https://api.ellipsis-drive.com/v3/path/c4feee8c-05df-4d73-9094-7c65d95aaeb3/raster/timestamp/be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad/tile/{z}/{x}/{y}?style=1e4d78d9%2de224%2d4b30%2dbf01%2d0ee600c591bd&token=epat_X7xe09y2UATpZPNghXh2LC9F4TbwZ97nWjiOKEzEUZIDq5m2CNtwtsdkcfKdD1OW";
+
   const baseURL =
     "https://data.waldklick.de/geoserver/waldklick/wms?&service=WMS&request=GetMap&format=image/png&version=1.1.1&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&width=256&HEIGHT=256&transparent=true&authkey=eedde8df-05df-48c5-864e-c571ba188f64";
   const wmsURL2021 = `${baseURL}&layers=waldklick:pred_BW_2021_3035`;
@@ -64,7 +56,6 @@ const DeadtreesMap = () => {
           id: "deadtrees_2018_layer",
           type: "raster",
           source: "deadtrees_2018",
-          paint: {},
         });
         map.addSource("deadtrees_2019", {
           type: "raster",
@@ -75,7 +66,9 @@ const DeadtreesMap = () => {
           id: "deadtrees_2019_layer",
           type: "raster",
           source: "deadtrees_2019",
-          paint: {},
+          layout: {
+            visibility: "none",
+          },
         });
         map.addSource("deadtrees_2020", {
           type: "raster",
@@ -86,7 +79,9 @@ const DeadtreesMap = () => {
           id: "deadtrees_2020_layer",
           type: "raster",
           source: "deadtrees_2020",
-          paint: {},
+          layout: {
+            visibility: "none",
+          },
         });
         map.addSource("deadtrees_2021", {
           type: "raster",
@@ -97,7 +92,9 @@ const DeadtreesMap = () => {
           id: "deadtrees_2021_layer",
           type: "raster",
           source: "deadtrees_2021",
-          paint: {},
+          layout: {
+            visibility: "none",
+          },
         });
       });
 
@@ -106,6 +103,7 @@ const DeadtreesMap = () => {
   }, []);
 
   useEffect(() => {
+    console.log(selectedYear, "running effect");
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {
@@ -128,7 +126,7 @@ const DeadtreesMap = () => {
         sliderValue,
       );
     }
-  }, [sliderValue, selectedYear]);
+  }, [sliderValue, selectedYear, mapLayerList]);
 
   return (
     <div className="h-full w-full">
@@ -164,3 +162,13 @@ const DeadtreesMap = () => {
 };
 
 export default DeadtreesMap;
+
+// const pathId = "c4feee8c-05df-4d73-9094-7c65d95aaeb3";
+// const token =
+//   "epat_7JMrvKfzqDGPYY6L15ff2Y1ucJVGL9ayVUuX4DffeVwpY2IuxOJmEU1oTq8iJeaA";
+// const timestampID = "be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad";
+// const styleID = "1e4d78d9-e224-4b30-bf01-0ee600c591bd";
+// const layerID = "be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad_1e4d78d9-e224-4b30-bf01-0ee600c591bd";
+// const wmsUrl = `https://api.ellipsis-drive.com/v3/ogc/wms/c4feee8c-05df-4d73-9094-7c65d95aaeb3/epat_34voDOkIxnajNSwzYTgoxSEyJ5FCEv7ESLn07RWLClxasA8nmiSR1MomhmxvSxT4?SERVICE=WMS&VERSION=1.1.1&LAYERS=${layerID}&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256`;
+// const wmsUrl =
+// "https://api.ellipsis-drive.com/v3/path/c4feee8c-05df-4d73-9094-7c65d95aaeb3/raster/timestamp/be6b89c8-a8d1-44be-9bcf-a9440ae1f6ad/tile/{z}/{x}/{y}?style=1e4d78d9%2de224%2d4b30%2dbf01%2d0ee600c591bd&token=epat_X7xe09y2UATpZPNghXh2LC9F4TbwZ97nWjiOKEzEUZIDq5m2CNtwtsdkcfKdD1OW";
