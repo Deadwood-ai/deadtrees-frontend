@@ -54,7 +54,7 @@ const Stat = ({
   unit: string;
 }) => {
   return (
-    <div className="m-auto rounded-xl bg-white px-6 py-6">
+    <div className="m-auto rounded-xl  px-6 py-6 md:bg-white">
       <div className="flex items-baseline justify-center">
         <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
         <p className="m-0 pl-1 text-lg font-medium capitalize text-blue-500">
@@ -72,7 +72,7 @@ const Stats = () => {
       <div className="text-center">
         <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
       </div>
-      <div className="flex justify-around pt-8">
+      <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
         <Stat title="Area covered" value="75 912" unit="ha" />
         <Stat title="Orthophotos" value="912" unit="" />
         <Stat title="Countries" value="18" unit="" />
@@ -91,18 +91,34 @@ const Gallery = () => {
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 2000,
+    responsive: [
+      {
+        breakpoint: 640,
+        settings: {
+          slidesToShow: 1,
+          slidesToScroll: 1,
+        },
+      },
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 1,
+          slidesToScroll: 1,
+        },
+      },
+    ],
   };
   return (
-    <div className="m-auto pt-32">
+    <div className="m-auto w-full pt-12 md:w-full md:pt-24">
       <Slider {...settings}>
         {[
           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
           21, 22, 23,
         ].map((i) => {
           return (
-            <div key={i}>
+            <div className="m-auto" key={i}>
               <img
-                className="h-56 rounded-md"
+                className="w-full items-center rounded-xl md:w-56"
                 src={`assets/compressed/image${i}.png`}
                 alt="deadtrees.earth"
               />
@@ -192,7 +208,7 @@ export default function HomePage() {
       <div className="md:hidden">
         <Stats />
       </div>
-      {/* <Gallery /> */}
+      <Gallery />
       {/* <Features /> */}
     </div>
   );
