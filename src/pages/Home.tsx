@@ -3,8 +3,8 @@ import Slider from "react-slick";
 
 const Hero = () => {
   return (
-    <div className="flex items-center">
-      <div className="t-16 flex-1">
+    <div className="flex items-center justify-center">
+      <div className="flex-1">
         <div>
           <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
             COMING SOON
@@ -68,15 +68,15 @@ const Stat = ({
 
 const Stats = () => {
   return (
-    <div className="pt-24">
+    <div className="flex flex-col justify-center py-4 align-middle">
       <div className="text-center">
         <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
       </div>
       <div className="flex justify-around pt-8">
-        <Stat title="Area covered" value="24 555" unit="ha" />
-        <Stat title="Orthophotos" value="421" unit="" />
-        <Stat title="Countries" value="16" unit="" />
-        <Stat title="Contributors" value="29" unit="" />
+        <Stat title="Area covered" value="75 912" unit="ha" />
+        <Stat title="Orthophotos" value="912" unit="" />
+        <Stat title="Countries" value="18" unit="" />
+        <Stat title="Contributors" value="47" unit="" />
       </div>
     </div>
   );
@@ -93,7 +93,7 @@ const Gallery = () => {
     autoplaySpeed: 2000,
   };
   return (
-    <div className="m-auto pt-48">
+    <div className="m-auto pt-32">
       <Slider {...settings}>
         {[
           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -183,8 +183,10 @@ const Features = () => {
 export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl">
-      <Hero />
-      <Stats />
+      <div className="grid h-[calc(100vh-74px)] content-around">
+        <Hero />
+        <Stats />
+      </div>
       <Gallery />
       <Features />
     </div>
