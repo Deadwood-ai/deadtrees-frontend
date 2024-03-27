@@ -140,21 +140,28 @@ const Feature = ({
   iconPath: string;
 }) => {
   return (
-    <div className="flex p-8">
-      <div className=" mr-8 flex aspect-square h-16 w-16 items-center justify-center rounded-lg bg-blue-500">
-        <img className="h-8" src={iconPath} />
+    <div className="mb-4 rounded-md bg-slate-100 p-8 md:bg-white">
+      <div className="flex ">
+        <div className=" mr-8 flex aspect-square h-16 w-16 items-center justify-center rounded-lg bg-blue-500">
+          <img className="h-8" src={iconPath} />
+        </div>
+        <div className="text-start">
+          <p className="m-0 text-2xl font-semibold">{title}</p>
+          {/* hide on smaller screens */}
+          <p className=" m-0 hidden pt-2 text-lg text-gray-500 md:block">
+            {description}
+          </p>
+        </div>
       </div>
-      <div className="text-start">
-        <p className="m-0 text-2xl font-semibold">{title}</p>
-        <p className="m-0 pt-2 text-lg text-gray-500">{description}</p>
-      </div>
+      {/* hide on large screens */}
+      <p className="m-0 pt-4 text-lg text-gray-500 md:hidden">{description}</p>
     </div>
   );
 };
 
 const Features = () => {
   return (
-    <div className="pt-36 text-center">
+    <div className="pt-36 md:text-center">
       <p className="text-lg font-semibold text-blue-600">
         OUR SERVICES TO THE COMMUNITY
       </p>
@@ -167,7 +174,7 @@ const Features = () => {
         understanding global tree mortality dynamics, fostering a comprehensive
         and accessible resource for researchers and stakeholders alike.
       </p>
-      <div className="flex pt-24">
+      <div className="pt-24 md:flex">
         <Feature
           title="Open access community effort"
           description="Upload and download your aerial imagery with optional delineations of standing deadwood. 
@@ -180,7 +187,7 @@ const Features = () => {
           iconPath="assets/ai-icon.svg"
         />
       </div>
-      <div className="flex">
+      <div className="md:flex">
         <Feature
           title="Large-scale tree mortality map"
           description="Embedded visualization and download of extensive spatiotemporal tree mortality products derived from extrapolating standing deadwood using Earth observation data."
@@ -209,7 +216,7 @@ export default function HomePage() {
         <Stats />
       </div>
       <Gallery />
-      {/* <Features /> */}
+      <Features />
     </div>
   );
 }
