@@ -7,7 +7,7 @@ const Hero = () => {
       <div className="flex-1">
         <div>
           <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
-            COMING SOON
+            BETA
           </p>
         </div>
         <h1 className="m-0 inline-block bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-5xl font-bold text-gray-800 text-transparent">

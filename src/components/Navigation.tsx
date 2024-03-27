@@ -57,9 +57,16 @@ export default function Navigation() {
           alt="deadtrees.earth"
           className="mr-3 h-8 w-8"
         />
-        <h1 className=" text-3xl font-semibold text-gray-600 md:text-2xl">
-          deadtrees.earth
-        </h1>
+        <div className="flex">
+          <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">
+            deadtrees.earth
+          </h1>
+          <div className="grid content-start pt-2">
+            <p className="m-0 ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 text-xs font-semibold text-gray-600">
+              BETA
+            </p>
+          </div>
+        </div>
       </div>
       <div className="hidden md:block">
         <Menu
