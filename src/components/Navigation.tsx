@@ -44,40 +44,39 @@ export default function Navigation() {
         display: "flex",
         alignItems: "center",
         background: colorBgContainer,
-        paddingLeft: 48,
+        // paddingLeft: 48,
         position: "sticky",
         top: 0,
         zIndex: 1,
         borderRadius: "0 0 8px 8px",
       }}
     >
-      <Space size={12}>
-        <Image
+      <div className="flex flex-1 items-center justify-center md:justify-start">
+        <img
           src="assets/tree-icon.png"
           alt="deadtrees.earth"
-          width={32}
-          height={32}
+          className="mr-3 h-8 w-8"
         />
-        {/* <PlusOutlined /> */}
-        <Typography.Title level={4} style={{ margin: 0 }}>
+        <h1 className=" text-3xl font-semibold text-gray-600 md:text-2xl">
           deadtrees.earth
-        </Typography.Title>
-      </Space>
-      <Menu
-        mode="horizontal"
-        defaultSelectedKeys={["1"]}
-        items={navigation}
-        style={{
-          justifyContent: "end",
-          flex: 1,
-          minWidth: 0,
-          borderBottom: "none",
-        }}
-      />
+        </h1>
+      </div>
+      <div className="hidden md:block">
+        <Menu
+          mode="horizontal"
+          defaultSelectedKeys={["1"]}
+          items={navigation}
+          defaultActiveFirst
+          style={{
+            justifyContent: "end",
+            flex: 1,
+            minWidth: 0,
+            borderBottom: "none",
+          }}
+        />
+      </div>
       <Button
-        style={{
-          marginLeft: 48,
-        }}
+        className="ml-8 hidden  md:block"
         type="primary"
         onClick={signOut}
       >
