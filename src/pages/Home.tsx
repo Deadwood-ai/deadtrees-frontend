@@ -3,17 +3,17 @@ import Slider from "react-slick";
 
 const Hero = () => {
   return (
-    <div className="flex items-center justify-center">
-      <div className="flex-1">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-around">
+      <div className="md:max-w-md">
         <div>
           <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
             BETA
           </p>
         </div>
-        <h1 className="m-0 inline-block bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-5xl font-bold text-gray-800 text-transparent">
+        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-5xl font-bold text-gray-800 text-transparent">
           deadtrees.earth
         </h1>
-        <p className="m-0 max-w-md text-lg text-gray-500">
+        <p className="m-0 text-lg text-gray-500 md:max-w-md">
           An open database for accessing, contributing, analyzing, and
           visualizing remote sensing-based tree mortality data.
         </p>
@@ -21,23 +21,23 @@ const Hero = () => {
           <p className="m-0 pb-1 text-sm text-gray-500">
             Get notified as soon as the service is up and running.
           </p>
-          <div className="flex pt-2">
+          <div className="grid space-y-2 pt-2 md:flex md:space-y-0">
             <Input
-              className="max-w-xs"
+              // className="max-w-xs"
               size="large"
               placeholder="Enter email..."
             />
-            <Button className="ml-4" type="primary" size="large">
+            <Button className="md:ml-4" type="primary" size="large">
               Get notified
             </Button>
           </div>
         </div>
       </div>
-      <div className="flex-1 p-8">
+      <div className="p-8  md:p-8">
         <img
           src="assets/compressed/hero-image.png"
           alt="deadtrees.earth"
-          className="w-4/5 rounded-3xl object-center"
+          className="w-full rounded-3xl md:max-w-96"
         />
       </div>
     </div>
@@ -183,12 +183,17 @@ const Features = () => {
 export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl">
-      <div className="grid h-[calc(100vh-74px)] content-around">
+      <div className="m-auto flex h-[calc(100vh-74px)] max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around">
         <Hero />
+        <div className="hidden md:block">
+          <Stats />
+        </div>
+      </div>
+      <div className="md:hidden">
         <Stats />
       </div>
-      <Gallery />
-      <Features />
+      {/* <Gallery /> */}
+      {/* <Features /> */}
     </div>
   );
 }

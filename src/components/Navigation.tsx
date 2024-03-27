@@ -40,11 +40,11 @@ export default function Navigation() {
   } = theme.useToken();
   return (
     <Header
+      // className="hidden md:block"
       style={{
         display: "flex",
         alignItems: "center",
         background: colorBgContainer,
-        // paddingLeft: 48,
         position: "sticky",
         top: 0,
         zIndex: 1,
@@ -61,7 +61,7 @@ export default function Navigation() {
           <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">
             deadtrees.earth
           </h1>
-          <div className="grid content-start pt-2">
+          <div className="hidden content-start pt-2 md:grid">
             <p className="m-0 ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 text-xs font-semibold text-gray-600">
               BETA
             </p>
