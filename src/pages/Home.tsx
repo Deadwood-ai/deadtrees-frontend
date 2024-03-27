@@ -140,7 +140,7 @@ const Feature = ({
   iconPath: string;
 }) => {
   return (
-    <div className="mb-4 rounded-md bg-slate-100 p-8 md:bg-white">
+    <div className="mb-4 rounded-md py-8">
       <div className="flex ">
         <div className=" mr-8 flex aspect-square h-16 w-16 items-center justify-center rounded-lg bg-blue-500">
           <img className="h-8" src={iconPath} />
@@ -165,16 +165,16 @@ const Features = () => {
       <p className="text-lg font-semibold text-blue-600">
         OUR SERVICES TO THE COMMUNITY
       </p>
-      <p className="text-4xl font-semibold">
+      <p className="m-0 text-4xl font-semibold md:text-6xl">
         Revealing tree mortality patterns
       </p>
-      <p className="m-auto max-w-4xl text-left text-lg text-gray-500">
+      <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
         By integrating Earth observation, machine learning, and ground-based
         data sources, this initiative aims to bridge the existing gaps in
         understanding global tree mortality dynamics, fostering a comprehensive
         and accessible resource for researchers and stakeholders alike.
       </p>
-      <div className="pt-24 md:flex">
+      <div className="pt-12 md:flex md:pt-24">
         <Feature
           title="Open access community effort"
           description="Upload and download your aerial imagery with optional delineations of standing deadwood. 
@@ -203,6 +203,33 @@ const Features = () => {
   );
 };
 
+const FAQ = () => {
+  return <div>FAQ</div>;
+};
+
+const GetInContact = () => {
+  return (
+    <div className="mt-24 rounded-xl bg-slate-100 p-8">
+      <p className="m-0 text-center text-4xl font-semibold text-gray-800">
+        Want to join?
+      </p>
+      <p className="m-auto max-w-xl pt-8 text-center text-lg text-gray-500">
+        Do you have high-resolution 20cm orthoimagery and would like to
+        participate in this project?
+      </p>
+      <div className="flex justify-center pt-8">
+        <Button
+          type="primary"
+          size="large"
+          href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
+        >
+          Get in touch
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl">
@@ -217,6 +244,8 @@ export default function HomePage() {
       </div>
       <Gallery />
       <Features />
+      <GetInContact />
+      <FAQ />
     </div>
   );
 }
