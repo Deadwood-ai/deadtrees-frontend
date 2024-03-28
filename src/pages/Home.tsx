@@ -1,8 +1,47 @@
-import { Input, Button, Collapse } from "antd";
-import Item from "antd/es/list/Item";
+import { Input, Button, Collapse, notification } from "antd";
+import { useState } from "react";
 import Slider from "react-slick";
 
+import { supabase } from "../components/useSupabase";
+
 const Hero = () => {
+  const [email, setEmail] = useState<string>("");
+
+  const emailCheck = (email: string) => {
+    const re = /\S+@\S+\.\S+/;
+    return re.test(email);
+  };
+
+  const addSubscriber = async () => {
+    if (!emailCheck(email)) {
+      notification.error({
+        message: "Invalid email",
+        description: "Please enter a valid email address.",
+        placement: "topRight",
+      });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("newsletter")
+      .insert([{ email }]);
+    if (error) {
+      notification.error({
+        message: "Error",
+        description: "An error occurred while adding the subscriber.",
+        placement: "topRight",
+      });
+      console.error("Error adding subscriber:", error);
+    } else {
+      notification.success({
+        message: "Thank you!",
+        description:
+          "You will be notified as soon as the service is up and running.",
+        placement: "topRight",
+      });
+      console.log("Subscriber added:", email);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-around">
       <div className="md:max-w-md">
@@ -27,8 +66,14 @@ const Hero = () => {
               // className="max-w-xs"
               size="large"
               placeholder="Enter email..."
+              onChange={(e) => setEmail(e.target.value)}
             />
-            <Button className="md:ml-4" type="primary" size="large">
+            <Button
+              onClick={addSubscriber}
+              className="md:ml-4"
+              type="primary"
+              size="large"
+            >
               Get notified
             </Button>
           </div>
