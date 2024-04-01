@@ -18,6 +18,8 @@ export default function DataList({ data }: { data: Dataset }) {
 
   return (
     <List
+      // make list scrollable
+      style={{ overflow: "auto", height: "100%" }}
       itemLayout="vertical"
       dataSource={data}
       renderItem={(item, index) => (
