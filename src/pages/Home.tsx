@@ -88,7 +88,7 @@ const Hero = () => {
           </div>
         </div>
       </div>
-      <div className="mt-16 md:mt-0  md:p-8">
+      <div className="mt-16 hidden md:mt-0 md:block  md:p-8">
         <img
           src="assets/compressed/hero-image.png"
           alt="deadtrees.earth"
@@ -144,6 +144,8 @@ const Gallery = () => {
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 2000,
+    // adding buttons
+
     responsive: [
       {
         breakpoint: 640,
@@ -155,14 +157,17 @@ const Gallery = () => {
       {
         breakpoint: 1024,
         settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
+          slidesToShow: 2,
+          slidesToScroll: 2,
         },
       },
     ],
   };
   return (
     <div className="m-auto w-full pt-12 md:w-full md:pt-24">
+      <p className="pb-8 text-center text-lg font-semibold uppercase text-blue-600">
+        Some of the imagery
+      </p>
       <Slider {...settings}>
         {[
           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
