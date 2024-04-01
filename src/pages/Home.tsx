@@ -392,7 +392,7 @@ const FAQ = () => {
       <Collapse
         bordered={false}
         style={{ backgroundColor: "transparent" }}
-        defaultActiveKey={["1"]}
+        // defaultActiveKey={["1"]}
         className="w-5xl mt-16"
         items={FAQItems}
       />
