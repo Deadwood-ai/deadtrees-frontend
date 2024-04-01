@@ -314,7 +314,7 @@ const Roadmap = () => {
             ),
           },
         ]}
-      ></Timeline>
+      />
     </div>
   );
 };
