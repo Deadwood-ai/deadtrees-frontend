@@ -198,8 +198,8 @@ const Feature = ({
   iconPath: string;
 }) => {
   return (
-    <div className="mb-4 rounded-md py-8">
-      <div className="flex ">
+    <div className="mb-4 w-full rounded-md py-8">
+      <div className="flex">
         <div className=" mr-8 flex aspect-square h-16 w-16 items-center justify-center rounded-lg bg-blue-500">
           <img className="h-8" src={iconPath} />
         </div>
@@ -219,7 +219,7 @@ const Feature = ({
 
 const Features = () => {
   return (
-    <div className="pt-16 md:pt-36 md:text-center">
+    <div className="pt-16 md:pt-36 md:text-center ">
       <p className="text-lg font-semibold text-blue-600">
         OUR SERVICES TO THE COMMUNITY
       </p>
@@ -245,7 +245,7 @@ const Features = () => {
           iconPath="assets/ai-icon.svg"
         />
       </div>
-      <div className="md:flex">
+      <div className=" md:flex">
         <Feature
           title="Large-scale tree mortality map"
           description="Embedded visualization and download of extensive spatiotemporal tree mortality products derived from extrapolating standing deadwood using Earth observation data."
