@@ -289,7 +289,7 @@ const Roadmap = () => {
             color: "gray",
             children: (
               <span className="m-0 pt-4 text-lg text-gray-500">
-                Download functinality and automatic deadtree segemtation for
+                Download functionality and automatic deadtree segemtation for
                 drone images
               </span>
             ),
