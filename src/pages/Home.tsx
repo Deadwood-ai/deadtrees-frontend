@@ -1,4 +1,4 @@
-import { Input, Button, Collapse, notification } from "antd";
+import { Input, Button, Collapse, notification, Alert } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
 
@@ -45,12 +45,21 @@ const Hero = () => {
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-around">
       <div className="md:max-w-md">
+        <div className="md:hidden">
+          <Alert
+            message="Mobile version is limited"
+            description="Please use a desktop browser for the best experience."
+            type="info"
+            showIcon
+            closable
+          />
+        </div>
         <div>
           <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
             BETA
           </p>
         </div>
-        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-5xl font-bold text-gray-800 text-transparent">
+        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-4xl font-bold text-gray-800 text-transparent md:text-5xl">
           deadtrees.earth
         </h1>
         <p className="m-0 text-lg text-gray-500 md:max-w-md">
@@ -79,7 +88,7 @@ const Hero = () => {
           </div>
         </div>
       </div>
-      <div className="p-8  md:p-8">
+      <div className="mt-16 md:mt-0  md:p-8">
         <img
           src="assets/compressed/hero-image.png"
           alt="deadtrees.earth"
@@ -103,9 +112,7 @@ const Stat = ({
     <div className="m-auto rounded-xl  px-6 py-6 md:bg-white">
       <div className="flex items-baseline justify-center">
         <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
-        <p className="m-0 pl-1 text-lg font-medium capitalize text-blue-500">
-          {unit}
-        </p>
+        <p className="m-0 pl-1 text-lg font-medium  text-blue-500">{unit}</p>
       </div>
       <p className="m-0 p-3 text-sm font-medium uppercase">{title}</p>
     </div>
@@ -114,12 +121,12 @@ const Stat = ({
 
 const Stats = () => {
   return (
-    <div className="flex flex-col justify-center py-4 align-middle">
+    <div className="mt-16 flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center">
         <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
       </div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
-        <Stat title="Area covered" value="75 912" unit="ha" />
+        <Stat title="covered" value="75k" unit="ha" />
         <Stat title="Orthophotos" value="912" unit="" />
         <Stat title="Countries" value="18" unit="" />
         <Stat title="Contributors" value="47" unit="" />
@@ -207,7 +214,7 @@ const Feature = ({
 
 const Features = () => {
   return (
-    <div className="pt-36 md:text-center">
+    <div className="pt-16 md:pt-36 md:text-center">
       <p className="text-lg font-semibold text-blue-600">
         OUR SERVICES TO THE COMMUNITY
       </p>
@@ -396,7 +403,7 @@ const FAQ = () => {
 export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl pb-1">
-      <div className="m-auto flex h-[calc(100vh-74px)] max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around">
+      <div className="m-auto flex max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around">
         <Hero />
         <div className="hidden md:block">
           <Stats />

@@ -39,56 +39,53 @@ export default function Navigation() {
     token: { colorBgContainer },
   } = theme.useToken();
   return (
-    <Header
-      // className="hidden md:block"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        background: colorBgContainer,
-        position: "sticky",
-        top: 0,
-        zIndex: 1,
-        borderRadius: "0 0 8px 8px",
-      }}
-    >
-      <div className="flex flex-1 items-center justify-center md:justify-start">
-        <img
-          src="assets/tree-icon.png"
-          alt="deadtrees.earth"
-          className="mr-3 h-8 w-8"
-        />
-        <div className="flex">
-          <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">
-            deadtrees.earth
-          </h1>
-          <div className="hidden content-start pt-2 md:grid">
-            <p className="m-0 ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 text-xs font-semibold text-gray-600">
-              BETA
-            </p>
+    <div className="hidden md:block">
+      <Header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          background: colorBgContainer,
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          borderRadius: "0 0 8px 8px",
+        }}
+      >
+        <div className="flex flex-1 items-center justify-center md:justify-start">
+          <img
+            src="assets/tree-icon.png"
+            alt="deadtrees.earth"
+            className="mr-3 h-8 w-8"
+          />
+          <div className="flex">
+            <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">
+              deadtrees.earth
+            </h1>
+            <div className="content-start pt-2">
+              <p className="m-0 ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 text-xs font-semibold text-gray-600">
+                BETA
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="hidden md:block">
-        <Menu
-          mode="horizontal"
-          defaultSelectedKeys={["1"]}
-          items={navigation}
-          defaultActiveFirst
-          style={{
-            justifyContent: "end",
-            flex: 1,
-            minWidth: 0,
-            borderBottom: "none",
-          }}
-        />
-      </div>
-      <Button
-        className="ml-8 hidden  md:block"
-        type="primary"
-        onClick={signOut}
-      >
-        {session ? "Sign Out" : "Sign In"}
-      </Button>
-    </Header>
+        <div>
+          <Menu
+            mode="horizontal"
+            defaultSelectedKeys={["1"]}
+            items={navigation}
+            defaultActiveFirst
+            style={{
+              justifyContent: "end",
+              flex: 1,
+              minWidth: 0,
+              borderBottom: "none",
+            }}
+          />
+        </div>
+        <Button className="ml-8" type="primary" onClick={signOut}>
+          {session ? "Sign Out" : "Sign In"}
+        </Button>
+      </Header>
+    </div>
   );
 }

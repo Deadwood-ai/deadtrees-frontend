@@ -14,18 +14,21 @@ const { Content } = Layout;
 export default function App() {
   const LayoutWrapper = () => {
     return (
-      <Layout
-        style={{
-          margin: "0 auto",
-          padding: 24,
-          height: "100vh",
-        }}
-      >
-        <Navigation />
-        <Content>
-          <Outlet />
-        </Content>
-      </Layout>
+      <div className="md:bg-slate-100">
+        <Layout
+          style={{
+            margin: "0 auto",
+            padding: 24,
+            height: "100vh",
+            backgroundColor: "transparent",
+          }}
+        >
+          <Navigation />
+          <Content>
+            <Outlet />
+          </Content>
+        </Layout>
+      </div>
     );
   };
 
