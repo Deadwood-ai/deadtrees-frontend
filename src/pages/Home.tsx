@@ -1,4 +1,4 @@
-import { Input, Button, Collapse, notification, Alert } from "antd";
+import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
 
@@ -256,6 +256,63 @@ const Features = () => {
   );
 };
 
+const Roadmap = () => {
+  return (
+    <div className="m-auto flex max-w-3xl flex-col pt-24  md:flex-row">
+      <div className="mb-8 text-center md:text-left">
+        <p className="m-auto text-2xl font-semibold text-blue-600 md:mt-0">
+          OUR ROADMAP
+        </p>
+        <p className="text-lg text-gray-500">
+          Our vision and goals for the future
+        </p>
+      </div>
+      <Timeline
+        mode="left"
+        items={[
+          {
+            label: <span className="text-xl font-semibold">Q2 2024</span>,
+            color: "blue",
+            children: (
+              <span className="m-0 pt-4 text-lg text-gray-500">
+                Beta version as prof of concept
+              </span>
+            ),
+          },
+          {
+            label: <span className="text-xl font-semibold">Q3 2024</span>,
+            color: "gray",
+            children: (
+              <span className="m-0 pt-4 text-lg text-gray-500">
+                Download functinality and automatic deadtree segemtation for
+                drone images
+              </span>
+            ),
+          },
+          {
+            label: <span className="text-xl font-semibold">Q4 2024</span>,
+            color: "gray",
+            children: (
+              <span className="m-0 pt-4 text-lg text-gray-500">
+                New global deadwood product based on Sentinel 2
+              </span>
+            ),
+          },
+          {
+            label: <span className="text-xl font-semibold">Q2 2025</span>,
+            color: "gray",
+            children: (
+              <span className="m-0 pt-4 text-lg text-gray-500">
+                Upload of raw drone images and automatic deadtree segmentation
+              </span>
+            ),
+          },
+        ]}
+      ></Timeline>
+    </div>
+  );
+};
+
 const GetInContact = () => {
   return (
     <div className="m-auto mt-24 max-w-5xl rounded-xl bg-slate-100 p-8">
@@ -282,7 +339,11 @@ const GetInContact = () => {
 const FAQItems = [
   {
     key: "1",
-    label: "What is deadtrees.earth?",
+    label: (
+      <span className="m-0 pt-4 text-lg text-gray-500">
+        Who is behind deadtrees.earth?
+      </span>
+    ),
     children: (
       <div>
         <p className="text-md">
@@ -362,12 +423,42 @@ const FAQItems = [
   },
   {
     key: "2",
-    label: "What happens to the data after your upload?",
+    label: (
+      <span className="m-0 pt-4 text-lg text-gray-500">
+        What happens to the data after your upload?
+      </span>
+    ),
+
     children: (
       <p className="text-md">
         The data is used to train multiple models related to standing deadwood.
         If you agree, we will also make your data publicly available to the
         community under a chosen Creative Commons license.
+      </p>
+    ),
+    style: {
+      border: "none",
+      borderRadius: "0.5rem",
+      marginBottom: "24px",
+      paddingLeft: "24px",
+      paddingRight: "24px",
+      paddingTop: "16px",
+      paddingBottom: "16px",
+      backgroundColor: "rgb(241 245 249)",
+    },
+  },
+  {
+    key: "3",
+    label: (
+      <span className="m-0 pt-4 text-lg text-gray-500">
+        Why can't I download the data?
+      </span>
+    ),
+
+    children: (
+      <p className="text-md">
+        We are currently working on the download functionality. Please stay
+        tuned. For more information have a look at our roadmap and get in touch.
       </p>
     ),
     style: {
@@ -414,6 +505,7 @@ export default function HomePage() {
       </div>
       <Gallery />
       <Features />
+      <Roadmap />
       <GetInContact />
       <FAQ />
     </div>
