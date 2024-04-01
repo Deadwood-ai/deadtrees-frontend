@@ -261,6 +261,13 @@ const Features = () => {
   );
 };
 
+const RoadmapItemDate = ({ date }: { date: string }) => {
+  return <span className="text-xl font-semibold">{date}</span>;
+};
+const RoadmapItemLabel = ({ label }: { label: string }) => {
+  return <span className="m-0 pt-4 text-lg text-gray-500">{label}</span>;
+};
+
 const Roadmap = () => {
   return (
     <div className="m-auto flex max-w-3xl flex-col pt-24  md:flex-row">
@@ -276,40 +283,34 @@ const Roadmap = () => {
         mode="left"
         items={[
           {
-            label: <span className="text-xl font-semibold">Q2 2024</span>,
+            label: RoadmapItemDate({ date: "Q2 2024" }),
             color: "blue",
             children: (
-              <span className="m-0 pt-4 text-lg text-gray-500">
-                Beta version as prof of concept
-              </span>
+              <RoadmapItemLabel label="Public release of a beta version of the platform" />
             ),
           },
           {
-            label: <span className="text-xl font-semibold">Q3 2024</span>,
+            label: RoadmapItemDate({ date: "Q3 2024" }),
             color: "gray",
             children: (
-              <span className="m-0 pt-4 text-lg text-gray-500">
-                Download functionality and automatic deadtree segemtation for
-                drone images
-              </span>
+              <RoadmapItemLabel
+                label=" Download functionality and automatic deadtree segemtation for
+              drone images"
+              />
             ),
           },
           {
-            label: <span className="text-xl font-semibold">Q4 2024</span>,
+            label: RoadmapItemDate({ date: "Q4 2024" }),
             color: "gray",
             children: (
-              <span className="m-0 pt-4 text-lg text-gray-500">
-                New global deadwood product based on Sentinel 2
-              </span>
+              <RoadmapItemLabel label="Integration of a large-scale tree mortality map" />
             ),
           },
           {
-            label: <span className="text-xl font-semibold">Q2 2025</span>,
+            label: RoadmapItemDate({ date: "Q1 2025" }),
             color: "gray",
             children: (
-              <span className="m-0 pt-4 text-lg text-gray-500">
-                Upload of raw drone images and automatic deadtree segmentation
-              </span>
+              <RoadmapItemLabel label="Analysis ready training data for AI models" />
             ),
           },
         ]}
