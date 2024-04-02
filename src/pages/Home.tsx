@@ -298,7 +298,7 @@ const Roadmap = () => {
           },
           {
             label: RoadmapItemDate({ date: "Q3 2024" }),
-            color: "blue",
+            color: "gray",
             children: (
               <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />
             ),
