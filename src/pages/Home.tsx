@@ -286,28 +286,32 @@ const Roadmap = () => {
             label: RoadmapItemDate({ date: "Q2 2024" }),
             color: "blue",
             children: (
-              <RoadmapItemLabel label="Public release of a beta version of the platform" />
+              <RoadmapItemLabel label="Public release of a beta version of the platform and start of data collection" />
+            ),
+          },
+          {
+            label: RoadmapItemDate({ date: "Q2 2024" }),
+            color: "gray",
+            children: (
+              <RoadmapItemLabel label="Download and upload functionality of drone images and tree mortality labels" />
             ),
           },
           {
             label: RoadmapItemDate({ date: "Q3 2024" }),
-            color: "gray",
+            color: "blue",
             children: (
-              <RoadmapItemLabel
-                label=" Download functionality and automatic deadtree segemtation for
-              drone images"
-              />
+              <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />
             ),
           },
           {
             label: RoadmapItemDate({ date: "Q4 2024" }),
             color: "gray",
             children: (
-              <RoadmapItemLabel label="Integration of a large-scale tree mortality map" />
+              <RoadmapItemLabel label="Integration of a large-scale tree mortality map using satellite data (sentinel)" />
             ),
           },
           {
-            label: RoadmapItemDate({ date: "Q1 2025" }),
+            label: RoadmapItemDate({ date: "Q4 2024" }),
             color: "gray",
             children: (
               <RoadmapItemLabel label="Analysis ready training data for AI models" />
