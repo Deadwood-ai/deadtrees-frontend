@@ -467,8 +467,9 @@ const FAQItems = [
 
     children: (
       <p className="text-md">
-        We are currently working on the download functionality. Please stay
-        tuned. For more information have a look at our roadmap and get in touch.
+        We are currently working on the download and upload functionality which
+        will be available soon. To stay updated, please subscribe to our
+        newsletter. For more information, check out our roadmap or contact us.
       </p>
     ),
     style: {
