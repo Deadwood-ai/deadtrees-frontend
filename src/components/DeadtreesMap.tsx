@@ -14,6 +14,7 @@ const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const mapContainer = useRef<HTMLDivElement | null>(null);
+  const [mapStyle, setMapStyle] = useState<string>("satellite");
 
   const baseURL =
     "https://data.waldklick.de/geoserver/waldklick/wms?&service=WMS&request=GetMap&format=image/png&version=1.1.1&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&width=256&HEIGHT=256&transparent=true&authkey=eedde8df-05df-48c5-864e-c571ba188f64";
@@ -29,12 +30,63 @@ const DeadtreesMap = () => {
     "deadtrees_2021_layer",
   ];
 
+  const addWMSLayers = (map: mapboxgl.Map) => {
+    map.addSource("deadtrees_2018", {
+      type: "raster",
+      tiles: [wmsURL2018],
+      tileSize: 256,
+    });
+    map.addLayer({
+      id: "deadtrees_2018_layer",
+      type: "raster",
+      source: "deadtrees_2018",
+    });
+    map.addSource("deadtrees_2019", {
+      type: "raster",
+      tiles: [wmsURL2019],
+      tileSize: 256,
+    });
+    map.addLayer({
+      id: "deadtrees_2019_layer",
+      type: "raster",
+      source: "deadtrees_2019",
+      layout: {
+        visibility: "none",
+      },
+    });
+    map.addSource("deadtrees_2020", {
+      type: "raster",
+      tiles: [wmsURL2020],
+      tileSize: 256,
+    });
+    map.addLayer({
+      id: "deadtrees_2020_layer",
+      type: "raster",
+      source: "deadtrees_2020",
+      layout: {
+        visibility: "none",
+      },
+    });
+    map.addSource("deadtrees_2021", {
+      type: "raster",
+      tiles: [wmsURL2021],
+      tileSize: 256,
+    });
+    map.addLayer({
+      id: "deadtrees_2021_layer",
+      type: "raster",
+      source: "deadtrees_2021",
+      layout: {
+        visibility: "none",
+      },
+    });
+  };
+
   const wmsUrl = useEffect(() => {
     if (mapContainer.current) {
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/satellite-v9",
-        // style: "mapbox://styles/mapbox/streets-v11",
         center: [8.7982700000000008, 48.5131999999999977],
         zoom: 7,
       });
@@ -43,61 +95,19 @@ const DeadtreesMap = () => {
         new MapboxGeocoder({
           accessToken: mapboxgl.accessToken,
           mapboxgl: mapboxgl,
+          style: {
+            backgroundColor: "white",
+            color: "black",
+          },
         }),
       );
 
       map.on("load", () => {
-        map.addSource("deadtrees_2018", {
-          type: "raster",
-          tiles: [wmsURL2018],
-          tileSize: 256,
-        });
-        map.addLayer({
-          id: "deadtrees_2018_layer",
-          type: "raster",
-          source: "deadtrees_2018",
-        });
-        map.addSource("deadtrees_2019", {
-          type: "raster",
-          tiles: [wmsURL2019],
-          tileSize: 256,
-        });
-        map.addLayer({
-          id: "deadtrees_2019_layer",
-          type: "raster",
-          source: "deadtrees_2019",
-          layout: {
-            visibility: "none",
-          },
-        });
-        map.addSource("deadtrees_2020", {
-          type: "raster",
-          tiles: [wmsURL2020],
-          tileSize: 256,
-        });
-        map.addLayer({
-          id: "deadtrees_2020_layer",
-          type: "raster",
-          source: "deadtrees_2020",
-          layout: {
-            visibility: "none",
-          },
-        });
-        map.addSource("deadtrees_2021", {
-          type: "raster",
-          tiles: [wmsURL2021],
-          tileSize: 256,
-        });
-        map.addLayer({
-          id: "deadtrees_2021_layer",
-          type: "raster",
-          source: "deadtrees_2021",
-          layout: {
-            visibility: "none",
-          },
-        });
+        addWMSLayers(map);
       });
-
+      map.on("style.load", () => {
+        addWMSLayers(map);
+      });
       mapContainer.current.mapInstance = map;
     }
   }, []);
@@ -115,6 +125,13 @@ const DeadtreesMap = () => {
       }
     });
   }, [selectedYear, mapLayerList]);
+
+  useEffect(() => {
+    const mapInstance = mapContainer.current?.mapInstance;
+    if (mapInstance) {
+      mapInstance.setStyle(`mapbox://styles/mapbox/${mapStyle}-v9`);
+    }
+  }, [mapStyle]);
 
   useEffect(() => {
     const selectedLayer = `deadtrees_${selectedYear}_layer`;
@@ -137,25 +154,43 @@ const DeadtreesMap = () => {
           borderRadius: "8px",
         }}
         ref={mapContainer}
-      />
-      <div className="absolute bottom-24 right-8  rounded-md bg-white px-3 py-1 shadow-xl">
-        <Slider
-          defaultValue={1}
-          step={0.01}
-          max={1}
-          value={sliderValue}
-          onChange={(value) => setSliderValue(value as number)}
-          min={0}
-        />
-        <Radio.Group
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-        >
-          <Radio.Button value="2018">2018</Radio.Button>
-          <Radio.Button value="2019">2019</Radio.Button>
-          <Radio.Button value="2020">2020</Radio.Button>
-          <Radio.Button value="2021">2021</Radio.Button>
-        </Radio.Group>
+      >
+        <div className="absolute left-2 top-2 z-20">
+          <Radio.Group
+            value={mapStyle}
+            onChange={(e) => setMapStyle(e.target.value)}
+          >
+            <Radio.Button value="satellite">Satellite</Radio.Button>
+            <Radio.Button value="streets">Streets</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
+          <p className="m-0 py-2 text-lg text-gray-800">
+            {" "}
+            Dead Trees for the year {selectedYear}
+          </p>
+          <p className="text-md m-0 text-gray-600">Layer Opacity</p>
+          <Slider
+            defaultValue={1}
+            step={0.01}
+            max={1}
+            value={sliderValue}
+            onChange={(value) => setSliderValue(value as number)}
+            min={0}
+          />
+          <p className="text-md m-0 pb-2 text-gray-600">Year</p>
+
+          <Radio.Group
+            className="pb-2"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+          >
+            <Radio.Button value="2018">2018</Radio.Button>
+            <Radio.Button value="2019">2019</Radio.Button>
+            <Radio.Button value="2020">2020</Radio.Button>
+            <Radio.Button value="2021">2021</Radio.Button>
+          </Radio.Group>
+        </div>
       </div>
     </div>
   );
