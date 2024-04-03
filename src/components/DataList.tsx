@@ -8,10 +8,15 @@ import { useData } from "../state/DataProvider";
 export default function DataList({ data }: { data: Dataset }) {
   const { Text, Link } = Typography;
   const navigate = useNavigate();
-  const { setFilter } = useData();
+  const { setFilter, setFilterTag } = useData();
 
-  const onClickFilterHandler = (e: React.ChangeEvent, filter: string) => {
+  const onClickFilterHandler = (
+    e: React.ChangeEvent,
+    filter: string,
+    filterTag: string,
+  ) => {
     setFilter(filter);
+    setFilterTag(filterTag);
     e.stopPropagation();
     console.log(filter);
   };
@@ -42,14 +47,18 @@ export default function DataList({ data }: { data: Dataset }) {
                   <Button
                     type="default"
                     size="small"
-                    onClick={(e) => onClickFilterHandler(e, item.content_type)}
+                    onClick={(e) =>
+                      onClickFilterHandler(e, item.content_type, "content_type")
+                    }
                   >
                     {item.content_type}
                   </Button>
                   <Button
                     type="default"
                     size="small"
-                    onClick={(e) => onClickFilterHandler(e, item.license)}
+                    onClick={(e) =>
+                      onClickFilterHandler(e, item.license, "license")
+                    }
                   >
                     {item.license}
                   </Button>

@@ -10,24 +10,28 @@ type DataContextType = {
   data: Dataset[] | null;
   filter: string;
   setFilter: (filter: string) => void;
+  setFilterTag: (filterTag: string) => void;
 };
 
 const DataContext = createContext<DataContextType>({
   data: null,
   filter: "",
   setFilter: () => {},
+  setFilterTag: () => {},
 });
 
 const DataProvider = (props: DataProviderProps) => {
-  const [data, setData] = useState<string>("");
+  const [rawData, setRawData] = useState<Dataset[]>([]);
+  const [data, setData] = useState<Dataset[]>([]);
   const [filter, setFilter] = useState<string>("");
+  const [filterTag, setFilterTag] = useState<string>("");
 
   const fetchData = async () => {
     const { data, error } = await supabase.from("upload_files_dev").select("*");
     if (error) {
       console.error("Error fetching data:", error);
     } else {
-      setData(data);
+      setRawData(data);
     }
   };
   const callWebhook = async (payload: any) => {
@@ -46,6 +50,10 @@ const DataProvider = (props: DataProviderProps) => {
       }),
     });
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -77,10 +85,30 @@ const DataProvider = (props: DataProviderProps) => {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!rawData) return; // Early exit if data is null
+    if (filter) {
+      console.log("filtering");
+      const filteredData = rawData.filter((item) => {
+        if (filterTag === "content_type") {
+          return item.content_type === filter;
+        } else if (filterTag === "license") {
+          return item.license === filter;
+        }
+        return false;
+      });
+
+      setData(filteredData);
+    } else {
+      setData(rawData);
+    }
+  }, [filter, rawData, filterTag]);
+
   const value = {
     data,
     filter,
     setFilter,
+    setFilterTag,
   };
   return (
     <DataContext.Provider value={value}>{props.children}</DataContext.Provider>

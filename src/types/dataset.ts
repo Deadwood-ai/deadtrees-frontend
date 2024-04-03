@@ -9,7 +9,8 @@ export interface Dataset {
   file_name: string;
   file_size: number;
   id: number;
-  license: License;
+  // license: License;
+  license: string;
   platform: Platform;
   processed_path: string;
   raw_path: string;
@@ -21,16 +22,16 @@ export interface Dataset {
   uuid: string;
   wms_source: string | null;
 }
-enum License {
+export enum License {
   "cc-by",
   "cc-by-sa",
 }
-enum Platform {
+export enum Platform {
   "drone",
   "airborne",
   "sattelfite",
 }
-enum Status {
+export enum Status {
   "pending",
   "processing",
   "errored",

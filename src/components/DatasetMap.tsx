@@ -14,7 +14,7 @@ const Map = ({ data }: { data: Dataset[] }) => {
 
   useEffect(() => {
     if (!mapContainer.current || !data.length) return;
-    console.log(data);
+    // console.log(data);
 
     const geojsonData = {
       type: "FeatureCollection",
