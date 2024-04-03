@@ -3,10 +3,10 @@ import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
 import Map from "../components/DatasetMap";
 import { useState } from "react";
-import { ArrowDownOutlined } from "@ant-design/icons";
+import { ArrowDownOutlined, CloseCircleFilled } from "@ant-design/icons";
 
 export default function Dataset() {
-  const { data, filter } = useData();
+  const { data, filter, setFilter } = useData();
   // filter for elements of data with status "processed"
   const processedData = data?.filter((d) => d.status === "processed");
   const [uuidHovered, setUuidHovered] = useState<string | null>(null);
@@ -14,7 +14,22 @@ export default function Dataset() {
   return (
     <div className="flex h-full ">
       <div className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
-        {filter && <h4>Filtered by: {<Tag color="blue">{filter}</Tag>}</h4>}
+        {filter && (
+          <h4>
+            Filtered by:{" "}
+            {
+              <Tag className="m-0" color="blue">
+                {filter}
+                <Button
+                  className="ml-2 border-none bg-transparent"
+                  size="small"
+                  onClick={() => setFilter("")}
+                  icon={<CloseCircleFilled />}
+                />
+              </Tag>
+            }
+          </h4>
+        )}
 
         <div className="flex pb-4">
           <Input.Search placeholder="Search" />
