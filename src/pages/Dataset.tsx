@@ -3,7 +3,12 @@ import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
 import Map from "../components/DatasetMap";
 import { useState } from "react";
-import { ArrowDownOutlined, CloseCircleFilled } from "@ant-design/icons";
+import {
+  ArrowDownOutlined,
+  ClockCircleOutlined,
+  CloseCircleFilled,
+  CloseOutlined,
+} from "@ant-design/icons";
 
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
@@ -18,13 +23,14 @@ export default function Dataset() {
           <h4>
             Filtered by:{" "}
             {
-              <Tag className="m-0" color="blue">
-                {filter}
+              <Tag className="m-0 ml-1" color="blue">
+                <span className="text-sm font-medium">{filter}</span>
                 <Button
-                  className="ml-2 border-none bg-transparent"
+                  className=" ml-2 border-none bg-transparent"
                   size="small"
+                  shape="circle"
                   onClick={() => setFilter("")}
-                  icon={<CloseCircleFilled />}
+                  icon={<CloseOutlined />}
                 />
               </Tag>
             }
