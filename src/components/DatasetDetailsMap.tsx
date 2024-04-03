@@ -13,6 +13,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
       console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
       console.log("bounds", bounds);
+
       // const wmsSourceUrl =
       //   "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=62fd732e-9209-4efb-826c-ae30486fdb09_uavforsat_KAB003_ortho.tif&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
       const wmsSource =
@@ -20,6 +21,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
         data.file_id +
         "&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
       console.log("wms", wmsSource);
+      console.log("file_id", data.file_id);
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11",

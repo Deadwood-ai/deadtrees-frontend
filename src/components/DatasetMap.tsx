@@ -16,8 +16,38 @@ const Map = ({ data }: { data: Dataset[] }) => {
     if (!mapContainer.current || !data.length) return;
     console.log(data);
 
+    const geojsonData = {
+      type: "FeatureCollection",
+      features: data.map((dataset) => ({
+        type: "Feature",
+        properties: {
+          id: dataset.uuid,
+          title: dataset.file_name,
+        },
+        geometry: {
+          type: "Point",
+          coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
+        },
+      })),
+    };
+    // Convert data to GeoJSON
+
+    console.log(geojsonData);
+    // fit bounds to geojsonData
+    const bounds = geojsonData.features.reduce(
+      (bounds, feature) => {
+        return bounds.extend(feature.geometry.coordinates);
+      },
+      new mapboxgl.LngLatBounds(
+        geojsonData.features[0].geometry.coordinates,
+        geojsonData.features[0].geometry.coordinates,
+      ),
+    );
+
     const map = new mapboxgl.Map({
       container: mapContainer.current,
+      zoom: 6,
+      center: bounds.getCenter(),
       style: "mapbox://styles/mapbox/streets-v11",
     });
 
@@ -26,32 +56,6 @@ const Map = ({ data }: { data: Dataset[] }) => {
         if (error) throw error;
         map.addImage("custom-marker", image);
 
-        // Convert data to GeoJSON
-        const geojsonData = {
-          type: "FeatureCollection",
-          features: data.map((dataset) => ({
-            type: "Feature",
-            properties: {
-              id: dataset.uuid,
-              title: dataset.file_name,
-            },
-            geometry: {
-              type: "Point",
-              coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
-            },
-          })),
-        };
-        console.log(geojsonData);
-        // fit bounds to geojsonData
-        const bounds = geojsonData.features.reduce(
-          (bounds, feature) => {
-            return bounds.extend(feature.geometry.coordinates);
-          },
-          new mapboxgl.LngLatBounds(
-            geojsonData.features[0].geometry.coordinates,
-            geojsonData.features[0].geometry.coordinates,
-          ),
-        );
         map.fitBounds(bounds, {
           padding: 100,
         });
