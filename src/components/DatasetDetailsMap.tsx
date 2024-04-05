@@ -1,21 +1,48 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Dataset } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
+import { FeatureCollection } from "geojson";
+import { supabase } from "./useSupabase";
 
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
+  const [aoi, setAoi] = useState<FeatureCollection>([]); // Add state for labels
+  const [standingDeadwood, setStandingDeadwood] = useState<FeatureCollection>(
+    [],
+  ); // Add state for labels
+
+  const fetchLabes = async (file_name: { file_name: string }) => {
+    console.log("file_name", file_name);
+    const { data, error } = await supabase
+      .from("labels_dev_egu")
+      .select("*")
+      // .limit(1);
+      .eq("ortho_file_name", file_name);
+
+    if (error) {
+      console.error("Error fetching data:", error);
+    } else {
+      // setStandingDeadwood(data[0].standing_deadwood);
+      setAoi(data.aoi);
+      console.log("Data fetched:", data);
+    }
+  };
+  useEffect(() => {
+    if (data) {
+      fetchLabes({ file_name: data.file_name });
+    }
+  }, [data]);
 
   useEffect(() => {
     if (mapContainer.current && data) {
       // Ensure the container and data are available
+      console.log("aoi", aoi);
       console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
       console.log("bounds", bounds);
 
-      // const wmsSourceUrl =
-      //   "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=62fd732e-9209-4efb-826c-ae30486fdb09_uavforsat_KAB003_ortho.tif&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
       const wmsSource =
         "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=" +
         data.file_id +
@@ -25,10 +52,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11",
-        // bounds: bounds,
-        // center: [8.6982700000000008, 49.0131999999999977],
         center: bounds[0],
-
         zoom: 14,
       });
 

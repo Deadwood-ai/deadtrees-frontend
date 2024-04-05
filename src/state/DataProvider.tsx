@@ -27,10 +27,13 @@ const DataProvider = (props: DataProviderProps) => {
   const [filterTag, setFilterTag] = useState<string>("");
 
   const fetchData = async () => {
-    const { data, error } = await supabase.from("upload_files_dev").select("*");
+    const { data, error } = await supabase
+      .from("metadata_dev_egu_view")
+      .select("*");
     if (error) {
       console.error("Error fetching data:", error);
     } else {
+      console.log("Data fetched:", data);
       setRawData(data);
     }
   };

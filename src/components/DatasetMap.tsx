@@ -45,7 +45,7 @@ const Map = ({ data }: { data: Dataset[] }) => {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      zoom: 6,
+      // zoom: 4,
       center: bounds.getCenter(),
       style: "mapbox://styles/mapbox/streets-v11",
     });

@@ -1,14 +1,24 @@
 import { Avatar, List, Space, Typography, Button } from "antd";
 import { Dataset } from "../types/dataset";
 import { DownloadOutlined, HeartOutlined } from "@ant-design/icons";
+import { supabase } from "../components/useSupabase";
+
 import { useNavigate } from "react-router-dom";
 
 import { useData } from "../state/DataProvider";
+import { useEffect } from "react";
 
 export default function DataList({ data }: { data: Dataset }) {
   const { Text, Link } = Typography;
   const navigate = useNavigate();
   const { setFilter, setFilterTag } = useData();
+
+  const getThumbnailURL = (file_name: string) => {
+    const url = supabase.storage
+      .from("thumbnails")
+      .getPublicUrl(file_name.replace("tif", "png"));
+    return url.data.publicUrl;
+  };
 
   const onClickFilterHandler = (
     e: React.ChangeEvent,
@@ -35,43 +45,49 @@ export default function DataList({ data }: { data: Dataset }) {
             onClick={() => navigate(`/dataset/${item.uuid}`)}
           >
             <Avatar
+              shape="square"
               size={64}
-              src="https://avatars.githubusercontent.com/u/8186664?v=7"
+              src={getThumbnailURL(item.file_name)}
             />
             <div className="flex flex-1 flex-col justify-between pl-3">
-              <p className="m-0 font-semibold">
-                {item.file_name.replace(".tif", "")}
-              </p>
-              <div>
-                <Space size="small">
-                  <Button
-                    type="default"
-                    size="small"
-                    onClick={(e) =>
-                      onClickFilterHandler(e, item.content_type, "content_type")
-                    }
-                  >
-                    {item.content_type}
-                  </Button>
-                  <Button
-                    type="default"
-                    size="small"
-                    onClick={(e) =>
-                      onClickFilterHandler(e, item.license, "license")
-                    }
-                  >
-                    {item.license}
-                  </Button>
-                </Space>
+              <div className="flex items-baseline">
+                <p className="m-0 font-semibold">
+                  {item.gadm_NAME_3}
+                  {", "}
+                  {item.gadm_NAME_0}
+                </p>
+                {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
+              </div>
+              <div className="flex space-x-1">
+                <Button
+                  type="default"
+                  size="small"
+                  onClick={(e) =>
+                    onClickFilterHandler(e, item.authors_image, "authors_image")
+                  }
+                >
+                  {item.authors_image.slice(0, 16) +
+                    (item.authors_image.length > 16 ? "..." : "")}
+                </Button>
+                <Button
+                  className="max-content"
+                  type="default"
+                  size="small"
+                  onClick={(e) =>
+                    onClickFilterHandler(e, item.license, "license")
+                  }
+                >
+                  {item.license}
+                </Button>
               </div>
             </div>
-            <div className="flex pr-3">
+            {/* <div className="flex pr-3">
               <Button
                 type="default"
                 size="small"
                 icon={<HeartOutlined />}
               ></Button>
-            </div>
+            </div> */}
           </div>
         </List.Item>
       )}

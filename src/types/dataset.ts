@@ -1,3 +1,5 @@
+import { FeatureCollection } from "geojson";
+
 export interface Dataset {
   aquisition_date: string;
   bbox: string | null;
@@ -9,7 +11,6 @@ export interface Dataset {
   file_name: string;
   file_size: number;
   id: number;
-  // license: License;
   license: string;
   platform: Platform;
   processed_path: string;
@@ -21,7 +22,25 @@ export interface Dataset {
   user_id: string;
   uuid: string;
   wms_source: string | null;
+  // labels
+  // aoi: FeatureCollection | null;
+  // standing_deadwood: FeatureCollection | null;
+  project_id: string | null;
+  authors_image: string | null;
+  label_type: string | null;
+  label_source: string | null;
+  image_spectral_properties: string | null;
+  citation_doi: string | null;
+  label_quality: string | null;
+  has_labels: boolean | null;
+  public: boolean | null;
+  display_filename: string | null;
+  gadm_NAME_0: string | null;
+  gadm_NAME_1: string | null;
+  gadm_NAME_2: string | null;
+  gadm_NAME_3: string | null;
 }
+
 export enum License {
   "cc-by",
   "cc-by-sa",
