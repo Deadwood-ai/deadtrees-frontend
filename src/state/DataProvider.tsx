@@ -33,7 +33,7 @@ const DataProvider = (props: DataProviderProps) => {
     if (error) {
       console.error("Error fetching data:", error);
     } else {
-      console.log("Data fetched:", data);
+      console.log("metadata fetched :", data);
       setRawData(data);
     }
   };

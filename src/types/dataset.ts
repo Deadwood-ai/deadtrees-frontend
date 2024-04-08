@@ -41,6 +41,13 @@ export interface Dataset {
   gadm_NAME_3: string | null;
 }
 
+export interface Labels {
+  id: number;
+  aoi: FeatureCollection;
+  standing_deadwood: FeatureCollection;
+  ortho_file_name: string;
+}
+
 export enum License {
   "cc-by",
   "cc-by-sa",

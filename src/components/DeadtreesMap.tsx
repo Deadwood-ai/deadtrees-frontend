@@ -9,6 +9,7 @@ import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 import mapboxgl from "mapbox-gl";
 
 import { Radio, Slider } from "antd";
+import addDeadwoodWMSLayers from "./addDeadwoodWMStoMap";
 
 const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
@@ -16,71 +17,12 @@ const DeadtreesMap = () => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState<string>("satellite");
 
-  const baseURL =
-    "https://data.waldklick.de/geoserver/waldklick/wms?&service=WMS&request=GetMap&format=image/png&version=1.1.1&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&width=256&HEIGHT=256&transparent=true&authkey=eedde8df-05df-48c5-864e-c571ba188f64";
-  const wmsURL2021 = `${baseURL}&layers=waldklick:pred_BW_2021_3035`;
-  const wmsURL2020 = `${baseURL}&layers=waldklick:pred_BW_2020_3035`;
-  const wmsURL2019 = `${baseURL}&layers=waldklick:pred_BW_2019_3035`;
-  const wmsURL2018 = `${baseURL}&layers=waldklick:pred_BW_2018_3035`;
-
   const mapLayerList = [
     "deadtrees_2018_layer",
     "deadtrees_2019_layer",
     "deadtrees_2020_layer",
     "deadtrees_2021_layer",
   ];
-
-  const addWMSLayers = (map: mapboxgl.Map) => {
-    map.addSource("deadtrees_2018", {
-      type: "raster",
-      tiles: [wmsURL2018],
-      tileSize: 256,
-    });
-    map.addLayer({
-      id: "deadtrees_2018_layer",
-      type: "raster",
-      source: "deadtrees_2018",
-    });
-    map.addSource("deadtrees_2019", {
-      type: "raster",
-      tiles: [wmsURL2019],
-      tileSize: 256,
-    });
-    map.addLayer({
-      id: "deadtrees_2019_layer",
-      type: "raster",
-      source: "deadtrees_2019",
-      layout: {
-        visibility: "none",
-      },
-    });
-    map.addSource("deadtrees_2020", {
-      type: "raster",
-      tiles: [wmsURL2020],
-      tileSize: 256,
-    });
-    map.addLayer({
-      id: "deadtrees_2020_layer",
-      type: "raster",
-      source: "deadtrees_2020",
-      layout: {
-        visibility: "none",
-      },
-    });
-    map.addSource("deadtrees_2021", {
-      type: "raster",
-      tiles: [wmsURL2021],
-      tileSize: 256,
-    });
-    map.addLayer({
-      id: "deadtrees_2021_layer",
-      type: "raster",
-      source: "deadtrees_2021",
-      layout: {
-        visibility: "none",
-      },
-    });
-  };
 
   const wmsUrl = useEffect(() => {
     if (mapContainer.current) {
@@ -103,10 +45,10 @@ const DeadtreesMap = () => {
       );
 
       map.on("load", () => {
-        addWMSLayers(map);
+        addDeadwoodWMSLayers(map);
       });
       map.on("style.load", () => {
-        addWMSLayers(map);
+        addDeadwoodWMSLayers(map);
       });
       mapContainer.current.mapInstance = map;
     }
