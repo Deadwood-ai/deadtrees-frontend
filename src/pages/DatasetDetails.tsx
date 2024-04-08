@@ -44,11 +44,25 @@ export default function DatasetDetails() {
                   className="pr-2"
                 />
                 <Typography.Title style={{ margin: 0 }} level={5}>
-                  {dataset.file_name}
+                  {dataset.gadm_NAME_3}
                 </Typography.Title>
               </div>
 
-              <div className="flex p-1">
+              <div className="flex justify-between  p-1">
+                <Typography.Text className="pr-2">Author: </Typography.Text>
+                <Typography.Text strong>
+                  {dataset.authors_image}
+                </Typography.Text>
+              </div>
+              {dataset.citation_doi && (
+                <div className="flex justify-between p-1">
+                  <Typography.Text className="pr-2">DOI: </Typography.Text>
+                  <Typography.Text strong>
+                    {dataset.citation_doi}
+                  </Typography.Text>
+                </div>
+              )}
+              <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">
                   Acquisition Date:{" "}
                 </Typography.Text>
@@ -60,13 +74,20 @@ export default function DatasetDetails() {
                   })}
                 </Typography.Text>
               </div>
-              <div className="flex p-1">
-                <Typography.Text className="pr-2">
-                  Content Type:{" "}
+              <div className="flex justify-between p-1">
+                <Typography.Text className="pr-2">Has Labels: </Typography.Text>
+                <Typography.Text strong>
+                  {dataset.has_labels ? "true" : "false"}
                 </Typography.Text>
-                <Typography.Text strong>{dataset.content_type}</Typography.Text>
               </div>
+              {/* <div className="flex justify-between p-1">
+                <Typography.Text className="pr-2">Public: </Typography.Text>
+                <Typography.Text strong>
+                  {dataset.public ? "true" : "false"}
+                </Typography.Text>
+              </div> */}
             </div>
+
             <div className="mt-4 rounded-md bg-white p-4">
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
@@ -82,9 +103,45 @@ export default function DatasetDetails() {
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Status: </Typography.Text>
+                  <Typography.Text className="pr-2">
+                    File Size:{" "}
+                  </Typography.Text>
                 </Typography.Text>
-                <Tag color="blue">{dataset.status}</Tag>
+                {(dataset.file_size / 1000000).toFixed(0)} MB
+              </div>
+              <div className="flex justify-between p-2">
+                <Typography.Text style={{ margin: 0 }}>
+                  <Typography.Text className="pr-2">
+                    Spectral Properties :{" "}
+                  </Typography.Text>
+                </Typography.Text>
+                <Tag color="blue"> {dataset.image_spectral_properties}</Tag>
+              </div>
+            </div>
+            <div className="mt-4 rounded-md bg-white p-4">
+              <div className="flex justify-between p-2">
+                <Typography.Text style={{ margin: 0 }}>
+                  <Typography.Text className="pr-2">
+                    Label Source:{" "}
+                  </Typography.Text>
+                </Typography.Text>
+                <Tag color="blue">{dataset.label_source}</Tag>
+              </div>
+              <div className="flex justify-between p-2">
+                <Typography.Text style={{ margin: 0 }}>
+                  <Typography.Text className="pr-2">
+                    Label Type:{" "}
+                  </Typography.Text>
+                </Typography.Text>
+                <Tag color="blue">{dataset.label_type}</Tag>
+              </div>
+              <div className="flex justify-between p-2">
+                <Typography.Text style={{ margin: 0 }}>
+                  <Typography.Text className="pr-2">
+                    Label Quality:{" "}
+                  </Typography.Text>
+                </Typography.Text>
+                <Tag color="blue">{dataset.label_quality}</Tag>
               </div>
             </div>
           </div>
