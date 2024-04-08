@@ -25,7 +25,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
       console.error("Error fetching data:", error);
     } else {
       // setStandingDeadwood(data[0].standing_deadwood);
-      setAoi(data.aoi);
+      // setAoi(data.aoi);
       console.log("Data fetched:", data);
     }
   };
@@ -39,16 +39,26 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
     if (mapContainer.current && data) {
       // Ensure the container and data are available
       console.log("aoi", aoi);
-      console.log("data", data);
+      // console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
-      console.log("bounds", bounds);
+      const params = {
+        LAYERS: data.file_id,
+        REQUEST: "GetMap",
+        SERVICE: "WMS",
+        VERSION: "1.1.1",
+        WIDTH: 256,
+        HEIGHT: 256,
+        SRS: "EPSG:3857",
+        FORMAT: "image/png",
+      };
 
-      const wmsSource =
-        "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=" +
-        data.file_id +
-        "&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
-      console.log("wms", wmsSource);
-      console.log("file_id", data.file_id);
+      const baseURL = "https://data.deadtrees.earth/mapserver/"; // Base URL
+      const sourceURL = `${baseURL}?${new URLSearchParams(params)}`; // Construct the source URL
+      const wmsSourceUrl = `${sourceURL}&BBOX={bbox-epsg-3857}`; // Adding the bounding box manually
+      // const wmsSource =
+      // "https://data.deadtrees.earth/mapserver/?SERVICE=WMS&VERSION=1.1.1&LAYERS=" +
+      // data.file_id +
+      // "&REQUEST=GetMap&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&FORMAT=image/png&width=256&HEIGHT=256";
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11",
@@ -61,18 +71,17 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
           padding: { top: 50, bottom: 50, left: 50, right: 50 },
         });
 
-        map.addSource("wms-test-source", {
+        map.addSource("wms-orthos-source", {
           type: "raster",
-          tiles: [wmsSource],
-          // tiles: [wmsSourceUrl],
+          tiles: [wmsSourceUrl],
           tileSize: 256,
         });
 
         map.addLayer(
           {
-            id: "wms-test-layer",
+            id: "wms-orthos-layer",
             type: "raster",
-            source: "wms-test-source",
+            source: "wms-orthos-source",
             paint: {},
           },
           "building",
