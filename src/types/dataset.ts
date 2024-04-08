@@ -12,7 +12,8 @@ export interface Dataset {
   file_size: number;
   id: number;
   license: string;
-  platform: Platform;
+  // platform: Platform;
+  platform: string;
   processed_path: string;
   raw_path: string;
   sha256: string;

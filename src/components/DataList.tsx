@@ -59,16 +59,23 @@ export default function DataList({ data }: { data: Dataset }) {
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
               </div>
               <div className="flex space-x-1">
-                <Button
-                  type="default"
-                  size="small"
-                  onClick={(e) =>
-                    onClickFilterHandler(e, item.authors_image, "authors_image")
-                  }
-                >
-                  {item.authors_image.slice(0, 16) +
-                    (item.authors_image.length > 16 ? "..." : "")}
-                </Button>
+                <div className="flex-1">
+                  <Button
+                    type="default"
+                    size="small"
+                    onClick={(e) =>
+                      onClickFilterHandler(
+                        e,
+                        item.authors_image,
+                        "authors_image",
+                      )
+                    }
+                  >
+                    {item.authors_image.slice(0, 16) +
+                      (item.authors_image.length > 16 ? "..." : "")}
+                  </Button>
+                </div>
+
                 <Button
                   className="max-content"
                   type="default"
@@ -78,6 +85,16 @@ export default function DataList({ data }: { data: Dataset }) {
                   }
                 >
                   {item.license}
+                </Button>
+                <Button
+                  className="max-content"
+                  type="default"
+                  size="small"
+                  onClick={(e) =>
+                    onClickFilterHandler(e, item.platform, "platform")
+                  }
+                >
+                  {item.platform}
                 </Button>
               </div>
             </div>

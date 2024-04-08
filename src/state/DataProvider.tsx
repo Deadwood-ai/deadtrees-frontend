@@ -93,11 +93,14 @@ const DataProvider = (props: DataProviderProps) => {
     if (filter) {
       console.log("filtering");
       const filteredData = rawData.filter((item) => {
-        if (filterTag === "content_type") {
-          return item.content_type === filter;
+        if (filterTag === "platform") {
+          return item.platform === filter;
         } else if (filterTag === "license") {
           return item.license === filter;
+        } else if (filterTag === "authors_image") {
+          return item.authors_image === filter;
         }
+
         return false;
       });
 
