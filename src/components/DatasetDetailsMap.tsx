@@ -6,7 +6,7 @@ import parseBBox from "../utils/parseBBox"; // Make sure this utility function i
 import { FeatureCollection } from "geojson";
 import { supabase } from "./useSupabase";
 import { Radio, Slider } from "antd";
-import addDeadwoodWMSLayers from "./addDeadwoodWMStoMap";
+import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -118,9 +118,16 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
           },
         });
       });
+
       mapContainer.current.mapInstance = map;
+      return () => {
+        // Cleanup function
+        if (map) {
+          map.remove(); // This removes the map instance and all associated resources
+        }
+      };
     }
-  }, [data, labels]); // Depend on `data` to re-initialize the map when it changes
+  }, [data, labels]); // Dnd on `data` to re-initialize the map when it changes
 
   useEffect(() => {
     console.log(selectedYear, "running effect");

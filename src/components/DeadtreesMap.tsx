@@ -9,7 +9,7 @@ import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 import mapboxgl from "mapbox-gl";
 
 import { Radio, Slider } from "antd";
-import addDeadwoodWMSLayers from "./addDeadwoodWMStoMap";
+import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
 const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
@@ -51,6 +51,12 @@ const DeadtreesMap = () => {
         addDeadwoodWMSLayers(map);
       });
       mapContainer.current.mapInstance = map;
+      return () => {
+        // Cleanup function
+        if (map) {
+          map.remove(); // This removes the map instance and all associated resources
+        }
+      };
     }
   }, []);
 

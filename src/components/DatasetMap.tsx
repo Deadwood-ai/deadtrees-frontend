@@ -110,6 +110,12 @@ const Map = ({ data }: { data: Dataset[] }) => {
         });
       });
     });
+    return () => {
+      // Cleanup function
+      if (map) {
+        map.remove(); // This removes the map instance and all associated resources
+      }
+    };
   }, [data, navigate]);
 
   return (
