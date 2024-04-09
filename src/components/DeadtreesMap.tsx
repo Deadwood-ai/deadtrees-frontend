@@ -16,12 +16,12 @@ const DeadtreesMap = () => {
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState<string>("satellite");
-  const [selectedSite, setSelectedSite] = useState<string>("Waldshut-Tiengen");
+  const [selectedSite, setSelectedSite] = useState<string>("Harz");
 
   const sites = {
     Waldshut: [8.174864507120049, 47.682517904265666],
-    Harz: [10.586222794914192, 51.78503339487423],
-    Bayern: [13.505996403672327, 48.95531032591546],
+    Harz: [10.668224826784524, 51.78688853393797],
+    Bayern: [13.330993298074588, 49.03963187270776],
   };
 
   const mapLayerList = [
@@ -36,7 +36,7 @@ const DeadtreesMap = () => {
       const map = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/satellite-v9",
-        center: [8.7982700000000008, 48.5131999999999977],
+        center: sites[selectedSite],
         zoom: 7,
       });
 
@@ -139,11 +139,12 @@ const DeadtreesMap = () => {
         <div className="absolute bottom-2 left-2 z-20">
           <Radio.Group
             value={selectedSite}
+            defaultValue={"Harz"}
             onChange={(e) => setSelectedSite(e.target.value)}
           >
-            <Radio.Button value="Waldshut">Waldshut-Tiengen</Radio.Button>
-            <Radio.Button value="Harz">Nationalpark Harz</Radio.Button>
-            <Radio.Button value="Bayern">Bayerischer Wald</Radio.Button>
+            <Radio.Button value="Harz">Harz National Park</Radio.Button>
+            <Radio.Button value="Waldshut">Waldshut</Radio.Button>
+            <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
           </Radio.Group>
         </div>
         <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
