@@ -16,6 +16,13 @@ const DeadtreesMap = () => {
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState<string>("satellite");
+  const [selectedSite, setSelectedSite] = useState<string>("Waldshut-Tiengen");
+
+  const sites = {
+    Waldshut: [8.174864507120049, 47.682517904265666],
+    Harz: [10.586222794914192, 51.78503339487423],
+    Bayern: [13.505996403672327, 48.95531032591546],
+  };
 
   const mapLayerList = [
     "deadtrees_2018_layer",
@@ -43,6 +50,9 @@ const DeadtreesMap = () => {
           },
         }),
       );
+      map.on("click", (e) => {
+        console.log(e.lngLat);
+      });
 
       map.on("load", () => {
         addDeadwoodWMSLayers(map);
@@ -77,7 +87,21 @@ const DeadtreesMap = () => {
   useEffect(() => {
     const mapInstance = mapContainer.current?.mapInstance;
     if (mapInstance) {
-      mapInstance.setStyle(`mapbox://styles/mapbox/${mapStyle}-v9`);
+      mapInstance.flyTo({
+        center: sites[selectedSite],
+        zoom: 14,
+      });
+    }
+  }, [selectedSite]);
+
+  useEffect(() => {
+    const mapInstance = mapContainer.current?.mapInstance;
+    if (mapInstance) {
+      if (mapStyle === "satellite") {
+        mapInstance.setStyle("mapbox://styles/mapbox/satellite-streets-v12");
+      } else {
+        mapInstance.setStyle("mapbox://styles/mapbox/streets-v12");
+      }
     }
   }, [mapStyle]);
 
@@ -110,6 +134,16 @@ const DeadtreesMap = () => {
           >
             <Radio.Button value="satellite">Satellite</Radio.Button>
             <Radio.Button value="streets">Streets</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div className="absolute bottom-2 left-2 z-20">
+          <Radio.Group
+            value={selectedSite}
+            onChange={(e) => setSelectedSite(e.target.value)}
+          >
+            <Radio.Button value="Waldshut">Waldshut-Tiengen</Radio.Button>
+            <Radio.Button value="Harz">Nationalpark Harz</Radio.Button>
+            <Radio.Button value="Bayern">Bayerischer Wald</Radio.Button>
           </Radio.Group>
         </div>
         <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
