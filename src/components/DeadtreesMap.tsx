@@ -150,9 +150,9 @@ const DeadtreesMap = () => {
         <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
           <p className="m-0 py-2 text-lg text-gray-800">
             {" "}
-            Dead Trees for the year {selectedYear}
+            Deadwood prediction for {selectedYear}
           </p>
-          <p className="text-md m-0 text-gray-600">Layer Opacity</p>
+          <p className="text-md m-0 text-gray-600">Prediction opacity</p>
           <Slider
             defaultValue={1}
             step={0.01}

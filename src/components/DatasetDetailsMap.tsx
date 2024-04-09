@@ -10,8 +10,9 @@ import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const [labels, setLabels] = useState<Labels | null>([]); // Add state for labels
+  const [labels, setLabels] = useState<Labels | null>(null); // Add state for labels
   const [sliderValue, setSliderValue] = useState<number>(1);
+  const [sliderValueLabels, setSliderValueLabels] = useState<number>(0.6);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
 
   const mapLayerList = [
@@ -42,9 +43,8 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   }, [data]);
 
   useEffect(() => {
-    if (mapContainer.current && data) {
+    if (mapContainer.current && labels) {
       // Ensure the container and data are available
-      console.log("labels", labels);
       // console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
       const params = {
@@ -121,10 +121,8 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
 
       mapContainer.current.mapInstance = map;
       return () => {
-        // Cleanup function
-        if (map) {
-          map.remove(); // This removes the map instance and all associated resources
-        }
+        console.log("cleaning up");
+        map.remove(); // This properly cleans up the map instance
       };
     }
   }, [data, labels]); // Dnd on `data` to re-initialize the map when it changes
@@ -143,16 +141,57 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
     });
   }, [selectedYear, mapLayerList]);
 
+  useEffect(() => {
+    const selectedLayer = `deadtrees_${selectedYear}_layer`;
+    const mapInstance = mapContainer.current?.mapInstance;
+    if (mapInstance && mapInstance.getLayer(selectedLayer)) {
+      mapInstance.setPaintProperty(
+        selectedLayer,
+        "raster-opacity",
+        sliderValue,
+      );
+    }
+  }, [sliderValue, selectedYear, mapLayerList]);
+
+  useEffect(() => {
+    const mapInstance = mapContainer.current?.mapInstance;
+    if (mapInstance && mapInstance.getLayer("standing_deadwood")) {
+      mapInstance.setPaintProperty(
+        "standing_deadwood",
+        "fill-opacity",
+        sliderValueLabels,
+      );
+    }
+  }, [sliderValueLabels]);
+
   return (
     <div
       style={{ width: "100%", height: "100%", borderRadius: 8 }} // Ensure the div has a specified height
       ref={mapContainer}
     >
       <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
-        <p className="m-0 py-2 text-lg text-gray-800">
+        <p className="m-0 py-2 text-base text-gray-800">
           {" "}
-          Dead Trees for the year {selectedYear}
+          Deadwood prediction for {selectedYear}
         </p>
+        <p className="text-md m-0 text-gray-600">Label opacity</p>
+        <Slider
+          defaultValue={0.6}
+          step={0.01}
+          max={1}
+          value={sliderValueLabels}
+          onChange={(value) => setSliderValueLabels(value as number)}
+          min={0}
+        />
+        <p className="text-md m-0 text-gray-600">Prediction Opacity</p>
+        <Slider
+          defaultValue={1}
+          step={0.01}
+          max={1}
+          value={sliderValue}
+          onChange={(value) => setSliderValue(value as number)}
+          min={0}
+        />
         <p className="text-md m-0 pb-2 text-gray-600">Year</p>
 
         <Radio.Group
