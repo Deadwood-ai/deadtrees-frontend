@@ -37,6 +37,11 @@ const DataProvider = (props: DataProviderProps) => {
       setRawData(data);
     }
   };
+  useEffect(() => {
+    if (rawData) return;
+    fetchData();
+  }, [rawData]);
+
   const callWebhook = async (payload: any) => {
     const webhookURL =
       "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
@@ -53,10 +58,6 @@ const DataProvider = (props: DataProviderProps) => {
       }),
     });
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -78,6 +79,7 @@ const DataProvider = (props: DataProviderProps) => {
             const webhookResponse = callWebhook(payload);
             console.log("webhook res", webhookResponse);
           }
+          console.log("fetching data via webhook");
           fetchData();
         },
       )
@@ -86,7 +88,7 @@ const DataProvider = (props: DataProviderProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     if (!rawData) return; // Early exit if data is null

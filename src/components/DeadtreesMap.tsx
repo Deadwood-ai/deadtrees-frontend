@@ -71,7 +71,7 @@ const DeadtreesMap = () => {
   }, []);
 
   useEffect(() => {
-    console.log(selectedYear, "running effect");
+    // console.log(selectedYear, "running effect");
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {

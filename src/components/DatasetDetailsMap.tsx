@@ -37,10 +37,10 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
     }
   };
   useEffect(() => {
-    if (data?.file_name) {
+    if (data?.file_name && !labels) {
       fetchLabels(data.file_name);
     }
-  }, [data]);
+  }, [data, labels]);
 
   useEffect(() => {
     if (mapContainer.current && labels) {
@@ -129,6 +129,9 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
 
   useEffect(() => {
     console.log(selectedYear, "running effect");
+    console.log(data, "data");
+    console.log(labels, "labels");
+    console.log(mapLayerList, "mapLayerList");
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {
