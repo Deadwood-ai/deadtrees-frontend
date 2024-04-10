@@ -152,7 +152,7 @@ const DeadtreesMap = () => {
             {" "}
             Deadwood for {selectedYear}
           </p>
-          <div className="mb-4 flex w-full items-end ">
+          <div className="mb-6 flex w-full items-end ">
             <p className="m-0 w-full text-xs text-gray-600">
               Satellite-based prediction
             </p>
