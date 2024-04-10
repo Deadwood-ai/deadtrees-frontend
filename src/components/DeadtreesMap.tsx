@@ -147,32 +147,42 @@ const DeadtreesMap = () => {
             <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
           </Radio.Group>
         </div>
-        <div className="absolute bottom-8 right-2 z-20 flex max-w-72 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
+        <div className="absolute bottom-8 right-2 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
           <p className="m-0 py-2 text-lg text-gray-800">
             {" "}
-            Deadwood prediction for {selectedYear}
+            Deadwood for {selectedYear}
           </p>
-          <p className="text-md m-0 text-gray-600">Prediction opacity</p>
-          <Slider
-            defaultValue={1}
-            step={0.01}
-            max={1}
-            value={sliderValue}
-            onChange={(value) => setSliderValue(value as number)}
-            min={0}
-          />
-          <p className="text-md m-0 pb-2 text-gray-600">Year</p>
+          <div className="mb-4 flex w-full items-end ">
+            <p className="m-0 w-full text-xs text-gray-600">
+              Satellite-based prediction
+            </p>
+            <div className="w-2/3">
+              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+              <Slider
+                className="m-0 w-full"
+                defaultValue={1}
+                step={0.01}
+                max={1}
+                value={sliderValue}
+                onChange={(value) => setSliderValue(value as number)}
+                min={0}
+              />
+            </div>
+          </div>
 
-          <Radio.Group
-            className="pb-2"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-          >
-            <Radio.Button value="2018">2018</Radio.Button>
-            <Radio.Button value="2019">2019</Radio.Button>
-            <Radio.Button value="2020">2020</Radio.Button>
-            <Radio.Button value="2021">2021</Radio.Button>
-          </Radio.Group>
+          <div className="flex items-center justify-between">
+            <p className="text-md m-0 pb-2 text-gray-600">Year</p>
+            <Radio.Group
+              className="pb-2"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              <Radio.Button value="2018">2018</Radio.Button>
+              <Radio.Button value="2019">2019</Radio.Button>
+              <Radio.Button value="2020">2020</Radio.Button>
+              <Radio.Button value="2021">2021</Radio.Button>
+            </Radio.Group>
+          </div>
         </div>
       </div>
     </div>
