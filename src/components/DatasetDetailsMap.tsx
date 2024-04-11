@@ -5,7 +5,7 @@ import { Dataset, Labels } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 import { FeatureCollection } from "geojson";
 import { supabase } from "./useSupabase";
-import { Radio, Slider } from "antd";
+import { Radio, Slider, notification } from "antd";
 import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
@@ -58,6 +58,14 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
         FORMAT: "image/png",
         transparent: true,
       };
+      notification.info({
+        message: "Loading data can be slow",
+        description:
+          "The Applikation is not optimized yet. We are working on it.",
+
+        // placement: "bottomLeft",
+        // duration: 10,
+      });
 
       const baseURL = "https://data.deadtrees.earth/mapserver/"; // Base URL
       const sourceURL = `${baseURL}?${new URLSearchParams(params)}`; // Construct the source URL
