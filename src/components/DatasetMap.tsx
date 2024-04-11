@@ -20,24 +20,26 @@ const Map = ({ data }: { data: Dataset[] }) => {
 
     const geojsonData = {
       type: "FeatureCollection",
-      features: data.map((dataset) => ({
-        type: "Feature",
-        properties: {
-          id: dataset.uuid,
-          // if has wms_source set dataset.file_name as title else set "coming soon" as title
-          title: dataset.wms_source ? dataset.file_name : "Coming Soon",
-          // title: dataset.file_name,
-          has_wms_source: dataset.wms_source !== null,
-        },
-        geometry: {
-          type: "Point",
-          // coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
-          coordinates: [
-            JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
-            JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
-          ],
-        },
-      })),
+      features: data
+        .sort((a, b) => (a.uuid ? 1 : -1))
+        .map((dataset) => ({
+          type: "Feature",
+          properties: {
+            id: dataset.uuid,
+            // if has wms_source set dataset.file_name as title else set "coming soon" as title
+            title: dataset.wms_source ? dataset.file_name : "Coming Soon",
+            // title: dataset.file_name,
+            has_wms_source: dataset.wms_source !== null,
+          },
+          geometry: {
+            type: "Point",
+            // coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
+            coordinates: [
+              JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
+              JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
+            ],
+          },
+        })),
     };
     // Convert data to GeoJSON
     console.log(geojsonData);
@@ -80,8 +82,19 @@ const Map = ({ data }: { data: Dataset[] }) => {
           type: "circle",
           source: "datasets",
           paint: {
-            "circle-opacity": 0.75,
-            "circle-radius": 8,
+            "circle-opacity": 0.8,
+            //  make smaller radius with higher zoom
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              0,
+              4,
+              22,
+              20,
+            ],
+
+            // "circle-radius": 8,
             // if has_wms_source is true make circle blue else make it red
             "circle-color": [
               "case",
