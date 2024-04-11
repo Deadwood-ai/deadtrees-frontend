@@ -1,6 +1,10 @@
-import { Avatar, List, Space, Typography, Button } from "antd";
+import { Avatar, List, Space, Typography, Button, notification } from "antd";
 import { Dataset } from "../types/dataset";
-import { DownloadOutlined, HeartOutlined } from "@ant-design/icons";
+import {
+  DownloadOutlined,
+  HeartOutlined,
+  InfoCircleFilled,
+} from "@ant-design/icons";
 import { supabase } from "../components/useSupabase";
 
 import { useNavigate } from "react-router-dom";
@@ -12,6 +16,18 @@ export default function DataList({ data }: { data: Dataset }) {
   const { Text, Link } = Typography;
   const navigate = useNavigate();
   const { setFilter, setFilterTag } = useData();
+
+  const onClickHandler = (item: Dataset) => {
+    console.log("clicked item", item);
+    if (item.uuid && item.file_size < 1000000000) {
+      navigate(`/dataset/${item.uuid}`);
+    } else {
+      notification.info({
+        message: "Coming Soon",
+        description: "This dataset is not yet available",
+      });
+    }
+  };
 
   const getThumbnailURL = (file_name: string) => {
     const url = supabase.storage
@@ -36,13 +52,13 @@ export default function DataList({ data }: { data: Dataset }) {
       // make list scrollable
       style={{ overflow: "auto", height: "100%" }}
       itemLayout="vertical"
-      dataSource={data}
+      dataSource={data.sort((a, b) => (a.uuid ? -1 : 1))}
       renderItem={(item, index) => (
         <List.Item key={index}>
           <div
             key={index}
             className="flex rounded-md bg-white p-3 transition duration-150 ease-in-out hover:bg-gray-200"
-            onClick={() => navigate(`/dataset/${item.uuid}`)}
+            onClick={() => onClickHandler(item)}
           >
             <Avatar
               shape="square"
@@ -51,12 +67,14 @@ export default function DataList({ data }: { data: Dataset }) {
             />
             <div className="flex flex-1 flex-col justify-between pl-3">
               <div className="flex items-baseline">
-                <p className="m-0 font-semibold">
+                <p className="m-0 flex-1 font-semibold">
                   {item.gadm_NAME_3}
                   {", "}
                   {item.gadm_NAME_0}
                 </p>
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
+                {item.wms_source === null ||
+                  (item.file_size > 1000000000 && <InfoCircleFilled />)}
               </div>
               <div className="flex space-x-1">
                 <div className="flex-1">

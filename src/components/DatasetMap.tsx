@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { Dataset } from "../types/dataset";
 import { useNavigate } from "react-router-dom";
 import parseBBox from "../utils/parseBBox";
+import { notification } from "antd";
 
 // Your Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEND!;
@@ -14,7 +15,8 @@ const Map = ({ data }: { data: Dataset[] }) => {
 
   useEffect(() => {
     if (!mapContainer.current || !data.length) return;
-    // console.log(data);
+
+    // const centroid = JSON.parse(data[0].centroid.replace(/'/g, '"'));
 
     const geojsonData = {
       type: "FeatureCollection",
@@ -22,11 +24,18 @@ const Map = ({ data }: { data: Dataset[] }) => {
         type: "Feature",
         properties: {
           id: dataset.uuid,
-          title: dataset.file_name,
+          // if has wms_source set dataset.file_name as title else set "coming soon" as title
+          title: dataset.wms_source ? dataset.file_name : "Coming Soon",
+          // title: dataset.file_name,
+          has_wms_source: dataset.wms_source !== null,
         },
         geometry: {
           type: "Point",
-          coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
+          // coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
+          coordinates: [
+            JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
+            JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
+          ],
         },
       })),
     };
@@ -68,12 +77,28 @@ const Map = ({ data }: { data: Dataset[] }) => {
         // Add markers as a layer
         map.addLayer({
           id: "markers",
-          type: "symbol",
+          type: "circle",
           source: "datasets",
-          layout: {
-            "icon-image": "custom-marker",
+          paint: {
+            "circle-opacity": 0.75,
+            "circle-radius": 8,
+            // if has_wms_source is true make circle blue else make it red
+            "circle-color": [
+              "case",
+              ["==", ["get", "has_wms_source"], true],
+              "#007cbf",
+              "#ff0000",
+            ],
+            // if wms_source is not null show custom marker else show default marke
+            // "icon-image": [
+            //   "case",
+            //   ["=", "has_wms_source"],
+            //   "custom-marker",
+            //   "default-marker",
+            // ],
+            // "icon-image": "custom-marker",
             // allow overlapping icons
-            "icon-allow-overlap": true,
+            // "icon-allow-overlap": true,
           },
         });
 
@@ -104,9 +129,17 @@ const Map = ({ data }: { data: Dataset[] }) => {
 
         // Navigate on click
         map.on("click", "markers", (e) => {
-          const datasetId = e.features[0].properties.id;
-          console.log(e.features);
-          navigate(`/dataset/${datasetId}`);
+          const feature = e.features[0];
+          const datasetId = feature.properties.id;
+          console.log("clicked feature", feature);
+          if (feature.properties.id) {
+            navigate(`/dataset/${datasetId}`);
+          } else {
+            notification.info({
+              message: "Coming Soon",
+              description: "This dataset is not yet available",
+            });
+          }
         });
       });
     });
