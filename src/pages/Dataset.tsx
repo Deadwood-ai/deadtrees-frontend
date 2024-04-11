@@ -21,30 +21,47 @@ export default function Dataset() {
   return (
     <div className="flex h-full ">
       <div className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
-        {filter && (
-          <h4>
-            Filtered by:{" "}
-            {
-              <Tag className="m-0 ml-1" color="blue">
-                <span className="text-sm font-medium">{filter}</span>
-                <Button
-                  className=" ml-2 border-none bg-transparent"
-                  size="small"
-                  shape="circle"
-                  onClick={() => setFilter("")}
-                  icon={<CloseOutlined />}
-                />
+        {filter ? (
+          <div className="flex justify-between pb-2">
+            <div className="flex items-center">
+              <h4 className="m-0">Filtered by: </h4>
+              {
+                <Tag className="m-0 ml-1" color="blue">
+                  <span className="text-sm font-medium">
+                    {filter.slice(0, 10) + (filter.length > 10 ? "..." : "")}
+                  </span>
+                  <Button
+                    className=" ml-2 border-none bg-transparent"
+                    size="small"
+                    shape="circle"
+                    onClick={() => setFilter("")}
+                    icon={<CloseOutlined />}
+                  />
+                </Tag>
+              }
+            </div>
+            <div className="flex items-center">
+              <h4 className="m-0 pr-2">Images: </h4>
+              <Tag>
+                <span>{data?.length}</span>
               </Tag>
-            }
-          </h4>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end pb-2">
+            <h4 className="m-0 pr-2">Images: </h4>
+            <Tag>
+              <span>{data?.length}</span>
+            </Tag>
+          </div>
         )}
 
-        <div className="flex pb-4">
+        {/* <div className="flex pb-4">
           <Input.Search placeholder="Search" />
           <div className="pl-4">
             <Button icon={<ArrowDownOutlined />} type="primary"></Button>
           </div>
-        </div>
+        </div> */}
         {data ? (
           <DataList data={processedData} setUuidHovered={setUuidHovered} />
         ) : (
