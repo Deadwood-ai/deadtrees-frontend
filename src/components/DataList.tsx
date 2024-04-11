@@ -72,8 +72,9 @@ export default function DataList({ data }: { data: Dataset }) {
                   {item.gadm_NAME_0}
                 </p>
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
-                {item.wms_source === null ||
-                  (item.file_size > 1000000000 && <InfoCircleFilled />)}
+                {(item.wms_source === null || item.file_size > 1000000000) && (
+                  <InfoCircleFilled />
+                )}
               </div>
               <div className="flex space-x-1">
                 <div className="flex-1">
