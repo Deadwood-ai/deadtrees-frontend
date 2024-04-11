@@ -42,6 +42,17 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
     }
   }, [data, labels]);
 
+  // useEffect(() => {
+  //   notification.info({
+  //     message: "Loading data can be slow and could fail",
+  //     description:
+  //       "The Applikation is not optimized yet. We are working on it.",
+
+  //     // placement: "bottomLeft",
+  //     // duration: 10,
+  //   });
+  // }, []);
+
   useEffect(() => {
     if (mapContainer.current && labels) {
       // Ensure the container and data are available
@@ -58,14 +69,6 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
         FORMAT: "image/png",
         transparent: true,
       };
-      notification.info({
-        message: "Loading data can be slow and could fail",
-        description:
-          "The Applikation is not optimized yet. We are working on it.",
-
-        // placement: "bottomLeft",
-        // duration: 10,
-      });
 
       const baseURL = "https://data.deadtrees.earth/mapserver/"; // Base URL
       const sourceURL = `${baseURL}?${new URLSearchParams(params)}`; // Construct the source URL
