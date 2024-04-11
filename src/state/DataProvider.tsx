@@ -28,7 +28,7 @@ const DataProvider = (props: DataProviderProps) => {
 
   const fetchData = async () => {
     const { data, error } = await supabase
-      .from("metadata_dev_egu_view")
+      .from("metadata_dev_egu_view_v2")
       .select("*");
     if (error) {
       console.error("Error fetching data:", error);
