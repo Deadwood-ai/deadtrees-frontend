@@ -169,7 +169,20 @@ const Map = ({ data }: { data: Dataset[] }) => {
       // className="h-full w-full"
       ref={mapContainer}
       style={{ width: "100%", height: "100%", borderRadius: 8 }}
-    />
+    >
+      {data.length > 0 && (
+        <div className="absolute left-4 top-4 z-50">
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 rounded-full bg-blue-500"></div>
+            <span className="ml-0">Available</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 rounded-full bg-red-600"></div>
+            <span className="ml-0">Coming Soon </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
