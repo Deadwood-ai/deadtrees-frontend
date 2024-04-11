@@ -4,6 +4,7 @@ import {
   DownloadOutlined,
   HeartOutlined,
   InfoCircleFilled,
+  InfoCircleTwoTone,
 } from "@ant-design/icons";
 import { supabase } from "../components/useSupabase";
 
@@ -73,7 +74,7 @@ export default function DataList({ data }: { data: Dataset }) {
                 </p>
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
                 {(item.wms_source === null || item.file_size > 1000000000) && (
-                  <InfoCircleFilled />
+                  <InfoCircleTwoTone />
                 )}
               </div>
               <div className="flex space-x-1">
