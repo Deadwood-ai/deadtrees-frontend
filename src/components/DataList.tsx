@@ -68,8 +68,7 @@ export default function DataList({ data }: { data: Dataset }) {
             <div className="flex flex-1 flex-col justify-between pl-3">
               <div className="flex items-baseline">
                 <p className="m-0 flex-1 font-semibold">
-                  {item.gadm_NAME_3}
-                  {", "}
+                  {item.gadm_NAME_3 && `${item.gadm_NAME_3},`}
                   {item.gadm_NAME_0}
                 </p>
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
