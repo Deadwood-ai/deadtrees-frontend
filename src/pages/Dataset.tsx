@@ -13,7 +13,9 @@ import {
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
   // filter for elements of data with status "processed"
-  const processedData = data?.filter((d) => d.status === "processed");
+  const processedData = data?.filter(
+    (d) => d.status === "processed" || d.status === null,
+  );
   const [uuidHovered, setUuidHovered] = useState<string | null>(null);
 
   return (
