@@ -59,7 +59,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
         transparent: true,
       };
       notification.info({
-        message: "Loading data can be slow",
+        message: "Loading data can be slow and could fail",
         description:
           "The Applikation is not optimized yet. We are working on it.",
 
