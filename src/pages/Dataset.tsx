@@ -3,12 +3,7 @@ import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
 import Map from "../components/DatasetMap";
 import { useState } from "react";
-import {
-  ArrowDownOutlined,
-  ClockCircleOutlined,
-  CloseCircleFilled,
-  CloseOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined } from "@ant-design/icons";
 
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
@@ -62,9 +57,10 @@ export default function Dataset() {
             <Button icon={<ArrowDownOutlined />} type="primary"></Button>
           </div>
         </div> */}
-        {data ? (
-          <DataList data={processedData} setUuidHovered={setUuidHovered} />
+        {processedData ? (
+          <DataList data={processedData} />
         ) : (
+          // <div>test</div>
           <div>Loading...</div>
         )}
       </div>

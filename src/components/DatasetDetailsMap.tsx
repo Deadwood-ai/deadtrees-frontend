@@ -5,7 +5,7 @@ import { Dataset, Labels } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 import { FeatureCollection } from "geojson";
 import { supabase } from "./useSupabase";
-import { Radio, Slider, notification } from "antd";
+import { Alert, Radio, Slider, notification } from "antd";
 import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
 const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
@@ -183,6 +183,15 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
       style={{ width: "100%", height: "100%", borderRadius: 8 }} // Ensure the div has a specified height
       ref={mapContainer}
     >
+      <Alert
+        message="Loading data can be slow and could fail"
+        description="The Application is not optimized yet. We are working on it."
+        type="info"
+        showIcon
+        closable
+        className="absolute right-4 top-4 z-20"
+      />
+
       <div className="absolute bottom-8 right-2 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
         <p className="m-0 py-2 text-lg text-gray-800">
           {" "}

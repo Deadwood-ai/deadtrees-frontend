@@ -25,6 +25,8 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.1",
     "react-slick": "^0.30.2",
+    "react-viewport-list": "^7.1.2",
+    "react-virtualized": "^9.22.5",
     "sort-by": "^1.2.0"
   },
   "devDependencies": {

@@ -53,14 +53,14 @@ const DataProvider = (props: DataProviderProps) => {
       setRawData(data);
     }
   };
-  // useEffect(() => {
-  //   if (!rawData) return;
-  //   // console.log("fetching data");
-  //   // fetchData();
-  //   fetchThumbnails(
-  //     rawData.map((item) => item.file_name?.replace("tif", "png")),
-  //   );
-  // }, [rawData]);
+  useEffect(() => {
+    // if (rawData) return;
+    // console.log("fetching data");
+    fetchData();
+    // fetchThumbnails(
+    //   rawData.map((item) => item.file_name?.replace("tif", "png")),
+    // );
+  }, []);
 
   const callWebhook = async (payload: any) => {
     const webhookURL =
@@ -80,12 +80,13 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   useEffect(() => {
+    console.log("subscribing to webhook");
     const channel = supabase
       .channel("upload_files_dev")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "upload_files_dev",
         },
@@ -100,18 +101,19 @@ const DataProvider = (props: DataProviderProps) => {
             console.log("webhook res", webhookResponse);
           }
           console.log("fetching data via webhook subscription");
-          fetchData();
+          // fetchData();
         },
       )
       .subscribe();
     console.log("fetching data via webhook initial load");
-    fetchData();
+    // fetchData();
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
   useEffect(() => {
+    console.log("filtering data");
     if (!rawData) return; // Early exit if data is null
     if (filter) {
       console.log("filtering");
