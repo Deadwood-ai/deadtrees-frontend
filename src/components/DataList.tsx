@@ -11,9 +11,10 @@ export default function DataList({ data }) {
         data
           // .slice(0, 10)
           .sort((a, b) => (a.uuid ? -1 : 1))
-          .map((item, index) => (
-            <ListItem key={index} item={item} index={index} />
-          ))
+          .map(
+            (item, index) =>
+              item.uuid && <ListItem key={index} item={item} index={index} />,
+          )
       ) : (
         <div>Loading...</div>
       )}
