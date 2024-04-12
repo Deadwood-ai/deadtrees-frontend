@@ -61,15 +61,20 @@ export default function DataList({ data }: { data: Dataset }) {
             className="flex rounded-md bg-white p-3 transition duration-150 ease-in-out hover:bg-gray-200"
             onClick={() => onClickHandler(item)}
           >
-            <Avatar
+            {/* <Avatar
               shape="square"
               size={64}
               src={getThumbnailURL(item.file_name)}
+            /> */}
+            <img
+              src={getThumbnailURL(item.file_name)}
+              className="m-0 h-16 rounded-lg"
+              loading="lazy"
             />
             <div className="flex flex-1 flex-col justify-between pl-3">
               <div className="flex items-baseline">
                 <p className="m-0 flex-1 font-semibold">
-                  {item.gadm_NAME_3 && `${item.gadm_NAME_3},`}
+                  {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
                   {item.gadm_NAME_0}
                 </p>
                 {/* <p className="text-md m-0 pl-2">{item.gadm_NAME_0}</p> */}
@@ -90,12 +95,11 @@ export default function DataList({ data }: { data: Dataset }) {
                       )
                     }
                   >
-                    {item.authors_image.slice(0, 16) +
-                      (item.authors_image.length > 16 ? "..." : "")}
+                    {item.authors_image.slice(0, 18) +
+                      (item.authors_image.length > 18 ? "..." : "")}
                   </Button>
                 </div>
-
-                <Button
+                {/* <Button
                   className="max-content"
                   type="default"
                   size="small"
@@ -104,7 +108,7 @@ export default function DataList({ data }: { data: Dataset }) {
                   }
                 >
                   {item.license}
-                </Button>
+                </Button> */}
                 <Button
                   className="max-content"
                   type="default"
