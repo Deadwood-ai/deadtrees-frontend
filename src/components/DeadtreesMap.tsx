@@ -178,7 +178,6 @@ const DeadtreesMap = () => {
               Schiefer et al., 2023
             </a>
           </div>
-
           <div className="flex items-center justify-between">
             <p className="text-md m-0 pb-2 text-gray-600">Year</p>
             <Radio.Group
