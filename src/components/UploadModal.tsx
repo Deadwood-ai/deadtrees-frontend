@@ -10,6 +10,7 @@ import {
   message,
   Modal,
   DatePicker,
+  Alert,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
@@ -120,7 +121,12 @@ const UploadModal = ({
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" htmlType="submit" loading={isSubmitting}>
+            <Button
+              type="primary"
+              disabled
+              htmlType="submit"
+              loading={isSubmitting}
+            >
               Submit
             </Button>
             <Button type="default" onClick={onClose}>
@@ -129,6 +135,21 @@ const UploadModal = ({
           </Space>
         </Form.Item>
       </Form>
+      <Alert
+        message="Upload is is available soon!"
+        description={
+          <>
+            The upload is not possible yet. It will be available soon. If you
+            have any questions, please{" "}
+            <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
+              contact{" "}
+            </a>{" "}
+            us.
+          </>
+        }
+        type="info"
+        showIcon
+      />
     </Modal>
   );
 };
