@@ -59,8 +59,9 @@ export default function ProfilePage() {
               message="Upload is in development!"
               description={
                 <>
-                  The upload is still experimental. If you have any questions,
-                  please{" "}
+                  We are currently working on the automatic data audit process.
+                  Expect your data to be visible in the datasets section in
+                  about two weeks. If you have any questions, please{" "}
                   <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
                     contact{" "}
                   </a>{" "}
@@ -69,7 +70,6 @@ export default function ProfilePage() {
               }
               type="info"
               showIcon
-              closable
             />
           </div>
         </div>
