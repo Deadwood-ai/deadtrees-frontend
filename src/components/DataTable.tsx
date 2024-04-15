@@ -4,14 +4,20 @@
 import { useEffect, useState } from "react";
 import { Table, Tag } from "antd";
 import { useAuth } from "../state/AuthProvider";
+import { useNavigate } from "react-router-dom";
+import { LinkOutlined } from "@ant-design/icons";
 
 const DataTable = ({ supabase }) => {
   const { user } = useAuth();
   const [data, setData] = useState([]);
+  const nav = useNavigate();
 
   const fetchData = async () => {
     //
-    const { data, error } = await supabase.from("upload_files_dev").select("*").eq("user_id", user!.id);
+    const { data, error } = await supabase
+      .from("upload_files_dev")
+      .select("*")
+      .eq("user_id", user!.id);
     if (error) {
       console.error("Error fetching data:", error);
     } else {
@@ -32,7 +38,7 @@ const DataTable = ({ supabase }) => {
         (payload) => {
           console.log("Change received!", payload);
           fetchData();
-        }
+        },
       )
       .subscribe();
 
@@ -58,6 +64,19 @@ const DataTable = ({ supabase }) => {
     },
 
     {
+      title: "uuid",
+      dataIndex: "uuid",
+      key: "uuid",
+      render: (tag) => (
+        <Tag
+          color="green"
+          onClick={() => nav(`/dataset/${tag}`)}
+          icon={<LinkOutlined />}
+        ></Tag>
+      ),
+    },
+
+    {
       title: "Status",
       dataIndex: "status",
       key: "status",
@@ -65,7 +84,14 @@ const DataTable = ({ supabase }) => {
     },
   ];
 
-  return <Table rowKey={"id"} dataSource={data} columns={columns} pagination={{ pageSize: 10 }} />;
+  return (
+    <Table
+      rowKey={"id"}
+      dataSource={data}
+      columns={columns}
+      pagination={{ pageSize: 10 }}
+    />
+  );
 };
 
 export default DataTable;

@@ -34,10 +34,12 @@ const Map = ({ data }: { data: Dataset[] }) => {
           geometry: {
             type: "Point",
             // coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
-            coordinates: [
-              JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
-              JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
-            ],
+            coordinates: dataset.centroid
+              ? [
+                  JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
+                  JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
+                ]
+              : [0, 0],
           },
         })),
     };

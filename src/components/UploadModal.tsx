@@ -11,10 +11,12 @@ import {
   Modal,
   DatePicker,
   Alert,
+  Input,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../state/AuthProvider";
+import { supabase } from "./useSupabase";
 
 const UploadModal = ({
   isVisible,
@@ -32,6 +34,8 @@ const UploadModal = ({
     const formData = new FormData();
     if (fileList.length > 0) {
       const file = fileList[0] as any; // Add type assertion to any
+      const fileName = file.name;
+      console.log("file", file);
       formData.append("file", file.originFileObj);
     }
     formData.append("platform", values.platform);
@@ -48,7 +52,14 @@ const UploadModal = ({
           body: formData,
         },
       );
-      if (response.ok) {
+      const supabaseRes = await supabase.from("metadata_dev_egu_v2").insert({
+        filename: fileList[0].name,
+        authors_image: values.author,
+        citation_doi: values.doi,
+      });
+      console.log("supabaseRes", supabaseRes);
+
+      if (response.ok && supabaseRes.error === null) {
         message.success("Upload successful");
         console.log(response);
         onClose(); // Invoke the onClose callback to close the modal
@@ -100,6 +111,13 @@ const UploadModal = ({
           </Upload>
         </Form.Item>
         <Form.Item
+          rules={[{ required: true, message: "Please enter the author" }]}
+          label="Author"
+          name="author"
+        >
+          <Input className="w-80" type="name" placeholder="Jon Doe" />
+        </Form.Item>
+        <Form.Item
           label="Aquisitaion Date"
           name="aquisition_date"
           rules={[{ required: true, message: "Select a Date" }]}
@@ -119,14 +137,12 @@ const UploadModal = ({
             <Radio value="cc-by-sa">CC BY SA</Radio>
           </Radio.Group>
         </Form.Item>
+        <Form.Item label="DOI" name="doi">
+          <Input type="name" placeholder="Jon Doe" />
+        </Form.Item>
         <Form.Item>
           <Space>
-            <Button
-              type="primary"
-              disabled
-              htmlType="submit"
-              loading={isSubmitting}
-            >
+            <Button type="primary" htmlType="submit" loading={isSubmitting}>
               Submit
             </Button>
             <Button type="default" onClick={onClose}>
@@ -135,7 +151,7 @@ const UploadModal = ({
           </Space>
         </Form.Item>
       </Form>
-      <Alert
+      {/* <Alert
         message="Upload is is available soon!"
         description={
           <>
@@ -149,7 +165,7 @@ const UploadModal = ({
         }
         type="info"
         showIcon
-      />
+      /> */}
     </Modal>
   );
 };

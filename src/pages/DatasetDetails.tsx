@@ -50,7 +50,7 @@ export default function DatasetDetails() {
                   className="pr-2"
                 />
                 <Typography.Title style={{ margin: 0 }} level={5}>
-                  {dataset.gadm_NAME_3}
+                  {dataset.gadm_NAME_3 ? dataset.gadm_NAME_3 : "Unknown"}
                 </Typography.Title>
               </div>
 
@@ -121,7 +121,12 @@ export default function DatasetDetails() {
                     Spectral Properties :{" "}
                   </Typography.Text>
                 </Typography.Text>
-                <Tag color="blue"> {dataset.image_spectral_properties}</Tag>
+                <Tag color="blue">
+                  {" "}
+                  {dataset.image_spectral_properties
+                    ? dataset.image_spectral_properties
+                    : "Unknown"}
+                </Tag>
               </div>
             </div>
             <div className="mt-4 rounded-md bg-white p-4">
