@@ -54,7 +54,7 @@ const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
   // }, []);
 
   useEffect(() => {
-    if (mapContainer.current && labels) {
+    if (mapContainer.current) {
       // Ensure the container and data are available
       // console.log("data", data);
       const bounds = parseBBox(data.bbox!); // Parse the bounding box
