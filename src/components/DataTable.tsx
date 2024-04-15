@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Table, Tag } from "antd";
+import { Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../state/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { LinkOutlined } from "@ant-design/icons";
@@ -68,11 +68,13 @@ const DataTable = ({ supabase }) => {
       dataIndex: "uuid",
       key: "uuid",
       render: (tag) => (
-        <Tag
-          color="green"
-          onClick={() => nav(`/dataset/${tag}`)}
-          icon={<LinkOutlined />}
-        ></Tag>
+        <Tooltip title="Wait for the status: 'processed'">
+          <Tag
+            color="green"
+            onClick={() => nav(`/dataset/${tag}`)}
+            icon={<LinkOutlined />}
+          ></Tag>
+        </Tooltip>
       ),
     },
 
