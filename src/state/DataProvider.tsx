@@ -91,7 +91,7 @@ const DataProvider = (props: DataProviderProps) => {
           table: "upload_files_dev",
         },
         (payload) => {
-          console.log("Change received!", payload);
+          console.log("Change received via insert!", payload);
           if (
             payload.eventType === "INSERT" &&
             payload.new.status === "pending"
@@ -101,14 +101,30 @@ const DataProvider = (props: DataProviderProps) => {
             console.log("webhook res", webhookResponse);
           }
           console.log("fetching data via webhook subscription");
-          // fetchData();
+          fetchData();
         },
       )
       .subscribe();
     console.log("fetching data via webhook initial load");
+    const channel2 = supabase
+      .channel("upload_files_dev")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "upload_files_dev",
+        },
+        (payload) => {
+          console.log("Update via update !", payload);
+          fetchData();
+        },
+      )
+      .subscribe();
     // fetchData();
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(channel2);
     };
   }, []);
 
