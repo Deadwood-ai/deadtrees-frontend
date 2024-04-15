@@ -42,7 +42,11 @@ const ListItme = ({ item, index }: { item: Dataset; index: any }) => {
       onClick={() => onClickHandler(item)}
     >
       <img
-        src={getThumbnailURL(item.file_name)}
+        src={
+          item.gadm_NAME_0
+            ? getThumbnailURL(item.file_name)
+            : "/assets/tree-icon.png"
+        }
         className="m-0 h-16 rounded-lg"
         loading="lazy"
       />
