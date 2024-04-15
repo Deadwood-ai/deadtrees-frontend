@@ -1,17 +1,7 @@
 import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import {
-  Alert,
-  Avatar,
-  Col,
-  Divider,
-  Flex,
-  Row,
-  Space,
-  Typography,
-  theme,
-} from "antd";
+import { Alert, Avatar, Typography, theme } from "antd";
 import { supabase } from "../components/useSupabase";
 import { useAuth } from "../state/AuthProvider";
 import DataTable from "../components/DataTable";
