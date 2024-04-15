@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 const { Header } = Layout;
 
 import { useAuth } from "../state/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 const navigation = [
   {
@@ -35,6 +36,7 @@ const navigation = [
 
 export default function Navigation() {
   const { session, signOut } = useAuth();
+  const nav = useNavigate();
   const {
     token: { colorBgContainer },
   } = theme.useToken();
@@ -82,7 +84,11 @@ export default function Navigation() {
             }}
           />
         </div>
-        <Button className="ml-8" type="primary" onClick={signOut}>
+        <Button
+          className="ml-8"
+          type="primary"
+          onClick={session ? signOut : () => nav("/profile")}
+        >
           {session ? "Sign Out" : "Sign In"}
         </Button>
       </Header>
