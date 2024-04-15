@@ -5,6 +5,11 @@ interface Centroid {
   lat: number;
 }
 
+export interface Thumbnail {
+  file_name: string;
+  url: string;
+}
+
 export interface Dataset {
   aquisition_date: string;
   bbox: string | null;
