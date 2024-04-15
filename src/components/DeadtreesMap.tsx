@@ -170,7 +170,7 @@ const DeadtreesMap = () => {
             </div>
           </div>
           <div className="mb-6 flex items-center space-x-2">
-            <p className="m-0 text-xs text-gray-800">Method Prototype by:</p>
+            <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
             <a
               className="m-0 italic underline"
               href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
