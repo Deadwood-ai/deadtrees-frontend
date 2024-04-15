@@ -56,7 +56,7 @@ const UploadModal = ({
         filename: fileList[0].name,
         authors_image: values.author,
         citation_doi: values.doi,
-        platform: values.platform,
+        image_platform: values.platform,
         license: values.license,
       });
       console.log("supabaseRes", supabaseRes);
