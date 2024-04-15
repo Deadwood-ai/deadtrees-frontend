@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import {
+  Alert,
   Avatar,
   Col,
   Divider,
@@ -42,13 +43,35 @@ export default function ProfilePage() {
   } else {
     return (
       <div className=" m-auto h-full max-w-7xl">
-        <div className="w-full pt-16">
-          <Avatar
-            size={64}
-            src="https://avatars.githubusercontent.com/u/8186664?v=7"
-          />
-          <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
-          <Typography.Text type="secondary">{user?.email}</Typography.Text>
+        <div className="flex pt-16">
+          <div className="w-full">
+            <Avatar
+              size={64}
+              src="https://avatars.githubusercontent.com/u/8186664?v=7"
+            />
+            <Typography.Title className="font-3xl m-0">
+              Profile
+            </Typography.Title>
+            <Typography.Text type="secondary">{user?.email}</Typography.Text>
+          </div>
+          <div>
+            <Alert
+              message="Upload is in development!"
+              description={
+                <>
+                  The upload is still experimental. If you have any questions,
+                  please{" "}
+                  <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
+                    contact{" "}
+                  </a>{" "}
+                  us.
+                </>
+              }
+              type="info"
+              showIcon
+              closable
+            />
+          </div>
         </div>
         <div className=" w-full">
           <div className="mb-4 flex justify-end">
