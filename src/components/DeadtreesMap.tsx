@@ -152,7 +152,7 @@ const DeadtreesMap = () => {
             {" "}
             Deadwood for {selectedYear}
           </p>
-          <div className="mb-6 flex w-full items-end ">
+          <div className="mb-2 flex w-full items-end ">
             <p className="m-0 w-full text-xs text-gray-600">
               Satellite-based prediction
             </p>
@@ -168,6 +168,15 @@ const DeadtreesMap = () => {
                 min={0}
               />
             </div>
+          </div>
+          <div className="mb-6 flex items-center space-x-2">
+            <p className="m-0 text-xs text-gray-800">Method Prototype by:</p>
+            <a
+              className="m-0 italic underline"
+              href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
+            >
+              Schiefer et al., 2023
+            </a>
           </div>
 
           <div className="flex items-center justify-between">
