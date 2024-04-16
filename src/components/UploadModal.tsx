@@ -113,11 +113,11 @@ const UploadModal = ({
           </Upload>
         </Form.Item>
         <Form.Item
-          rules={[{ required: true, message: "Please enter the author" }]}
-          label="Author"
+          rules={[{ required: true, message: "Please enter the authors" }]}
+          label="Authors"
           name="author"
         >
-          <Input className="w-80" type="name" placeholder="Jon Doe" />
+          <Input className="w-96" type="name" placeholder="Jon Doe" />
         </Form.Item>
         <Form.Item
           label="Aquisitaion Date"
@@ -140,7 +140,7 @@ const UploadModal = ({
           </Radio.Group>
         </Form.Item>
         <Form.Item label="DOI" name="doi">
-          <Input type="name" placeholder="Jon Doe" />
+          <Input type="name" placeholder="DOI" />
         </Form.Item>
         <Form.Item>
           <Space>
@@ -153,12 +153,12 @@ const UploadModal = ({
           </Space>
         </Form.Item>
       </Form>
-      {/* <Alert
-        message="Upload is is available soon!"
+      <Alert
+        message="Label Upload Coming Soon!"
         description={
           <>
-            The upload is not possible yet. It will be available soon. If you
-            have any questions, please{" "}
+            Label upload is not currently supported, but will be available soon.
+            If you have questions, please{" "}
             <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
               contact{" "}
             </a>{" "}
@@ -167,7 +167,7 @@ const UploadModal = ({
         }
         type="info"
         showIcon
-      /> */}
+      />
     </Modal>
   );
 };
