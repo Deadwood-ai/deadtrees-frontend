@@ -330,8 +330,7 @@ const GetInContact = () => {
         Want to join?
       </p>
       <p className="m-auto max-w-xl pt-8 text-center text-lg text-gray-500">
-        {`Do you have high-resolution (<20cm) orthoimagery and would like to
-        participate in this project?`}
+        {`Do you have high-resolution (<20cm) orthoimagery and optionally any labels for standing deadwood? We'd be excited to have you collaborate with us on this project.`}
       </p>
       <div className="flex justify-center pt-8">
         <Button
