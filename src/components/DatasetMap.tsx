@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Dataset } from "../types/dataset";
+import { IDataset } from "../types/dataset";
 import { useNavigate } from "react-router-dom";
 import parseBBox from "../utils/parseBBox";
 import { notification } from "antd";
@@ -9,7 +9,7 @@ import { notification } from "antd";
 // Your Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEND!;
 
-const Map = ({ data }: { data: Dataset[] }) => {
+const Map = ({ data }: { data: IDataset[] }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 

@@ -1,16 +1,16 @@
 import { FeatureCollection } from "geojson";
 
-interface Centroid {
+interface ICentroid {
   lng: number;
   lat: number;
 }
 
-export interface Thumbnail {
+export interface IThumbnail {
   file_name: string;
   url: string;
 }
 
-export interface Dataset {
+export interface IDataset {
   aquisition_date: string;
   bbox: string | null;
   // compress_time: number | null;
@@ -20,7 +20,7 @@ export interface Dataset {
   file_id: string | null;
   file_name: string | null;
   file_size: number | null;
-  centroid: Centroid | null;
+  centroid: ICentroid | null;
   // id: number;
   license: string;
   // platform: Platform;
@@ -96,7 +96,7 @@ export interface Dataset {
 //   gadm_NAME_3: string | null;
 // }
 
-export interface Labels {
+export interface ILabels {
   id: number;
   aoi: FeatureCollection;
   standing_deadwood: FeatureCollection;
@@ -120,3 +120,20 @@ export enum Status {
   "audited",
   "audit_failed",
 }
+
+export interface IStats {
+  id: number;
+  created_at: string;
+  date: string;
+  area_covered: number;
+  orthophoto_count: number;
+  countries_count: number;
+  contributors_count: number;
+}
+
+export interface ICollaborators {
+  id: number;
+  created_at: string;
+  collaborator_text: string;
+}
+

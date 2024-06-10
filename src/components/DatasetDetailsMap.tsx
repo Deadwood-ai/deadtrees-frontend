@@ -1,16 +1,16 @@
 import React, { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Dataset, Labels } from "../types/dataset";
+import { IDataset, ILabels } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 import { FeatureCollection } from "geojson";
 import { supabase } from "./useSupabase";
 import { Alert, Radio, Slider, notification } from "antd";
 import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
-const DatasetDetailsMap = ({ data }: { data: Dataset }) => {
+const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const [labels, setLabels] = useState<Labels | null>(null); // Add state for labels
+  const [labels, setLabels] = useState<ILabels | null>(null); // Add state for labels
   const [sliderValue, setSliderValue] = useState<number>(1);
   const [sliderValueLabels, setSliderValueLabels] = useState<number>(0.6);
   const [selectedYear, setSelectedYear] = useState<string>("2018");

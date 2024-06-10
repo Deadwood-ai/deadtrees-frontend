@@ -2,10 +2,10 @@ import { Button, notification, Tooltip } from "antd";
 import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
-import { Dataset } from "../types/dataset";
+import { IDataset } from "../types/dataset";
 import { supabase } from "./useSupabase";
 
-const ListItme = ({ item, index }: { item: Dataset; index: any }) => {
+const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
   const { setFilter, setFilterTag } = useData();
   const navigate = useNavigate();
 
