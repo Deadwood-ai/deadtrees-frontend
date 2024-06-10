@@ -1,17 +1,18 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../components/useSupabase";
-import { Dataset, Thumbnail } from "../types/dataset";
+import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
 
 interface DataProviderProps {
   children: React.ReactNode;
 }
 
 type DataContextType = {
-  data: Dataset[] | null;
+  data: IDataset[] | null;
   filter: string;
   setFilter: (filter: string) => void;
   setFilterTag: (filterTag: string) => void;
-  thumbnails: Thumbnail[] | null;
+  thumbnails: IThumbnail[] | null;
+  collaborators: ICollaborators[] | null;
 };
 
 const DataContext = createContext<DataContextType>({
@@ -20,14 +21,26 @@ const DataContext = createContext<DataContextType>({
   setFilter: () => {},
   setFilterTag: () => {},
   thumbnails: null,
+  collaborators: null,
 });
 
 const DataProvider = (props: DataProviderProps) => {
-  const [rawData, setRawData] = useState<Dataset[]>([]);
-  const [data, setData] = useState<Dataset[]>([]);
+  const [rawData, setRawData] = useState<IDataset[]>([]);
+  const [data, setData] = useState<IDataset[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
-  const [thumbnails, setThumbnails] = useState<Thumbnail[]>([]);
+  const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
+  const [collaborators, setCollaborators] = useState<ICollaborators[]>([]);
+
+  const fetchCollaborators = async () => {
+    const { data, error } = await supabase.from("collaborators").select("*");
+    if (error) {
+      console.error("Error fetching data:", error);
+    } else {
+      console.log("collaborators fetched :", data);
+      setCollaborators(data);
+    }
+  };
 
   const fetchThumbnails = async (filname_list: string[]) => {
     console.log("fetching thumbnails with:", filname_list);
@@ -57,6 +70,7 @@ const DataProvider = (props: DataProviderProps) => {
     // if (rawData) return;
     // console.log("fetching data");
     fetchData();
+    fetchCollaborators();
     // fetchThumbnails(
     //   rawData.map((item) => item.file_name?.replace("tif", "png")),
     // );
@@ -156,6 +170,7 @@ const DataProvider = (props: DataProviderProps) => {
     filter,
     setFilter,
     setFilterTag,
+    collaborators,
   };
   return (
     <DataContext.Provider value={value}>{props.children}</DataContext.Provider>

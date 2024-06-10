@@ -3,6 +3,7 @@ import { useState } from "react";
 import Slider from "react-slick";
 
 import { supabase } from "../components/useSupabase";
+import { useData } from "../state/DataProvider";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");
@@ -345,146 +346,111 @@ const GetInContact = () => {
   );
 };
 
-const FAQItems = [
-  {
-    key: "1",
-    label: (
-      <span className="m-0 pt-4 text-lg text-gray-500">
-        Who is behind deadtrees.earth?
-      </span>
-    ),
-    children: (
-      <div>
-        <p className="text-md">
-          This initiative is being led by Prof. Dr. Teja Kattenborn from
-          <a href="https://geosense.uni-freiburg.de/en"> geosense </a>
-          and Clemens Mosig from <a href="https://rsc4earth.de/">
-            {" "}
-            RSC4Earth{" "}
-          </a>{" "}
-          /<a href="https://scads.ai/"> ScaDS.AI </a>
-          and the service is being built by{" "}
-          <a href="https://hydrocode.de/home"> hydrocode </a>.
-        </p>
-        <p className="text-md font-semibold">
-          Data Contributors and collaborators:
-        </p>
-        <ul className="text-md">
-          <li>Alfred Wegner Institute (Stefan Kruse)</li>
-          <li>Chinese Academy of Sciences (Yanjun Su)</li>
-          <li>
-            Forest Research Institute (Katarzyna Zielewska-Büttner, Selina Ganz,
-            Andreas Uhl)
-          </li>
-          <li>Freie University Berlin (Fabian Fassnacht)</li>
-          <li>
-            K. N. Toosi University of Technology (Hooman Latifi, Marziye
-            Ghasemi)
-          </li>
-          <li>
-            Karlsruhe Institute of Technology (Elham Shafeian, Felix Schiefer,
-            Mirko Mälicke)
-          </li>
-          <li>
-            Leipzig University (Clemens Mosig, Miguel Mahecha, Jakobus Möhring,
-            Djamil Al-Halbouni, David Montero)
-          </li>
-          <li>Luftbild Umwelt Planung GmbH (Annett Frick)</li>
-          <li>Nanjing Normal University (Qin Ma, Yanjun Su)</li>
-          <li>Nelson Mandela University (Alastair Potts)</li>
-          <li>Oak Ridge National Laboratory (KC Cushman)</li>
-          <li>Potsdam University (Marie-Therese-Schmehl)</li>
-          <li>Purdue University (Joseph Hupy)</li>
-          <li>
-            Smithsonian Tropical Research Institute (Helene-Müller-Landau,
-            Vicente Vásquez, Milton García, Melvin Hernández)
-          </li>
-          <li>Swiss Data Science Center (Michele Volpi)</li>
-          <li>Swiss National Park (Samuel Wiesmann, Christian Rossi) </li>
-          <li>Universidad Adolfo Ibáñez (Javier Lopatin)</li>
-
-          <li>Université de Montréal (Myriam Cloutier, Etienne Laliberté)</li>
-          <li>University of Copenhagen (Yan Cheng, Stéphanie Horion)</li>
-          <li>University of Cordoba (Oscar Perez Priego)</li>
-          <li>University of Florida (Ben Weinstein)</li>
-          <li>
-            University of Freiburg (Teja Kattenborn, Julian Frey, Martin Denter,
-            Anna Göritz, Janusch Jehle)
-          </li>
-          <li>
-            University of Marburg (Chris Reudenbach, Christian Mestre Runge,
-            Lars Oppgenoorth)
-          </li>
-          <li>University of Washington (Pratima Khatri-Chhetri)</li>
-        </ul>
-      </div>
-    ),
-    style: {
-      border: "none",
-      borderRadius: "0.5rem",
-      marginBottom: "24px",
-      paddingLeft: "24px",
-      paddingRight: "24px",
-      paddingTop: "16px",
-      paddingBottom: "16px",
-      backgroundColor: "rgb(241 245 249)",
-    },
-  },
-  {
-    key: "2",
-    label: (
-      <span className="m-0 pt-4 text-lg text-gray-500">
-        What happens to the data after your upload?
-      </span>
-    ),
-
-    children: (
-      <p className="text-md">
-        The data is used to train multiple models related to standing deadwood.
-        If you agree, we will also make your data publicly available to the
-        community under a chosen Creative Commons license.
-      </p>
-    ),
-    style: {
-      border: "none",
-      borderRadius: "0.5rem",
-      marginBottom: "24px",
-      paddingLeft: "24px",
-      paddingRight: "24px",
-      paddingTop: "16px",
-      paddingBottom: "16px",
-      backgroundColor: "rgb(241 245 249)",
-    },
-  },
-  {
-    key: "3",
-    label: (
-      <span className="m-0 pt-4 text-lg text-gray-500">
-        Why can't I download the data?
-      </span>
-    ),
-
-    children: (
-      <p className="text-md">
-        We are currently working on the download and upload functionality which
-        will be available soon. To stay updated, please subscribe to our
-        newsletter. For more information, check out our roadmap or contact us.
-      </p>
-    ),
-    style: {
-      border: "none",
-      borderRadius: "0.5rem",
-      marginBottom: "24px",
-      paddingLeft: "24px",
-      paddingRight: "24px",
-      paddingTop: "16px",
-      paddingBottom: "16px",
-      backgroundColor: "rgb(241 245 249)",
-    },
-  },
-];
-
 const FAQ = () => {
+  const { collaborators } = useData();
+
+  const FAQItems = [
+    {
+      key: "1",
+      label: (
+        <span className="m-0 pt-4 text-lg text-gray-500">
+          Who is behind deadtrees.earth?
+        </span>
+      ),
+      children: (
+        <div>
+          <p className="text-md">
+            This initiative is being led by Prof. Dr. Teja Kattenborn from
+            <a href="https://geosense.uni-freiburg.de/en"> geosense </a>
+            and Clemens Mosig from{" "}
+            <a href="https://rsc4earth.de/"> RSC4Earth </a> /
+            <a href="https://scads.ai/"> ScaDS.AI </a>
+            and the service is being built by{" "}
+            <a href="https://hydrocode.de/home"> hydrocode </a>.
+          </p>
+          <p className="text-md font-semibold">
+            Data Contributors and collaborators:
+          </p>
+          <ul className="text-md">
+            {collaborators!
+              .sort((a, b) =>
+                a.collaborator_text.localeCompare(b.collaborator_text),
+              )
+              .map((collaborator) => {
+                return (
+                  <li key={collaborator.id}>
+                    {collaborator.collaborator_text}
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      ),
+      style: {
+        border: "none",
+        borderRadius: "0.5rem",
+        marginBottom: "24px",
+        paddingLeft: "24px",
+        paddingRight: "24px",
+        paddingTop: "16px",
+        paddingBottom: "16px",
+        backgroundColor: "rgb(241 245 249)",
+      },
+    },
+    {
+      key: "2",
+      label: (
+        <span className="m-0 pt-4 text-lg text-gray-500">
+          What happens to the data after your upload?
+        </span>
+      ),
+
+      children: (
+        <p className="text-md">
+          The data is used to train multiple models related to standing
+          deadwood. If you agree, we will also make your data publicly available
+          to the community under a chosen Creative Commons license.
+        </p>
+      ),
+      style: {
+        border: "none",
+        borderRadius: "0.5rem",
+        marginBottom: "24px",
+        paddingLeft: "24px",
+        paddingRight: "24px",
+        paddingTop: "16px",
+        paddingBottom: "16px",
+        backgroundColor: "rgb(241 245 249)",
+      },
+    },
+    {
+      key: "3",
+      label: (
+        <span className="m-0 pt-4 text-lg text-gray-500">
+          Why can't I download the data?
+        </span>
+      ),
+
+      children: (
+        <p className="text-md">
+          We are currently working on the download and upload functionality
+          which will be available soon. To stay updated, please subscribe to our
+          newsletter. For more information, check out our roadmap or contact us.
+        </p>
+      ),
+      style: {
+        border: "none",
+        borderRadius: "0.5rem",
+        marginBottom: "24px",
+        paddingLeft: "24px",
+        paddingRight: "24px",
+        paddingTop: "16px",
+        paddingBottom: "16px",
+        backgroundColor: "rgb(241 245 249)",
+      },
+    },
+  ];
+
   return (
     <div className="my-24 md:mt-36">
       <h1 className="m-auto text-center text-3xl font-semibold text-gray-800 md:text-4xl">
