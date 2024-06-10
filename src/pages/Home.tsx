@@ -200,7 +200,7 @@ const Feature = ({
   return (
     <div className="mb-4 w-full rounded-md py-8">
       <div className="flex">
-        <div className=" mr-8 flex aspect-square h-16 w-16 items-center justify-center rounded-lg bg-blue-500">
+        <div className="mr-8 flex aspect-square h-16 items-center justify-center rounded-lg bg-blue-500">
           <img className="h-8" src={iconPath} />
         </div>
         <div className="text-start">
