@@ -49,10 +49,9 @@ export default function ProfilePage() {
               message="Upload is in development!"
               description={
                 <>
-                  We are enhancing our automatic data audit process. Although
-                  uploads are functioning, some metadata fields are not yet
-                  available. We anticipate full functionality soon. If you have
-                  any questions, please{" "}
+                  We are enhancing our automatic data audit process. We
+                  anticipate full functionality soon. If you have any questions,
+                  please{" "}
                   <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
                     contact{" "}
                   </a>{" "}
@@ -65,9 +64,7 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className=" w-full">
-          <div className="mb-4 flex justify-end">
-            <UploadButton />
-          </div>
+          <div className="mb-4 flex justify-end">{/* <UploadButton /> */}</div>
           <DataTable supabase={supabase} />{" "}
           {/* Use the new DataTable component */}
         </div>
