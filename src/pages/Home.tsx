@@ -177,7 +177,7 @@ const Gallery = () => {
           return (
             <div className="m-auto" key={i}>
               <img
-                className="w-full items-center rounded-xl md:w-56"
+                className="aspect-square h-full items-center rounded-xl md:w-56"
                 src={`assets/compressed/image${i}.png`}
                 alt="deadtrees.earth"
               />
