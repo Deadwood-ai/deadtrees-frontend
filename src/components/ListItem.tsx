@@ -3,7 +3,7 @@ import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 import { IDataset } from "../types/dataset";
-import { supabase } from "./useSupabase";
+import { getThumbnailURL } from "./utils";
 
 const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
   const { setFilter, setFilterTag } = useData();
@@ -19,13 +19,6 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
         description: "This dataset is not yet available",
       });
     }
-  };
-
-  const getThumbnailURL = (file_name) => {
-    const url = supabase.storage
-      .from("thumbnails")
-      .getPublicUrl(file_name.replace("tif", "png"));
-    return url.data.publicUrl;
   };
 
   const onClickFilterHandler = (e, filter, filterTag) => {
