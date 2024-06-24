@@ -5,6 +5,7 @@ import { IDataset } from "../types/dataset";
 import { useNavigate } from "react-router-dom";
 import parseBBox from "../utils/parseBBox";
 import { notification } from "antd";
+import { getThumbnailURL } from "./utils";
 
 // Your Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEND!;
@@ -135,7 +136,20 @@ const Map = ({ data }: { data: IDataset[] }) => {
             coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
           }
 
-          popup.setLngLat(coordinates).setHTML(description).addTo(map);
+          popup
+            .setLngLat(coordinates)
+            .setHTML(
+              description !== "Coming Soon"
+                ? `<div style="display: flex; flex-direction: column; align-items: center;">
+                  <img width="200" src="${getThumbnailURL(description)}" alt="Image" />
+                  <div style="text-align: center;">
+                    <h5 style="padding: 0 1px;">${description}</h5>
+                    <i>${`click view file`}</i>
+                  </div>
+                </div>`
+                : `<p style="padding: 0 0">${description}</p>`,
+            )
+            .addTo(map);
         });
         map.on("mouseleave", "markers", () => {
           map.getCanvas().style.cursor = "";
