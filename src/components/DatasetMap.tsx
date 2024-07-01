@@ -5,7 +5,7 @@ import { IDataset } from "../types/dataset";
 import { useNavigate } from "react-router-dom";
 import parseBBox from "../utils/parseBBox";
 import { notification } from "antd";
-import { getThumbnailURL } from "./utils";
+import getThumbnailURL from "../utils/getThumbnails";
 
 // Your Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEND!;

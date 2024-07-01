@@ -3,7 +3,7 @@ import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 import { IDataset } from "../types/dataset";
-import { getThumbnailURL } from "./utils";
+import getThumbnailURL from "../utils/getThumbnails";
 
 const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
   const { setFilter, setFilterTag } = useData();
