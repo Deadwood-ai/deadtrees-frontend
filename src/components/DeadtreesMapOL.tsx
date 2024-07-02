@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "ol/ol.css";
 import { Map, View } from "ol";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayer from "ol/layer/WebGLTile.js";
 import { BingMaps, GeoTIFF } from "ol/source";
 // import { TileJSON } from "ol/source";
@@ -14,10 +14,13 @@ import {
 } from "@geoapify/react-geocoder-autocomplete";
 
 import getDeadwoodCOGUrl from "../utils/getDeadwoodCOGUrl";
+import { extend } from "ol/extent";
 
 const DeadtreesMapOL = () => {
+  const [bounds, setBounds] = useState([0, 0, 0, 0]);
   const mapContainer = useRef();
   useEffect(() => {
+    console.log("bounds", bounds);
     const basemapLayer = new TileLayer({
       //   source: new TileJSON({
       //     url: `https://api.maptiler.com/maps/satellite/tiles.json?key=${import.meta.env.VITE_MAPTILER_KEY}`,
@@ -68,15 +71,20 @@ const DeadtreesMapOL = () => {
       target: mapContainer.current,
       layers: [basemapLayer, geotiffLayer],
       //   view: geotiffSource.getView(),
-      view: new View({
-        center: fromLonLat([10.668224826784524, 51.78688853393797]),
-        zoom: 15,
-      }),
+      // view: new View({
+      //   center: fromLonLat([10.668224826784524, 51.78688853393797]),
+      //   zoom: 15,
+      // }),
     });
+    // const extent = [fromLonLat([bounds[0], bounds[1]], ));]
+    // console.log("extent", extent);
+    map.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+
     return () => map.setTarget(null);
-  }, []);
+  }, [bounds]);
 
   const handlePlaceSelect = (place) => {
+    setBounds(place.bbox);
     console.log(place);
   };
 
@@ -97,8 +105,8 @@ const DeadtreesMapOL = () => {
               // value={value}
               // type="city"
               filterByCountryCode={["DE"]}
-              placeSelect={(e) => console.log(e)}
-              suggestionsChange={handlePlaceSelect}
+              placeSelect={handlePlaceSelect}
+              // suggestionsChange={handlePlaceSelect}
             />
             {/* Your Geoapify Geocoder Autocomplete components go here */}
           </GeoapifyContext>
