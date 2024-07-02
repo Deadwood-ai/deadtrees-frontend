@@ -14,10 +14,11 @@ import {
 } from "@geoapify/react-geocoder-autocomplete";
 
 import getDeadwoodCOGUrl from "../utils/getDeadwoodCOGUrl";
-import { extend } from "ol/extent";
 
 const DeadtreesMapOL = () => {
-  const [bounds, setBounds] = useState([0, 0, 0, 0]);
+  const [bounds, setBounds] = useState([
+    5.8663153, 47.2701114, 15.0419309, 55.099161,
+  ]);
   const mapContainer = useRef();
   useEffect(() => {
     console.log("bounds", bounds);
@@ -32,7 +33,6 @@ const DeadtreesMapOL = () => {
         imagerySet: "AerialWithLabelsOnDemand",
         culture: "en-us",
       }),
-      //   source: new OSM(),
     });
     const geotiffSource = new GeoTIFF({
       sources: [
@@ -64,20 +64,18 @@ const DeadtreesMapOL = () => {
           [129, 176, 247, 0.6],
         ],
       },
-      maxZoom: 24,
+      // maxZoom: 24,
     });
 
     const map = new Map({
       target: mapContainer.current,
       layers: [basemapLayer, geotiffLayer],
-      //   view: geotiffSource.getView(),
+      // view: geotiffSource.getView(),
       // view: new View({
       //   center: fromLonLat([10.668224826784524, 51.78688853393797]),
       //   zoom: 15,
       // }),
     });
-    // const extent = [fromLonLat([bounds[0], bounds[1]], ));]
-    // console.log("extent", extent);
     map.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
 
     return () => map.setTarget(null);
@@ -102,13 +100,10 @@ const DeadtreesMapOL = () => {
           <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
             <GeoapifyGeocoderAutocomplete
               placeholder="Enter address here"
-              // value={value}
               // type="city"
-              filterByCountryCode={["DE"]}
+              filterByCountryCode={["de"]}
               placeSelect={handlePlaceSelect}
-              // suggestionsChange={handlePlaceSelect}
             />
-            {/* Your Geoapify Geocoder Autocomplete components go here */}
           </GeoapifyContext>
         </div>
       </div>
