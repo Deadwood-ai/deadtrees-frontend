@@ -3,10 +3,7 @@ import { TileJSON } from "ol/source";
 // import fromLonLat from "ol/proj";
 import "ol/ol.css";
 import { fromLonLat } from "ol/proj";
-// import { OpenCageGeoSearchPlugin } from "@opencage/geosearch-core";
-// import { GeoSearch } from "./components/GeoSearch";
 
-// import TileLayer from "ol/layer/Tile";
 import TileLayer from "ol/layer/WebGLTile.js";
 
 import { useEffect, useRef } from "react";
@@ -61,28 +58,6 @@ const DeadtreesMapOL = () => {
       },
       maxZoom: 24,
     });
-    // const geocoder = new Geocoder("nominatim", {
-    //   provider: "bing",
-    //   key: import.meta.env.VITE_BING_MAPS_KEY,
-    //   lang: "ger-DE",
-    //   placeholder: "Search for ...",
-    //   limit: 5,
-    //   debug: false,
-    //   autoComplete: true,
-    //   keepOpen: false,
-    // });
-    const options = {
-      key: import.meta.env.VITE_OPENCAGE_KEY, // you will need to become a customer to get a geosearch ke
-      position: "topright", // Possible values are 'topleft', 'topright', 'bottomleft' or 'bottomright'
-    };
-    const events = {
-      onSubmit: (params) => {
-        console.log("--plugin.OnSubmit()");
-        console.log(`params: ${JSON.stringify(params)}`);
-        // console.log(`event: ${JSON.stringify(params.event)}`);
-      },
-    };
-    const geocoder = new OpenCageGeosearchControl(options);
 
     const map = new Map({
       target: mapContainer.current,
@@ -93,7 +68,6 @@ const DeadtreesMapOL = () => {
         zoom: 15,
       }),
     });
-    map.addControl(geocoder);
     return () => map.setTarget(null);
   }, []);
 
