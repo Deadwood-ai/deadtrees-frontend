@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.3.0",
+    "@geoapify/geocoder-autocomplete": "^2.0.1",
+    "@geoapify/react-geocoder-autocomplete": "^2.0.0",
     "@mapbox/mapbox-gl-geocoder": "^5.0.2",
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
