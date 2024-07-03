@@ -101,6 +101,14 @@ const DeadtreesMapOL = () => {
         controls: [],
       });
       newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+
+      newMap.on("click", (event) => {
+        const pixel = newMap.getEventPixel(event.originalEvent);
+        console.log(pixel);
+        console.log(event.coordinate);
+        console.log(event);
+      });
+
       setMap(newMap);
     }
 
