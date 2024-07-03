@@ -23,6 +23,13 @@ const sites = {
   Bayern: [13.330993298074588, 49.03963187270776],
 };
 
+const yearByIndex = {
+  1: "2018",
+  2: "2019",
+  3: "2020",
+  4: "2021",
+};
+
 const DeadtreesMapOL = () => {
   const [map, setMap] = useState(null);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
@@ -34,38 +41,42 @@ const DeadtreesMapOL = () => {
 
   // layers ---------------------------------------------------
 
+  const createGeotiffLayer = (year) => {
+    const geotiffLayer = new TileLayerWebGL({
+      source: new GeoTIFF({
+        sources: [
+          {
+            url: getDeadwoodCOGUrl(year),
+            min: 400,
+            max: 4000,
+          },
+        ],
+        interpolate: false,
+        normalize: true,
+      }),
+      style: {
+        color: [
+          "interpolate",
+          ["linear"],
+          ["band", 1],
+          0,
+          [129, 176, 247, 0],
+          0.4,
+          [129, 176, 247, 0.1],
+          0.6,
+          [129, 176, 247, 0.3],
+          0.8,
+          [129, 176, 247, 0.6],
+          1,
+          [129, 176, 247, 1],
+        ],
+      },
+    });
+    return geotiffLayer;
+  };
+
   useEffect(() => {
     if (!map) {
-      const geotiffLayer = new TileLayerWebGL({
-        source: new GeoTIFF({
-          sources: [
-            {
-              url: getDeadwoodCOGUrl("2018"),
-              min: 400,
-              max: 4000,
-            },
-          ],
-          interpolate: false,
-          normalize: true,
-        }),
-        style: {
-          color: [
-            "interpolate",
-            ["linear"],
-            ["band", 1],
-            0,
-            [129, 176, 247, 0],
-            0.4,
-            [129, 176, 247, 0.1],
-            0.6,
-            [129, 176, 247, 0.2],
-            0.8,
-            [129, 176, 247, 0.4],
-            1,
-            [129, 176, 247, 0.6],
-          ],
-        },
-      });
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -73,9 +84,20 @@ const DeadtreesMapOL = () => {
           culture: "en-us",
         }),
       });
+      const geotifLayer2018 = createGeotiffLayer("2018");
+      const geotifLayer2019 = createGeotiffLayer("2019");
+      const geotifLayer2020 = createGeotiffLayer("2020");
+      const geotifLayer2021 = createGeotiffLayer("2021");
+
       const newMap = new Map({
         target: mapContainer.current,
-        layers: [basemapLayer, geotiffLayer],
+        layers: [
+          basemapLayer,
+          geotifLayer2018,
+          geotifLayer2019,
+          geotifLayer2020,
+          geotifLayer2021,
+        ],
         controls: [],
       });
       newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
@@ -89,7 +111,9 @@ const DeadtreesMapOL = () => {
     };
   }, []);
 
-  // update on bounds change
+  // effects -----------------------------------------------------------
+
+  // update on bounds change after geocoder search
   useEffect(() => {
     if (map) {
       map.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
@@ -114,8 +138,12 @@ const DeadtreesMapOL = () => {
   //update opacity of geotiff layer
   useEffect(() => {
     if (map) {
-      const geotiffLayer = map.getLayers().getArray()[1];
-      geotiffLayer.setOpacity(sliderValue);
+      const layers = map.getLayers().getArray();
+      layers.forEach((layer, index) => {
+        if (layer instanceof TileLayerWebGL) {
+          layer.setOpacity(sliderValue);
+        }
+      });
     }
   }, [sliderValue, map]);
 
@@ -128,11 +156,123 @@ const DeadtreesMapOL = () => {
     }
   }, [selectedSite, map]);
 
-  // handlers ---------------------------------------------------
+  // update visibility of geotiff layers based on selectedYear
+  useEffect(() => {
+    if (map) {
+      const layers = map.getLayers().getArray();
+      // console.log(layers);
+      layers.forEach((layer, index) => {
+        if (layer instanceof TileLayerWebGL) {
+          layer.setVisible(yearByIndex[index] === selectedYear);
+        }
+      });
+    }
+  }, [selectedYear, map]);
 
-  const handlePlaceSelect = (place) => {
-    setBounds(place.bbox);
-    console.log(place);
+  // components ---------------------------------------------------
+  const YearSelectionButtons = () => {
+    return (
+      <div className="flex items-center justify-between">
+        <p className="text-md m-0 pb-2 text-gray-600">Year</p>
+        <Radio.Group
+          className="pb-2"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+        >
+          <Radio.Button value="2018">2018</Radio.Button>
+          <Radio.Button value="2019">2019</Radio.Button>
+          <Radio.Button value="2020">2020</Radio.Button>
+          <Radio.Button value="2021">2021</Radio.Button>
+        </Radio.Group>
+      </div>
+    );
+  };
+  const MapStyleSwitchButtons = () => {
+    return (
+      <div className="absolute left-8 top-28 z-20">
+        <Radio.Group
+          value={mapStyle}
+          onChange={(e) => setMapStyle(e.target.value)}
+        >
+          <Radio.Button value="AerialWithLabelsOnDemand">
+            Satellite
+          </Radio.Button>
+          <Radio.Button value="RoadOnDemand">Streets</Radio.Button>
+        </Radio.Group>
+      </div>
+    );
+  };
+  const SideSelectionButtons = () => {
+    return (
+      <div className="absolute bottom-12 left-8 z-20">
+        <Radio.Group
+          value={selectedSite}
+          // defaultValue={"Harz"}
+          defaultValue={false}
+          onChange={(e) => setSelectedSite(e.target.value)}
+        >
+          <Radio.Button value="Harz">Harz National Park</Radio.Button>
+          <Radio.Button value="Waldshut">Waldshut</Radio.Button>
+          <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
+        </Radio.Group>
+      </div>
+    );
+  };
+
+  const Legend = () => {
+    return (
+      <div className="absolute bottom-56 right-8 z-50 flex flex-col items-end space-x-2 rounded-md bg-slate-100 p-4">
+        <p className="m-0 max-w-24 pb-2 text-center text-xs text-gray-500">
+          Share of standing deadwood (%)
+        </p>
+        <div className="flex h-32 space-x-2">
+          <div className="flex flex-col items-end justify-between">
+            <p className="m-0 text-xs text-gray-600">100% - </p>
+            <p className="m-0 text-xs text-gray-600">50% - </p>
+            <p className="m-0 text-xs text-gray-600">0% - </p>
+          </div>
+          <div className="mb-1 mt-1  w-4 rounded-sm bg-gradient-to-b from-sky-500"></div>
+        </div>
+      </div>
+    );
+  };
+
+  const DeadwoodCard = () => {
+    return (
+      <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
+        <p className="m-0 py-2 text-lg text-gray-800">
+          {" "}
+          Deadwood for {selectedYear}
+        </p>
+        <div className="mb-2 flex w-full items-end ">
+          <p className="m-0 w-full text-xs text-gray-600">
+            Satellite-based prediction
+          </p>
+          <div className="w-2/3">
+            <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+            <Slider
+              className="m-0 w-full"
+              defaultValue={1}
+              step={0.01}
+              max={1}
+              value={sliderValue}
+              onChange={(value) => setSliderValue(value as number)}
+              min={0}
+            />
+          </div>
+        </div>
+        <div className="mb-6 flex items-center space-x-2">
+          <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
+          <a
+            className="m-0 italic underline"
+            href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
+          >
+            Schiefer et al., 2023
+          </a>
+        </div>
+        <YearSelectionButtons />
+      </div>
+    );
   };
 
   return (
@@ -151,33 +291,14 @@ const DeadtreesMapOL = () => {
               placeholder="Enter address here"
               // type="city"
               filterByCountryCode={["de"]}
-              placeSelect={handlePlaceSelect}
+              placeSelect={(place) => setBounds(place.bbox)}
             />
           </GeoapifyContext>
         </div>
-        <div className="absolute left-8 top-28 z-20">
-          <Radio.Group
-            value={mapStyle}
-            onChange={(e) => setMapStyle(e.target.value)}
-          >
-            <Radio.Button value="AerialWithLabelsOnDemand">
-              Satellite
-            </Radio.Button>
-            <Radio.Button value="RoadOnDemand">Streets</Radio.Button>
-          </Radio.Group>
-        </div>
-        <div className="absolute bottom-12 left-8 z-20">
-          <Radio.Group
-            value={selectedSite}
-            // defaultValue={"Harz"}
-            defaultValue={false}
-            onChange={(e) => setSelectedSite(e.target.value)}
-          >
-            <Radio.Button value="Harz">Harz National Park</Radio.Button>
-            <Radio.Button value="Waldshut">Waldshut</Radio.Button>
-            <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
-          </Radio.Group>
-        </div>
+        <MapStyleSwitchButtons />
+        <SideSelectionButtons />
+        <Legend />
+        {/* <DeadwoodCard /> */}
         <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
           <p className="m-0 py-2 text-lg text-gray-800">
             {" "}
@@ -209,19 +330,7 @@ const DeadtreesMapOL = () => {
               Schiefer et al., 2023
             </a>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-md m-0 pb-2 text-gray-600">Year</p>
-            <Radio.Group
-              className="pb-2"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              <Radio.Button value="2018">2018</Radio.Button>
-              <Radio.Button value="2019">2019</Radio.Button>
-              <Radio.Button value="2020">2020</Radio.Button>
-              <Radio.Button value="2021">2021</Radio.Button>
-            </Radio.Group>
-          </div>
+          <YearSelectionButtons />
         </div>
       </div>
     </div>
