@@ -111,6 +111,14 @@ const DeadtreesMapOL = () => {
     }
   }, [mapStyle, map]);
 
+  //update opacity of geotiff layer
+  useEffect(() => {
+    if (map) {
+      const geotiffLayer = map.getLayers().getArray()[1];
+      geotiffLayer.setOpacity(sliderValue);
+    }
+  }, [sliderValue, map]);
+
   // update on selectedSite change
   useEffect(() => {
     if (map && selectedSite) {
