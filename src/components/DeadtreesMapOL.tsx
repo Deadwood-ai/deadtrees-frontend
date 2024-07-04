@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import "ol/ol.css";
 import { Map, View, Overlay } from "ol";
-import { fromLonLat, transformExtent, transform } from "ol/proj";
+import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import TileLayer from "ol/layer/Tile";
 import { BingMaps, GeoTIFF } from "ol/source";
-// import { TileJSON } from "ol/source";
-import "./popup.css";
 
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
 import "./geocoder.css";
@@ -15,6 +13,7 @@ import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-g
 import getDeadwoodCOGUrl from "../utils/getDeadwoodCOGUrl";
 import { Radio, Slider } from "antd";
 import getPixelValueOfCoordinate from "../utils/getPixelValueOfCoordinate";
+import "./popup.css";
 
 const sites = {
   Waldshut: [8.174864507120049, 47.682517904265666],
@@ -38,7 +37,6 @@ const DeadtreesMapOL = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
-  const popupContainer = useRef();
 
   let overlay; // Declare overlay at the top-level scope
 
@@ -149,12 +147,8 @@ const DeadtreesMapOL = () => {
       }
 
       mapRef.current = newMap;
-
       newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
-
       setMap(newMap);
-      console.log("map initialized");
-      console.log(map);
     }
 
     return () => {
