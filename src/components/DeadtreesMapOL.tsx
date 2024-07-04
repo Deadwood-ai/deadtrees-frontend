@@ -1,21 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import "ol/ol.css";
-import { Map, View } from "ol";
-import { fromLonLat, transformExtent } from "ol/proj";
+import { Map, View, Overlay } from "ol";
+import { fromLonLat, transformExtent, transform } from "ol/proj";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import TileLayer from "ol/layer/Tile";
 import { BingMaps, GeoTIFF } from "ol/source";
 // import { TileJSON } from "ol/source";
+import "./popup.css";
 
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
 import "./geocoder.css";
-import {
-  GeoapifyContext,
-  GeoapifyGeocoderAutocomplete,
-} from "@geoapify/react-geocoder-autocomplete";
+import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-geocoder-autocomplete";
 
 import getDeadwoodCOGUrl from "../utils/getDeadwoodCOGUrl";
 import { Radio, Slider } from "antd";
+import getPixelValueOfCoordinate from "../utils/getPixelValueOfCoordinate";
 
 const sites = {
   Waldshut: [8.174864507120049, 47.682517904265666],
@@ -38,6 +37,10 @@ const DeadtreesMapOL = () => {
   const [selectedSite, setSelectedSite] = useState<string>();
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
+  const mapRef = useRef(null);
+  const popupContainer = useRef();
+
+  let overlay; // Declare overlay at the top-level scope
 
   // layers ---------------------------------------------------
 
@@ -47,8 +50,8 @@ const DeadtreesMapOL = () => {
         sources: [
           {
             url: getDeadwoodCOGUrl(year),
-            min: 400,
-            max: 4000,
+            min: 0,
+            max: 10000,
           },
         ],
         interpolate: false,
@@ -62,17 +65,41 @@ const DeadtreesMapOL = () => {
           0,
           [129, 176, 247, 0],
           0.4,
-          [129, 176, 247, 0.1],
-          0.6,
           [129, 176, 247, 0.3],
+          0.6,
+          [129, 176, 247, 0.5],
           0.8,
-          [129, 176, 247, 0.6],
+          [129, 176, 247, 0.8],
           1,
           [129, 176, 247, 1],
         ],
       },
     });
     return geotiffLayer;
+  };
+
+  // handler functions
+  const handleClick = async (event, year) => {
+    if (mapRef.current) {
+      const value = await getPixelValueOfCoordinate({
+        coordinates: event.coordinate,
+        cogUrl: getDeadwoodCOGUrl(year),
+      });
+
+      const popupContent = document.getElementById("popup-content");
+
+      if (popupContent) {
+        if (value > 0) {
+          popupContent.innerHTML = `Deadwood ${(value / 100).toFixed(0)} %`;
+        } else {
+          popupContent.innerHTML = `No deadwood`;
+        }
+      }
+      const overlay = mapRef.current.getOverlays().getArray()[0];
+      overlay.setPosition(event.coordinate);
+    } else {
+      console.log("map not initialized");
+    }
   };
 
   useEffect(() => {
@@ -91,25 +118,43 @@ const DeadtreesMapOL = () => {
 
       const newMap = new Map({
         target: mapContainer.current,
-        layers: [
-          basemapLayer,
-          geotifLayer2018,
-          geotifLayer2019,
-          geotifLayer2020,
-          geotifLayer2021,
-        ],
+        layers: [basemapLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
+        overlays: [],
         controls: [],
       });
-      newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+      const popupElement = document.createElement("div");
+      popupElement.id = "popup";
+      popupElement.className = "ol-popup";
+      popupElement.innerHTML = `
+        <div id="popup-content"></div>
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      `;
 
-      newMap.on("click", (event) => {
-        const pixel = newMap.getEventPixel(event.originalEvent);
-        console.log(pixel);
-        console.log(event.coordinate);
-        console.log(event);
+      const overlay = new Overlay({
+        element: popupElement,
+        autoPan: true,
+        autoPanAnimation: {
+          duration: 0,
+        },
       });
 
+      newMap.addOverlay(overlay);
+      const closer = popupElement.querySelector("#popup-closer");
+      if (closer) {
+        closer.onclick = function () {
+          overlay.setPosition(undefined);
+          closer.blur();
+          return false;
+        };
+      }
+
+      mapRef.current = newMap;
+
+      newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+
       setMap(newMap);
+      console.log("map initialized");
+      console.log(map);
     }
 
     return () => {
@@ -164,6 +209,25 @@ const DeadtreesMapOL = () => {
     }
   }, [selectedSite, map]);
 
+  // update onClick handler when selectedYear changes
+  useEffect(() => {
+    if (mapRef.current) {
+      // Remove the old click listener
+      mapRef.current.un("click", handleClick);
+
+      // Add a new click listener with the current selectedYear
+      const clickHandler = (event) => handleClick(event, selectedYear);
+      mapRef.current.on("click", clickHandler);
+
+      // Clean up function to remove the listener when the component unmounts or selectedYear changes
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.un("click", clickHandler);
+        }
+      };
+    }
+  }, [selectedYear]);
+
   // update visibility of geotiff layers based on selectedYear
   useEffect(() => {
     if (map) {
@@ -174,19 +238,17 @@ const DeadtreesMapOL = () => {
           layer.setVisible(yearByIndex[index] === selectedYear);
         }
       });
+      // update onclick listerer
     }
   }, [selectedYear, map]);
 
   // components ---------------------------------------------------
+
   const YearSelectionButtons = () => {
     return (
       <div className="flex items-center justify-between">
         <p className="text-md m-0 pb-2 text-gray-600">Year</p>
-        <Radio.Group
-          className="pb-2"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-        >
+        <Radio.Group className="pb-2" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
           <Radio.Button value="2018">2018</Radio.Button>
           <Radio.Button value="2019">2019</Radio.Button>
           <Radio.Button value="2020">2020</Radio.Button>
@@ -198,13 +260,8 @@ const DeadtreesMapOL = () => {
   const MapStyleSwitchButtons = () => {
     return (
       <div className="absolute left-8 top-28 z-20">
-        <Radio.Group
-          value={mapStyle}
-          onChange={(e) => setMapStyle(e.target.value)}
-        >
-          <Radio.Button value="AerialWithLabelsOnDemand">
-            Satellite
-          </Radio.Button>
+        <Radio.Group value={mapStyle} onChange={(e) => setMapStyle(e.target.value)}>
+          <Radio.Button value="AerialWithLabelsOnDemand">Satellite</Radio.Button>
           <Radio.Button value="RoadOnDemand">Streets</Radio.Button>
         </Radio.Group>
       </div>
@@ -230,9 +287,7 @@ const DeadtreesMapOL = () => {
   const Legend = () => {
     return (
       <div className="absolute bottom-56 right-8 z-50 flex flex-col items-end space-x-2 rounded-md bg-slate-100 p-4">
-        <p className="m-0 max-w-24 pb-2 text-center text-xs text-gray-500">
-          Share of standing deadwood (%)
-        </p>
+        <p className="m-0 max-w-24 pb-2 text-center text-xs text-gray-500">Share of standing deadwood (%)</p>
         <div className="flex h-32 space-x-2">
           <div className="flex flex-col items-end justify-between">
             <p className="m-0 text-xs text-gray-600">100% - </p>
@@ -241,44 +296,6 @@ const DeadtreesMapOL = () => {
           </div>
           <div className="mb-1 mt-1  w-4 rounded-sm bg-gradient-to-b from-sky-500"></div>
         </div>
-      </div>
-    );
-  };
-
-  const DeadwoodCard = () => {
-    return (
-      <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
-        <p className="m-0 py-2 text-lg text-gray-800">
-          {" "}
-          Deadwood for {selectedYear}
-        </p>
-        <div className="mb-2 flex w-full items-end ">
-          <p className="m-0 w-full text-xs text-gray-600">
-            Satellite-based prediction
-          </p>
-          <div className="w-2/3">
-            <p className="m-0 w-full text-xs text-gray-600">opacity</p>
-            <Slider
-              className="m-0 w-full"
-              defaultValue={1}
-              step={0.01}
-              max={1}
-              value={sliderValue}
-              onChange={(value) => setSliderValue(value as number)}
-              min={0}
-            />
-          </div>
-        </div>
-        <div className="mb-6 flex items-center space-x-2">
-          <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
-          <a
-            className="m-0 italic underline"
-            href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
-          >
-            Schiefer et al., 2023
-          </a>
-        </div>
-        <YearSelectionButtons />
       </div>
     );
   };
@@ -293,6 +310,7 @@ const DeadtreesMapOL = () => {
         }}
         ref={mapContainer}
       >
+        {/* <CogValuePopup /> */}
         <div className="absolute right-8 top-28 z-20 w-96 rounded-sm">
           <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
             <GeoapifyGeocoderAutocomplete
@@ -308,14 +326,9 @@ const DeadtreesMapOL = () => {
         <Legend />
         {/* <DeadwoodCard /> */}
         <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
-          <p className="m-0 py-2 text-lg text-gray-800">
-            {" "}
-            Deadwood for {selectedYear}
-          </p>
+          <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {selectedYear}</p>
           <div className="mb-2 flex w-full items-end ">
-            <p className="m-0 w-full text-xs text-gray-600">
-              Satellite-based prediction
-            </p>
+            <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
             <div className="w-2/3">
               <p className="m-0 w-full text-xs text-gray-600">opacity</p>
               <Slider
