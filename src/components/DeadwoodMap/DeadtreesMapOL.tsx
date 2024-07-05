@@ -244,13 +244,17 @@ const DeadtreesMapOL = () => {
         </div>
         <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         <SideSelectionButtons />
-        <Legend />
-        <DeadwoodCard
-          year={selectedYear}
-          sliderValue={sliderValue}
-          setSliderValue={setSliderValue}
-          setSelectedYear={setSelectedYear}
-        />
+        <div className="absolute bottom-12 right-8 z-50 space-y-2">
+          <div className="flex justify-end">
+            <Legend />
+          </div>
+          <DeadwoodCard
+            year={selectedYear}
+            sliderValue={sliderValue}
+            setSliderValue={setSliderValue}
+            setSelectedYear={setSelectedYear}
+          />
+        </div>
       </div>
     </div>
   );

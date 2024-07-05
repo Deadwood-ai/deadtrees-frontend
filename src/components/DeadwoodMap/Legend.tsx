@@ -1,6 +1,6 @@
 const Legend = () => {
   return (
-    <div className="absolute bottom-56 right-8 z-50 flex flex-col items-end space-x-2 rounded-md bg-white p-4">
+    <div className="flex min-w-fit flex-col items-end space-x-2 rounded-md bg-white p-4">
       <p className="m-0 max-w-24 pb-2 text-center text-xs text-gray-500">Share of standing deadwood (%)</p>
       <div className="flex h-32 space-x-2">
         <div className="flex flex-col items-end justify-between">
