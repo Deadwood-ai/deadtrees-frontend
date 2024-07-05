@@ -9,7 +9,7 @@ import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 import mapboxgl from "mapbox-gl";
 
 import { Radio, Slider } from "antd";
-import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
+import addDeadwoodWMSLayers from "../archive/addDeadwoodWMSToMap";
 
 const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);

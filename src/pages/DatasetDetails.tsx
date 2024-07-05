@@ -2,13 +2,8 @@ import { Button, Col, Row, Tag, Typography, notification } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 
-import {
-  ArrowLeftOutlined,
-  BackwardFilled,
-  EnvironmentFilled,
-  EnvironmentOutlined,
-} from "@ant-design/icons";
-import DatasetDetailsMap from "../components/DatasetDetailsMap";
+import { ArrowLeftOutlined, BackwardFilled, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
+import DatasetDetailsMap from "../archive/DatasetDetailsMap";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -45,10 +40,7 @@ export default function DatasetDetails() {
             </div>
             <div className="mt-4 rounded-md bg-white p-4">
               <div className="flex items-center pb-4">
-                <EnvironmentOutlined
-                  style={{ fontSize: 24, color: "#1890ff" }}
-                  className="pr-2"
-                />
+                <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
                   {dataset.gadm_NAME_3 ? dataset.gadm_NAME_3 : "Unknown"}
                 </Typography.Title>
@@ -56,22 +48,16 @@ export default function DatasetDetails() {
 
               <div className="flex justify-between  p-1">
                 <Typography.Text className="pr-2">Author: </Typography.Text>
-                <Typography.Text strong>
-                  {dataset.authors_image}
-                </Typography.Text>
+                <Typography.Text strong>{dataset.authors_image}</Typography.Text>
               </div>
               {dataset.citation_doi && (
                 <div className="flex justify-between p-1">
                   <Typography.Text className="pr-2">DOI: </Typography.Text>
-                  <Typography.Text strong>
-                    {dataset.citation_doi}
-                  </Typography.Text>
+                  <Typography.Text strong>{dataset.citation_doi}</Typography.Text>
                 </div>
               )}
               <div className="flex justify-between p-1">
-                <Typography.Text className="pr-2">
-                  Acquisition Date:{" "}
-                </Typography.Text>
+                <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
                 <Typography.Text strong>
                   {date.toLocaleString("en-US", {
                     year: "numeric",
@@ -82,9 +68,7 @@ export default function DatasetDetails() {
               </div>
               <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">Has Labels: </Typography.Text>
-                <Typography.Text strong>
-                  {dataset.has_labels ? "true" : "false"}
-                </Typography.Text>
+                <Typography.Text strong>{dataset.has_labels ? "true" : "false"}</Typography.Text>
               </div>
               {/* <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">Public: </Typography.Text>
@@ -109,48 +93,36 @@ export default function DatasetDetails() {
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">
-                    File Size:{" "}
-                  </Typography.Text>
+                  <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
                 {(dataset.file_size / 1000000).toFixed(0)} MB
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">
-                    Spectral Properties :{" "}
-                  </Typography.Text>
+                  <Typography.Text className="pr-2">Spectral Properties : </Typography.Text>
                 </Typography.Text>
                 <Tag color="blue">
                   {" "}
-                  {dataset.image_spectral_properties
-                    ? dataset.image_spectral_properties
-                    : "Unknown"}
+                  {dataset.image_spectral_properties ? dataset.image_spectral_properties : "Unknown"}
                 </Tag>
               </div>
             </div>
             <div className="mt-4 rounded-md bg-white p-4">
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">
-                    Label Source:{" "}
-                  </Typography.Text>
+                  <Typography.Text className="pr-2">Label Source: </Typography.Text>
                 </Typography.Text>
                 <Tag color="blue">{dataset.label_source}</Tag>
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">
-                    Label Type:{" "}
-                  </Typography.Text>
+                  <Typography.Text className="pr-2">Label Type: </Typography.Text>
                 </Typography.Text>
                 <Tag color="blue">{dataset.label_type}</Tag>
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">
-                    Label Quality:{" "}
-                  </Typography.Text>
+                  <Typography.Text className="pr-2">Label Quality: </Typography.Text>
                 </Typography.Text>
                 <Tag color="blue">{dataset.label_quality}</Tag>
               </div>

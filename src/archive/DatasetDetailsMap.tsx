@@ -4,7 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { IDataset, ILabels } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 import { FeatureCollection } from "geojson";
-import { supabase } from "./useSupabase";
+import { supabase } from "../components/useSupabase";
 import { Alert, Radio, Slider, notification } from "antd";
 import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 
@@ -15,12 +15,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [sliderValueLabels, setSliderValueLabels] = useState<number>(0.6);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
 
-  const mapLayerList = [
-    "deadtrees_2018_layer",
-    "deadtrees_2019_layer",
-    "deadtrees_2020_layer",
-    "deadtrees_2021_layer",
-  ];
+  const mapLayerList = ["deadtrees_2018_layer", "deadtrees_2019_layer", "deadtrees_2020_layer", "deadtrees_2021_layer"];
 
   const fetchLabels = async (file_name: string) => {
     console.log("file_name", file_name);
@@ -146,11 +141,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {
-        mapInstance.setLayoutProperty(
-          layer,
-          "visibility",
-          selectedYear === layer.split("_")[1] ? "visible" : "none",
-        );
+        mapInstance.setLayoutProperty(layer, "visibility", selectedYear === layer.split("_")[1] ? "visible" : "none");
       }
     });
   }, [selectedYear, mapLayerList]);
@@ -159,22 +150,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     const selectedLayer = `deadtrees_${selectedYear}_layer`;
     const mapInstance = mapContainer.current?.mapInstance;
     if (mapInstance && mapInstance.getLayer(selectedLayer)) {
-      mapInstance.setPaintProperty(
-        selectedLayer,
-        "raster-opacity",
-        sliderValue,
-      );
+      mapInstance.setPaintProperty(selectedLayer, "raster-opacity", sliderValue);
     }
   }, [sliderValue, selectedYear, mapLayerList]);
 
   useEffect(() => {
     const mapInstance = mapContainer.current?.mapInstance;
     if (mapInstance && mapInstance.getLayer("standing_deadwood")) {
-      mapInstance.setPaintProperty(
-        "standing_deadwood",
-        "fill-opacity",
-        sliderValueLabels,
-      );
+      mapInstance.setPaintProperty("standing_deadwood", "fill-opacity", sliderValueLabels);
     }
   }, [sliderValueLabels]);
 
@@ -193,10 +176,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       />
 
       <div className="absolute bottom-8 right-2 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
-        <p className="m-0 py-2 text-lg text-gray-800">
-          {" "}
-          Deadwood for {selectedYear}
-        </p>
+        <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {selectedYear}</p>
         <div className="mb-2 flex w-full items-end">
           <p className="m-0 w-full text-xs text-gray-600">Drone-based label</p>
           <div className="w-2/3">
@@ -214,9 +194,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           </div>
         </div>
         <div className="mb-4 flex w-full items-end ">
-          <p className="m-0 w-full text-xs text-gray-600">
-            Satellite-based prediction
-          </p>
+          <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
           <div className="w-2/3">
             <p className="m-0 w-full text-xs text-gray-600">opacity</p>
             <Slider
@@ -232,11 +210,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         </div>
         <div className="flex items-center justify-between">
           <p className="text-md m-0 pb-2 text-gray-600">Year</p>
-          <Radio.Group
-            className="pb-2"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-          >
+          <Radio.Group className="pb-2" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
             <Radio.Button value="2018">2018</Radio.Button>
             <Radio.Button value="2019">2019</Radio.Button>
             <Radio.Button value="2020">2020</Radio.Button>
