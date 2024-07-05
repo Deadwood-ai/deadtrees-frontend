@@ -4,6 +4,7 @@ import { useData } from "../state/DataProvider";
 
 import { ArrowLeftOutlined, BackwardFilled, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
 import DatasetDetailsMap from "../archive/DatasetDetailsMap";
+import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -133,7 +134,8 @@ export default function DatasetDetails() {
         )}
       </Col>
       <Col className="flex-1 py-4">
-        <DatasetDetailsMap data={dataset} />
+        {/* <DatasetDetailsMap data={dataset} /> */}
+        <DatasetDetailsMapOL data={dataset} />
       </Col>
     </Row>
   );

@@ -1,4 +1,4 @@
-import DeadtreesMap from "../components/DeadtreesMap";
+import DeadtreesMap from "../archive/DeadtreesMap";
 import DeadtreesMapOL from "../components/DeadwoodMap/DeadtreesMapOL";
 
 const Deadtrees = () => {
