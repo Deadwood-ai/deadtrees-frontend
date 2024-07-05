@@ -62,6 +62,8 @@ const DeadtreesMapOL = () => {
           ["band", 1],
           0,
           [129, 176, 247, 0],
+          0.2,
+          [129, 176, 247, 0.2],
           0.4,
           [129, 176, 247, 0.3],
           0.6,
@@ -137,6 +139,7 @@ const DeadtreesMapOL = () => {
       });
 
       newMap.addOverlay(overlay);
+
       const closer = popupElement.querySelector("#popup-closer");
       if (closer) {
         closer.onclick = function () {
@@ -280,7 +283,7 @@ const DeadtreesMapOL = () => {
 
   const Legend = () => {
     return (
-      <div className="absolute bottom-56 right-8 z-50 flex flex-col items-end space-x-2 rounded-md bg-slate-100 p-4">
+      <div className="absolute bottom-56 right-8 z-50 flex flex-col items-end space-x-2 rounded-md bg-white p-4">
         <p className="m-0 max-w-24 pb-2 text-center text-xs text-gray-500">Share of standing deadwood (%)</p>
         <div className="flex h-32 space-x-2">
           <div className="flex flex-col items-end justify-between">
@@ -289,6 +292,42 @@ const DeadtreesMapOL = () => {
             <p className="m-0 text-xs text-gray-600">0% - </p>
           </div>
           <div className="mb-1 mt-1  w-4 rounded-sm bg-gradient-to-b from-sky-500"></div>
+        </div>
+      </div>
+    );
+  };
+
+  // const DeadwoodCard = ({ year, sliderValue }: { year: string; sliderValue: number }) => {
+  const DeadwoodCard = (year: string, sliderValue: number) => {
+    return (
+      <div>
+        <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
+          <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {year}</p>
+          <div className="mb-2 flex w-full items-end ">
+            <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
+            <div className="w-2/3">
+              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+              <Slider
+                className="m-0 w-full"
+                defaultValue={1}
+                step={0.01}
+                max={1}
+                value={sliderValue}
+                onChange={(value) => setSliderValue(value as number)}
+                min={0}
+              />
+            </div>
+          </div>
+          <div className="mb-6 flex items-center space-x-2">
+            <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
+            <a
+              className="m-0 italic underline"
+              href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
+            >
+              Schiefer et al., 2023
+            </a>
+          </div>
+          <YearSelectionButtons />
         </div>
       </div>
     );
@@ -318,35 +357,8 @@ const DeadtreesMapOL = () => {
         <MapStyleSwitchButtons />
         <SideSelectionButtons />
         <Legend />
-        {/* <DeadwoodCard /> */}
-        <div className="absolute bottom-12 right-8 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
-          <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {selectedYear}</p>
-          <div className="mb-2 flex w-full items-end ">
-            <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
-            <div className="w-2/3">
-              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
-              <Slider
-                className="m-0 w-full"
-                defaultValue={1}
-                step={0.01}
-                max={1}
-                value={sliderValue}
-                onChange={(value) => setSliderValue(value as number)}
-                min={0}
-              />
-            </div>
-          </div>
-          <div className="mb-6 flex items-center space-x-2">
-            <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
-            <a
-              className="m-0 italic underline"
-              href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
-            >
-              Schiefer et al., 2023
-            </a>
-          </div>
-          <YearSelectionButtons />
-        </div>
+        {DeadwoodCard(selectedYear, sliderValue)}
+        {/* if rendering as regular jsx, interaction selects everything, this approach does not. No idea why ?*/}
       </div>
     </div>
   );
