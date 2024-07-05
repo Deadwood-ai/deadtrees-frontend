@@ -242,7 +242,9 @@ const DeadtreesMapOL = () => {
             />
           </GeoapifyContext>
         </div>
-        <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+        <div className="absolute left-8 top-28 z-50">
+          <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+        </div>
         <SideSelectionButtons />
         <div className="absolute bottom-12 right-8 z-50 space-y-2">
           <div className="flex justify-end">
