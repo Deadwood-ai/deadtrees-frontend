@@ -1,79 +1,64 @@
 // UploadModal.js
 
 import { useState } from "react";
-import {
-  Button,
-  Form,
-  Radio,
-  Space,
-  Upload,
-  message,
-  Modal,
-  DatePicker,
-  Alert,
-  Input,
-} from "antd";
+import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../state/AuthProvider";
 import { supabase } from "./useSupabase";
+import uploadFile from "../api/uploadFile";
 
-const UploadModal = ({
-  isVisible,
-  onClose,
-}: {
-  isVisible: boolean;
-  onClose: () => void;
-}) => {
+const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const [fileList, setFileList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
 
   const onFormFinish = async (values: { platform: string | Blob }) => {
     setIsSubmitting(true);
+
     const formData = new FormData();
-    if (fileList.length > 0) {
-      const file = fileList[0] as any; // Add type assertion to any
-      const fileName = file.name;
-      console.log("file", file);
-      formData.append("file", file.originFileObj);
-    }
+    // if (fileList.length > 0) {
+    const file = fileList[0] as any; // Add type assertion to any
+    console.log("file", file);
+    const fileName = file.name;
+    const resUpload = await uploadFile(file.originFileObj, session!.access_token);
+    // formData.append("file", file.originFileObj);
+    // }
     formData.append("platform", values.platform);
     formData.append("aquisition_date", values.aquisition_date.toISOString());
     formData.append("license", values.license);
-    try {
-      const response = await fetch(
-        "https://data.deadtrees.earth/api/dev/upload",
-        {
-          headers: {
-            Authorization: `Bearer ${session!.access_token}`,
-          },
-          method: "POST",
-          body: formData,
-        },
-      );
-      const supabaseRes = await supabase.from("metadata_dev_egu_v2").insert({
-        filename: fileList[0].name,
-        authors_image: values.author,
-        citation_doi: values.doi,
-        image_platform: values.platform,
-        license: values.license,
-      });
-      console.log("supabaseRes", supabaseRes);
 
-      if (response.ok && supabaseRes.error === null) {
-        message.success("Upload successful");
-        console.log(response);
-        onClose(); // Invoke the onClose callback to close the modal
-      } else {
-        message.error("Upload failed");
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      message.error("Upload failed");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // try {
+    //   const response = await fetch("https://data.deadtrees.earth/api/dev/upload", {
+    //     headers: {
+    //       Authorization: `Bearer ${session!.access_token}`,
+    //     },
+    //     method: "POST",
+    //     body: formData,
+    //   });
+
+    //   const supabaseRes = await supabase.from("metadata_dev_egu_v2").insert({
+    //     filename: fileList[0].name,
+    //     authors_image: values.author,
+    //     citation_doi: values.doi,
+    //     image_platform: values.platform,
+    //     license: values.license,
+    //   });
+    //   console.log("supabaseRes", supabaseRes);
+
+    //   if (response.ok && supabaseRes.error === null) {
+    //     message.success("Upload successful");
+    //     console.log(response);
+    //     onClose(); // Invoke the onClose callback to close the modal
+    //   } else {
+    //     message.error("Upload failed");
+    //   }
+    // } catch (error) {
+    //   console.error("Upload error:", error);
+    //   message.error("Upload failed");
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
 
   const onFileChange = ({ fileList: newFileList }) => {
@@ -86,37 +71,14 @@ const UploadModal = ({
   };
 
   return (
-    <Modal
-      title="File Upload"
-      open={isVisible}
-      onCancel={onClose}
-      footer={null}
-    >
-      <Form
-        layout="vertical"
-        onFinish={onFormFinish}
-        initialValues={{ platform: "drone", license: "cc-by" }}
-      >
-        <Form.Item
-          label="File"
-          name="file"
-          rules={[{ required: true, message: "Please upload a file" }]}
-        >
-          <Upload
-            fileList={fileList}
-            onChange={onFileChange}
-            beforeUpload={beforeUpload}
-            listType="text"
-            maxCount={1}
-          >
+    <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
+      <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
+        <Form.Item label="File" name="file" rules={[{ required: true, message: "Please upload a file" }]}>
+          <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
             <Button icon={<UploadOutlined />}>Click to upload</Button>
           </Upload>
         </Form.Item>
-        <Form.Item
-          rules={[{ required: true, message: "Please enter the authors" }]}
-          label="Authors"
-          name="author"
-        >
+        <Form.Item rules={[{ required: true, message: "Please enter the authors" }]} label="Authors" name="author">
           <Input className="w-96" type="name" placeholder="Jon Doe" />
         </Form.Item>
         <Form.Item
@@ -157,8 +119,7 @@ const UploadModal = ({
         message="Label Upload Coming Soon!"
         description={
           <>
-            Label upload is not currently supported, but will be available soon.
-            If you have questions, please{" "}
+            Label upload is not currently supported, but will be available soon. If you have questions, please{" "}
             <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
               contact{" "}
             </a>{" "}
