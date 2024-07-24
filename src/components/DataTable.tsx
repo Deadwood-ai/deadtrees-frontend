@@ -1,11 +1,12 @@
 // DataTable.js
-"use client";
+// "use client";
 
 import { useEffect, useState } from "react";
 import { Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../state/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { LinkOutlined } from "@ant-design/icons";
+import { Settings } from "../config";
 
 const DataTable = ({ supabase }) => {
   const { user } = useAuth();
@@ -14,10 +15,7 @@ const DataTable = ({ supabase }) => {
 
   const fetchData = async () => {
     //
-    const { data, error } = await supabase
-      .from("upload_files_dev")
-      .select("*")
-      .eq("user_id", user!.id);
+    const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", user!.id);
     if (error) {
       console.error("Error fetching data:", error);
     } else {
@@ -52,8 +50,7 @@ const DataTable = ({ supabase }) => {
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },
     { title: "Date", dataIndex: "aquisition_date", key: "aquisition_date" },
-    { title: "File", dataIndex: "file_name", key: "file_name" },
-    { title: "Type", dataIndex: "content_type", key: "content_type" },
+    { title: "File", dataIndex: "file_alias", key: "file_alias" },
     { title: "License", dataIndex: "license", key: "license" },
 
     {
@@ -64,16 +61,12 @@ const DataTable = ({ supabase }) => {
     },
 
     {
-      title: "uuid",
-      dataIndex: "uuid",
-      key: "uuid",
+      title: "id",
+      dataIndex: "id",
+      key: "id",
       render: (tag) => (
         <Tooltip title="Wait for the status: 'processed'">
-          <Tag
-            color="green"
-            onClick={() => nav(`/dataset/${tag}`)}
-            icon={<LinkOutlined />}
-          ></Tag>
+          <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
         </Tooltip>
       ),
     },
@@ -86,14 +79,7 @@ const DataTable = ({ supabase }) => {
     },
   ];
 
-  return (
-    <Table
-      rowKey={"id"}
-      dataSource={data}
-      columns={columns}
-      pagination={{ pageSize: 10 }}
-    />
-  );
+  return <Table rowKey={"id"} dataSource={data} columns={columns} pagination={{ pageSize: 10 }} />;
 };
 
 export default DataTable;

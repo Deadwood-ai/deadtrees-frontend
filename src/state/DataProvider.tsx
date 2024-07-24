@@ -56,11 +56,11 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   const fetchData = async () => {
-    const { data, error } = await supabase.from(Settings.DATA_TABLE).select("*");
+    const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
     if (error) {
-      console.error("Error fetching data from", Settings.DATA_TABLE, ":", error);
+      console.error("Error fetching data from", Settings.DATA_TABLE_FULL, ":", error);
     } else {
-      console.log(Settings.DATA_TABLE, "fetched :", data);
+      console.log(Settings.DATA_TABLE_FULL, "fetched :", data);
       setRawData(data);
     }
   };

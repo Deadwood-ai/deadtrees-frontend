@@ -35,13 +35,8 @@ export default function ProfilePage() {
       <div className=" m-auto h-full max-w-7xl">
         <div className="flex pt-16">
           <div className="w-full">
-            <Avatar
-              size={64}
-              src="https://avatars.githubusercontent.com/u/8186664?v=7"
-            />
-            <Typography.Title className="font-3xl m-0">
-              Profile
-            </Typography.Title>
+            <Avatar size={64} src="https://avatars.githubusercontent.com/u/8186664?v=7" />
+            <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
             <Typography.Text type="secondary">{user?.email}</Typography.Text>
           </div>
           <div>
@@ -49,9 +44,8 @@ export default function ProfilePage() {
               message="Upload is in development!"
               description={
                 <>
-                  We are enhancing our automatic data audit process. We
-                  anticipate full functionality soon. If you have any questions,
-                  please{" "}
+                  We are enhancing our automatic data audit process. We anticipate full functionality soon. If you have
+                  any questions, please{" "}
                   <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
                     contact{" "}
                   </a>{" "}
@@ -64,9 +58,10 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className=" w-full">
-          <div className="mb-4 flex justify-end">{/* <UploadButton /> */}</div>
-          <DataTable supabase={supabase} />{" "}
-          {/* Use the new DataTable component */}
+          <div className="mb-4 flex justify-end">
+            <UploadButton />
+          </div>
+          <DataTable supabase={supabase} /> {/* Use the new DataTable component */}
         </div>
       </div>
     );

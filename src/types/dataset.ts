@@ -13,6 +13,7 @@ export interface IThumbnail {
 export interface IDataset {
   id: number;
   file_name: string | null;
+  file_size: number;
   bbox: string | null;
   status: string | null;
   created_at: string;
