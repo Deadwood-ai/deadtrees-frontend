@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../components/useSupabase";
 import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
+import { Settings } from "../config";
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -47,8 +48,7 @@ const DataProvider = (props: DataProviderProps) => {
     const publicURLs = filname_list.map((file_name) => {
       return {
         file_name: file_name,
-        url: supabase.storage.from("thumbnails").getPublicUrl(file_name).data
-          .publicUrl,
+        url: supabase.storage.from("thumbnails").getPublicUrl(file_name).data.publicUrl,
       };
     });
     console.log("publicURLs", publicURLs);
@@ -56,13 +56,11 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   const fetchData = async () => {
-    const { data, error } = await supabase
-      .from("metadata_dev_egu_view_v2")
-      .select("*");
+    const { data, error } = await supabase.from(Settings.DATA_TABLE).select("*");
     if (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data from", Settings.DATA_TABLE, ":", error);
     } else {
-      console.log("metadata_v2 fetched :", data);
+      console.log(Settings.DATA_TABLE, "fetched :", data);
       setRawData(data);
     }
   };
@@ -77,8 +75,7 @@ const DataProvider = (props: DataProviderProps) => {
   }, []);
 
   const callWebhook = async (payload: any) => {
-    const webhookURL =
-      "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
+    const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
     const webhookResponse = fetch(webhookURL, {
       method: "POST",
       headers: {
@@ -92,7 +89,7 @@ const DataProvider = (props: DataProviderProps) => {
       }),
     });
   };
-
+  // subscription to webhook
   useEffect(() => {
     console.log("subscribing to webhook");
     const channel = supabase
@@ -106,10 +103,7 @@ const DataProvider = (props: DataProviderProps) => {
         },
         (payload) => {
           console.log("Change received via insert!", payload);
-          if (
-            payload.eventType === "INSERT" &&
-            payload.new.status === "pending"
-          ) {
+          if (payload.eventType === "INSERT" && payload.new.status === "pending") {
             console.log("calling webhook");
             const webhookResponse = callWebhook(payload);
             console.log("webhook res", webhookResponse);
@@ -142,6 +136,7 @@ const DataProvider = (props: DataProviderProps) => {
     };
   }, []);
 
+  // filtering data
   useEffect(() => {
     console.log("filtering data");
     if (!rawData) return; // Early exit if data is null
@@ -153,7 +148,7 @@ const DataProvider = (props: DataProviderProps) => {
         } else if (filterTag === "license") {
           return item.license === filter;
         } else if (filterTag === "authors_image") {
-          return item.authors_image === filter;
+          return item.authors === filter;
         }
 
         return false;
@@ -172,9 +167,7 @@ const DataProvider = (props: DataProviderProps) => {
     setFilterTag,
     collaborators,
   };
-  return (
-    <DataContext.Provider value={value}>{props.children}</DataContext.Provider>
-  );
+  return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
 };
 
 export const useData = () => {

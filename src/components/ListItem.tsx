@@ -11,14 +11,14 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
 
   const onClickHandler = (item) => {
     console.log("clicked item", item);
-    if (item.uuid && item.file_size < 1000000000) {
-      navigate(`/dataset/${item.uuid}`);
-    } else {
-      notification.info({
-        message: "Coming Soon",
-        description: "This dataset is not yet available",
-      });
-    }
+    // if (item.id && item.file_size < 1000000000) {
+    navigate(`/dataset/${item.id}`);
+    // } else {
+    //   notification.info({
+    //     message: "Coming Soon",
+    //     description: "This dataset is not yet available",
+    //   });
+    // }
   };
 
   const onClickFilterHandler = (e, filter, filterTag) => {
@@ -35,11 +35,7 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
       onClick={() => onClickHandler(item)}
     >
       <img
-        src={
-          item.gadm_NAME_0
-            ? getThumbnailURL(item.file_name)
-            : "/assets/tree-icon.png"
-        }
+        src={item.gadm_NAME_0 ? getThumbnailURL(item.file_name) : "/assets/tree-icon.png"}
         className="m-0 h-16 rounded-lg"
         loading="lazy"
       />
@@ -49,26 +45,23 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
             {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
             {item.gadm_NAME_0}
           </p>
-          {(item.wms_source === null || item.file_size > 1000000000) && (
+          {/* {(item.wms_source === null || item.file_size > 1000000000) && (
             <div>
               <Tooltip title="This dataset is not yet available">
                 <InfoCircleTwoTone />
               </Tooltip>
             </div>
-          )}
+          )} */}
         </div>
         <div className="flex space-x-1">
           <div className="flex-1">
-            <Tooltip title={item.authors_image}>
+            <Tooltip title={item.authors}>
               <Button
                 type="default"
                 size="small"
-                onClick={(e) =>
-                  onClickFilterHandler(e, item.authors_image, "authors_image")
-                }
+                onClick={(e) => onClickFilterHandler(e, item.authors, "authors_image")}
               >
-                {item.authors_image.slice(0, 18) +
-                  (item.authors_image.length > 18 ? "..." : "")}
+                {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
               </Button>
             </Tooltip>
           </div>

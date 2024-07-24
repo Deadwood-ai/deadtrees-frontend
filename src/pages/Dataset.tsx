@@ -8,9 +8,10 @@ import { CloseOutlined } from "@ant-design/icons";
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
   // filter for elements of data with status "processed"
-  const processedData = data?.filter(
-    (d) => d.status === "processed" || d.status === null,
-  );
+  console.log("data in Dataset", data);
+
+  const processedData = data?.filter((d) => d.status === "processed" || d.status === null);
+  console.log("processedData in Dataset", processedData);
   const [uuidHovered, setUuidHovered] = useState<string | null>(null);
 
   return (
@@ -22,9 +23,7 @@ export default function Dataset() {
               <h4 className="m-0">Filtered by: </h4>
               {
                 <Tag className="m-0 ml-1" color="blue">
-                  <span className="text-sm font-medium">
-                    {filter.slice(0, 10) + (filter.length > 10 ? "..." : "")}
-                  </span>
+                  <span className="text-sm font-medium">{filter.slice(0, 10) + (filter.length > 10 ? "..." : "")}</span>
                   <Button
                     className=" ml-2 border-none bg-transparent"
                     size="small"
