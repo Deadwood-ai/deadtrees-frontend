@@ -8,8 +8,6 @@ import { useAuth } from "../state/AuthProvider";
 import uploadFile from "../api/uploadFile";
 import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
-import axios from "axios";
-import { set } from "ol/transform";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const [fileList, setFileList] = useState([]);
