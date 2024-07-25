@@ -5,78 +5,129 @@ import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, 
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../state/AuthProvider";
-import { supabase } from "./useSupabase";
 import uploadFile from "../api/uploadFile";
+import buildCog from "../api/buildCog";
+import addMetadata from "../api/addMetadata";
+import axios from "axios";
+import { set } from "ol/transform";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const [fileList, setFileList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const onFormFinish = async (values: { platform: string | Blob }) => {
+  const onFormFinish = async (values: { platform: string | Blob; license: string; aquisition_date: Date }) => {
     setIsSubmitting(true);
 
-    const formData = new FormData();
-    // if (fileList.length > 0) {
-    const file = fileList[0] as any; // Add type assertion to any
-    console.log("file", file);
-    const fileName = file.name;
-    const resUpload = await uploadFile(file.originFileObj, session!.access_token);
-    // formData.append("file", file.originFileObj);
-    // }
-    formData.append("platform", values.platform);
-    formData.append("aquisition_date", values.aquisition_date.toISOString());
-    formData.append("license", values.license);
+    try {
+      const file = fileList[0]; // Assuming fileList is defined and non-empty
 
-    // try {
-    //   const response = await fetch("https://data.deadtrees.earth/api/dev/upload", {
-    //     headers: {
-    //       Authorization: `Bearer ${session!.access_token}`,
-    //     },
-    //     method: "POST",
-    //     body: formData,
-    //   });
+      if (!file) {
+        throw new Error("No file selected for upload.");
+      }
 
-    //   const supabaseRes = await supabase.from("metadata_dev_egu_v2").insert({
-    //     filename: fileList[0].name,
-    //     authors_image: values.author,
-    //     citation_doi: values.doi,
-    //     image_platform: values.platform,
-    //     license: values.license,
-    //   });
-    //   console.log("supabaseRes", supabaseRes);
+      const resUpload = await uploadFile(file, session!.access_token);
+      console.log("resUpload", resUpload);
+      onClose(); // Close the modal
 
-    //   if (response.ok && supabaseRes.error === null) {
-    //     message.success("Upload successful");
-    //     console.log(response);
-    //     onClose(); // Invoke the onClose callback to close the modal
-    //   } else {
-    //     message.error("Upload failed");
-    //   }
-    // } catch (error) {
-    //   console.error("Upload error:", error);
-    //   message.error("Upload failed");
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
+      if (resUpload.id) {
+        // Adding metadata
+        const metadata = {
+          dataset_id: resUpload.id.toString(),
+          user_id: session!.user.id,
+          name: file.name,
+          license: values.license,
+          platform: values.platform,
+          aquisition_date: values.aquisition_date.toISOString(),
+        };
+
+        const resAddMetadata = await addMetadata(resUpload.id, metadata, session!.access_token);
+        console.log("resAddMetadata", resAddMetadata);
+
+        message.success("Upload successful");
+
+        // Starting COG build
+        const resBuildCog = await buildCog(resUpload.id, session!.access_token);
+        console.log("resBuildCog", resBuildCog);
+      } else {
+        throw new Error("Upload failed to return an ID.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      message.error("Upload failed");
+      onClose(); // Close the modal
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const onFileChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList.slice(-1));
+    setFileList(newFileList);
+    console.log("newFileList", newFileList);
+    setUploadProgress(newFileList[0].percent || 0);
   };
 
   const beforeUpload = (file) => {
     setFileList([file]);
-    return false;
+    return Upload.LIST_IGNORE;
+  };
+  const handleCustomRequest = ({ file }) => {
+    console.log("file", file);
+
+    // Ensure the URL has the correct protocol
+    const url = "http://localhost:3000/profile";
+
+    axios
+      .post(url, file, {
+        onUploadProgress: (progressEvent) => {
+          console.log(progressEvent);
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(percentCompleted);
+        },
+        headers: {
+          "Content-Type": file.type, // Set the content type based on the file type
+        },
+      })
+      .then((response) => {
+        console.log("Upload response:", response);
+        message.success("Upload successful!");
+      })
+      .catch((error) => {
+        console.error("Upload error:", error);
+        message.error("Upload failed. Please try again.");
+      });
   };
 
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
       <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
-        <Form.Item label="File" name="file" rules={[{ required: true, message: "Please upload a file" }]}>
-          <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
-            <Button icon={<UploadOutlined />}>Click to upload</Button>
-          </Upload>
+        <Form.Item label="File" rules={[{ required: true, message: "Please upload a file" }]}>
+          {uploadProgress < 100 && (
+            <Upload fileList={fileList} onChange={onFileChange} listType="text" maxCount={1}>
+              <Button icon={<UploadOutlined />}>Click to upload</Button>
+            </Upload>
+          )}
+          {uploadProgress === 100 && (
+            <Upload
+              fileList={[
+                {
+                  uid: "1",
+                  name: fileList[0].name,
+                  status: "done",
+                  // url: "http://www.baidu.com/yyy.png",
+                },
+              ]}
+              listType="text"
+              onRemove={() => {
+                setFileList([]);
+                setUploadProgress(0);
+              }}
+              maxCount={1}
+            >
+              <Button icon={<UploadOutlined />}>uploaded {uploadProgress}</Button>
+            </Upload>
+          )}
         </Form.Item>
         <Form.Item rules={[{ required: true, message: "Please enter the authors" }]} label="Authors" name="author">
           <Input className="w-96" type="name" placeholder="Jon Doe" />
