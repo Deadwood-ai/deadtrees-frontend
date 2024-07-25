@@ -11,4 +11,6 @@ export const Settings = {
   THUMBNAILS_BUCKET: DEV ? "dev_thumbnails" : "v1_thumbnails",
   LABELS_TABLE: DEV ? "dev_labels" : "v1_labels",
   API_URL: LOCAL_SERVER_URL,
+  METADATA_TABLE: DEV ? "dev_metadata" : "v1_metadata",
+  DATA_TABLE: DEV ? "dev_dataset" : "v1_dataset",
 };

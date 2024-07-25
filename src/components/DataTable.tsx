@@ -38,7 +38,7 @@ const DataTable = ({ supabase }) => {
         {
           event: "*",
           schema: "public",
-          table: "v1_datasets",
+          table: Settings.DATA_TABLE,
         },
         (payload) => {
           console.log("Change received in DataTalbe!", payload);
