@@ -74,72 +74,51 @@ const DataProvider = (props: DataProviderProps) => {
     // );
   }, []);
 
-  const callWebhook = async (payload: any) => {
-    const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
-    const webhookResponse = fetch(webhookURL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "INSERT",
-        schema: "public",
-        table: "upload_files_dev",
-        record: payload.new,
-      }),
-    });
-  };
+  // const callWebhook = async (payload: any) => {
+  //   const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
+  //   const webhookResponse = fetch(webhookURL, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       type: "INSERT",
+  //       schema: "public",
+  //       table: "upload_files_dev",
+  //       record: payload.new,
+  //     }),
+  //   });
+  // };
   // subscription to webhook
-  useEffect(() => {
-    console.log("subscribing to webhook");
-    const channel = supabase
-      .channel("upload_files_dev")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "upload_files_dev",
-        },
-        (payload) => {
-          console.log("Change received via insert!", payload);
-          if (payload.eventType === "INSERT" && payload.new.status === "pending") {
-            console.log("calling webhook");
-            const webhookResponse = callWebhook(payload);
-            console.log("webhook res", webhookResponse);
-          }
-          console.log("fetching data via webhook subscription");
-          fetchData();
-        },
-      )
-      .subscribe();
-    console.log("fetching data via webhook initial load");
-    const channel2 = supabase
-      .channel("upload_files_dev")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "upload_files_dev",
-        },
-        (payload) => {
-          console.log("Update via update !", payload);
-          fetchData();
-        },
-      )
-      .subscribe();
-    // fetchData();
-    return () => {
-      supabase.removeChannel(channel);
-      supabase.removeChannel(channel2);
-    };
-  }, []);
+  // useEffect(() => {
+  //   console.log("subscribing to webhook");
+  //   const channel = supabase
+  //     .channel("metadata_changes")
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "INSERT",
+  //         schema: "public",
+  //         table: "v1_metadata",
+  //       },
+  //       (payload) => {
+  //         console.log("Change received via insert!", payload);
+  //         // if (payload.eventType === "INSERT" && payload.new.status === "pending") {
+  //         fetchData();
+  //       },
+  //     )
+  //     .subscribe();
+
+  //   // fetchData();
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, []);
 
   // filtering data
   useEffect(() => {
-    console.log("filtering data");
     if (!rawData) return; // Early exit if data is null
+    console.log("filtering data");
     if (filter) {
       console.log("filtering");
       const filteredData = rawData.filter((item) => {

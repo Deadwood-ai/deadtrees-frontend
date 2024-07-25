@@ -5,7 +5,14 @@ import { useEffect, useState } from "react";
 import { Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../state/AuthProvider";
 import { useNavigate } from "react-router-dom";
-import { LinkOutlined } from "@ant-design/icons";
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  LinkOutlined,
+  LoadingOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 import { Settings } from "../config";
 
 const DataTable = ({ supabase }) => {
@@ -25,16 +32,16 @@ const DataTable = ({ supabase }) => {
 
   useEffect(() => {
     const channel = supabase
-      .channel("metadata")
+      .channel("datasets_changes")
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "upload_files_dev",
+          table: "v1_datasets",
         },
         (payload) => {
-          console.log("Change received!", payload);
+          console.log("Change received in DataTalbe!", payload);
           fetchData();
         },
       )
@@ -61,21 +68,53 @@ const DataTable = ({ supabase }) => {
     },
 
     {
-      title: "id",
+      title: "Link",
       dataIndex: "id",
       key: "id",
-      render: (tag) => (
-        <Tooltip title="Wait for the status: 'processed'">
-          <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
-        </Tooltip>
-      ),
+      render: (tag) => {
+        if (!tag) {
+          return (
+            <Tooltip title="Wait for the status: 'processed'">
+              <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
+            </Tooltip>
+          );
+        } else {
+          return <Tag icon={<ClockCircleOutlined />} color="default" />;
+        }
+      },
     },
-
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (tag) => <Tag color="green">{tag}</Tag>,
+      render: (tag) => {
+        if (tag === "panding") {
+          return (
+            <Tag icon={<LoadingOutlined />} color="processing">
+              uploading
+            </Tag>
+          );
+        } else if (tag === "processed") {
+          return (
+            <Tag icon={<CheckCircleOutlined />} color="success">
+              {tag}
+            </Tag>
+          );
+        } else if (tag === "processing") {
+          return (
+            <Tag icon={<SyncOutlined spin />} color="processing">
+              {tag}
+            </Tag>
+          );
+        } else {
+          return (
+            <Tag icon={<CloseCircleOutlined />} color="error">
+              {tag}
+            </Tag>
+          );
+        }
+      },
+      // <Tag color="processing" st>{tag}</Tag>},
     },
   ];
 
