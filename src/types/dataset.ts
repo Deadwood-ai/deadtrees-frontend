@@ -36,6 +36,7 @@ export interface IDataset {
   aquisition_date: string;
   cog_folder: string | null;
   cog_name: string | null;
+  cog_url: string | null;
   label_source: string | null;
   label_quality: string | null;
   label_type: string | null;
@@ -85,9 +86,14 @@ export interface IDataset {
 
 export interface ILabels {
   id: number;
+  dataset_id: number;
+  user_id: string;
   aoi: FeatureCollection;
-  standing_deadwood: FeatureCollection;
-  ortho_file_name: string;
+  label: FeatureCollection;
+  label_source: string;
+  label_quality: number;
+  created_at: string;
+  label_type: string;
 }
 
 export enum License {

@@ -15,6 +15,7 @@ const createDeadwoodGeotiffLayer = (year) => {
       interpolate: false,
       normalize: true,
     }),
+    className: "geotiff-layer" + year,
     style: {
       color: [
         "interpolate",
@@ -34,6 +35,7 @@ const createDeadwoodGeotiffLayer = (year) => {
         [129, 176, 247, 1],
       ],
     },
+    visible: true ? year === "2018" : false,
   });
   return geotiffLayer;
 };

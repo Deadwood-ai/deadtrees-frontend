@@ -1,18 +1,16 @@
+import { Settings } from "../../config";
 import { ILabels } from "../../types/dataset";
 import { supabase } from "../useSupabase";
 
 const fetchLabels = async ({
-  file_name,
+  dataset_id,
   // setLabels,
 }: {
-  file_name: string;
+  dataset_id: number;
   // setLabels: React.Dispatch<React.SetStateAction<ILabels | null>>;
 }): Promise<ILabels | null> => {
-  console.log("file_name", file_name);
-  const { data, error } = await supabase
-    .from("labels_dev_egu")
-    .select("id, aoi, standing_deadwood, ortho_file_name")
-    .eq("ortho_file_name", file_name);
+  console.log("dataset_id", dataset_id);
+  const { data, error } = await supabase.from(Settings.LABELS_TABLE).select("*").eq("dataset_id", dataset_id);
 
   if (error) {
     console.error("Error fetching data:", error);

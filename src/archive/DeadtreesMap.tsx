@@ -24,12 +24,7 @@ const DeadtreesMap = () => {
     Bayern: [13.330993298074588, 49.03963187270776],
   };
 
-  const mapLayerList = [
-    "deadtrees_2018_layer",
-    "deadtrees_2019_layer",
-    "deadtrees_2020_layer",
-    "deadtrees_2021_layer",
-  ];
+  const mapLayerList = ["deadtrees_2018_layer", "deadtrees_2019_layer", "deadtrees_2020_layer", "deadtrees_2021_layer"];
 
   const wmsUrl = useEffect(() => {
     if (mapContainer.current) {
@@ -75,11 +70,7 @@ const DeadtreesMap = () => {
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {
-        mapInstance.setLayoutProperty(
-          layer,
-          "visibility",
-          selectedYear === layer.split("_")[1] ? "visible" : "none",
-        );
+        mapInstance.setLayoutProperty(layer, "visibility", selectedYear === layer.split("_")[1] ? "visible" : "none");
       }
     });
   }, [selectedYear, mapLayerList]);
@@ -109,11 +100,7 @@ const DeadtreesMap = () => {
     const selectedLayer = `deadtrees_${selectedYear}_layer`;
     const mapInstance = mapContainer.current?.mapInstance;
     if (mapInstance && mapInstance.getLayer(selectedLayer)) {
-      mapInstance.setPaintProperty(
-        selectedLayer,
-        "raster-opacity",
-        sliderValue,
-      );
+      mapInstance.setPaintProperty(selectedLayer, "raster-opacity", sliderValue);
     }
   }, [sliderValue, selectedYear, mapLayerList]);
 
@@ -128,9 +115,7 @@ const DeadtreesMap = () => {
         ref={mapContainer}
       >
         <div className="absolute bottom-56 right-2 z-50 flex flex-col items-end space-x-2 rounded-md bg-slate-100 p-4">
-          <p className="m-0 max-w-24 pb-2 text-right text-xs text-gray-500">
-            Share of standing deadwood (%)
-          </p>
+          <p className="m-0 max-w-24 pb-2 text-right text-xs text-gray-500">Share of standing deadwood (%)</p>
           <div className="flex h-32 space-x-2">
             <div className="flex flex-col items-end justify-between">
               <p className="m-0 text-xs text-gray-600">100% - </p>
@@ -142,26 +127,18 @@ const DeadtreesMap = () => {
         </div>
 
         <div className="absolute left-2 top-2 z-20">
-          <Radio.Group
-            value={mapStyle}
-            onChange={(e) => setMapStyle(e.target.value)}
-          >
+          <Radio.Group value={mapStyle} onChange={(e) => setMapStyle(e.target.value)}>
             <Radio.Button value="satellite">Satellite</Radio.Button>
             <Radio.Button value="streets">Streets</Radio.Button>
           </Radio.Group>
         </div>
         <div className="absolute bottom-2 left-2 z-20">
-          <Radio.Group
-            value={selectedSite}
-            defaultValue={"Harz"}
-            onChange={(e) => setSelectedSite(e.target.value)}
-          >
+          <Radio.Group value={selectedSite} defaultValue={"Harz"} onChange={(e) => setSelectedSite(e.target.value)}>
             <Radio.Button value="Harz">Harz National Park</Radio.Button>
             <Radio.Button value="Waldshut">Waldshut</Radio.Button>
             <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
           </Radio.Group>
         </div>
-        <
       </div>
     </div>
   );

@@ -6,13 +6,15 @@ import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
+import { GeoTIFF } from "ol/source";
 
 import { IDataset, ILabels } from "../../types/dataset";
-import fetchLabels from "./getLabels";
+import fetchLabels from "./fetchLabels";
 import DeadwoodCardDetails from "./DeadwoodCardDetails";
 import Legend from "../DeadwoodMap/Legend";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
+import { Settings } from "../../config";
 
 const yearByIndex = {
   2: "2018",
@@ -40,35 +42,75 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       });
-      const orthoWmsUrl = new TileLayer({
-        source: new TileWMS({
-          url: "https://data.deadtrees.earth/mapserver",
-          params: {
-            LAYERS: data.file_id,
-            TILED: true,
-            SRS: "EPSG:3857",
-            format: "image/png",
-            transparent: true,
-          },
+      // const orthoWmsUrl = new TileLayer({
+      //   source: new TileWMS({
+      //     url: "https://data.deadtrees.earth/mapserver",
+      //     params: {
+      //       LAYERS: data.file_id,
+      //       TILED: true,
+      //       SRS: "EPSG:3857",
+      //       format: "image/png",
+      //       transparent: true,
+      //     },
+      //   }),
+      // });
+      console.log("cog url:", Settings.COG_BASE_URL + data.cog_url);
+
+      const orthoCogLayer = new TileLayerWebGL({
+        source: new GeoTIFF({
+          sources: [
+            {
+              // url: Settings.COG_BASE_URL + data.cog_url,
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif",
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // slow
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif",
+              url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif",
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif",
+            },
+          ],
+          // projection: "EPSG:4326",
+
+          // convertToRGB: true,
+          // interpolate: false,
+          // norma,
         }),
+        maxZoom: 20,
+        cacheSize: 1024,
+        preload: 4,
+        zIndex: 99,
       });
+      console.log("orthoCogLayer", orthoCogLayer);
+      // console.log("extend of ortho is:", orthoCogLayer.getSource().getExtent());
+
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
+      console.log("geotifLayer2018", geotifLayer2018);
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
       const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
       const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
 
       const newMap = new Map({
         target: mapContainer.current,
-        layers: [basemapLayer, orthoWmsUrl, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
-        view: new View({
-          center: [0, 0],
-          zoom: 2,
-        }),
+        // layers: [basemapLayer, orthoCogLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
+        layers: [basemapLayer],
+        view: orthoCogLayer.getSource().getView(),
+
+        // view: new View({
+        //   // center: [0, 0],
+        //   // projection: "EPSG:4326",
+        //   maxZoom: 21,
+        // }),
+        // view: new View({
+        //   extent: orthoCogLayer.getExtent(),
+        //   maxZoom: 22,
+        //   smoothExtentConstraint: true,
+        //   // showFullExtent: true,
+        // }),
+
         overlays: [],
         controls: [],
       });
 
-      fetchLabels({ file_name: data.file_name }).then((labelsData) => {
+      fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
         console.log("labelsData", labelsData);
         const vectorLayerAOI = new VectorLayer({
           source: new VectorSource({
@@ -83,25 +125,33 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             "fill-color": "rgba(0, 0, 255, 0)",
           },
         });
-        const vectorLayerDeadwood = new VectorLayer({
+        const vectorLayerLabels = new VectorLayer({
           source: new VectorSource({
-            features: new GeoJSON().readFeatures(labelsData?.standing_deadwood, {
+            features: new GeoJSON().readFeatures(labelsData?.label, {
               dataProjection: "EPSG:4326",
               featureProjection: "EPSG:3857",
             }),
           }),
+          className: "labels",
           style: {
             "stroke-color": "red",
             "stroke-width": 1,
             "fill-color": "rgba(255, 0, 0, 0.8)",
           },
         });
+
+        newMap.addLayer(orthoCogLayer);
+        newMap.addLayer(geotifLayer2018);
+        newMap.addLayer(geotifLayer2019);
+        newMap.addLayer(geotifLayer2020);
+        newMap.addLayer(geotifLayer2021);
         newMap.addLayer(vectorLayerAOI);
-        newMap.addLayer(vectorLayerDeadwood);
-        newMap.getView().fit(vectorLayerAOI.getSource().getExtent(), {
-          size: newMap.getSize(),
-          maxZoom: 18,
-        });
+        newMap.addLayer(vectorLayerLabels);
+        // fit view to extent of orthoCogLayer
+        // newMap.getView().fit(vectorLayerAOI.getSource().getExtent(), {
+        //   size: newMap.getSize(),
+        //   maxZoom: 18,
+        // });
         setLabelsFetched(true);
       });
 
@@ -117,8 +167,13 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   // update label opacity on slider change
   useEffect(() => {
     if (map && labelsFetched) {
-      const deadwoodLayer = map.getLayers().getArray()[7];
-      deadwoodLayer.setOpacity(sliderValueLabels);
+      // const deadwoodLayer = map.getLayers().getArray()[7];
+      // get layers with className_ === "labels"
+      const labelsLayer = map
+        .getLayers()
+        .getArray()
+        .filter((layer) => layer.className_ === "labels")[0];
+      labelsLayer.setOpacity(sliderValueLabels);
     }
   }, [sliderValueLabels, map]);
 
@@ -127,7 +182,10 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
     if (map) {
       const layers = map.getLayers().getArray();
       layers.forEach((layer, index) => {
-        if (layer instanceof TileLayerWebGL) {
+        // if has geotif in name
+        // console.log("layer", layer.className_);
+        if (layer.className_?.includes("geotiff")) {
+          // if (layer instanceof TileLayerWebGL) {
           layer.setOpacity(sliderValueSatellite);
         }
       });
@@ -139,8 +197,9 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
     if (map) {
       const layers = map.getLayers().getArray();
       layers.forEach((layer, index) => {
-        if (layer instanceof TileLayerWebGL) {
-          layer.setVisible(yearByIndex[index] === selectedYear);
+        // if (layer instanceof TileLayerWebGL) {
+        if (layer.className_?.includes("geotiff")) {
+          layer.setVisible(layer.className_?.includes(selectedYear.toString()));
         }
       });
     }
@@ -150,7 +209,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   useEffect(() => {
     if (map) {
       const layer = map.getLayers().getArray()[0]; // basemap layer
-      console.log(layer);
+      // console.log(layer);
       layer.setSource(
         new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,

@@ -10,7 +10,7 @@ export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const data = useData();
-  const dataset = data.data?.find((d) => d.uuid === id);
+  const dataset = data.data?.find((d) => d.id.toString() === id);
   // notification.info({
   //   message: "Loading data can be slow and could fail",
   //   description: "The Applikation is not optimized yet. We are working on it.",
