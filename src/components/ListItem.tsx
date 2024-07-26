@@ -42,8 +42,9 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
       <div className="flex flex-1 flex-col justify-between pl-3">
         <div className="flex items-baseline">
           <p className="m-0 flex-1 font-semibold">
-            {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
-            {item.gadm_NAME_0}
+            {/* {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
+            {item.gadm_NAME_0} */}
+            {item.file_alias}
           </p>
           {/* {(item.wms_source === null || item.file_size > 1000000000) && (
             <div>
