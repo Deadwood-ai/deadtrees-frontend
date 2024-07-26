@@ -16,13 +16,6 @@ import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLaye
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 
-const yearByIndex = {
-  2: "2018",
-  3: "2019",
-  4: "2020",
-  5: "2021",
-};
-
 const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [map, setMap] = useState(null);
   const mapContainer = useRef();
@@ -42,18 +35,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       });
-      // const orthoWmsUrl = new TileLayer({
-      //   source: new TileWMS({
-      //     url: "https://data.deadtrees.earth/mapserver",
-      //     params: {
-      //       LAYERS: data.file_id,
-      //       TILED: true,
-      //       SRS: "EPSG:3857",
-      //       format: "image/png",
-      //       transparent: true,
-      //     },
-      //   }),
-      // });
+
       console.log("cog url:", Settings.COG_BASE_URL + data.cog_url);
 
       const orthoCogLayer = new TileLayerWebGL({
@@ -61,18 +43,15 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           sources: [
             {
               // url: Settings.COG_BASE_URL + data.cog_url,
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif",
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // slow
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif",
-              url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif",
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif",
+              url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // does not work
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // is ok but 1 gb file
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // problem
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif", // too big
             },
           ],
           // projection: "EPSG:4326",
-
           // convertToRGB: true,
           // interpolate: false,
-          // norma,
         }),
         maxZoom: 20,
         cacheSize: 1024,
