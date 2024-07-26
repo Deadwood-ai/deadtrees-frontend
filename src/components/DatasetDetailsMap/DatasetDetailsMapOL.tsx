@@ -212,10 +212,10 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-6 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className="absolute bottom-6 right-2 z-50 space-y-2">
-          <div className="flex justify-end">
-            <Legend />
-          </div>
+        <div className="absolute bottom-52 right-2 z-50">
+          <Legend />
+        </div>
+        <div className="absolute bottom-6 right-2 z-50 ">
           <DeadwoodCardDetails
             year={selectedYear}
             setSelectedYear={setSelectedYear}
