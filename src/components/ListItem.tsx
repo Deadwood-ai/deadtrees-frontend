@@ -44,7 +44,8 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
           <p className="m-0 flex-1 font-semibold">
             {/* {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
             {item.gadm_NAME_0} */}
-            {item.file_alias}
+            {`${item.file_alias}-${item.id}`}
+            {/* {item.id} */}
           </p>
           {/* {(item.wms_source === null || item.file_size > 1000000000) && (
             <div>

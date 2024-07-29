@@ -22,15 +22,16 @@ const Map = ({ data }: { data: IDataset[] }) => {
     const geojsonData = {
       type: "FeatureCollection",
       features: data
-        .sort((a, b) => (a.uuid ? 1 : -1))
+        .sort((a, b) => (a.id ? 1 : -1))
         .map((dataset) => ({
           type: "Feature",
           properties: {
-            id: dataset.uuid,
+            id: dataset.id,
             // if has wms_source set dataset.file_name as title else set "coming soon" as title
-            title: dataset.wms_source ? dataset.file_name : "Coming Soon",
+            // title: dataset.wms_source ? dataset.file_name : "Coming Soon",
+            title: dataset.file_name,
             // title: dataset.file_name,
-            has_wms_source: dataset.wms_source !== null,
+            // has_wms_source: dataset.wms_source !== null,
           },
           geometry: {
             type: "Point",
@@ -87,24 +88,11 @@ const Map = ({ data }: { data: IDataset[] }) => {
           paint: {
             "circle-opacity": 0.8,
             //  make smaller radius with higher zoom
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              0,
-              4,
-              22,
-              20,
-            ],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 22, 20],
 
             // "circle-radius": 8,
             // if has_wms_source is true make circle blue else make it red
-            "circle-color": [
-              "case",
-              ["==", ["get", "has_wms_source"], true],
-              "#007cbf",
-              "#ff0000",
-            ],
+            "circle-color": ["case", ["==", ["get", "has_wms_source"], true], "#007cbf", "#ff0000"],
             // if wms_source is not null show custom marker else show default marke
             // "icon-image": [
             //   "case",

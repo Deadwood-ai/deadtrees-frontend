@@ -42,17 +42,35 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         source: new GeoTIFF({
           sources: [
             {
-              // url: Settings.COG_BASE_URL + data.cog_url,
-              url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // does not work
+              url: Settings.COG_BASE_URL + data.cog_url,
+              // url: "https://data.deadtrees.earth/cogs/v1/4b727747-f9ff-41d1-b28d-18f215c550ec_uavforsat_2020_CFB034_ortho/4b727747-f9ff-41d1-b28d-18f215c550ec_uavforsat_2020_CFB034_ortho_cog_jpeg_ovr8_q75.tif", // funktioniert
+              // url: "https://data.deadtrees.earth/cogs/v1/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho_cog_jpeg_ovr8_q75.tif", // funktioniert
+              //  https://data.deadtrees.earth/cogs/v1/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho_cog_jpeg_ovr8_q75.tif
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // does not work
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // is ok but 1 gb file
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // problem
+              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // funktioniert
+              // url: "https://data.deadtrees.earth/cogs/v1/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho_cog_jpeg_ovr6_q70.tif",
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif", // too big
+              nodata: 0,
             },
           ],
           // projection: "EPSG:4326",
-          // convertToRGB: true,
+          convertToRGB: true,
+
+          opaque: true,
+          // normalize: false,
           // interpolate: false,
         }),
+        // make the no data value of 0 fully transparent
+        // style: {
+        //   color: [
+        //     "case",
+        //     ["any", ["<", ["band", 1], 255], ["<", ["band", 2], 255], ["<", ["band", 3], 255]],
+        //     ["array", ["band", 1], ["band", 2], ["band", 3], 255], // Keep non-white colors opaque
+        //     [255, 255, 255, 0], // Make pure white transparent
+        //   ],
+        // },
+
         maxZoom: 20,
         cacheSize: 1024,
         preload: 4,
