@@ -1,8 +1,8 @@
-import { Button, Col, Input, Row, Tag } from "antd";
+import { Button, Col, Row, Tag } from "antd";
 import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
-import Map from "../components/DatasetMap";
-import { useState } from "react";
+// import Map from "../archive/DatasetMap";
+import DatasetMapOL from "../components/DatasetMap/DatasetMapOL";
 import { CloseOutlined } from "@ant-design/icons";
 
 export default function Dataset() {
@@ -12,11 +12,16 @@ export default function Dataset() {
 
   const processedData = data?.filter((d) => d.status === "processed" || d.status === null);
   console.log("processedData in Dataset", processedData);
-  const [uuidHovered, setUuidHovered] = useState<string | null>(null);
+  // const [uuidHovered, setUuidHovered] = useState<string | null>(null);
 
   return (
-    <div className="flex h-full ">
-      <div className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
+    <Row
+      style={{
+        width: "100%",
+        height: "100%",
+      }}
+    >
+      <Col className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
         {filter ? (
           <div className="flex justify-between pb-2">
             <div className="flex items-center">
@@ -62,10 +67,18 @@ export default function Dataset() {
           // <div>test</div>
           <div>Loading...</div>
         )}
-      </div>
-      <div className="flex-1 py-4">
-        <Map data={processedData} uuidHovered={uuidHovered} />
-      </div>
-    </div>
+      </Col>
+      <Col className="flex-1 py-4">
+        {/* <Map data={processedData} uuidHovered={uuidHovered} /> */}
+
+        {processedData && processedData.length > 0 ? (
+          <DatasetMapOL data={processedData} />
+        ) : (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
+            <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>
+          </div>
+        )}
+      </Col>
+    </Row>
   );
 }

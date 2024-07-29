@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import parseBBox from "../utils/parseBBox";
 import { notification } from "antd";
 import getThumbnailURL from "../utils/getThumbnails";
+import { fromExtent } from "ol/geom/Polygon";
 
 // Your Mapbox access token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEND!;
@@ -34,19 +35,20 @@ const Map = ({ data }: { data: IDataset[] }) => {
             // has_wms_source: dataset.wms_source !== null,
           },
           geometry: {
-            type: "Point",
-            // coordinates: parseBBox(dataset.bbox)[0], // Assuming dataset.bbox is [lng, lat]
-            coordinates: dataset.centroid
-              ? [
-                  JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
-                  JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
-                ]
-              : [0, 0],
+            type: "Polygon",
+            // coordinates: parseBBox(dataset.bbox), // Assuming dataset.bbox is [lng, lat]
+            geometry: fromExtent(parseBBox(dataset.bbox)),
+            //   coordinates: dataset.centroid
+            //     ? [
+            //         JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lng,
+            //         JSON.parse(dataset.centroid.replace(/'/g, '"'))?.lat,
+            //       ]
+            //     : [0, 0],
           },
         })),
     };
     // Convert data to GeoJSON
-    console.log(geojsonData);
+    console.log("geojson: ", geojsonData);
     // fit bounds to geojsonData
     const bounds = geojsonData.features.reduce(
       (bounds, feature) => {
