@@ -35,7 +35,7 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
       onClick={() => onClickHandler(item)}
     >
       <img
-        src={item.gadm_NAME_0 ? getThumbnailURL(item.file_name) : "/assets/tree-icon.png"}
+        src={item.cog_name ? getThumbnailURL(item.file_alias) : "/assets/tree-icon.png"}
         className="m-0 h-16 rounded-lg"
         loading="lazy"
       />
@@ -44,7 +44,7 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
           <p className="m-0 flex-1 font-semibold">
             {/* {item.gadm_NAME_3 && `${item.gadm_NAME_3}, `}
             {item.gadm_NAME_0} */}
-            {`${item.file_alias}-${item.id}`}
+            {`${item.file_alias}`}
             {/* {item.id} */}
           </p>
           {/* {(item.wms_source === null || item.file_size > 1000000000) && (

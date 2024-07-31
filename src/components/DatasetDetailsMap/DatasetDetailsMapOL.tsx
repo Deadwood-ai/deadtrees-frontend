@@ -59,23 +59,32 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           // normalize: false,
           // interpolate: false,
         }),
-        style: {
-          color: [
-            "case",
-            [
-              "any",
-              ["<=", ["band", 1], 0.000001], // Adjust this threshold if necessary
-              ["<=", ["band", 2], 0.000001],
-              ["<=", ["band", 3], 0.000001],
-              // ["==", ["band", 4], 20],
 
-              // ["==", ["band", 3], 0],
-              // ["==", ["band", 1], 1],
-            ], // Check if the Red band (band 1) is 0 (could check Green and Blue bands as well)
-            [0, 0, 0, 0], // If true, set the pixel to fully transparent
-            ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
-          ],
-        },
+        // style: {
+        //   color: [
+        //     "case",
+        //     ["==", ["band", 3], 1],
+        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
+        //     [0, 0, 0, 0],
+        //   ],
+        // },
+        // style: {
+        //   color: [
+        //     "case",
+        //     [
+        //       "any",
+        //       ["<=", ["band", 1], 0.000001], // Adjust this threshold if necessary
+        //       ["<=", ["band", 2], 0.000001],
+        //       ["<=", ["band", 3], 0.000001],
+        //       // ["==", ["band", 4], 20],
+
+        //       // ["==", ["band", 3], 0],
+        //       // ["==", ["band", 1], 1],
+        //     ], // Check if the Red band (band 1) is 0 (could check Green and Blue bands as well)
+        //     [0, 0, 0, 0], // If true, set the pixel to fully transparent
+        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
+        //   ],
+        // },
         // style: {
         //   color: [
         //     "case",
