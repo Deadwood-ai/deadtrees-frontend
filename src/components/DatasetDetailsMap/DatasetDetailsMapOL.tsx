@@ -51,32 +51,52 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // funktioniert
               // url: "https://data.deadtrees.earth/cogs/v1/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho_cog_jpeg_ovr6_q70.tif",
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif", // too big
-              nodata: 0,
+              // nodata: 1,
             },
           ],
           // projection: "EPSG:4326",
           convertToRGB: true,
-
-          opaque: true,
           // normalize: false,
           // interpolate: false,
         }),
-        // make the no data value of 0 fully transparent
+        style: {
+          color: [
+            "case",
+            [
+              "any",
+              ["<=", ["band", 1], 0.000001], // Adjust this threshold if necessary
+              ["<=", ["band", 2], 0.000001],
+              ["<=", ["band", 3], 0.000001],
+              // ["==", ["band", 4], 20],
+
+              // ["==", ["band", 3], 0],
+              // ["==", ["band", 1], 1],
+            ], // Check if the Red band (band 1) is 0 (could check Green and Blue bands as well)
+            [0, 0, 0, 0], // If true, set the pixel to fully transparent
+            ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
+          ],
+        },
         // style: {
         //   color: [
         //     "case",
-        //     ["any", ["<", ["band", 1], 255], ["<", ["band", 2], 255], ["<", ["band", 3], 255]],
-        //     ["array", ["band", 1], ["band", 2], ["band", 3], 255], // Keep non-white colors opaque
-        //     [255, 255, 255, 0], // Make pure white transparent
+        //     [
+        //       "all",
+        //       ["<=", ["band", 1], 1], // Adjust range if necessary
+        //       ["<=", ["band", 2], 1],
+        //       ["<=", ["band", 3], 1],
+        //     ],
+        //     [0, 0, 0, 0], // Set to fully transparent if all bands are no-data
+        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly
         //   ],
         // },
 
         maxZoom: 20,
-        cacheSize: 1024,
-        preload: 4,
+        // cacheSize: 1024,
+        // preload: 4,
         zIndex: 99,
       });
       console.log("orthoCogLayer", orthoCogLayer);
+      console.log("ortho props:", orthoCogLayer.getSource());
       // console.log("extend of ortho is:", orthoCogLayer.getSource().getExtent());
 
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
