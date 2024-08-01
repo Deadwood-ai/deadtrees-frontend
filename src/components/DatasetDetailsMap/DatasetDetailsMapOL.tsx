@@ -7,6 +7,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
+import { createEmpty, extend, getCenter } from "ol/extent.js";
 
 import { IDataset, ILabels } from "../../types/dataset";
 import fetchLabels from "./fetchLabels";
@@ -15,6 +16,7 @@ import Legend from "../DeadwoodMap/Legend";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
+import { Projection, transformExtent } from "ol/proj";
 
 const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [map, setMap] = useState(null);
@@ -54,7 +56,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
               // nodata: 1,
             },
           ],
-          // projection: "EPSG:4326",
+          projection: "EPSG:4326",
           convertToRGB: true,
           // normalize: false,
           // interpolate: false,
@@ -102,7 +104,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         maxZoom: 20,
         // cacheSize: 1024,
         // preload: 4,
-        zIndex: 99,
+        // zIndex: 99,
       });
       console.log("orthoCogLayer", orthoCogLayer);
       console.log("ortho props:", orthoCogLayer.getSource());
@@ -116,25 +118,18 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
 
       const newMap = new Map({
         target: mapContainer.current,
-        // layers: [basemapLayer, orthoCogLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
         layers: [basemapLayer],
-        view: orthoCogLayer.getSource().getView(),
-
-        // view: new View({
-        //   // center: [0, 0],
-        //   // projection: "EPSG:4326",
-        //   maxZoom: 21,
-        // }),
-        // view: new View({
-        //   extent: orthoCogLayer.getExtent(),
-        //   maxZoom: 22,
-        //   smoothExtentConstraint: true,
-        //   // showFullExtent: true,
-        // }),
-
+        // view: orthoCogLayer.getSource().getView(),
+        view: new View({
+          center: [0, 0],
+          zoom: 2,
+          projection: "EPSG:3857",
+        }),
         overlays: [],
         controls: [],
       });
+      newMap.setView(orthoCogLayer.getSource().getView());
+      console.log("newMap", newMap.getView());
 
       fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
         console.log("labelsData", labelsData);
@@ -142,7 +137,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.aoi, {
               dataProjection: "EPSG:4326",
-              featureProjection: "EPSG:3857",
+              // featureProjection: "EPSG:3857",
             }),
           }),
           style: {
@@ -155,7 +150,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.label, {
               dataProjection: "EPSG:4326",
-              featureProjection: "EPSG:3857",
+              // featureProjection: "EPSG:3857",
             }),
           }),
           className: "labels",
@@ -165,7 +160,14 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             "fill-color": "rgba(255, 0, 0, 0.8)",
           },
         });
-
+        // console.log(
+        //   "projection:",
+        //   orthoCogLayer
+        //     .getSource()
+        //     ?.getView()
+        //     .then((view) => console.log(view.projection())),
+        // );
+        console.log("map properties: ", newMap.getProperties());
         newMap.addLayer(orthoCogLayer);
         newMap.addLayer(geotifLayer2018);
         newMap.addLayer(geotifLayer2019);
@@ -173,6 +175,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         newMap.addLayer(geotifLayer2021);
         newMap.addLayer(vectorLayerAOI);
         newMap.addLayer(vectorLayerLabels);
+
         // fit view to extent of orthoCogLayer
         // newMap.getView().fit(vectorLayerAOI.getSource().getExtent(), {
         //   size: newMap.getSize(),
