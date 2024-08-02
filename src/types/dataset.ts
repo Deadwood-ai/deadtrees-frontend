@@ -29,11 +29,12 @@ export interface IDataset {
   authors: string | null;
   spectral_properties: string | null;
   citation_doi: string | null;
-  gadm_NAME_0: string | null;
-  gadm_NAME_1: string | null;
-  gadm_NAME_2: string | null;
-  gadm_NAME_3: string | null;
-  aquisition_date: string;
+  admin_level_1: string | null;
+  admin_level_2: string | null;
+  admin_level_3: string | null;
+  aquisition_day: string;
+  aquisition_month: string;
+  aquisition_year: string;
   cog_folder: string | null;
   cog_name: string | null;
   cog_url: string | null;

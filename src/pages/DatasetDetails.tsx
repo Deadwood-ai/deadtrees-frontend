@@ -18,7 +18,6 @@ export default function DatasetDetails() {
   //   // placement: "bottomLeft",
   //   // duration: 10,
   // });
-  const date = new Date(dataset?.aquisition_date);
   return (
     <Row
       style={{
@@ -43,13 +42,14 @@ export default function DatasetDetails() {
               <div className="flex items-center pb-4">
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
-                  {dataset.gadm_NAME_3 ? dataset.gadm_NAME_3 : "Unknown"}
+                  {/* {dataset.admin_level_3 ? dataset.admin_level_3 : "Unknown"} */}
+                  {`${dataset.admin_level_3}, ${dataset.admin_level_1}`}
                 </Typography.Title>
               </div>
 
               <div className="flex justify-between  p-1">
                 <Typography.Text className="pr-2">Author: </Typography.Text>
-                <Typography.Text strong>{dataset.authors_image}</Typography.Text>
+                <Typography.Text strong>{dataset.authors}</Typography.Text>
               </div>
               {dataset.citation_doi && (
                 <div className="flex justify-between p-1">
@@ -60,17 +60,28 @@ export default function DatasetDetails() {
               <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
                 <Typography.Text strong>
-                  {date.toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  {
+                    // date.toLocaleString("en-US", {
+                    //   year: "numeric",
+                    //   month: "long",
+                    //   day: "numeric",
+                    // })
+                    new Date(
+                      dataset.aquisition_year,
+                      dataset.aquisition_month,
+                      dataset.aquisition_day,
+                    ).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  }
                 </Typography.Text>
               </div>
-              <div className="flex justify-between p-1">
+              {/* <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">Has Labels: </Typography.Text>
                 <Typography.Text strong>{dataset.has_labels ? "true" : "false"}</Typography.Text>
-              </div>
+              </div> */}
               {/* <div className="flex justify-between p-1">
                 <Typography.Text className="pr-2">Public: </Typography.Text>
                 <Typography.Text strong>
@@ -102,10 +113,7 @@ export default function DatasetDetails() {
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">Spectral Properties : </Typography.Text>
                 </Typography.Text>
-                <Tag color="blue">
-                  {" "}
-                  {dataset.image_spectral_properties ? dataset.image_spectral_properties : "Unknown"}
-                </Tag>
+                <Tag color="blue"> {dataset.spectral_properties ? dataset.spectral_properties : "Unknown"}</Tag>
               </div>
             </div>
             <div className="mt-4 rounded-md bg-white p-4">
