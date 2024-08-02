@@ -61,7 +61,6 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           // normalize: false,
           // interpolate: false,
         }),
-
         // style: {
         //   color: [
         //     "case",
@@ -102,8 +101,8 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         // },
 
         maxZoom: 20,
-        // cacheSize: 1024,
-        // preload: 4,
+        cacheSize: 4096,
+        preload: 4,
         // zIndex: 99,
       });
       console.log("orthoCogLayer", orthoCogLayer);
