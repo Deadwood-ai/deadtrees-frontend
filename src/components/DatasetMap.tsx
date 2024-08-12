@@ -87,24 +87,11 @@ const Map = ({ data }: { data: IDataset[] }) => {
           paint: {
             "circle-opacity": 0.8,
             //  make smaller radius with higher zoom
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              0,
-              4,
-              22,
-              20,
-            ],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 0, 4, 22, 20],
 
             // "circle-radius": 8,
             // if has_wms_source is true make circle blue else make it red
-            "circle-color": [
-              "case",
-              ["==", ["get", "has_wms_source"], true],
-              "#007cbf",
-              "#ff0000",
-            ],
+            "circle-color": ["case", ["==", ["get", "has_wms_source"], true], "#007cbf", "#ff0000"],
             // if wms_source is not null show custom marker else show default marke
             // "icon-image": [
             //   "case",
@@ -161,14 +148,14 @@ const Map = ({ data }: { data: IDataset[] }) => {
           const feature = e.features[0];
           const datasetId = feature.properties.id;
           console.log("clicked feature", feature);
-          if (feature.properties.id) {
-            navigate(`/dataset/${datasetId}`);
-          } else {
-            notification.info({
-              message: "Coming Soon",
-              description: "This dataset is not yet available",
-            });
-          }
+          // if (feature.properties.id) {
+          // navigate(`/dataset/${datasetId}`);
+          // } else {
+          notification.info({
+            message: "Platform is under development",
+            description: "We are currently updating the platform. All datasets will be available in the coming days.",
+          });
+          // }
         });
       });
     });
