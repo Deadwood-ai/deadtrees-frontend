@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input } from "antd";
+import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input, Select } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../state/AuthProvider";
@@ -9,15 +9,18 @@ import addMetadata from "../api/addMetadata";
 import { Settings } from "../config";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
+  const pickerTypeOptions = ["date", "month", "year"];
+
   const [fileList, setFileList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
+  const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
+
   // const [uploadProgress, setUploadProgress] = useState(0);
 
-  const onFormFinish = async (values: { platform: string | Blob; license: string; aquisition_date: Date }) => {
+  const onFormFinish = async (values: { platform: string | Blob; license: string; aquisition_date: any }) => {
     setIsSubmitting(true);
-    console.log("settings: ", Settings)
-;
+    console.log("settings: ", Settings);
     try {
       const file = fileList[0]; // Assuming fileList is defined and non-empty
 
@@ -36,9 +39,10 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
       //   body: formData,
       // });
       console.log("resUpload", resUpload);
-      // onClose(); // Close the modal
+      onClose(); // Close the modal
 
       if (resUpload.id) {
+        console.log("values", values);
         // Adding metadata
         const metadata = {
           dataset_id: resUpload.id.toString(),
@@ -46,7 +50,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           name: file.name,
           license: values.license,
           platform: values.platform,
-          aquisition_date: values.aquisition_date.toISOString(),
+          aquisition_year: values.aquisition_date.year(),
+          aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
+          aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
         };
 
         const resAddMetadata = await addMetadata(resUpload.id, metadata, session!.access_token);
@@ -82,6 +88,24 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
     // return Upload.LIST_IGNORE;
     return false;
   };
+  // const handlePickerTypeChange = (value) => {
+  //   setPickerType(value);
+  // };
+
+  const PickerWithType = ({ value, onChange }) => {
+    return (
+      <Space>
+        <Select value={pickerType} onChange={(value) => setPickerType(value)}>
+          {pickerTypeOptions.map((option) => (
+            <Select.Option key={option} value={option}>
+              {option}
+            </Select.Option>
+          ))}
+        </Select>
+        <DatePicker picker={pickerType} onChange={onChange} />
+      </Space>
+    );
+  };
   // const handleCustomRequest = ({ file }) => {
   //   console.log("file", file);
 
@@ -113,7 +137,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
       <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
-        <Form.Item label="File" rules={[{ required: true, message: "Please upload a file" }]}>
+        <Form.Item label="Orthophoto" rules={[{ required: true, message: "Please upload a file" }]}>
           <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
             <Button icon={<UploadOutlined />}>Click to upload</Button>
           </Upload>
@@ -143,15 +167,23 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
             </Upload>
           )} */}
         </Form.Item>
-        <Form.Item rules={[{ required: true, message: "Please enter the authors" }]} label="Authors" name="author">
+        <Form.Item
+          rules={[{ required: true, message: "Please enter the authors" }]}
+          label="Authors of the orthophoto"
+          name="author"
+        >
           <Input className="w-96" type="name" placeholder="Jon Doe" />
         </Form.Item>
         <Form.Item
-          label="Aquisitaion Date"
+          label="Aquisitaion Date (Year, Y/M or Y/M/D if known)"
+          // label={`Aquisition Date (${pickerType})`}
           name="aquisition_date"
           rules={[{ required: true, message: "Select a Date" }]}
+          valuePropName="value"
+          getValueFromEvent={(value) => value} // This ensures the selected date is captured by the form
         >
-          <DatePicker />
+          {/* <DatePicker type="" /> */}
+          <PickerWithType />
         </Form.Item>
         <Form.Item label="Platform" name="platform">
           <Radio.Group>
@@ -172,7 +204,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         <Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" loading={isSubmitting}>
-              Submit
+              {isSubmitting ? "Uploading..." : "Upload"}
             </Button>
             <Button type="default" onClick={onClose}>
               Cancel
