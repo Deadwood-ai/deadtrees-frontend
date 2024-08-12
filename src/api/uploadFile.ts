@@ -6,13 +6,15 @@ const uploadFile = async (file: any, token: string) => {
   formData.append("file", file.originFileObj);
 
   try {
-    const res = await fetch(Settings.API_URL + "/datasets", {
+    const res = await fetch(`${Settings.API_URL}/datasets`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       },
       body: formData,
     });
+    console.log("Upload dataset response:", res);
 
     if (!res.ok) {
       throw new Error(`HTTP error! Status: ${res.status}`);

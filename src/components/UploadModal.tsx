@@ -1,5 +1,3 @@
-// UploadModal.js
-
 import { useState } from "react";
 import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
@@ -8,26 +6,37 @@ import { useAuth } from "../state/AuthProvider";
 import uploadFile from "../api/uploadFile";
 import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
+import { Settings } from "../config";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const [fileList, setFileList] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
-  const [uploadProgress, setUploadProgress] = useState(0);
+  // const [uploadProgress, setUploadProgress] = useState(0);
 
   const onFormFinish = async (values: { platform: string | Blob; license: string; aquisition_date: Date }) => {
     setIsSubmitting(true);
-
+    console.log("settings: ", Settings)
+;
     try {
       const file = fileList[0]; // Assuming fileList is defined and non-empty
 
       if (!file) {
         throw new Error("No file selected for upload.");
       }
+      // const formData = new FormData();
+      // formData.append("file", file.originFileObj);
 
       const resUpload = await uploadFile(file, session!.access_token);
+      // const resUpload = await fetch("https://data.deadtrees.earth/api/v1/datasets", {
+      //   headers: {
+      //     Authorization: `Bearer ${session!.access_token}`,
+      //   },
+      //   method: "POST",
+      //   body: formData,
+      // });
       console.log("resUpload", resUpload);
-      onClose(); // Close the modal
+      // onClose(); // Close the modal
 
       if (resUpload.id) {
         // Adding metadata
@@ -61,47 +70,54 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   };
 
   const onFileChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-    console.log("newFileList", newFileList);
-    setUploadProgress(newFileList[0].percent || 0);
+    setFileList(newFileList.slice(-1));
+
+    // setFileList(newFileList);
+    // console.log("newFileList", newFileList);
+    // setUploadProgress(newFileList[0].percent || 0);
   };
 
   const beforeUpload = (file) => {
     setFileList([file]);
-    return Upload.LIST_IGNORE;
+    // return Upload.LIST_IGNORE;
+    return false;
   };
-  const handleCustomRequest = ({ file }) => {
-    console.log("file", file);
+  // const handleCustomRequest = ({ file }) => {
+  //   console.log("file", file);
 
-    // Ensure the URL has the correct protocol
-    const url = "http://localhost:3000/profile";
+  // Ensure the URL has the correct protocol
+  // const url = "http://localhost:5173//profile";
+  /// const url = "https://deadwood-d4a4b--update-deadwood-api-3yq2nb9e.web.app/profile";
 
-    axios
-      .post(url, file, {
-        onUploadProgress: (progressEvent) => {
-          console.log(progressEvent);
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(percentCompleted);
-        },
-        headers: {
-          "Content-Type": file.type, // Set the content type based on the file type
-        },
-      })
-      .then((response) => {
-        console.log("Upload response:", response);
-        message.success("Upload successful!");
-      })
-      .catch((error) => {
-        console.error("Upload error:", error);
-        message.error("Upload failed. Please try again.");
-      });
-  };
+  // axios
+  //   .post(url, file, {
+  //     onUploadProgress: (progressEvent) => {
+  //       console.log(progressEvent);
+  //       const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+  //       console.log(percentCompleted);
+  //     },
+  //     headers: {
+  //       "Content-Type": file.type, // Set the content type based on the file type
+  //     },
+  //   })
+  //   .then((response) => {
+  //     console.log("Upload response:", response);
+  //     message.success("Upload successful!");
+  //   })
+  //   .catch((error) => {
+  //     console.error("Upload error:", error);
+  //     message.error("Upload failed. Please try again.");
+  //   });
+  // };
 
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
       <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
         <Form.Item label="File" rules={[{ required: true, message: "Please upload a file" }]}>
-          {uploadProgress < 100 && (
+          <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
+            <Button icon={<UploadOutlined />}>Click to upload</Button>
+          </Upload>
+          {/* {uploadProgress < 100 && (
             <Upload fileList={fileList} onChange={onFileChange} listType="text" maxCount={1}>
               <Button icon={<UploadOutlined />}>Click to upload</Button>
             </Upload>
@@ -125,7 +141,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
             >
               <Button icon={<UploadOutlined />}>uploaded {uploadProgress}</Button>
             </Upload>
-          )}
+          )} */}
         </Form.Item>
         <Form.Item rules={[{ required: true, message: "Please enter the authors" }]} label="Authors" name="author">
           <Input className="w-96" type="name" placeholder="Jon Doe" />
