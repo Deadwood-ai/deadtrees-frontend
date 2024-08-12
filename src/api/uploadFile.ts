@@ -6,14 +6,19 @@ const uploadFile = async (file: any, token: string) => {
   formData.append("file", file.originFileObj);
 
   try {
-    const res = await fetch(`${Settings.API_URL}/datasets`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
+    const res = await fetch(
+      // `${Settings.API_URL}/datasets`
+      "https://cors-anywhere.herokuapp.com/https://data.deadtrees.earth/api/v1/datasets",
+
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
     console.log("Upload dataset response:", res);
 
     if (!res.ok) {

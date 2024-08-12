@@ -27,6 +27,7 @@ const DataTable = ({ supabase }) => {
       console.error("Error fetching data:", error);
     } else {
       setData(data);
+      console.log("Profile data:", data);
     }
   };
 

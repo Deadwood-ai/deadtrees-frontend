@@ -12,6 +12,6 @@ export const Settings = {
   LABELS_TABLE: DEV ? "dev_labels" : "v1_labels",
   API_URL: DEV ? LOCAL_SERVER_URL : PRODUCTION_SERVER_URL,
   METADATA_TABLE: DEV ? "dev_metadata" : "v1_metadata",
-  DATA_TABLE: DEV ? "dev_dataset" : "v1_dataset",
+  DATA_TABLE: DEV ? "dev_dataset" : "v1_datasets",
   COG_BASE_URL: PRODUCTION_SERVER_URL + "/cogs/v1/",
 };
