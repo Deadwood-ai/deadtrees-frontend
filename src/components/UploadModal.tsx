@@ -7,6 +7,7 @@ import uploadFile from "../api/uploadFile";
 import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
 import { Settings } from "../config";
+import buildThumbnail from "../api/buildThumbnail";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const pickerTypeOptions = ["date", "month", "year"];
@@ -61,6 +62,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         message.success("Upload successful");
 
         // Starting COG build
+        const resBuildThumbnail = await buildThumbnail(resUpload.id, session!.access_token);
+        console.log("resBuildThumbnail", resBuildThumbnail);
+        
         const resBuildCog = await buildCog(resUpload.id, session!.access_token);
         console.log("resBuildCog", resBuildCog);
       } else {
