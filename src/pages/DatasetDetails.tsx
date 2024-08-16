@@ -7,6 +7,7 @@ import DatasetDetailsMap from "../archive/DatasetDetailsMap";
 import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
 import download from "../api/download";
 import { useAuth } from "../state/AuthProvider";
+import { Settings } from "../config";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -140,7 +141,9 @@ export default function DatasetDetails() {
               </div>
             </div>
 
-            <Button type="primary" icon={<DownloadOutlined/>} className="mt-6" onClick={() => download(dataset.id, session?.access_token)}>Download</Button>
+            <Button href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`} type="primary" icon={<DownloadOutlined/>} className="mt-6">
+          Download
+            </Button>
           </div>
         ) : (
           <div>Loading...</div>
