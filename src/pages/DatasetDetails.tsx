@@ -2,13 +2,16 @@ import { Button, Col, Row, Tag, Typography, notification } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 
-import { ArrowLeftOutlined, BackwardFilled, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, BackwardFilled, DownloadOutlined, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
 import DatasetDetailsMap from "../archive/DatasetDetailsMap";
 import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
+import download from "../api/download";
+import { useAuth } from "../state/AuthProvider";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const {session} = useAuth()
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
   // notification.info({
@@ -136,6 +139,8 @@ export default function DatasetDetails() {
                 <Tag color="blue">{dataset.label_quality}</Tag>
               </div>
             </div>
+
+            <Button type="primary" icon={<DownloadOutlined/>} className="mt-6" onClick={() => download(dataset.id, session?.access_token)}>Download</Button>
           </div>
         ) : (
           <div>Loading...</div>
