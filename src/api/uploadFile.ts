@@ -7,8 +7,8 @@ const uploadFile = async (file: any, token: string) => {
 
   try {
     const res = await fetch(
-      // `${Settings.API_URL}/datasets`,
-      "https://cors-anywhere.herokuapp.com/https://data.deadtrees.earth/api/v1/datasets",
+      `${Settings.API_URL}/datasets`,
+      // "https://cors-anywhere.herokuapp.com/https://data.deadtrees.earth/api/v1/datasets",
 
       {
         method: "POST",

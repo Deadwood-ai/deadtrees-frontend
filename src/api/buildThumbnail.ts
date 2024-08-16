@@ -3,8 +3,8 @@ import { Settings } from "../config";
 const buildThumbnail = async (dataset_id: number, token: string) => {
   try {
     const res = await fetch(
-      // `${Settings.API_URL}/datasets/${dataset_id}/build-thumbnail`,
-      `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-thumbnail`,
+      `${Settings.API_URL}/datasets/${dataset_id}/build-thumbnail`,
+      // `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-thumbnail`,
       {
         method: "PUT",
         headers: {

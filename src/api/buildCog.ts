@@ -3,8 +3,8 @@ import { Settings } from "../config";
 const buildCog = async (dataset_id: number, token: string) => {
   try {
     const res = await fetch(
-      // `${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
-      `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
+      `${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
+      // `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
       {
         method: "PUT",
         headers: {

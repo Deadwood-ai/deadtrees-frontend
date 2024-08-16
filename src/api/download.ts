@@ -3,7 +3,8 @@ import { Settings } from "../config";
 const download = async (dataset_id, token) => {
     try {
         const response = await fetch(
-            `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,
+            `${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,
+            // `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,
             {
                 method: "GET",
                 headers: {

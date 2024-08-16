@@ -3,8 +3,8 @@ import { Settings } from "../config";
 const addMetadata = async (dataset_id: number, metadata: any, token: string) => {
   try {
     const res = await fetch(
-      // `${Settings.API_URL}/datasets/${dataset_id}/metadata`,
-      `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/metadata`,
+      `${Settings.API_URL}/datasets/${dataset_id}/metadata`,
+      // `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/metadata`,
       {
         method: "PUT",
         headers: {
