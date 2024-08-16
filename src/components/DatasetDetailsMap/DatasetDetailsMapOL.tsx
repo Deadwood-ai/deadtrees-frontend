@@ -53,7 +53,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // funktioniert
               // url: "https://data.deadtrees.earth/cogs/v1/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho_cog_jpeg_ovr6_q70.tif",
               // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif", // too big
-              // nodata: 1,
+              nodata: 0,
             },
           ],
           projection: "EPSG:4326",
