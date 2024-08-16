@@ -3,7 +3,7 @@ import { Settings } from "../config";
 const buildCog = async (dataset_id: number, token: string) => {
   try {
     const res = await fetch(
-      // `${Settings.API_URL}/datasets/${dataset_id}/build-cog`
+      // `${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
       `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
       {
         method: "PUT",
@@ -11,15 +11,11 @@ const buildCog = async (dataset_id: number, token: string) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json", // Specify that the content type is JSON
         },
-        body: JSON.stringify({
-          overviews: 8, // Number of overview layers to generate
-          resolution: 0.04, // Target resolution in the COG file
-          profile: "webp", // Profile type for the COG (e.g., webp, jpeg, etc.)
-          force_recreate: false, // Flag to force recreate the COG if it already exists
+        body : JSON.stringify({
+     
         }),
       },
     );
-
     if (!res.ok) {
       throw new Error(`HTTP error! Status: ${res.status}`);
     }
