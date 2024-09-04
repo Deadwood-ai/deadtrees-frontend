@@ -41,6 +41,7 @@ export interface IDataset {
   label_source: string | null;
   label_quality: string | null;
   label_type: string | null;
+  thumbnail_src: string | null;
 }
 
 // export interface Dataset {

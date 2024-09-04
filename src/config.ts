@@ -8,11 +8,11 @@ console.log("DEV", DEV);
 
 export const Settings = {
   COLLABORATORS_TABLE: "collaborators",
-  DATA_TABLE_FULL: DEV ? "dev_full_dataset" : "v2_full_dataset",
+  DATA_TABLE_FULL: DEV ? "dev_full_dataset" : "v1_full_dataset_view",
   THUMBNAILS_BUCKET: DEV ? "dev_thumbnails" : "v1_thumbnails",
   LABELS_TABLE: DEV ? "dev_labels" : "v1_labels",
   API_URL: DEV ? LOCAL_SERVER_URL : PRODUCTION_SERVER_URL + "api/v1",
   METADATA_TABLE: DEV ? "dev_metadata" : "v1_metadata",
   DATA_TABLE: DEV ? "dev_dataset" : "v1_datasets",
-  COG_BASE_URL: PRODUCTION_SERVER_URL + "/cogs/v1/",
+  COG_BASE_URL: PRODUCTION_SERVER_URL + "cogs/v1",
 };
