@@ -1,14 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
-import {
-  Breadcrumb,
-  Button,
-  Layout,
-  Menu,
-  Space,
-  Typography,
-  theme,
-  Image,
-} from "antd";
+import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } from "antd";
 import { Link } from "react-router-dom";
 const { Header } = Layout;
 
@@ -54,15 +45,9 @@ export default function Navigation() {
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
-          <img
-            src="assets/tree-icon.png"
-            alt="deadtrees.earth"
-            className="mr-3 h-8 w-8"
-          />
+          <img src="assets/tree-icon.png" alt="deadtrees.earth" className="mr-3 h-8 w-8" />
           <div className="flex">
-            <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">
-              deadtrees.earth
-            </h1>
+            <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">deadtrees.earth</h1>
             <div>
               <p className="absolute ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600">
                 BETA
@@ -84,11 +69,7 @@ export default function Navigation() {
             }}
           />
         </div>
-        <Button
-          className="ml-8"
-          type="primary"
-          onClick={session ? signOut : () => nav("/profile")}
-        >
+        <Button className="ml-8" type="primary" onClick={session ? signOut : () => nav("/sign-in")}>
           {session ? "Sign Out" : "Sign In"}
         </Button>
       </Header>

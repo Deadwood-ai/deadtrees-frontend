@@ -64,7 +64,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         // Starting COG build
         const resBuildThumbnail = await buildThumbnail(resUpload.id, session!.access_token);
         console.log("resBuildThumbnail", resBuildThumbnail);
-        
+
         const resBuildCog = await buildCog(resUpload.id, session!.access_token);
         console.log("resBuildCog", resBuildCog);
       } else {

@@ -7,6 +7,7 @@ import { useAuth } from "../state/AuthProvider";
 import DataTable from "../components/DataTable";
 import { Content } from "antd/es/layout/layout";
 import UploadButton from "../components/UploadButton";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function ProfilePage() {
   const {
@@ -14,22 +15,32 @@ export default function ProfilePage() {
   } = theme.useToken();
 
   const { session, user } = useAuth();
+  const navigate = useNavigate();
+  console.log(window.origin)
+  useEffect(() => {
+    if (!session) {
+      navigate("/sign-in");
+    }
+  }, [session, navigate]);
 
   if (!session) {
-    return (
-      <div className="m-auto flex h-full max-w-7xl items-center justify-center">
-        <div className="w-96 rounded-md bg-white p-8 ">
-          <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign in</h1>
-          <Auth
-            redirectTo={window.origin}
-            supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            // providers={["google", "github"]}
-            providers={[]}
-          />
-        </div>
-      </div>
-    );
+    return null; // 
+    // return (
+    //   <div className="m-auto flex h-full max-w-7xl items-center justify-center">
+    //     <div className="w-96 rounded-md bg-white p-8 ">
+    //       <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign in</h1>
+
+    //       <Auth
+    //         redirectTo={window.origin + "/profile"}
+    //         supabaseClient={supabase}
+    //         appearance={{ theme: ThemeSupa }}
+    //         showLinks={true}            // providers={["google", "github"]}
+    //         providers={[]}
+    //         view="update_password"
+    //       />
+    //     </div>
+    //   </div>
+    // );
   } else {
     return (
       <div className=" m-auto h-full max-w-7xl">
