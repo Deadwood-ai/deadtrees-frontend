@@ -8,18 +8,27 @@ import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
 import { Settings } from "../config";
 import buildThumbnail from "../api/buildThumbnail";
+import { ILicense, IPlatform } from "../types/dataset";
+import type { UploadFile } from "antd";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const pickerTypeOptions = ["date", "month", "year"];
 
-  const [fileList, setFileList] = useState([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
-  // const [uploadProgress, setUploadProgress] = useState(0);
+  interface IFormValues {
+    license: ILicense;
+    platform: IPlatform;
+    aquisition_date: Date;
+    author: string;
+    doi: string;
+    additional_information: string;
+  }
 
-  const onFormFinish = async (values: { platform: string | Blob; license: string; aquisition_date: any }) => {
+  const onFormFinish = async (values: IFormValues) => {
     setIsSubmitting(true);
     console.log("settings: ", Settings);
     try {
@@ -28,17 +37,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
       if (!file) {
         throw new Error("No file selected for upload.");
       }
-      // const formData = new FormData();
-      // formData.append("file", file.originFileObj);
 
       const resUpload = await uploadFile(file, session!.access_token);
-      // const resUpload = await fetch("https://data.deadtrees.earth/api/v1/datasets", {
-      //   headers: {
-      //     Authorization: `Bearer ${session!.access_token}`,
-      //   },
-      //   method: "POST",
-      //   body: formData,
-      // });
+
       console.log("resUpload", resUpload);
       onClose(); // Close the modal
 
@@ -54,6 +55,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           aquisition_year: values.aquisition_date.year(),
           aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
           aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
+          authors_image: values.author,
+          doi: values.doi,
+          additional_information: values.additional_information,
         };
 
         const resAddMetadata = await addMetadata(resUpload.id, metadata, session!.access_token);
@@ -80,6 +84,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   };
 
   const onFileChange = ({ fileList: newFileList }) => {
+    console.log("newFileList", newFileList);
     setFileList(newFileList.slice(-1));
 
     // setFileList(newFileList);
@@ -95,6 +100,10 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   // const handlePickerTypeChange = (value) => {
   //   setPickerType(value);
   // };
+
+  const onUploadChange = (info) => {
+    console.log("info", info);
+  };
 
   const PickerWithType = ({ value, onChange }) => {
     return (
@@ -113,9 +122,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   // const handleCustomRequest = ({ file }) => {
   //   console.log("file", file);
 
-  // Ensure the URL has the correct protocol
-  // const url = "http://localhost:5173//profile";
-  /// const url = "https://deadwood-d4a4b--update-deadwood-api-3yq2nb9e.web.app/profile";
+  // // Ensure the URL has the correct protocol
+  // // const url = "http://localhost:5173//profile";
+  // // / const url = "https://deadwood-d4a4b--update-deadwood-api-3yq2nb9e.web.app/profile";
 
   // axios
   //   .post(url, file, {
@@ -140,7 +149,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
 
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
-      <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "cc-by" }}>
+      <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "CC BY" }}>
         <Form.Item label="Orthophoto" rules={[{ required: true, message: "Please upload a file" }]}>
           <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
             <Button icon={<UploadOutlined />}>Click to upload</Button>
@@ -198,12 +207,17 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         </Form.Item>
         <Form.Item label="License" name="license">
           <Radio.Group>
-            <Radio value="cc-by">CC BY</Radio>
-            <Radio value="cc-by-sa">CC BY SA</Radio>
+            <Radio value="CC BY">CC BY</Radio>
+            <Radio value="CC BY-SA">CC BY SA</Radio>
+            <Radio value="CC BY-NC-SA">CC BY NC SA</Radio>
+            <Radio value="MIT">MIT</Radio>
           </Radio.Group>
         </Form.Item>
         <Form.Item label="DOI" name="doi">
           <Input type="name" placeholder="DOI" />
+        </Form.Item>
+        <Form.Item label="Additional Information" name="additional_information">
+          <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} placeholder="Additional Information for the Dataset" />
         </Form.Item>
         <Form.Item>
           <Space>
