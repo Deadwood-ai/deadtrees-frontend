@@ -39,11 +39,14 @@ const DataTable = ({ supabase }) => {
         {
           event: "*",
           schema: "public",
-          table: Settings.DATA_TABLE,
+          // table: Settings.DATA_TABLE,
         },
         (payload) => {
-          console.log("Change received in DataTalbe!", payload);
-          fetchData();
+          if (payload.table === Settings.DATA_TABLE || payload.table === Settings.METADATA_TABLE) {
+            console.log(Settings);
+            console.log("Change received in DataTalbe!", payload);
+            fetchData();
+          }
         },
       )
       .subscribe();
@@ -57,7 +60,19 @@ const DataTable = ({ supabase }) => {
 
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },
-    { title: "Date", dataIndex: "aquisition_date", key: "aquisition_date" },
+    {
+      title: "Date",
+      dataIndex: "aquisition_day",
+      key: "aquisition_day",
+      render: (tag, record) => (
+        // create date from aquisition_day, aquisition_month and aquisition_year
+        <span>
+          {record.aquisition_day && record.aquisition_day + "/"}
+          {record.aquisition_month && record.aquisition_month + "/"}
+          {record.aquisition_year}
+        </span>
+      ),
+    },
     { title: "File", dataIndex: "file_alias", key: "file_alias" },
     { title: "License", dataIndex: "license", key: "license" },
 
@@ -69,18 +84,22 @@ const DataTable = ({ supabase }) => {
     },
 
     {
-      title: "Link",
+      title: "Map",
       dataIndex: "id",
       key: "id",
       render: (tag) => {
-        if (!tag) {
+        if (data.find((d) => d.id === tag).status == "processed") {
           return (
-            <Tooltip title="Wait for the status: 'processed'">
+            <Tooltip title="View data on the map">
               <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
             </Tooltip>
           );
         } else {
-          return <Tag icon={<ClockCircleOutlined />} color="default" />;
+          return (
+            <Tooltip title="Data is being processed">
+              <Tag icon={<ClockCircleOutlined />} color="default" />
+            </Tooltip>
+          );
         }
       },
     },
@@ -89,33 +108,39 @@ const DataTable = ({ supabase }) => {
       dataIndex: "status",
       key: "status",
       render: (tag) => {
-        if (tag === "panding") {
-          return (
-            <Tag icon={<LoadingOutlined />} color="processing">
-              uploading
-            </Tag>
-          );
-        } else if (tag === "processed") {
-          return (
-            <Tag icon={<CheckCircleOutlined />} color="success">
-              {tag}
-            </Tag>
-          );
-        } else if (tag === "processing") {
-          return (
-            <Tag icon={<SyncOutlined spin />} color="processing">
-              {tag}
-            </Tag>
-          );
-        } else {
-          return (
-            <Tag icon={<CloseCircleOutlined />} color="error">
-              {tag}
-            </Tag>
-          );
+        switch (tag) {
+          case "pending":
+            return (
+              <Tag icon={<LoadingOutlined />} color="processing">
+                uploading
+              </Tag>
+            );
+          case "processed":
+            return (
+              <Tag icon={<CheckCircleOutlined />} color="success">
+                {tag}
+              </Tag>
+            );
+          case "processing":
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                {tag}
+              </Tag>
+            );
+          case "errored":
+            return (
+              <Tag icon={<CloseCircleOutlined spin />} color="error">
+                {tag}
+              </Tag>
+            );
+          default:
+            return (
+              <Tag icon={<ClockCircleOutlined />} color="default">
+                {tag}
+              </Tag>
+            );
         }
       },
-      // <Tag color="processing" st>{tag}</Tag>},
     },
   ];
 
