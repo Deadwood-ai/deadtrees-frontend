@@ -29,7 +29,7 @@ export interface IDataset {
   authors: string | null;
   spectral_properties: string | null;
   citation_doi: string | null;
-  additional_info: string | null;
+  additional_information: string | null;
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
