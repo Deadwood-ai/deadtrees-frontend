@@ -29,6 +29,7 @@ export interface IDataset {
   authors: string | null;
   spectral_properties: string | null;
   citation_doi: string | null;
+  additional_info: string | null;
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
@@ -98,19 +99,19 @@ export interface ILabels {
   label_type: string;
 }
 
-export enum License {
+export enum ILicense {
   "CC BY",
   "CC BY-SA",
   "CC BY-NC-SA",
   "MIT",
 }
 
-export enum Platform {
+export enum IPlatform {
   "drone",
   "airborne",
   "satellite",
 }
-export enum Status {
+export enum IStatus {
   "pending",
   "processing",
   "errored",
