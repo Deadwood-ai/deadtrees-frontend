@@ -99,13 +99,16 @@ export interface ILabels {
 }
 
 export enum License {
-  "cc-by",
-  "cc-by-sa",
+  "CC BY",
+  "CC BY-SA",
+  "CC BY-NC-SA",
+  "MIT",
 }
+
 export enum Platform {
   "drone",
   "airborne",
-  "sattelfite",
+  "satellite",
 }
 export enum Status {
   "pending",
