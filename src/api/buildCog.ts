@@ -3,7 +3,8 @@ import { Settings } from "../config";
 const buildCog = async (dataset_id: number, token: string) => {
   try {
     const res = await fetch(
-      `${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
+      // `${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
+      `${Settings.API_URL}/datasets/${dataset_id}/force-cog-build`, // only for testing without queue
       // `https://cors-anywhere.herokuapp.com/${Settings.API_URL}/datasets/${dataset_id}/build-cog`,
       {
         method: "PUT",
@@ -11,9 +12,7 @@ const buildCog = async (dataset_id: number, token: string) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json", // Specify that the content type is JSON
         },
-        body : JSON.stringify({
-     
-        }),
+        body: JSON.stringify({}),
       },
     );
     if (!res.ok) {
