@@ -39,7 +39,6 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
     e.stopPropagation();
     console.log(filter);
   };
-  console.log('thumbnail urls:', Settings.THUMBNAIL_URL + item.file_name?.replace('.tif', '.jpg'));
 
   return (
     <div
