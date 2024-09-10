@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { BingMaps, TileWMS } from "ol/source";
+import { BingMaps } from "ol/source";
 import TileLayer from "ol/layer/Tile";
-import { View, Map, Tile } from "ol";
+import { View, Map } from "ol";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
-import { createEmpty, extend, getCenter } from "ol/extent.js";
 
 import { IDataset, ILabels } from "../../types/dataset";
 import fetchLabels from "./fetchLabels";
@@ -16,7 +15,6 @@ import Legend from "../DeadwoodMap/Legend";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
-import { Projection, transformExtent } from "ol/proj";
 
 const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [map, setMap] = useState(null);
@@ -38,67 +36,19 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         }),
       });
 
-      console.log("cog url:", Settings.COG_BASE_URL + data.cog_url);
-
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
           sources: [
             {
               url: Settings.COG_BASE_URL + data.cog_url,
-              // url: "https://data.deadtrees.earth/cogs/v1/4b727747-f9ff-41d1-b28d-18f215c550ec_uavforsat_2020_CFB034_ortho/4b727747-f9ff-41d1-b28d-18f215c550ec_uavforsat_2020_CFB034_ortho_cog_jpeg_ovr8_q75.tif", // funktioniert
-              // url: "https://data.deadtrees.earth/cogs/v1/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho_cog_jpeg_ovr8_q75.tif", // funktioniert
-              //  https://data.deadtrees.earth/cogs/v1/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho/262c8eae-e357-4c4d-93a2-552e860b4780_uavforsat_2017_CFB030_ortho_cog_jpeg_ovr8_q75.tif
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // does not work
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_deflate_ovr8.tif", // is ok but 1 gb file
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_jpeg_ovr8.tif", // funktioniert
-              // url: "https://data.deadtrees.earth/cogs/v1/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho/eb12a2ed-2811-4cd7-b9a7-2f1899892822_uavforsat_2017_CFB008_ortho_cog_jpeg_ovr6_q70.tif",
-              // url: "https://data.deadtrees.earth/cogs/v1/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho/f9cd3537-38b2-46e7-a5e2-2cad10a1faf8_uavforsat_2017_CFB017_ortho_cog_lzw_ovr8.tif", // too big
               nodata: 0,
             },
           ],
-          projection: "EPSG:4326",
+          // projection: "EPSG:4326",
           convertToRGB: true,
           // normalize: false,
           // interpolate: false,
         }),
-        // style: {
-        //   color: [
-        //     "case",
-        //     ["==", ["band", 3], 1],
-        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
-        //     [0, 0, 0, 0],
-        //   ],
-        // },
-        // style: {
-        //   color: [
-        //     "case",
-        //     [
-        //       "any",
-        //       ["<=", ["band", 1], 0.000001], // Adjust this threshold if necessary
-        //       ["<=", ["band", 2], 0.000001],
-        //       ["<=", ["band", 3], 0.000001],
-        //       // ["==", ["band", 4], 20],
-
-        //       // ["==", ["band", 3], 0],
-        //       // ["==", ["band", 1], 1],
-        //     ], // Check if the Red band (band 1) is 0 (could check Green and Blue bands as well)
-        //     [0, 0, 0, 0], // If true, set the pixel to fully transparent
-        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly with full opacity
-        //   ],
-        // },
-        // style: {
-        //   color: [
-        //     "case",
-        //     [
-        //       "all",
-        //       ["<=", ["band", 1], 1], // Adjust range if necessary
-        //       ["<=", ["band", 2], 1],
-        //       ["<=", ["band", 3], 1],
-        //     ],
-        //     [0, 0, 0, 0], // Set to fully transparent if all bands are no-data
-        //     ["array", ["band", 1], ["band", 2], ["band", 3], 1], // Use RGB values directly
-        //   ],
-        // },
 
         maxZoom: 20,
         cacheSize: 4096,
@@ -118,7 +68,6 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
       const newMap = new Map({
         target: mapContainer.current,
         layers: [basemapLayer],
-        // view: orthoCogLayer.getSource().getView(),
         view: new View({
           center: [0, 0],
           zoom: 2,
@@ -127,6 +76,11 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         overlays: [],
         controls: [],
       });
+      newMap.addLayer(orthoCogLayer);
+      newMap.addLayer(geotifLayer2018);
+      newMap.addLayer(geotifLayer2019);
+      newMap.addLayer(geotifLayer2020);
+      newMap.addLayer(geotifLayer2021);
       newMap.setView(orthoCogLayer.getSource().getView());
       console.log("newMap", newMap.getView());
 
@@ -136,7 +90,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.aoi, {
               dataProjection: "EPSG:4326",
-              // featureProjection: "EPSG:3857",
+              featureProjection: "EPSG:3857",
             }),
           }),
           style: {
@@ -145,11 +99,12 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             "fill-color": "rgba(0, 0, 255, 0)",
           },
         });
+        console.log('aoi layer', vectorLayerAOI);
         const vectorLayerLabels = new VectorLayer({
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.label, {
               dataProjection: "EPSG:4326",
-              // featureProjection: "EPSG:3857",
+              featureProjection: "EPSG:3857",
             }),
           }),
           className: "labels",
@@ -167,11 +122,6 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         //     .then((view) => console.log(view.projection())),
         // );
         console.log("map properties: ", newMap.getProperties());
-        newMap.addLayer(orthoCogLayer);
-        newMap.addLayer(geotifLayer2018);
-        newMap.addLayer(geotifLayer2019);
-        newMap.addLayer(geotifLayer2020);
-        newMap.addLayer(geotifLayer2021);
         newMap.addLayer(vectorLayerAOI);
         newMap.addLayer(vectorLayerLabels);
 
@@ -181,6 +131,8 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         //   maxZoom: 18,
         // });
         setLabelsFetched(true);
+        // newMap.setView(vectorLayerAOI.getSource().getView());
+
       });
 
       setMap(newMap);
