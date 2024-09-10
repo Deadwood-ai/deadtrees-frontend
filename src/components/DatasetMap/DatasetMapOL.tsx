@@ -159,35 +159,36 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           return;
         }
         const pixel = newMap.getEventPixel(evt.originalEvent);
-        const feature = newMap.forEachFeatureAtPixel(pixel, function (feature) {
-          return feature;
+
+        // Reset all features to default style
+        vectorLayerExtend.getSource().getFeatures().forEach((f) => f.setStyle(extendDefaultStyle));
+        vectorLayerMarker.getSource().getFeatures().forEach((f) => f.setStyle(markerDefaultStyle));
+
+        let hoveredFeature = null;
+
+        newMap.forEachFeatureAtPixel(pixel, function (feature) {
+          if (!hoveredFeature) {
+            hoveredFeature = feature;
+            return true; // Stop iterating after finding the first feature
+          }
         });
 
-        if (feature) {
+        if (hoveredFeature) {
           newMap.getTargetElement().style.cursor = "pointer";
 
-          if (feature.getGeometry() instanceof Polygon) {
-            feature.setStyle(extendHoverStyle);
+          // Apply hover style only to the topmost feature
+          if (hoveredFeature.getGeometry() instanceof Polygon) {
+            hoveredFeature.setStyle(extendHoverStyle);
           } else {
-            feature.setStyle(markerHoverStyle);
+            hoveredFeature.setStyle(markerHoverStyle);
           }
 
           const coordinate = evt.coordinate;
           tooltip.setPosition(coordinate);
-          tooltip.getElement().innerHTML = feature.get("title");
+          tooltip.getElement().innerHTML = hoveredFeature.get("title");
           tooltip.getElement().classList.remove("hidden");
         } else {
           newMap.getTargetElement().style.cursor = "";
-
-          vectorLayerExtend
-            .getSource()
-            .getFeatures()
-            .forEach((f) => f.setStyle(extendDefaultStyle));
-          vectorLayerMarker
-            .getSource()
-            .getFeatures()
-            .forEach((f) => f.setStyle(markerDefaultStyle));
-
           tooltip.getElement().classList.add("hidden");
         }
       });
