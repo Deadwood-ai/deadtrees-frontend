@@ -3,7 +3,7 @@ import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 import { IDataset } from "../types/dataset";
-import getThumbnailURL from "../utils/getThumbnails";
+import { Settings } from "../config";
 
 const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
   const { setFilter, setFilterTag } = useData();
@@ -27,6 +27,7 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
     e.stopPropagation();
     console.log(filter);
   };
+  console.log('thumbnail urls:', Settings.THUMBNAIL_URL + item.file_name?.replace('.tif', '.jpg'));
 
   return (
     <div
@@ -35,12 +36,8 @@ const ListItme = ({ item, index }: { item: IDataset; index: any }) => {
       onClick={() => onClickHandler(item)}
     >
       <img
-        // src={item.cog_name ? getThumbnailURL(item.file_alias) : "/assets/tree-icon.png"}
-        // src={item.thumbnail_src ? item.thumbnail_src : "/assets/tree-icon.png"}
-        // src=
-
-        src={item.thumbnail_src ? `${item.thumbnail_src}` : "/assets/tree-icon.png"}
-        className="m-0 h-16 rounded-lg"
+        src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path: "/assets/tree-icon.png"}
+        className="m-0 w-16 rounded-lg"
         loading="lazy"
       />
       <div className="flex flex-1 flex-col justify-between pl-3">
