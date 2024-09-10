@@ -19,8 +19,8 @@ type DataContextType = {
 const DataContext = createContext<DataContextType>({
   data: null,
   filter: "",
-  setFilter: () => {},
-  setFilterTag: () => {},
+  setFilter: () => { },
+  setFilterTag: () => { },
   thumbnails: null,
   collaborators: null,
 });
@@ -122,15 +122,20 @@ const DataProvider = (props: DataProviderProps) => {
     if (filter) {
       console.log("filtering");
       const filteredData = rawData.filter((item) => {
-        if (filterTag === "platform") {
-          return item.platform === filter;
-        } else if (filterTag === "license") {
-          return item.license === filter;
-        } else if (filterTag === "authors_image") {
-          return item.authors === filter;
+        switch (filterTag) {
+          case "platform":
+            return item.platform === filter;
+          case "license":
+            return item.license === filter;
+          case "authors_image":
+            return item.authors === filter;
+          case "admin_level_1":
+            return item.admin_level_1 === filter;
+          case "admin_level_3":
+            return item.admin_level_3 === filter;
+          default:
+            return false;
         }
-
-        return false;
       });
 
       setData(filteredData);
