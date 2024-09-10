@@ -15,5 +15,6 @@ export const Settings = {
   API_URL: DEV ? LOCAL_SERVER_URL : PRODUCTION_SERVER_URL + "api/v1",
   METADATA_TABLE: DEV ? "dev_metadata" : "v1_metadata",
   DATA_TABLE: DEV ? "dev_datasets" : "v1_datasets",
-  COG_BASE_URL: PRODUCTION_SERVER_URL + "cogs/v1",
+  COG_BASE_URL: PRODUCTION_SERVER_URL + "cogs/v1/",
+  THUMBNAIL_URL: PRODUCTION_SERVER_URL + "thumbnails/v1/",
 };
