@@ -110,6 +110,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
       const vectorSourceMarker = new VectorSource();
       const vectorLayerMarker = new VectorLayer({
         source: vectorSourceMarker,
+        maxZoom: 11,
       });
       setVectorLayerMarker(vectorLayerMarker);
       newMap.addLayer(vectorLayerMarker);
