@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input, Select } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
@@ -10,6 +10,7 @@ import { Settings } from "../config";
 import buildThumbnail from "../api/buildThumbnail";
 import { ILicense, IPlatform } from "../types/dataset";
 import type { UploadFile } from "antd";
+import { useData } from "../state/DataProvider";
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const pickerTypeOptions = ["date", "month", "year"];
@@ -17,7 +18,25 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { session } = useAuth();
+  const data = useData();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
+  const [options, setOptions] = useState([]);
+
+  useEffect(() => {
+    if (data?.data) {
+      const authors = data.data.map((d) => d.authors);
+      // Get unique authors
+      const authorsUnique = [...new Set(authors)];
+
+      // Map authors to the required AntD selectProps format
+      const options = authorsUnique.map((author) => ({
+        label: author,
+        value: author,
+      }));
+
+      setOptions(options); // Assuming setOptions is a state setter for the options
+    }
+  }, [data]);
 
   interface IFormValues {
     license: ILicense;
@@ -185,7 +204,11 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           label="Authors of the orthophoto"
           name="author"
         >
-          <Input className="w-96" type="name" placeholder="Jon Doe" />
+          {/* <Input className="w-96" type="name" placeholder="Jon Doe" /> */}
+          {/* get all authors as option */}
+          {options.length > 0 && (
+            <Select mode="tags" style={{ width: "100%" }} options={options} placeholder="Authors" />
+          )}
         </Form.Item>
         <Form.Item
           label="Aquisitaion Date (Year, Y/M or Y/M/D if known)"
