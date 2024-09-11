@@ -31,52 +31,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
 
   const mapContainer = useRef<HTMLDivElement>(null);
-  
-  const defaultExtendStyle = new Style({
-    fill: new Fill({
-      color: [0, 0, 255, 0.4],
-    }),
-    stroke: new Stroke({
-      color: "black",
-      width: 1,
-    }),
-  });
-  
-  const hoverExtendStyle = new Style({
-    fill: new Fill({
-      color: [0, 0, 255, 0.5],
-    }),
-    stroke: new Stroke({
-      color: "white",
-      width: 4,
-    }),
-  });
-  
-  const defaultMarkerStyle = new Style({
-    image: new Circle({
-      radius: 10,
-      fill: new Fill({
-        color: [0, 0, 255, 0.5],
-      }),
-      stroke: new Stroke({
-        color: "black",
-        width: 2,
-      }),
-    }),
-  });
-  
-  const hoverMarkerStyle = new Style({
-    image: new Circle({
-      radius: 10,
-      fill: new Fill({
-        color: [0, 0, 255, 0.5],
-      }),
-      stroke: new Stroke({
-        color: "white",
-        width: 4,
-      }),
-    }),
-  });
+
 
   useEffect(() => {
     if (!map) {
@@ -99,6 +54,51 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
       });
 
       setMap(newMap);
+      const defaultExtendStyle = new Style({
+        fill: new Fill({
+          color: [0, 0, 255, 0.4],
+        }),
+        stroke: new Stroke({
+          color: "black",
+          width: 1,
+        }),
+      });
+      
+      const hoverExtendStyle = new Style({
+        fill: new Fill({
+          color: [0, 0, 255, 0.5],
+        }),
+        stroke: new Stroke({
+          color: "white",
+          width: 4,
+        }),
+      });
+      
+      const defaultMarkerStyle = new Style({
+        image: new Circle({
+          radius: 10,
+          fill: new Fill({
+            color: [0, 0, 255, 0.5],
+          }),
+          stroke: new Stroke({
+            color: "black",
+            width: 2,
+          }),
+        }),
+      });
+      
+      const hoverMarkerStyle = new Style({
+        image: new Circle({
+          radius: 10,
+          fill: new Fill({
+            color: [0, 0, 255, 0.5],
+          }),
+          stroke: new Stroke({
+            color: "white",
+            width: 4,
+          }),
+        }),
+      });
 
       const vectorSourceExtend = new VectorSource();
       const vectorLayerExtend = new VectorLayer({
