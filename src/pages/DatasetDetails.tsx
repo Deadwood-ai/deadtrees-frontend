@@ -1,4 +1,4 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, notification } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 
@@ -162,6 +162,7 @@ export default function DatasetDetails() {
                 type="primary"
                 icon={<DownloadOutlined />}
                 className="mt-6"
+                onClick={() => message.info("Downloading Dataset, please wait...")}
               >
                 Download Ortho & Labels
               </Button>
@@ -171,6 +172,7 @@ export default function DatasetDetails() {
                 type="primary"
                 icon={<DownloadOutlined />}
                 className="mt-6"
+                onClick={() => message.info("Downloading Orthoimage, please wait...")}
               >
                 Download Ortho
               </Button>
