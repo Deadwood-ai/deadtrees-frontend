@@ -78,7 +78,7 @@ const Hero = () => {
         </div>
       </div>
       <div className="mt-16 hidden md:mt-0 md:block  md:p-8">
-        <img src="assets/compressed/hero-image.png" alt="deadtrees.earth" className="w-full rounded-3xl md:max-w-96" />
+        <img src="assets/compressed/hero-image.jpg" alt="deadtrees.earth" className="w-full rounded-3xl md:max-w-96" />
       </div>
     </div>
   );
