@@ -156,15 +156,25 @@ export default function DatasetDetails() {
                 </div>
               </div>
             )}
-
-            <Button
-              href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
-              type="primary"
-              icon={<DownloadOutlined />}
-              className="mt-6"
-            >
-              Download
-            </Button>
+            {dataset.label_source ? (
+              <Button
+                href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
+                type="primary"
+                icon={<DownloadOutlined />}
+                className="mt-6"
+              >
+                Download Ortho & Labels
+              </Button>
+            ) : (
+              <Button
+                href={`${Settings.API_URL}/download/datasets/${dataset.id}/ortho.tif`}
+                type="primary"
+                icon={<DownloadOutlined />}
+                className="mt-6"
+              >
+                Download Ortho
+              </Button>
+            )}
           </div>
         ) : (
           <div>Loading...</div>
