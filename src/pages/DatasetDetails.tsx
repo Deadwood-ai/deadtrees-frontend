@@ -1,8 +1,14 @@
-import { Button, Col, Row, Tag, Typography, notification } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, notification } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../state/DataProvider";
 
-import { ArrowLeftOutlined, BackwardFilled, DownloadOutlined, EnvironmentFilled, EnvironmentOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  BackwardFilled,
+  DownloadOutlined,
+  EnvironmentFilled,
+  EnvironmentOutlined,
+} from "@ant-design/icons";
 import DatasetDetailsMap from "../archive/DatasetDetailsMap";
 import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
 import download from "../api/download";
@@ -12,7 +18,7 @@ import { Settings } from "../config";
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const {session} = useAuth()
+  const { session } = useAuth();
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
   // notification.info({
@@ -53,12 +59,20 @@ export default function DatasetDetails() {
 
               <div className="flex justify-between  p-1">
                 <Typography.Text className="pr-2">Author: </Typography.Text>
-                <Typography.Text strong>{dataset.authors}</Typography.Text>
+                <Tooltip title={dataset.authors}>
+                  <Typography.Text strong>
+                    {dataset.authors && dataset.authors.slice(0, 25) + (dataset.authors.length > 18 ? "..." : "")}
+                  </Typography.Text>
+                </Tooltip>
               </div>
               {dataset.citation_doi && (
                 <div className="flex justify-between p-1">
                   <Typography.Text className="pr-2">DOI: </Typography.Text>
-                  <Typography.Text strong>{dataset.citation_doi}</Typography.Text>
+                  {/* <Typography.Text strong> */}
+                  <a href={dataset.citation_doi}>link</a>
+                  {/* {dataset.citation_doi} */}
+
+                  {/* </Typography.Text> */}
                 </div>
               )}
               <div className="flex justify-between p-1">
@@ -120,29 +134,36 @@ export default function DatasetDetails() {
                 <Tag color="blue"> {dataset.spectral_properties ? dataset.spectral_properties : "Unknown"}</Tag>
               </div>
             </div>
-            <div className="mt-4 rounded-md bg-white p-4">
-              <div className="flex justify-between p-2">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Label Source: </Typography.Text>
-                </Typography.Text>
-                <Tag color="blue">{dataset.label_source}</Tag>
+            {dataset.label_source && (
+              <div className="mt-4 rounded-md bg-white p-4">
+                <div className="flex justify-between p-2">
+                  <Typography.Text style={{ margin: 0 }}>
+                    <Typography.Text className="pr-2">Label Source: </Typography.Text>
+                  </Typography.Text>
+                  <Tag color="blue">{dataset.label_source}</Tag>
+                </div>
+                <div className="flex justify-between p-2">
+                  <Typography.Text style={{ margin: 0 }}>
+                    <Typography.Text className="pr-2">Label Type: </Typography.Text>
+                  </Typography.Text>
+                  <Tag color="blue">{dataset.label_type}</Tag>
+                </div>
+                <div className="flex justify-between p-2">
+                  <Typography.Text style={{ margin: 0 }}>
+                    <Typography.Text className="pr-2">Label Quality: </Typography.Text>
+                  </Typography.Text>
+                  <Tag color="blue">{dataset.label_quality}</Tag>
+                </div>
               </div>
-              <div className="flex justify-between p-2">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Label Type: </Typography.Text>
-                </Typography.Text>
-                <Tag color="blue">{dataset.label_type}</Tag>
-              </div>
-              <div className="flex justify-between p-2">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Label Quality: </Typography.Text>
-                </Typography.Text>
-                <Tag color="blue">{dataset.label_quality}</Tag>
-              </div>
-            </div>
+            )}
 
-            <Button href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`} type="primary" icon={<DownloadOutlined/>} className="mt-6">
-          Download
+            <Button
+              href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
+              type="primary"
+              icon={<DownloadOutlined />}
+              className="mt-6"
+            >
+              Download
             </Button>
           </div>
         ) : (
