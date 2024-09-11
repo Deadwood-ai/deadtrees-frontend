@@ -111,9 +111,11 @@ const DataTable = ({ supabase }) => {
         switch (tag) {
           case "pending":
             return (
-              <Tag icon={<LoadingOutlined />} color="processing">
-                uploading
-              </Tag>
+              <Tooltip title="Data will be processed once the audit and processing pipeline is ready.">
+                <Tag icon={<CheckCircleOutlined />} color="success">
+                  uploaded
+                </Tag>
+              </Tooltip>
             );
           case "processed":
             return (

@@ -16,7 +16,7 @@ export default function ProfilePage() {
 
   const { session, user } = useAuth();
   const navigate = useNavigate();
-  console.log(window.origin)
+  console.log(window.origin);
   useEffect(() => {
     if (!session) {
       navigate("/sign-in");
@@ -24,7 +24,7 @@ export default function ProfilePage() {
   }, [session, navigate]);
 
   if (!session) {
-    return null; // 
+    return null; //
     // return (
     //   <div className="m-auto flex h-full max-w-7xl items-center justify-center">
     //     <div className="w-96 rounded-md bg-white p-8 ">
@@ -52,13 +52,13 @@ export default function ProfilePage() {
           </div>
           <div>
             <Alert
-              message="Upload is in development!"
+              message="Upload is available!"
               description={
                 <>
-                  We are enhancing our automatic data audit process. We anticipate full functionality soon. If you have
-                  any questions, please{" "}
+                  You can upload your data now, but integration and visualization on the platform are still in
+                  development. Full functionality will be available soon. For any questions, please{" "}
                   <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
-                    contact{" "}
+                    contact
                   </a>{" "}
                   us.
                 </>
