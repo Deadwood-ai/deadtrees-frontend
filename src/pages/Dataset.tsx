@@ -14,7 +14,7 @@ export default function Dataset() {
   // filter for elements of data with status "processed"
   console.log("data in Dataset", data);
 
-  const processedData = data?.filter((d) => d.status === "processed" || d.status === null);
+  const processedData = data?.filter((d) => d.status === "processed");
   console.log("processedData in Dataset", processedData);
   // const [uuidHovered, setUuidHovered] = useState<string | null>(null);
 
