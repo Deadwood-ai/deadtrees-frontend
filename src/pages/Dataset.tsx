@@ -4,7 +4,6 @@ import { ArrowDownOutlined } from "@ant-design/icons";
 
 import { useData } from "../state/DataProvider";
 import DataList from "../components/DataList";
-// import Map from "../archive/DatasetMap";
 import DatasetMapOL from "../components/DatasetMap/DatasetMapOL";
 import { CloseOutlined } from "@ant-design/icons";
 
@@ -46,7 +45,7 @@ export default function Dataset() {
             <div className="flex items-center">
               <h4 className="m-0 pr-2">Images: </h4>
               <Tag>
-                <span>{data?.length}</span>
+                <span>{processedData?.length}</span>
               </Tag>
             </div>
           </div>
@@ -54,7 +53,7 @@ export default function Dataset() {
           <div className="flex items-center justify-end pb-2">
             <h4 className="m-0 pr-2">Images: </h4>
             <Tag>
-              <span>{data?.length}</span>
+              <span>{processedData?.length}</span>
             </Tag>
           </div>
         )}
