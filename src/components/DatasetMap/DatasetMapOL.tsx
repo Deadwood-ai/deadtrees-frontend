@@ -53,15 +53,15 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const { viewport, setViewport } = useDatasetMap();
+  const { DatasetViewport, setDatasetViewport} = useDatasetMap();
   const { filter } = useData();
 
 
   useEffect(() => {
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
-        center: viewport.center,
-        zoom: viewport.zoom,
+        center: DatasetViewport.center,
+        zoom: DatasetViewport.zoom,
       });
 
       const basemapLayer = new TileLayer({
@@ -108,7 +108,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           center: map.getView().getCenter() as number[],
           zoom: map.getView().getZoom() as number,
         };
-        setViewport(newViewport);
+        setDatasetViewport(newViewport);
       });
 
       map.on("pointermove", (evt) => {

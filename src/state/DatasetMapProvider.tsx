@@ -1,20 +1,32 @@
 import React, { createContext, useState, useContext } from 'react';
-
+import { transform } from 'ol/proj';
 interface MapViewportContextType {
-  viewport: { center: number[]; zoom: number };
-  setViewport: (view: { center: number[]; zoom: number }) => void;
+  DatasetViewport: { center: number[]; zoom: number };
+  setDatasetViewport: (view: { center: number[]; zoom: number }) => void;
+  DeadwoodMapViewport: { center: number[]; zoom: number };
+  setDeadwoodMapViewport: (view: { center: number[]; zoom: number }) => void;
+  DeadwoodMapStyle: string;
+  setDeadwoodMapStyle: (style: string) => void;
 }
 
 
 const MapViewportContext = createContext<MapViewportContextType>({
-  viewport: { center: [0, 0], zoom: 2 },
-  setViewport: () => {},
+  DatasetViewport: { center: [0, 0], zoom: 2 },
+  setDatasetViewport: () => {},
+  DeadwoodMapViewport: { center: [0, 0], zoom: 6 },
+  setDeadwoodMapViewport: () => {},
+  DeadwoodMapStyle: "RoadOnDemand",
+  setDeadwoodMapStyle: () => {},
 });
 
 const DatasetMapProvider = (props: { children: React.ReactNode }) => {
-    const [viewport, setViewport] = useState({ center: [0, 0], zoom: 2 });
+    const [DatasetViewport, setDatasetViewport] = useState({ center: [0, 0], zoom: 2 });
+    // center of germany in  epsg:3857
+    const center = transform([10.451526, 51.165691], "EPSG:4326", "EPSG:3857");
+    const [DeadwoodMapViewport, setDeadwoodMapViewport] = useState({ center: center, zoom: 6 });
+    const [DeadwoodMapStyle, setDeadwoodMapStyle] = useState("RoadOnDemand");
     return (
-        <MapViewportContext.Provider value={{ viewport, setViewport }}>
+        <MapViewportContext.Provider value={{ DatasetViewport, setDatasetViewport, DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle }}>
             {props.children}
         </MapViewportContext.Provider>
     );

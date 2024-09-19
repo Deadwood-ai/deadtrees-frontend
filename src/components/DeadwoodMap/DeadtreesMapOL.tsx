@@ -6,7 +6,7 @@ import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
 import { BingMaps } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
-
+import View from "ol/View";
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
 import "./geocoder.css";
 import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-geocoder-autocomplete";
@@ -18,6 +18,7 @@ import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
 import createDeadwoodGeotiffLayer from "./createDeadwoodGeotiffLayer";
 import getDeadwoodCOGUrl from "../../utils/getDeadwoodCOGUrl";
 import DeadwoodCard from "./DeadwoodCard";
+import { useDatasetMap } from "../../state/DatasetMapProvider";
 
 const sites = {
   Waldshut: [8.174864507120049, 47.682517904265666],
@@ -35,12 +36,12 @@ const yearByIndex = {
 const DeadtreesMapOL = () => {
   const [map, setMap] = useState(null);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
-  const [bounds, setBounds] = useState([5.86, 47.27, 15.04, 55.09]);
-  const [mapStyle, setMapStyle] = useState("RoadOnDemand");
+  const [bounds, setBounds] = useState([]);
   const [selectedSite, setSelectedSite] = useState<string>();
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
+  const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
 
   // handler functions
   const handleClick = async (event, year) => {
@@ -67,11 +68,17 @@ const DeadtreesMapOL = () => {
   };
 
   useEffect(() => {
+    console.log(DeadwoodMapViewport);
     if (!map) {
+      const initialView = new View({
+        // transform to EPSG:3857
+        center: DeadwoodMapViewport.center,
+        zoom: DeadwoodMapViewport.zoom,
+      });
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
+          imagerySet: DeadwoodMapStyle,
           culture: "en-us",
         }),
       });
@@ -83,6 +90,7 @@ const DeadtreesMapOL = () => {
       const newMap = new Map({
         target: mapContainer.current,
         layers: [basemapLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
+        view: initialView,
         overlays: [],
         controls: [],
       });
@@ -104,6 +112,13 @@ const DeadtreesMapOL = () => {
 
       newMap.addOverlay(overlay);
 
+      newMap.on("moveend", () => {
+        setDeadwoodMapViewport({
+          center: newMap.getView().getCenter(),
+          zoom: newMap.getView().getZoom(),
+        });
+      });
+
       const closer = popupElement.querySelector("#popup-closer");
       if (closer) {
         closer.onclick = function () {
@@ -114,7 +129,9 @@ const DeadtreesMapOL = () => {
       }
 
       mapRef.current = newMap;
-      newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+      // if (DeadwoodMapViewport.zoom != 2) {
+      // newMap.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
+      // }
       setMap(newMap);
     }
 
@@ -129,7 +146,7 @@ const DeadtreesMapOL = () => {
 
   // update on bounds change after geocoder search
   useEffect(() => {
-    if (map) {
+    if (map && bounds.length > 0) {
       map.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
     }
   }, [bounds, map]);
@@ -142,12 +159,12 @@ const DeadtreesMapOL = () => {
       layer.setSource(
         new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
+          imagerySet: DeadwoodMapStyle,
           culture: "en-us",
         }),
       );
     }
-  }, [mapStyle, map]);
+  }, [DeadwoodMapStyle, map]);
 
   //update opacity of geotiff layer
   useEffect(() => {
@@ -243,7 +260,7 @@ const DeadtreesMapOL = () => {
           </GeoapifyContext>
         </div>
         <div className="absolute left-8 top-28 z-50">
-          <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+          <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
         </div>
         <SideSelectionButtons />
         <div className="absolute bottom-56 right-8 z-50">
