@@ -28,7 +28,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       console.error("Error fetching data:", error);
     } else {
       setLabels(data[0]);
-      console.log("Data fetched:", data);
+      // console.log("Data fetched:", data);
     }
   };
   useEffect(() => {
@@ -134,10 +134,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   }, [data, labels]); // Dnd on `data` to re-initialize the map when it changes
 
   useEffect(() => {
-    console.log(selectedYear, "running effect");
-    console.log(data, "data");
-    console.log(labels, "labels");
-    console.log(mapLayerList, "mapLayerList");
+
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {

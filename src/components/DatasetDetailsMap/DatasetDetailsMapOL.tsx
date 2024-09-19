@@ -55,12 +55,12 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         preload: 4,
         // zIndex: 99,
       });
-      console.log("orthoCogLayer", orthoCogLayer);
-      console.log("ortho props:", orthoCogLayer.getSource());
+      // console.log("orthoCogLayer", orthoCogLayer);
+      // console.log("ortho props:", orthoCogLayer.getSource());
       // console.log("extend of ortho is:", orthoCogLayer.getSource().getExtent());
 
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-      console.log("geotifLayer2018", geotifLayer2018);
+      // console.log("geotifLayer2018", geotifLayer2018);
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
       const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
       const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
@@ -85,7 +85,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
       console.log("newMap", newMap.getView());
 
       fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
-        console.log("labelsData", labelsData);
+        // console.log("labelsData", labelsData);
         const vectorLayerAOI = new VectorLayer({
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.aoi, {
@@ -99,7 +99,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             "fill-color": "rgba(0, 0, 255, 0)",
           },
         });
-        console.log('aoi layer', vectorLayerAOI);
+        // console.log('aoi layer', vectorLayerAOI);
         const vectorLayerLabels = new VectorLayer({
           source: new VectorSource({
             features: new GeoJSON().readFeatures(labelsData?.label, {

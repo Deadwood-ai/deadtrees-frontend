@@ -48,7 +48,7 @@ const Map = ({ data }: { data: IDataset[] }) => {
         })),
     };
     // Convert data to GeoJSON
-    console.log("geojson: ", geojsonData);
+    // console.log("geojson: ", geojsonData);
     // fit bounds to geojsonData
     const bounds = geojsonData.features.reduce(
       (bounds, feature) => {

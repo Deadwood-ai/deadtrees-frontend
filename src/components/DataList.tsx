@@ -4,7 +4,7 @@ import ListItem from "./ListItem";
 import { Button } from "antd";
 
 export default function DataList({ data }) {
-  console.log("mounting DataList with data:", data);
+  // console.log("mounting DataList with data:", data);
   const [nItems, setNItems] = useState(50);
 
   const handleMoreItems = () => {

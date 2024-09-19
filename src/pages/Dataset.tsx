@@ -11,10 +11,10 @@ export default function Dataset() {
   const { data, filter, setFilter } = useData();
   // const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   // filter for elements of data with status "processed"
-  console.log("data in Dataset", data);
+  // console.log("data in Dataset", data);
 
   const processedData = data?.filter((d) => d.status === "processed" && d.admin_level_1);
-  console.log("processedData in Dataset", processedData);
+  // console.log("processedData in Dataset", processedData);
   // const [uuidHovered, setUuidHovered] = useState<string | null>(null);
 
   return (
