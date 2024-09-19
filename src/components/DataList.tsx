@@ -17,7 +17,7 @@ export default function DataList({ data }) {
       {data ? (
         data
           .slice(0, nItems)
-          .sort((a, b) => (a.id ? -1 : 1))
+          // .sort((a, b) => (a.id ? -1 : 1))
           .map((item, index) => item.id && <ListItem key={index} item={item} index={index} />)
       ) : (
         <div>Loading...</div>
