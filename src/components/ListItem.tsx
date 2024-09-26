@@ -57,10 +57,9 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
         <div className="flex items-baseline">
           <Tooltip title={item.admin_level_3}>
           <Button
-            className="max-content"
             type="text"
             size="small"
-            className="font-semibold m-0 ml-1 p-0"
+            className=" max-content font-semibold m-0 ml-1 p-0"
             onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
           >
             {/* {item.admin_level_3} */}
@@ -70,10 +69,9 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
           </Tooltip>
           ,
           <Button
-            className="max-content"
             type="text"
             size="small"
-            className="font-semibold m-0 p-0 ml-1"
+            className="max-content font-semibold m-0 p-0 ml-1"
             onClick={(e) => onClickFilterHandler(e, item.admin_level_1, "admin_level_1")}
           >
             {item.admin_level_1}
