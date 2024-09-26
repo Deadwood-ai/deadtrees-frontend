@@ -63,7 +63,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
           aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
           authors: values.author.length > 1 ? values.author.join(' and ') : values.author[0],
-          doi: values.doi,
+          citation_doi: values.doi,
           additional_information: values.additional_information,
         };
 
@@ -122,7 +122,13 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
             </Select.Option>
           ))}
         </Select>
-        <DatePicker picker={pickerType} onChange={onChange} />
+        <DatePicker
+          picker={pickerType}
+          onChange={(date) => {
+            onChange(date);
+          }}
+          value={value}
+        />
       </Space>
     );
   };
@@ -204,7 +210,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           label="Aquisitaion Date (Year, Y/M or Y/M/D if known)"
           // label={`Aquisition Date (${pickerType})`}
           name="aquisition_date"
-          rules={[{ required: true, message: "Select a Date" }]}
+          rules={[{ required: true, message: "Please select a date" }]}
           valuePropName="value"
           getValueFromEvent={(value) => value} // This ensures the selected date is captured by the form
         >
