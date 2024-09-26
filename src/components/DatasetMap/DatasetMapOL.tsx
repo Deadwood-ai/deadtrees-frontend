@@ -17,9 +17,9 @@ import Stroke from "ol/style/Stroke";
 import Circle from "ol/style/Circle";
 import Overlay from "ol/Overlay";
 import Select from "ol/interaction/Select.js";
-import { useDatasetMap } from "../../state/DatasetMapProvider";
+import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import "./tooltip.css";
-import { useData } from "../../state/DataProvider";
+import { useData } from "../../hooks/useDataProvider";
 
 const defaultExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.4] }),
@@ -53,7 +53,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const { DatasetViewport, setDatasetViewport} = useDatasetMap();
+  const { DatasetViewport, setDatasetViewport } = useDatasetMap();
   const { filter } = useData();
 
 
@@ -206,7 +206,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
             title: dataset.file_alias,
           });
           pointFeature.setStyle(defaultMarkerStyle);
-        
+
           vectorSourceMarker.addFeature(pointFeature);
         }
       });

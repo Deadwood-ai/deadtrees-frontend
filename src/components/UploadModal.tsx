@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input, Select } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
-import { useAuth } from "../state/AuthProvider";
+import { useAuth } from "../hooks/useAuthProvider";
 import uploadFile from "../api/uploadFile";
 import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
@@ -10,7 +10,9 @@ import { Settings } from "../config";
 import buildThumbnail from "../api/buildThumbnail";
 import { ILicense, IPlatform } from "../types/dataset";
 import type { UploadFile } from "antd";
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useDataProvider";
+
+
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
   const pickerTypeOptions = ["date", "month", "year"];
@@ -24,6 +26,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
 
   useEffect(() => {
     if (data?.data) {
+
       const authors = data.data.map((d) => d.authors);
       // Get unique authors
       const authorsUnique = [...new Set(authors)];
@@ -206,8 +209,10 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         >
           {/* <Input className="w-96" type="name" placeholder="Jon Doe" /> */}
           {/* get all authors as option */}
-          {options.length > 0 && (
+          {options.length > 0 ? (
             <Select mode="tags" style={{ width: "100%" }} options={options} placeholder="Authors" />
+          ) : (
+            <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
           )}
         </Form.Item>
         <Form.Item

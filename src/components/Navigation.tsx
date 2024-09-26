@@ -3,7 +3,7 @@ import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } fro
 import { Link } from "react-router-dom";
 const { Header } = Layout;
 
-import { useAuth } from "../state/AuthProvider";
+import { useAuth } from "../hooks/useAuthProvider";
 import { useNavigate } from "react-router-dom";
 
 const navigation = [

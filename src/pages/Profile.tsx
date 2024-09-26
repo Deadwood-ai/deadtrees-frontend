@@ -3,7 +3,7 @@ import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { Alert, Avatar, Typography, theme } from "antd";
 import { supabase } from "../components/useSupabase";
-import { useAuth } from "../state/AuthProvider";
+import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import { Content } from "antd/es/layout/layout";
 import UploadButton from "../components/UploadButton";

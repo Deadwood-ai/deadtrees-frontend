@@ -3,7 +3,7 @@ import { useState } from "react";
 import Slider from "react-slick";
 
 import { supabase } from "../components/useSupabase";
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useDataProvider";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");

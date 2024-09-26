@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Col, Row, Tag, Input } from "antd";
 import { ArrowDownOutlined } from "@ant-design/icons";
 
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useDataProvider";
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMapOL";
 import { CloseOutlined } from "@ant-design/icons";

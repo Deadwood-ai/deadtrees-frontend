@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Table, Tag, Tooltip } from "antd";
-import { useAuth } from "../state/AuthProvider";
+import { useAuth } from "../hooks/useAuthProvider";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircleOutlined,

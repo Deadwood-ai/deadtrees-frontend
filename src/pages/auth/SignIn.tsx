@@ -3,7 +3,7 @@ import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "../../components/useSupabase";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { useAuth } from "../../state/AuthProvider";
+import { useAuth } from "../../hooks/useAuthProvider";
 
 const SignIn = () => {
   const { session, user } = useAuth();
