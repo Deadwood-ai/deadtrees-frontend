@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Button, Form, Radio, Space, Upload, message, Modal, DatePicker, Alert, Input, Select } from "antd";
+import { useEffect, useState, useRef } from "react";
+import { Button, Form, Radio, Space, Upload, notification, Modal, DatePicker, Alert, Input, Select, Progress } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 
 import { useAuth } from "../hooks/useAuthProvider";
-import uploadFile from "../api/uploadFile";
+// import uploadFile from "../api/uploadFile";
 import buildCog from "../api/buildCog";
 import addMetadata from "../api/addMetadata";
 import { Settings } from "../config";
@@ -23,8 +23,37 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   const data = useData();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
   const options = useAuthorOptions();
-  console.log("options", options);
 
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
+  const notificationKey = 'uploadNotification';
+  const notificationRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (uploadStatus) {
+      updateNotification(uploadProgress, uploadStatus);
+    }
+  }, [uploadProgress, uploadStatus]);
+
+  const updateNotification = (percent: number, status: string) => {
+    const content = (
+      <div>
+        <Progress percent={percent} size="small" status={status === 'error' ? 'exception' : undefined} />
+        <div>{status === 'uploading' ? 'Uploading...' : status === 'processing' ? 'Processing...' : 'Upload complete'}</div>
+      </div>
+    );
+
+    if (notificationRef.current) {
+      notification.destroy(notificationKey);
+    }
+
+    notificationRef.current = notification.info({
+      key: notificationKey,
+      message: 'File Upload',
+      description: content,
+      duration: 0,
+    });
+  };
 
   interface IFormValues {
     license: ILicense;
@@ -37,7 +66,11 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
 
   const onFormFinish = async (values: IFormValues) => {
     setIsSubmitting(true);
-    console.log("settings: ", Settings);
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+    onClose(); // Close the modal immediately
+    updateNotification(0, 'uploading'); // Show initial notification
+
     try {
       const uploadFile = fileList[0];
 
@@ -58,13 +91,16 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
             reject(error);
           },
           onProgress: (event) => {
-            console.log("Upload progress:", event);
+            const percent = Math.round(event.percent);
+            setUploadProgress(percent);
+            console.log("Upload progress:", percent);
           },
         });
       });
 
       console.log("resUpload", resUpload);
-      onClose(); // Close the modal
+      setUploadStatus('processing');
+      setUploadProgress(100);
 
       if (resUpload.id) {
         console.log("values", values);
@@ -86,7 +122,14 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         const resAddMetadata = await addMetadata(resUpload.id, metadata, session!.access_token);
         console.log("resAddMetadata", resAddMetadata);
 
-        message.success("Upload successful");
+        setUploadStatus('success');
+        notification.destroy(notificationKey);
+        notification.success({
+          key: notificationKey,
+          message: 'Upload Successful',
+          description: 'File uploaded and metadata added successfully.',
+          duration: 4,
+        });
 
         // Starting COG build
         // const resBuildThumbnail = await buildThumbnail(resUpload.id, session!.access_token);
@@ -99,8 +142,14 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
       }
     } catch (error) {
       console.error("Upload error:", error);
-      message.error("Upload failed");
-      onClose(); // Close the modal
+      setUploadStatus('error');
+      notification.destroy(notificationKey);
+      notification.error({
+        key: notificationKey,
+        message: 'Upload Failed',
+        description: 'An error occurred during the upload. Please try again.',
+        duration: 4,
+      });
     } finally {
       setIsSubmitting(false);
     }
