@@ -11,7 +11,7 @@ import buildThumbnail from "../api/buildThumbnail";
 import { ILicense, IPlatform } from "../types/dataset";
 import type { UploadFile } from "antd";
 import { useData } from "../hooks/useDataProvider";
-
+import { useAuthorOptions } from "../hooks/useAuthorOptions";
 
 
 const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () => void }) => {
@@ -22,24 +22,9 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   const { session } = useAuth();
   const data = useData();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
-  const [options, setOptions] = useState([]);
+  const options = useAuthorOptions();
+  console.log("options", options);
 
-  useEffect(() => {
-    if (data?.data) {
-
-      const authors = data.data.map((d) => d.authors);
-      // Get unique authors
-      const authorsUnique = [...new Set(authors)];
-
-      // Map authors to the required AntD selectProps format
-      const options = authorsUnique.map((author) => ({
-        label: author,
-        value: author,
-      }));
-
-      setOptions(options); // Assuming setOptions is a state setter for the options
-    }
-  }, [data]);
 
   interface IFormValues {
     license: ILicense;
@@ -77,7 +62,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
           aquisition_year: values.aquisition_date.year(),
           aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
           aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
-          authors_image: values.author,
+          authors: values.author.length > 1 ? values.author.join(' and ') : values.author[0],
           doi: values.doi,
           additional_information: values.additional_information,
         };
@@ -209,7 +194,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         >
           {/* <Input className="w-96" type="name" placeholder="Jon Doe" /> */}
           {/* get all authors as option */}
-          {options.length > 0 ? (
+          {options.at(0)?.label ? (
             <Select mode="tags" style={{ width: "100%" }} options={options} placeholder="Authors" />
           ) : (
             <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
