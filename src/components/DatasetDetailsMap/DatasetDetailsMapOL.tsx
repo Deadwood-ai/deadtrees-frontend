@@ -262,7 +262,3 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
 };
 
 export default DatasetDetailsMapOL;
-
-const test = 1;
-const test2 = 2;
-console.log(test, test2);
