@@ -137,9 +137,24 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
 
       setMap(newMap);
     }
+
     return () => {
       if (map) {
+        // Remove all layers
+        // map.getLayers().getArray().slice().forEach(layer => map.removeLayer(layer));
+        
+        // // Remove all controls
+        // map.getControls().getArray().slice().forEach(control => map.removeControl(control));
+        
+        // // Remove all interactions
+        // map.getInteractions().getArray().slice().forEach(interaction => map.removeInteraction(interaction));
+        
+        // // Remove all overlays
+        // map.getOverlays().getArray().slice().forEach(overlay => map.removeOverlay(overlay));
+        
+        // Dispose of the map
         map.setTarget(null);
+        map.dispose();
       }
     };
   }, [data]);
