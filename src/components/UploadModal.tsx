@@ -39,13 +39,29 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
     setIsSubmitting(true);
     console.log("settings: ", Settings);
     try {
-      const file = fileList[0]; // Assuming fileList is defined and non-empty
+      const uploadFile = fileList[0];
 
-      if (!file) {
+      if (!uploadFile || !uploadFile.originFileObj) {
         throw new Error("No file selected for upload.");
       }
 
-      const resUpload = await uploadFile(file, session!.access_token);
+      // Execute custom request here
+      const resUpload = await new Promise((resolve, reject) => {
+        customRequest({
+          file: uploadFile.originFileObj,
+          onSuccess: (response) => {
+            console.log("Upload success:", response);
+            resolve(response);
+          },
+          onError: (error) => {
+            console.error("Upload error:", error);
+            reject(error);
+          },
+          onProgress: (event) => {
+            console.log("Upload progress:", event);
+          },
+        });
+      });
 
       console.log("resUpload", resUpload);
       onClose(); // Close the modal
@@ -56,7 +72,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         const metadata = {
           dataset_id: resUpload.id.toString(),
           user_id: session!.user.id,
-          name: file.name,
+          name: uploadFile.name,
           license: values.license,
           platform: values.platform,
           aquisition_year: values.aquisition_date.year(),
@@ -93,23 +109,11 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
   const onFileChange = ({ fileList: newFileList }) => {
     console.log("newFileList", newFileList);
     setFileList(newFileList.slice(-1));
-
-    // setFileList(newFileList);
-    // console.log("newFileList", newFileList);
-    // setUploadProgress(newFileList[0].percent || 0);
   };
 
   const beforeUpload = (file) => {
     setFileList([file]);
-    // return Upload.LIST_IGNORE;
     return false;
-  };
-  // const handlePickerTypeChange = (value) => {
-  //   setPickerType(value);
-  // };
-
-  const onUploadChange = (info) => {
-    console.log("info", info);
   };
 
   const PickerWithType = ({ value, onChange }) => {
@@ -132,74 +136,59 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
       </Space>
     );
   };
-  // const handleCustomRequest = ({ file }) => {
-  //   console.log("file", file);
 
-  // // Ensure the URL has the correct protocol
-  // // const url = "http://localhost:5173//profile";
-  // // / const url = "https://deadwood-d4a4b--update-deadwood-api-3yq2nb9e.web.app/profile";
+  const customRequest = (options) => {
+    const { file, onProgress, onSuccess, onError } = options;
+    const xhr = new XMLHttpRequest();
 
-  // axios
-  //   .post(url, file, {
-  //     onUploadProgress: (progressEvent) => {
-  //       console.log(progressEvent);
-  //       const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-  //       console.log(percentCompleted);
-  //     },
-  //     headers: {
-  //       "Content-Type": file.type, // Set the content type based on the file type
-  //     },
-  //   })
-  //   .then((response) => {
-  //     console.log("Upload response:", response);
-  //     message.success("Upload successful!");
-  //   })
-  //   .catch((error) => {
-  //     console.error("Upload error:", error);
-  //     message.error("Upload failed. Please try again.");
-  //   });
-  // };
+    xhr.open('POST', `${Settings.API_URL}/datasets`);
+    xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        onProgress({ percent });
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onSuccess(JSON.parse(xhr.response), xhr);
+      } else {
+        onError(new Error(xhr.statusText));
+      }
+    };
+
+    xhr.onerror = () => {
+      onError(new Error('Upload failed.'));
+    };
+
+    const formData = new FormData();
+    formData.append('file', file);
+    xhr.send(formData);
+  };
+
+
 
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
       <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone", license: "CC BY" }}>
         <Form.Item label="Orthophoto" rules={[{ required: true, message: "Please upload a file" }]}>
-          <Upload fileList={fileList} onChange={onFileChange} beforeUpload={beforeUpload} listType="text" maxCount={1}>
-            <Button icon={<UploadOutlined />}>Click to upload</Button>
+          <Upload
+            fileList={fileList}
+            onChange={onFileChange}
+            beforeUpload={beforeUpload}
+            listType="text"
+            maxCount={1}
+          >
+            <Button icon={<UploadOutlined />}>Select file</Button>
           </Upload>
-          {/* {uploadProgress < 100 && (
-            <Upload fileList={fileList} onChange={onFileChange} listType="text" maxCount={1}>
-              <Button icon={<UploadOutlined />}>Click to upload</Button>
-            </Upload>
-          )}
-          {uploadProgress === 100 && (
-            <Upload
-              fileList={[
-                {
-                  uid: "1",
-                  name: fileList[0].name,
-                  status: "done",
-                  // url: "http://www.baidu.com/yyy.png",
-                },
-              ]}
-              listType="text"
-              onRemove={() => {
-                setFileList([]);
-                setUploadProgress(0);
-              }}
-              maxCount={1}
-            >
-              <Button icon={<UploadOutlined />}>uploaded {uploadProgress}</Button>
-            </Upload>
-          )} */}
         </Form.Item>
         <Form.Item
           rules={[{ required: true, message: "Please enter the authors" }]}
           label="Authors of the orthophoto"
           name="author"
         >
-          {/* <Input className="w-96" type="name" placeholder="Jon Doe" /> */}
-          {/* get all authors as option */}
           {options.at(0)?.label ? (
             <Select mode="tags" style={{ width: "100%" }} options={options} placeholder="Authors" />
           ) : (
@@ -208,13 +197,11 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         </Form.Item>
         <Form.Item
           label="Aquisitaion Date (Year, Y/M or Y/M/D if known)"
-          // label={`Aquisition Date (${pickerType})`}
           name="aquisition_date"
           rules={[{ required: true, message: "Please select a date" }]}
           valuePropName="value"
-          getValueFromEvent={(value) => value} // This ensures the selected date is captured by the form
+          getValueFromEvent={(value) => value}
         >
-          {/* <DatePicker type="" /> */}
           <PickerWithType />
         </Form.Item>
         <Form.Item label="Platform" name="platform">
@@ -240,7 +227,7 @@ const UploadModal = ({ isVisible, onClose }: { isVisible: boolean; onClose: () =
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button type="primary" htmlType="submit" loading={isSubmitting}>
+            <Button type="primary" htmlType="submit" loading={isSubmitting} disabled={fileList.length === 0}>
               {isSubmitting ? "Uploading..." : "Upload"}
             </Button>
             <Button type="default" onClick={onClose}>
