@@ -1,4 +1,4 @@
-import { supabase } from "../components/useSupabase";
+import { supabase } from "../useSupabase";
 
 const getDeadwoodCOGUrl = (year: string | null) => {
   const url = supabase.storage.from("COG").getPublicUrl(`DE-${year}-COG.tif`);

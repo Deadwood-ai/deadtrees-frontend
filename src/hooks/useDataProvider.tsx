@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../components/useSupabase";
 import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
 import { Settings } from "../config";
+import { supabase } from "../useSupabase";
+import { useAuth } from "./useAuthProvider";
+
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -14,6 +16,7 @@ type DataContextType = {
   setFilterTag: (filterTag: string) => void;
   thumbnails: IThumbnail[] | null;
   collaborators: ICollaborators[] | null;
+  userData: IDataset[] | null;
 };
 
 const DataContext = createContext<DataContextType>({
@@ -23,15 +26,18 @@ const DataContext = createContext<DataContextType>({
   setFilterTag: () => { },
   thumbnails: null,
   collaborators: null,
+  userData: null,
 });
 
 const DataProvider = (props: DataProviderProps) => {
   const [rawData, setRawData] = useState<IDataset[]>([]);
+  const [userData, setUserData] = useState<IDataset[]>([]);
   const [data, setData] = useState<IDataset[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
   const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
   const [collaborators, setCollaborators] = useState<ICollaborators[]>([]);
+  const { session } = useAuth();
 
   const fetchCollaborators = async () => {
     const { data, error } = await supabase.from("collaborators").select("*");
@@ -64,15 +70,44 @@ const DataProvider = (props: DataProviderProps) => {
       setRawData(data);
     }
   };
+
+  useEffect(() => {
+    if (rawData) {
+      const filteredUserData = rawData.filter((item) => item.user_id === session?.user.id);
+      setUserData(filteredUserData);
+    }
+  }, [rawData, session]);
+
+
   useEffect(() => {
     // if (rawData) return;
     // console.log("fetching data");
+    const channel = supabase
+      .channel("datasets_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+        }, (payload) => {
+          console.log("Change received in DataProvider!", payload);
+          console.log('user:', session);
+          if (payload.new.user_id === session?.user.id) {
+            console.log("Change received in DataProvider with same user id!", payload);
+            fetchData();
+          }
+        }).subscribe();
+
     fetchData();
     fetchCollaborators();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
     // fetchThumbnails(
     //   rawData.map((item) => item.file_name?.replace("tif", "png")),
     // );
-  }, []);
+  }, [supabase, session]);
 
   // const callWebhook = async (payload: any) => {
   //   const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
@@ -146,6 +181,7 @@ const DataProvider = (props: DataProviderProps) => {
 
   const value = {
     data,
+    userData,
     filter,
     setFilter,
     setFilterTag,

@@ -1,6 +1,6 @@
 import { SignIn as SignInAuthUI } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "../../components/useSupabase";
+import { supabase } from "../../useSupabase";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "../../hooks/useAuthProvider";

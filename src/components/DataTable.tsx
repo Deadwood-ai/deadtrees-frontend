@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useNavigate } from "react-router-dom";
+import { useData } from "../hooks/useDataProvider";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -16,47 +17,48 @@ import {
 import { Settings } from "../config";
 
 const DataTable = ({ supabase }) => {
-  const { user } = useAuth();
-  const [data, setData] = useState([]);
+  // const [data, setData] = useState([]);
+  const { userData } = useData();
   const nav = useNavigate();
+  console.log("userData", userData);
 
-  const fetchData = async () => {
-    //
-    const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", user!.id);
-    if (error) {
-      console.error("Error fetching data:", error);
-    } else {
-      setData(data);
-      console.log("Profile data:", data);
-    }
-  };
+  // const fetchData = async () => {
+  //   //
+  //   const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", user!.id);
+  //   if (error) {
+  //     console.error("Error fetching data:", error);
+  //   } else {
+  //     setData(data);
+  //     console.log("Profile data:", data);
+  //   }
+  // };
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("datasets_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          // table: Settings.DATA_TABLE,
-        },
-        (payload) => {
-          if (payload.table === Settings.DATA_TABLE || payload.table === Settings.METADATA_TABLE) {
-            console.log(Settings);
-            console.log("Change received in DataTalbe!", payload);
-            fetchData();
-          }
-        },
-      )
-      .subscribe();
+  // useEffect(() => {
+  //   const channel = supabase
+  //     .channel("datasets_changes")
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "*",
+  //         schema: "public",
+  //         // table: Settings.DATA_TABLE,
+  //       },
+  //       (payload) => {
+  //         if (payload.table === Settings.DATA_TABLE || payload.table === Settings.METADATA_TABLE) {
+  //           console.log(Settings);
+  //           console.log("Change received in DataTalbe!", payload);
+  //           fetchData();
+  //         }
+  //       },
+  //     )
+  //     .subscribe();
 
-    fetchData();
+  //   fetchData();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase]);
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [supabase]);
 
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },
@@ -88,7 +90,7 @@ const DataTable = ({ supabase }) => {
       dataIndex: "id",
       key: "id",
       render: (tag) => {
-        if (data.find((d) => d.id === tag).status == "processed") {
+        if (userData?.find((d) => d.id === tag).status == "processed") {
           return (
             <Tooltip title="View data on the map">
               <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
@@ -146,7 +148,7 @@ const DataTable = ({ supabase }) => {
     },
   ];
 
-  return <Table rowKey={"id"} dataSource={data} columns={columns} pagination={{ pageSize: 10 }} />;
+  return <Table rowKey={"id"} dataSource={userData} columns={columns} pagination={{ pageSize: 10 }} />;
 };
 
 export default DataTable;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useData } from "../hooks/useDataProvider";
+import { useSupabase } from "../useSupabase";
 
 interface AuthorOption {
   label: string;

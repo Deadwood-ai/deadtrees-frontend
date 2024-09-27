@@ -23,7 +23,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src"
+    "src",
+    "constants/uploadMessages.ts"
   ],
   "references": [
     {
