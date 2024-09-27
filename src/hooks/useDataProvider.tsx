@@ -9,6 +9,11 @@ interface DataProviderProps {
   children: React.ReactNode;
 }
 
+interface AuthorOption {
+  label: string;
+  value: string;
+}
+
 type DataContextType = {
   data: IDataset[] | null;
   filter: string;
@@ -16,6 +21,7 @@ type DataContextType = {
   setFilterTag: (filterTag: string) => void;
   thumbnails: IThumbnail[] | null;
   collaborators: ICollaborators[] | null;
+  authors: AuthorOption[] | null;
   userData: IDataset[] | null;
 };
 
@@ -24,6 +30,7 @@ const DataContext = createContext<DataContextType>({
   filter: "",
   setFilter: () => { },
   setFilterTag: () => { },
+  authors: null,
   thumbnails: null,
   collaborators: null,
   userData: null,
@@ -32,6 +39,7 @@ const DataContext = createContext<DataContextType>({
 const DataProvider = (props: DataProviderProps) => {
   const [rawData, setRawData] = useState<IDataset[]>([]);
   const [userData, setUserData] = useState<IDataset[]>([]);
+  const [authors, setAuthors] = useState<AuthorOption[]>([]);
   const [data, setData] = useState<IDataset[]>([]);
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
@@ -77,6 +85,24 @@ const DataProvider = (props: DataProviderProps) => {
       setUserData(filteredUserData);
     }
   }, [rawData, session]);
+
+  useEffect(() => {
+    if (rawData) {
+      const authors = rawData
+        .map((item) => item.authors)
+        .filter((author): author is string => author !== null);
+      const authorsUnique = [...new Set(authors)];
+      console.log("authorsUnique", authorsUnique);
+
+      const newOptions = authorsUnique.map((author) => ({
+        label: author,
+        value: author,
+      }));
+
+      setAuthors(newOptions);
+      console.log("authors", newOptions);
+    }
+  }, [rawData]);
 
 
   useEffect(() => {
@@ -182,6 +208,7 @@ const DataProvider = (props: DataProviderProps) => {
   const value = {
     data,
     userData,
+    authors,
     filter,
     setFilter,
     setFilterTag,

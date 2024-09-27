@@ -1,9 +1,7 @@
 // DataTable.js
 // "use client";
 
-import { useEffect, useState } from "react";
 import { Table, Tag, Tooltip } from "antd";
-import { useAuth } from "../hooks/useAuthProvider";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 import {
@@ -11,7 +9,6 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   LinkOutlined,
-  LoadingOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import { Settings } from "../config";
@@ -21,44 +18,6 @@ const DataTable = ({ supabase }) => {
   const { userData } = useData();
   const nav = useNavigate();
   console.log("userData", userData);
-
-  // const fetchData = async () => {
-  //   //
-  //   const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", user!.id);
-  //   if (error) {
-  //     console.error("Error fetching data:", error);
-  //   } else {
-  //     setData(data);
-  //     console.log("Profile data:", data);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   const channel = supabase
-  //     .channel("datasets_changes")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "*",
-  //         schema: "public",
-  //         // table: Settings.DATA_TABLE,
-  //       },
-  //       (payload) => {
-  //         if (payload.table === Settings.DATA_TABLE || payload.table === Settings.METADATA_TABLE) {
-  //           console.log(Settings);
-  //           console.log("Change received in DataTalbe!", payload);
-  //           fetchData();
-  //         }
-  //       },
-  //     )
-  //     .subscribe();
-
-  //   fetchData();
-
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, [supabase]);
 
   const columns = [
     { title: "ID", dataIndex: "id", key: "id" },

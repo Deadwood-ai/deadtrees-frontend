@@ -6,7 +6,6 @@ import {
   Space,
   Upload,
   Modal,
-  DatePicker,
   Alert,
   Input,
   Select,
@@ -14,13 +13,12 @@ import {
 import { UploadOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
-import { Settings } from "../../config";
 import { ILicense, IPlatform } from "../../types/dataset";
-import { useAuthorOptions } from "../../hooks/useAuthorOptions";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
 import upload from "../../api/upload";
+import { useData } from "../../hooks/useDataProvider";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -43,15 +41,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const { fileList, fileName, onFileChange, beforeUpload } = useFileUpload();
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
-  const options = useAuthorOptions();
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
+  const { authors } = useData();
+  console.log("authors in upload modal", authors);
   const { updateNotification, showUploadingNotification, showSuccessNotification, showErrorNotification } = useUploadNotification(uploadKey, fileName);
 
   const handleUpload = async (values: IFormValues) => {
-    setUploadStatus("uploading");
-    setUploadProgress(0);
 
     showUploadingNotification(fileName);
 
@@ -142,63 +139,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   };
 
 
-  // const customRequest = (options) => {
-  //   const { file, onProgress, onSuccess, onError, uploadId } = options;
-  //   const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
-  //   const chunks = Math.ceil(file.size / CHUNK_SIZE);
-  //   let currentChunk = 0;
-
-  //   const uploadStartTime = Date.now(); // Set the upload start time
-
-  //   const uploadChunk = (start) => {
-  //     const end = Math.min(start + CHUNK_SIZE, file.size);
-  //     const chunk = file.slice(start, end);
-  //     const copyTime = Math.round((Date.now() - uploadStartTime) / 1000); // Convert to seconds
-
-  //     const formData = new FormData();
-  //     formData.append("file", chunk, file.name);
-  //     formData.append("chunk", currentChunk.toString());
-  //     formData.append("chunks", chunks.toString());
-  //     formData.append("filename", file.name);
-  //     formData.append("upload_id", uploadId);
-  //     formData.append("copy_time", copyTime.toString());
-
-  //     const xhr = new XMLHttpRequest();
-  //     xhr.open("POST", `${Settings.API_URL}/datasets/chunk`);
-  //     xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
-
-  //     xhr.upload.onprogress = (event) => {
-  //       if (event.lengthComputable) {
-  //         const percentComplete = Math.round(
-  //           ((currentChunk * CHUNK_SIZE + event.loaded) / file.size) * 100
-  //         );
-  //         onProgress({ percent: percentComplete });
-  //       }
-  //     };
-
-  //     xhr.onload = () => {
-  //       if (xhr.status >= 200 && xhr.status < 300) {
-  //         currentChunk++;
-  //         if (currentChunk < chunks) {
-  //           uploadChunk(currentChunk * CHUNK_SIZE);
-  //         } else {
-  //           onSuccess(JSON.parse(xhr.response));
-  //         }
-  //       } else {
-  //         onError(new Error(xhr.statusText));
-  //       }
-  //     };
-
-  //     xhr.onerror = () => {
-  //       onError(new Error("Upload failed."));
-  //     };
-
-  //     xhr.send(formData);
-  //   };
-
-  //   uploadChunk(0);
-  // };
-
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
       <Form
@@ -225,11 +165,11 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           label="Authors of the orthophoto"
           name="author"
         >
-          {options.at(0)?.label ? (
+          {authors?.at(0)?.label ? (
             <Select
               mode="tags"
               style={{ width: "100%" }}
-              options={options}
+              options={authors}
               placeholder="Authors"
             />
           ) : (
