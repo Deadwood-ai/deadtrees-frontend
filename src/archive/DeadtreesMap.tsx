@@ -24,12 +24,7 @@ const DeadtreesMap = () => {
     Bayern: [13.330993298074588, 49.03963187270776],
   };
 
-  const mapLayerList = [
-    "deadtrees_2018_layer",
-    "deadtrees_2019_layer",
-    "deadtrees_2020_layer",
-    "deadtrees_2021_layer",
-  ];
+  const mapLayerList = ["deadtrees_2018_layer", "deadtrees_2019_layer", "deadtrees_2020_layer", "deadtrees_2021_layer"];
 
   const wmsUrl = useEffect(() => {
     if (mapContainer.current) {
@@ -75,11 +70,7 @@ const DeadtreesMap = () => {
     const mapInstance = mapContainer.current?.mapInstance;
     mapLayerList.forEach((layer) => {
       if (mapInstance && mapInstance.getLayer(layer)) {
-        mapInstance.setLayoutProperty(
-          layer,
-          "visibility",
-          selectedYear === layer.split("_")[1] ? "visible" : "none",
-        );
+        mapInstance.setLayoutProperty(layer, "visibility", selectedYear === layer.split("_")[1] ? "visible" : "none");
       }
     });
   }, [selectedYear, mapLayerList]);
@@ -109,11 +100,7 @@ const DeadtreesMap = () => {
     const selectedLayer = `deadtrees_${selectedYear}_layer`;
     const mapInstance = mapContainer.current?.mapInstance;
     if (mapInstance && mapInstance.getLayer(selectedLayer)) {
-      mapInstance.setPaintProperty(
-        selectedLayer,
-        "raster-opacity",
-        sliderValue,
-      );
+      mapInstance.setPaintProperty(selectedLayer, "raster-opacity", sliderValue);
     }
   }, [sliderValue, selectedYear, mapLayerList]);
 
@@ -128,9 +115,7 @@ const DeadtreesMap = () => {
         ref={mapContainer}
       >
         <div className="absolute bottom-56 right-2 z-50 flex flex-col items-end space-x-2 rounded-md bg-slate-100 p-4">
-          <p className="m-0 max-w-24 pb-2 text-right text-xs text-gray-500">
-            Share of standing deadwood (%)
-          </p>
+          <p className="m-0 max-w-24 pb-2 text-right text-xs text-gray-500">Share of standing deadwood (%)</p>
           <div className="flex h-32 space-x-2">
             <div className="flex flex-col items-end justify-between">
               <p className="m-0 text-xs text-gray-600">100% - </p>
@@ -142,69 +127,17 @@ const DeadtreesMap = () => {
         </div>
 
         <div className="absolute left-2 top-2 z-20">
-          <Radio.Group
-            value={mapStyle}
-            onChange={(e) => setMapStyle(e.target.value)}
-          >
+          <Radio.Group value={mapStyle} onChange={(e) => setMapStyle(e.target.value)}>
             <Radio.Button value="satellite">Satellite</Radio.Button>
             <Radio.Button value="streets">Streets</Radio.Button>
           </Radio.Group>
         </div>
         <div className="absolute bottom-2 left-2 z-20">
-          <Radio.Group
-            value={selectedSite}
-            defaultValue={"Harz"}
-            onChange={(e) => setSelectedSite(e.target.value)}
-          >
+          <Radio.Group value={selectedSite} defaultValue={"Harz"} onChange={(e) => setSelectedSite(e.target.value)}>
             <Radio.Button value="Harz">Harz National Park</Radio.Button>
             <Radio.Button value="Waldshut">Waldshut</Radio.Button>
             <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
           </Radio.Group>
-        </div>
-        <div className="absolute bottom-8 right-2 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
-          <p className="m-0 py-2 text-lg text-gray-800">
-            {" "}
-            Deadwood for {selectedYear}
-          </p>
-          <div className="mb-2 flex w-full items-end ">
-            <p className="m-0 w-full text-xs text-gray-600">
-              Satellite-based prediction
-            </p>
-            <div className="w-2/3">
-              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
-              <Slider
-                className="m-0 w-full"
-                defaultValue={1}
-                step={0.01}
-                max={1}
-                value={sliderValue}
-                onChange={(value) => setSliderValue(value as number)}
-                min={0}
-              />
-            </div>
-          </div>
-          <div className="mb-6 flex items-center space-x-2">
-            <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
-            <a
-              className="m-0 italic underline"
-              href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
-            >
-              Schiefer et al., 2023
-            </a>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-md m-0 pb-2 text-gray-600">Year</p>
-            <Radio.Group
-              className="pb-2"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              <Radio.Button value="2018">2018</Radio.Button>
-              <Radio.Button value="2019">2019</Radio.Button>
-              <Radio.Button value="2020">2020</Radio.Button>
-              <Radio.Button value="2021">2021</Radio.Button>
-            </Radio.Group>
-          </div>
         </div>
       </div>
     </div>

@@ -8,6 +8,10 @@ import ProfilePage from "./pages/Profile";
 import Dataset from "./pages/Dataset";
 import DatasetDetails from "./pages/DatasetDetails";
 import Deadtrees from "./pages/Deadtrees";
+import SignUp from "./pages/auth/SignUp";
+import SignIn from "./pages/auth/SignIn";
+import Forgotpassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 
 const { Content } = Layout;
 
@@ -42,6 +46,10 @@ export default function App() {
             <Route path="dataset" element={<Dataset />} />
             <Route path="dataset/:id" element={<DatasetDetails />} />
             <Route path="deadtrees" element={<Deadtrees />} />
+            <Route path="sign-up" element={<SignUp />}></Route>
+            <Route path="sign-in" element={<SignIn />}></Route>
+            <Route path="forgot-password" element={<Forgotpassword />}></Route>
+            <Route path="reset-password" element={<ResetPassword />}></Route>
           </Route>
         </Routes>
       </BrowserRouter>

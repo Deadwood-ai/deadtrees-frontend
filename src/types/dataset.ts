@@ -11,47 +11,38 @@ export interface IThumbnail {
 }
 
 export interface IDataset {
-  aquisition_date: string;
-  bbox: string | null;
-  // compress_time: number | null;
-  // content_type: string | null;
-  // copy_time: number | null;
-  // created_at: string | null;
-  file_id: string | null;
+  id: number;
   file_name: string | null;
-  file_size: number | null;
-  centroid: ICentroid | null;
-  // id: number;
-  license: string;
-  // platform: Platform;
-  platform: string;
-  // processed_path: string;
-  // raw_path: string;
-  // sha256: string;
-  // status: Status | null;
+  file_size: number;
+  bbox: string | null;
   status: string | null;
-  // target_path: string;
-  // upload_date: string;
-  // user_id: string;
-  uuid: string | null;
-  wms_source: string | null;
-  // labels
-  // aoi: FeatureCollection | null;
-  // standing_deadwood: FeatureCollection | null;
+  created_at: string;
+  copy_time: number;
+  sha256: string;
+  file_alias: string | null;
+  dataset_id: number;
+  user_id: string;
+  name: string;
+  license: string;
+  platform: string;
   project_id: string | null;
-  authors_image: string | null;
-  label_type: string | null;
-  label_source: string | null;
-  image_spectral_properties: string | null;
+  authors: string | null;
+  spectral_properties: string | null;
   citation_doi: string | null;
+  additional_information: string | null;
+  admin_level_1: string | null;
+  admin_level_2: string | null;
+  admin_level_3: string | null;
+  aquisition_day: string;
+  aquisition_month: string;
+  aquisition_year: string;
+  cog_folder: string | null;
+  cog_name: string | null;
+  cog_url: string | null;
+  label_source: string | null;
   label_quality: string | null;
-  has_labels: boolean | null;
-  public: boolean | null;
-  display_filename: string | null;
-  gadm_NAME_0: string | null;
-  gadm_NAME_1: string | null;
-  gadm_NAME_2: string | null;
-  gadm_NAME_3: string | null;
+  label_type: string | null;
+  thumbnail_path: string | null;
 }
 
 // export interface Dataset {
@@ -98,21 +89,29 @@ export interface IDataset {
 
 export interface ILabels {
   id: number;
+  dataset_id: number;
+  user_id: string;
   aoi: FeatureCollection;
-  standing_deadwood: FeatureCollection;
-  ortho_file_name: string;
+  label: FeatureCollection;
+  label_source: string;
+  label_quality: number;
+  created_at: string;
+  label_type: string;
 }
 
-export enum License {
-  "cc-by",
-  "cc-by-sa",
+export enum ILicense {
+  "CC BY",
+  "CC BY-SA",
+  "CC BY-NC-SA",
+  "MIT",
 }
-export enum Platform {
+
+export enum IPlatform {
   "drone",
   "airborne",
-  "sattelfite",
+  "satellite",
 }
-export enum Status {
+export enum IStatus {
   "pending",
   "processing",
   "errored",
@@ -136,4 +135,3 @@ export interface ICollaborators {
   created_at: string;
   collaborator_text: string;
 }
-

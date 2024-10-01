@@ -22,9 +22,7 @@ const Hero = () => {
       });
       return;
     }
-    const { data, error } = await supabase
-      .from("newsletter")
-      .insert([{ email }]);
+    const { data, error } = await supabase.from("newsletter").insert([{ email }]);
     if (error) {
       notification.error({
         message: "Error",
@@ -35,8 +33,7 @@ const Hero = () => {
     } else {
       notification.success({
         message: "Thank you!",
-        description:
-          "You will be notified as soon as the service is up and running.",
+        description: "You will be notified as soon as the service is up and running.",
         placement: "topRight",
       });
       console.log("Subscriber added:", email);
@@ -56,21 +53,17 @@ const Hero = () => {
           />
         </div>
         <div>
-          <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">
-            BETA
-          </p>
+          <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">BETA</p>
         </div>
         <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-4xl font-bold text-gray-800 text-transparent md:text-5xl">
           deadtrees.earth
         </h1>
         <p className="m-0 text-lg text-gray-500 md:max-w-md">
-          An open database for accessing, contributing, analyzing, and
-          visualizing remote sensing-based tree mortality data.
+          An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality
+          data.
         </p>
         <div className="pt-16">
-          <p className="m-0 pb-1 text-sm text-gray-500">
-            Get notified as soon as the service is up and running.
-          </p>
+          <p className="m-0 pb-1 text-sm text-gray-500">Get notified as soon as the service is up and running.</p>
           <div className="grid space-y-2 pt-2 md:flex md:space-y-0">
             <Input
               // className="max-w-xs"
@@ -78,44 +71,27 @@ const Hero = () => {
               placeholder="Enter email..."
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Button
-              onClick={addSubscriber}
-              className="md:ml-4"
-              type="primary"
-              size="large"
-            >
+            <Button onClick={addSubscriber} className="md:ml-4" type="primary" size="large">
               Get notified
             </Button>
           </div>
         </div>
       </div>
       <div className="mt-16 hidden md:mt-0 md:block  md:p-8">
-        <img
-          src="assets/compressed/hero-image.png"
-          alt="deadtrees.earth"
-          className="w-full rounded-3xl md:max-w-96"
-        />
+        <img src="assets/compressed/hero-image.jpg" alt="deadtrees.earth" className="w-full rounded-3xl md:max-w-96" />
       </div>
     </div>
   );
 };
 
-const Stat = ({
-  title,
-  value,
-  unit,
-}: {
-  title: string;
-  value: string;
-  unit: string;
-}) => {
+const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
     <div className="m-auto rounded-xl  px-6 py-6 md:bg-white">
       <div className="flex items-baseline justify-center">
         <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
         <p className="m-0 pl-1 text-lg font-medium  text-blue-500">{unit}</p>
       </div>
-      <p className="m-0 p-3 text-sm font-medium uppercase">{title}</p>
+      <p className="m-0 p-3 text-center text-sm font-medium uppercase">{title}</p>
     </div>
   );
 };
@@ -127,10 +103,11 @@ const Stats = () => {
         <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
       </div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
-        <Stat title="covered" value="75k" unit="ha" />
-        <Stat title="Orthophotos" value="912" unit="" />
-        <Stat title="Countries" value="18" unit="" />
-        <Stat title="Contributors" value="47" unit="" />
+        {/* <Stat title="covered" value="75k" unit="ha" /> */}
+        <Stat title="Orthophotos" value="1000+" unit="" />
+        <Stat title="Labeled Polygons" value="40k" unit="" />
+        <Stat title="Countries" value="63" unit="" />
+        <Stat title="Institutions" value="43" unit="" />
       </div>
     </div>
   );
@@ -166,14 +143,9 @@ const Gallery = () => {
   };
   return (
     <div className="m-auto w-full pt-12 md:w-full md:pt-24">
-      <p className="pb-8 text-center text-lg font-semibold uppercase text-blue-600">
-        Some of the imagery
-      </p>
+      <p className="pb-8 text-center text-lg font-semibold uppercase text-blue-600">Some of the imagery</p>
       <Slider {...settings}>
-        {[
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-          21, 22, 23,
-        ].map((i) => {
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((i) => {
           return (
             <div className="m-auto" key={i}>
               <img
@@ -189,15 +161,7 @@ const Gallery = () => {
   );
 };
 
-const Feature = ({
-  title,
-  description,
-  iconPath,
-}: {
-  title: string;
-  description: string;
-  iconPath: string;
-}) => {
+const Feature = ({ title, description, iconPath }: { title: string; description: string; iconPath: string }) => {
   return (
     <div className="mb-4 w-full rounded-md py-8">
       <div className="flex">
@@ -207,9 +171,7 @@ const Feature = ({
         <div className="text-start">
           <p className="m-0 text-2xl font-semibold">{title}</p>
           {/* hide on smaller screens */}
-          <p className=" m-0 hidden pt-2 text-lg text-gray-500 md:block">
-            {description}
-          </p>
+          <p className=" m-0 hidden pt-2 text-lg text-gray-500 md:block">{description}</p>
         </div>
       </div>
       {/* hide on large screens */}
@@ -221,17 +183,12 @@ const Feature = ({
 const Features = () => {
   return (
     <div className="pt-16 md:pt-36 md:text-center ">
-      <p className="text-lg font-semibold text-blue-600">
-        OUR SERVICES TO THE COMMUNITY
-      </p>
-      <p className="m-0 text-4xl font-semibold md:text-6xl">
-        Revealing tree mortality patterns
-      </p>
+      <p className="text-lg font-semibold text-blue-600">OUR SERVICES TO THE COMMUNITY</p>
+      <p className="m-0 text-4xl font-semibold md:text-6xl">Revealing tree mortality patterns</p>
       <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
-        By integrating Earth observation, machine learning, and ground-based
-        data sources, this initiative aims to bridge the existing gaps in
-        understanding global tree mortality dynamics, fostering a comprehensive
-        and accessible resource for researchers and stakeholders alike.
+        By integrating Earth observation, machine learning, and ground-based data sources, this initiative aims to
+        bridge the existing gaps in understanding global tree mortality dynamics, fostering a comprehensive and
+        accessible resource for researchers and stakeholders alike.
       </p>
       <div className="pt-12 md:flex md:pt-24">
         <Feature
@@ -273,12 +230,8 @@ const Roadmap = () => {
   return (
     <div className="m-auto flex max-w-3xl flex-col pt-24  md:flex-row">
       <div className="mb-8 text-center md:text-left">
-        <p className="m-auto text-2xl font-semibold text-blue-600 md:mt-0">
-          OUR ROADMAP
-        </p>
-        <p className="text-lg text-gray-500">
-          Our vision and goals for the future
-        </p>
+        <p className="m-auto text-2xl font-semibold text-blue-600 md:mt-0">OUR ROADMAP</p>
+        <p className="text-lg text-gray-500">Our vision and goals for the future</p>
       </div>
       <Timeline
         mode="left"
@@ -292,7 +245,7 @@ const Roadmap = () => {
           },
           {
             label: RoadmapItemDate({ date: "Q2 2024" }),
-            color: "gray",
+            color: "blue",
             children: (
               <RoadmapItemLabel label="Download and upload functionality of drone images and tree mortality labels" />
             ),
@@ -300,23 +253,25 @@ const Roadmap = () => {
           {
             label: RoadmapItemDate({ date: "Q3 2024" }),
             color: "gray",
-            children: (
-              <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />
-            ),
+            children: <RoadmapItemLabel label="Automated integration and visualisation of uploaded data" />,
           },
+          // Automated segmentation of dead trees in airborne and drone images
           {
             label: RoadmapItemDate({ date: "Q4 2024" }),
+            color: "gray",
+            children: <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />,
+          },
+          {
+            label: RoadmapItemDate({ date: "Q1 2025" }),
             color: "gray",
             children: (
               <RoadmapItemLabel label="Integration of a large-scale tree mortality map using satellite data (sentinel)" />
             ),
           },
           {
-            label: RoadmapItemDate({ date: "Q4 2024" }),
+            label: RoadmapItemDate({ date: "Q1 2025" }),
             color: "gray",
-            children: (
-              <RoadmapItemLabel label="Analysis ready training data for AI models" />
-            ),
+            children: <RoadmapItemLabel label="Analysis ready training data for AI models" />,
           },
         ]}
       />
@@ -327,9 +282,7 @@ const Roadmap = () => {
 const GetInContact = () => {
   return (
     <div className="m-auto mt-24 max-w-6xl rounded-xl bg-slate-100 p-8">
-      <p className="m-0 text-center text-3xl font-semibold text-gray-800 md:text-4xl">
-        Want to join?
-      </p>
+      <p className="m-0 text-center text-3xl font-semibold text-gray-800 md:text-4xl">Want to join?</p>
       <p className="m-auto max-w-3xl pt-8 text-center text-lg text-gray-500">
         {`Do you have high-resolution (<20cm) orthoimagery and `}
         <em>optionally</em>
@@ -354,36 +307,22 @@ const FAQ = () => {
   const FAQItems = [
     {
       key: "1",
-      label: (
-        <span className="m-0 pt-4 text-lg text-gray-500">
-          Who is behind deadtrees.earth?
-        </span>
-      ),
+      label: <span className="m-0 pt-4 text-lg text-gray-500">Who is behind deadtrees.earth?</span>,
       children: (
         <div>
           <p className="text-md">
             This initiative is being led by Prof. Dr. Teja Kattenborn from
             <a href="https://geosense.uni-freiburg.de/en"> geosense </a>
-            and Clemens Mosig from{" "}
-            <a href="https://rsc4earth.de/"> RSC4Earth </a> /
+            and Clemens Mosig from <a href="https://rsc4earth.de/"> RSC4Earth </a> /
             <a href="https://scads.ai/"> ScaDS.AI </a>
-            and the service is being built by{" "}
-            <a href="https://hydrocode.de/home"> hydrocode </a>.
+            and the service is being built by <a href="https://hydrocode.de/home"> hydrocode </a>.
           </p>
-          <p className="text-md font-semibold">
-            Data Contributors and collaborators:
-          </p>
+          <p className="text-md font-semibold">Data Contributors and collaborators:</p>
           <ul className="text-md">
             {collaborators!
-              .sort((a, b) =>
-                a.collaborator_text.localeCompare(b.collaborator_text),
-              )
+              .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
               .map((collaborator) => {
-                return (
-                  <li key={collaborator.id}>
-                    {collaborator.collaborator_text}
-                  </li>
-                );
+                return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
               })}
           </ul>
         </div>
@@ -401,17 +340,12 @@ const FAQ = () => {
     },
     {
       key: "2",
-      label: (
-        <span className="m-0 pt-4 text-lg text-gray-500">
-          What happens to the data after your upload?
-        </span>
-      ),
+      label: <span className="m-0 pt-4 text-lg text-gray-500">What happens to the data after your upload?</span>,
 
       children: (
         <p className="text-md">
-          The data is used to train multiple models related to standing
-          deadwood. If you agree, we will also make your data publicly available
-          to the community under a chosen Creative Commons license.
+          The data is used to train multiple models related to standing deadwood. If you agree, we will also make your
+          data publicly available to the community under a chosen Creative Commons license.
         </p>
       ),
       style: {
@@ -427,17 +361,12 @@ const FAQ = () => {
     },
     {
       key: "3",
-      label: (
-        <span className="m-0 pt-4 text-lg text-gray-500">
-          Why can't I download the data?
-        </span>
-      ),
+      label: <span className="m-0 pt-4 text-lg text-gray-500">Why can't I download the data?</span>,
 
       children: (
         <p className="text-md">
-          We are currently working on the download and upload functionality
-          which will be available soon. To stay updated, please subscribe to our
-          newsletter. For more information, check out our roadmap or contact us.
+          We are currently working on the download and upload functionality which will be available soon. To stay
+          updated, please subscribe to our newsletter. For more information, check out our roadmap or contact us.
         </p>
       ),
       style: {
