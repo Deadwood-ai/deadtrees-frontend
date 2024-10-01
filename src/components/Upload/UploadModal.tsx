@@ -141,14 +141,22 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   return (
     <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
+      <Alert
+        message="Upload Guidelines"
+        description="Providing the correct acquisition date (year, year/month, or full date) is essential for the performance of our ML pipeline."
+        type="info"
+        showIcon
+        style={{ marginBottom: '16px' }}
+
+      />
       <Form
         layout="vertical"
         onFinish={onFormFinish}
         initialValues={{ platform: "drone", license: "CC BY" }}
       >
         <Form.Item
-          label="Orthophoto"
-          rules={[{ required: true, message: "Please upload a file" }]}
+          label="Orthophoto (GeoTIFF format)"
+          rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
         >
           <Upload
             fileList={fileList}
@@ -157,7 +165,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             listType="text"
             maxCount={1}
           >
-            <Button icon={<UploadOutlined />}>Select file</Button>
+            <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
           </Upload>
         </Form.Item>
         <Form.Item
@@ -177,11 +185,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           )}
         </Form.Item>
         <Form.Item
-          label="Acquisition Date (Year, Y/M or Y/M/D if known)"
+          label="Acquisition Date (prioritize correctness over precision)"
           name="aquisition_date"
           rules={[{ required: true, message: "Please select a date" }]}
-          valuePropName="value"
-          getValueFromEvent={(value) => value}
         >
           <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
         </Form.Item>
@@ -224,21 +230,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           </Space>
         </Form.Item>
       </Form>
-      <Alert
-        message="Label Upload Coming Soon!"
-        description={
-          <>
-            Label upload is not currently supported, but will be available soon. If you have
-            questions, please{" "}
-            <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
-              contact{" "}
-            </a>{" "}
-            us.
-          </>
-        }
-        type="info"
-        showIcon
-      />
     </Modal>
   );
 };
