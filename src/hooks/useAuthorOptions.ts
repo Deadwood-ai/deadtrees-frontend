@@ -9,11 +9,10 @@ interface AuthorOption {
 
 export const useAuthorOptions = () => {
   const [options, setOptions] = useState<AuthorOption[]>([]);
-  const data = useData();
+  const { authors } = useData();
 
   useEffect(() => {
-    if (data?.data) {
-      const authors = data.data.map((d) => d.authors);
+    if (authors) {
       const authorsUnique = [...new Set(authors)];
 
       const newOptions = authorsUnique.map((author) => ({
@@ -23,7 +22,7 @@ export const useAuthorOptions = () => {
 
       setOptions(newOptions);
     }
-  }, [data]);
+  }, [authors]);
 
   return options;
 };
