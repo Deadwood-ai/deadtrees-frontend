@@ -50,7 +50,7 @@ export default function ProfilePage() {
             <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
             <Typography.Text type="secondary">{user?.email}</Typography.Text>
           </div>
-          <div>
+          {/* <div>
             <Alert
               message="Upload is available!"
               description={
@@ -66,7 +66,7 @@ export default function ProfilePage() {
               type="info"
               showIcon
             />
-          </div>
+          </div> */}
         </div>
         <div className=" w-full">
           <div className="mb-4 flex justify-end">
