@@ -151,14 +151,14 @@ const Map = ({ data }: { data: IDataset[] }) => {
           const feature = e.features[0];
           const datasetId = feature.properties.id;
           console.log("clicked feature", feature);
-          if (feature.properties.id) {
-            navigate(`/dataset/${datasetId}`);
-          } else {
-            notification.info({
-              message: "Coming Soon",
-              description: "This dataset is not yet available",
-            });
-          }
+          // if (feature.properties.id) {
+          // navigate(`/dataset/${datasetId}`);
+          // } else {
+          notification.info({
+            message: "Platform is under development",
+            description: "We are currently updating the platform. All datasets will be available in the coming days.",
+          });
+          // }
         });
       });
     });
