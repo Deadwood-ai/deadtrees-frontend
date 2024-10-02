@@ -24,8 +24,8 @@ const upload = (options: IUploadOptions) => {
 
     const formData = new FormData();
     formData.append("file", chunk, file.name);
-    formData.append("chunk", currentChunk.toString());
-    formData.append("chunks", chunks.toString());
+    formData.append("chunk_index", currentChunk.toString());
+    formData.append("chunks_total", chunks.toString());
     formData.append("filename", file.name);
     formData.append("upload_id", uploadId);
     formData.append("copy_time", copyTime.toString());
