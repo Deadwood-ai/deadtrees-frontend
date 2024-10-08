@@ -5,14 +5,15 @@ import { useData } from "../state/DataProvider";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 
-const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any; setHoveredItem: ((id: number | null) => void) | undefined }) => {
+const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset; index: any; setHoveredItem: ((id: number | null) => void) | undefined, hoveredItem: number | null }) => {
   const { setFilter, setFilterTag } = useData();
   const navigate = useNavigate();
 
   const handleMouseEnter = () => {
-    if (setHoveredItem) {
-      setHoveredItem(item.id);
-    }
+    console.log("hoveredItem", hoveredItem);
+
+    setHoveredItem(item.id);
+
   };
 
   const handleMouseLeave = () => {
@@ -43,7 +44,8 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
   return (
     <div
       key={index}
-      className="flex rounded-md bg-white p-3 transition duration-150 ease-in-out hover:bg-gray-200"
+      className={`flex rounded-md p-3 transition duration-150 ease-in-out ${hoveredItem === item.id ? 'bg-gray-200' : 'bg-white hover:bg-gray-100'
+        }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => onClickHandler(item)}

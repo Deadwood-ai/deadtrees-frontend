@@ -9,7 +9,7 @@ import { CloseOutlined } from "@ant-design/icons";
 
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
-  // const [hoveredItem, setHoveredItem] = useState<number | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   // filter for elements of data with status "processed"
   // console.log("data in Dataset", data);
 
@@ -65,7 +65,7 @@ export default function Dataset() {
           </div>
         </div> */}
         {processedData ? (
-          <DataList data={processedData} />
+          <DataList data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
         ) : (
           // <div>test</div>
           <div>Loading...</div>
@@ -75,7 +75,7 @@ export default function Dataset() {
         {/* <Map data={processedData} uuidHovered={uuidHovered} /> */}
 
         {processedData && processedData.length > 0 ? (
-          <DatasetMapOL data={processedData} />
+          <DatasetMapOL data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
         ) : (
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
             <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>

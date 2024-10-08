@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "../components/useSupabase";
 import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
 import { Settings } from "../config";
@@ -12,6 +12,8 @@ type DataContextType = {
   filter: string;
   setFilter: (filter: string) => void;
   setFilterTag: (filterTag: string) => void;
+  visibleFeatures: string[] | null;
+  setVisibleFeatures: (visibleFeatures: string[]) => void;
   thumbnails: IThumbnail[] | null;
   collaborators: ICollaborators[] | null;
 };
@@ -21,6 +23,8 @@ const DataContext = createContext<DataContextType>({
   filter: "",
   setFilter: () => { },
   setFilterTag: () => { },
+  visibleFeatures: null,
+  setVisibleFeatures: () => { },
   thumbnails: null,
   collaborators: null,
 });
@@ -32,6 +36,7 @@ const DataProvider = (props: DataProviderProps) => {
   const [filterTag, setFilterTag] = useState<string>("");
   const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
   const [collaborators, setCollaborators] = useState<ICollaborators[]>([]);
+  const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
 
   const fetchCollaborators = async () => {
     const { data, error } = await supabase.from("collaborators").select("*");
@@ -64,64 +69,17 @@ const DataProvider = (props: DataProviderProps) => {
       setRawData(data);
     }
   };
+
   useEffect(() => {
-    // if (rawData) return;
-    // console.log("fetching data");
     fetchData();
     fetchCollaborators();
-    // fetchThumbnails(
-    //   rawData.map((item) => item.file_name?.replace("tif", "png")),
-    // );
   }, []);
 
-  // const callWebhook = async (payload: any) => {
-  //   const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
-  //   const webhookResponse = fetch(webhookURL, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify({
-  //       type: "INSERT",
-  //       schema: "public",
-  //       table: "upload_files_dev",
-  //       record: payload.new,
-  //     }),
-  //   });
-  // };
-  // subscription to webhook
-  // useEffect(() => {
-  //   console.log("subscribing to webhook");
-  //   const channel = supabase
-  //     .channel("metadata_changes")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "INSERT",
-  //         schema: "public",
-  //         table: "v1_metadata",
-  //       },
-  //       (payload) => {
-  //         console.log("Change received via insert!", payload);
-  //         // if (payload.eventType === "INSERT" && payload.new.status === "pending") {
-  //         fetchData();
-  //       },
-  //     )
-  //     .subscribe();
-
-  //   // fetchData();
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, []);
-
-  // filtering data
   useEffect(() => {
-    if (!rawData) return; // Early exit if data is null
-    console.log("filtering data");
-    if (filter) {
-      console.log("filtering");
-      const filteredData = rawData.filter((item) => {
+    if (!rawData.length) return;
+
+    const filteredData = filter
+      ? rawData.filter((item) => {
         switch (filterTag) {
           case "platform":
             return item.platform === filter;
@@ -136,21 +94,21 @@ const DataProvider = (props: DataProviderProps) => {
           default:
             return false;
         }
-      });
+      })
+      : rawData;
 
-      setData(filteredData);
-    } else {
-      setData(rawData);
-    }
+    setData(filteredData);
   }, [filter, rawData, filterTag]);
 
-  const value = {
+  const value = useMemo(() => ({
     data,
     filter,
     setFilter,
     setFilterTag,
+    visibleFeatures,
+    setVisibleFeatures,
     collaborators,
-  };
+  }), [data, filter, visibleFeatures, collaborators]);
   return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { Map, View } from "ol";
 import { BingMaps } from "ol/source";
 import TileLayer from "ol/layer/Tile";
@@ -20,6 +20,7 @@ import Select from "ol/interaction/Select.js";
 import { useDatasetMap } from "../../state/DatasetMapProvider";
 import "./tooltip.css";
 import { useData } from "../../state/DataProvider";
+import { debounce } from 'lodash';
 
 const defaultExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.4] }),
@@ -27,8 +28,8 @@ const defaultExtendStyle = new Style({
 });
 
 const hoverExtendStyle = new Style({
-  fill: new Fill({ color: [0, 0, 255, 0.5] }),
-  stroke: new Stroke({ color: "white", width: 4 }),
+  fill: new Fill({ color: [255, 255, 255, 0.] }),  // Orange with 60% opacity
+  stroke: new Stroke({ color: "white", width: 6 }),  // Dark orange stroke
 });
 
 const defaultMarkerStyle = new Style({
@@ -43,21 +44,36 @@ const hoverMarkerStyle = new Style({
   image: new Circle({
     radius: 10,
     fill: new Fill({ color: [0, 0, 255, 0.5] }),
-    stroke: new Stroke({ color: "white", width: 4 }),
+    stroke: new Stroke({ color: "white", width: 6 }),
   }),
 });
 
-const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
+const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[], hoveredItem: number | null, setHoveredItem: (id: number | null) => void }) => {
   const navigate = useNavigate();
   const mapRef = useRef<Map | null>(null);
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
-  const { filter } = useData();
+  const { filter, setVisibleFeatures } = useData();
+  const [userInteracted, setUserInteracted] = useState(false);
 
+  const debouncedUpdateVisibleFeatures = useCallback(
+    debounce(() => {
+      if (mapRef.current && vectorLayerExtendRef.current) {
+        const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
+        const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
+        const visibleIds = visibleFeatures.map(feature => feature.get('id'));
+        setVisibleFeatures(visibleIds);
+      }
+    }, 300),
+    [setVisibleFeatures]
+  );
+
+  const prevFilterRef = useRef(filter);
 
   useEffect(() => {
+    console.log("initial map useEffect");
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
         center: DatasetViewport.center,
@@ -109,20 +125,13 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           zoom: map.getView().getZoom() as number,
         };
         setDatasetViewport(newViewport);
+        debouncedUpdateVisibleFeatures();
+        setUserInteracted(true);
       });
 
       map.on("pointermove", (evt) => {
         if (evt.dragging) return;
         const pixel = map.getEventPixel(evt.originalEvent);
-
-        vectorLayerExtend
-          .getSource()
-          .getFeatures()
-          .forEach((f) => f.setStyle(defaultExtendStyle));
-        vectorLayerMarker
-          .getSource()
-          .getFeatures()
-          .forEach((f) => f.setStyle(defaultMarkerStyle));
 
         let hoveredFeature = null;
         map.forEachFeatureAtPixel(pixel, (feature) => {
@@ -133,18 +142,23 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
         });
 
         if (hoveredFeature) {
+          const featureId = hoveredFeature.get("id");
+          setHoveredItem(featureId);
           map.getTargetElement().style.cursor = "pointer";
-          hoveredFeature.setStyle(
-            hoveredFeature.getGeometry() instanceof Polygon
-              ? hoverExtendStyle
-              : hoverMarkerStyle
-          );
           tooltip.setPosition(evt.coordinate);
           tooltip.getElement().innerHTML = hoveredFeature.get("title");
           tooltip.getElement().classList.remove("hidden");
+
+          // Apply hover styles
+          hoveredFeature.setStyle(hoveredFeature.getGeometry() instanceof Polygon ? hoverExtendStyle : hoverMarkerStyle);
         } else {
+          setHoveredItem(null);
           map.getTargetElement().style.cursor = "";
           tooltip.getElement().classList.add("hidden");
+
+          // Reset styles when not hovering
+          vectorLayerExtendRef.current?.getSource().getFeatures().forEach(f => f.setStyle(defaultExtendStyle));
+          vectorLayerMarkerRef.current?.getSource().getFeatures().forEach(f => f.setStyle(defaultMarkerStyle));
         }
       });
 
@@ -169,7 +183,15 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
         }
       };
     }
-  }, []); // Only run when the container is ready
+  }, []); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
+
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      if (a.id === hoveredItem) return 1;
+      if (b.id === hoveredItem) return -1;
+      return 0;
+    });
+  }, [data, hoveredItem]);
 
   useEffect(() => {
     console.log("updating data");
@@ -184,7 +206,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
       vectorSourceExtend.clear();
       vectorSourceMarker.clear();
 
-      data.forEach((dataset) => {
+      sortedData.forEach((dataset) => {
         if (dataset.bbox) {
           const extentFeature = new Feature(
             fromExtent(parseBBox(dataset.bbox)).transform(
@@ -210,15 +232,94 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           vectorSourceMarker.addFeature(pointFeature);
         }
       });
+
+      // Only fit the extent if the user hasn't interacted with the map
       if (filter) {
-        // Only fit view on initial load or specific conditions
-        mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
-          size: mapRef.current.getSize(),
+        const extent = vectorSourceExtend.getExtent();
+        mapRef.current.getView().fit(extent, {
+          padding: [50, 50, 50, 50],
           maxZoom: 18,
         });
+      }
+    }
+  }, [sortedData, filter]);
+
+  useEffect(() => {
+    console.log("filter changed", filter);
+    if (filter && mapRef.current && vectorLayerExtendRef.current) {
+      const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
+      mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
+        size: mapRef.current.getSize(),
+        // maxZoom: 18,
+      });
+      debouncedUpdateVisibleFeatures();
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    console.log("hoveredItem changed", hoveredItem);
+    if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
+      const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
+      const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
+
+      vectorSourceExtend.getFeatures().forEach((feature) => {
+        const featureId = feature.get("id");
+        feature.setStyle(featureId === hoveredItem ? hoverExtendStyle : defaultExtendStyle);
+      });
+
+      vectorSourceMarker.getFeatures().forEach((feature) => {
+        const featureId = feature.get("id");
+        feature.setStyle(featureId === hoveredItem ? hoverMarkerStyle : defaultMarkerStyle);
+      });
+    }
+  }, [hoveredItem]);
+
+  // const initialFilterAppliedRef = useRef(false);
+
+  // useEffect(() => {
+  //   console.log("initialFilterAppliedRef", initialFilterAppliedRef.current);
+  //   if (filter && !initialFilterAppliedRef.current && mapRef.current && vectorLayerExtendRef.current) {
+  //     const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
+  //     mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
+  //       size: mapRef.current.getSize(),
+  //       maxZoom: 18,
+  //     });
+  //     debouncedUpdateVisibleFeatures();
+  //     initialFilterAppliedRef.current = true;
+  //   }
+  // }, [filter]);
+
+  // useEffect(() => {
+  //   console.log("filter changed", filter);
+  //   if (filter !== prevFilterRef.current && mapRef.current && vectorLayerExtendRef.current) {
+  //     const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
+  //     mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
+  //       size: mapRef.current.getSize(),
+  //       maxZoom: 18,
+  //     });
+  //     debouncedUpdateVisibleFeatures();
+  //     prevFilterRef.current = filter;
+  //   }
+  // }, [filter, debouncedUpdateVisibleFeatures]);
+
+  useEffect(() => {
+    console.log("useEffect on moveend");
+    if (mapRef.current) {
+      const moveEndListener = () => {
+        debouncedUpdateVisibleFeatures();
+      };
+      mapRef.current.on('moveend', moveEndListener);
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.un('moveend', moveEndListener);
+        }
       };
     }
-  }, [data, filter]); // Update when data changes
+  }, [debouncedUpdateVisibleFeatures]);
+
+  // useEffect(() => {
+  //   setUserInteracted(false);
+  // }, [filter]);
 
   return (
     <div
