@@ -53,7 +53,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const { DatasetViewport, setDatasetViewport} = useDatasetMap();
+  const { DatasetViewport, setDatasetViewport } = useDatasetMap();
   const { filter } = useData();
 
 
@@ -194,7 +194,7 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           );
           extentFeature.setProperties({
             id: dataset.id,
-            title: dataset.file_name,
+            title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
           });
           extentFeature.setStyle(defaultExtendStyle);
           vectorSourceExtend.addFeature(extentFeature);
@@ -203,10 +203,10 @@ const DatasetMapOL = ({ data }: { data: IDataset[] }) => {
           const pointFeature = new Feature(point);
           pointFeature.setProperties({
             id: dataset.id,
-            title: dataset.file_alias,
+            title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, '_'),
           });
           pointFeature.setStyle(defaultMarkerStyle);
-        
+
           vectorSourceMarker.addFeature(pointFeature);
         }
       });
