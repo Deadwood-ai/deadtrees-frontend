@@ -55,7 +55,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
-  const { filter, setVisibleFeatures } = useData();
+  const { filter, setVisibleFeatures, setFilter } = useData();
   const [userInteracted, setUserInteracted] = useState(false);
 
   const debouncedUpdateVisibleFeatures = useCallback(
@@ -70,10 +70,8 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
     [setVisibleFeatures]
   );
 
-  const prevFilterRef = useRef(filter);
-
   useEffect(() => {
-    console.log("initial map useEffect");
+    // console.log("initial map useEffect");
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
         center: DatasetViewport.center,
@@ -185,6 +183,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
     }
   }, []); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
 
+
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => {
       if (a.id === hoveredItem) return 1;
@@ -194,7 +193,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
   }, [data, hoveredItem]);
 
   useEffect(() => {
-    console.log("updating data");
+    // console.log("updating data");
     if (
       vectorLayerExtendRef.current &&
       vectorLayerMarkerRef.current &&
@@ -234,7 +233,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
       });
 
       // Only fit the extent if the user hasn't interacted with the map
-      if (filter) {
+      if (filter && !userInteracted) {
         const extent = vectorSourceExtend.getExtent();
         mapRef.current.getView().fit(extent, {
           padding: [50, 50, 50, 50],
@@ -242,22 +241,16 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
         });
       }
     }
-  }, [sortedData, filter]);
+  }, [sortedData, filter, userInteracted]);
 
   useEffect(() => {
-    console.log("filter changed", filter);
-    if (filter && mapRef.current && vectorLayerExtendRef.current) {
-      const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
-      mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
-        size: mapRef.current.getSize(),
-        // maxZoom: 18,
-      });
-      debouncedUpdateVisibleFeatures();
-    }
+    // user interacted with the map
+    setUserInteracted(false);
   }, [filter]);
 
+
   useEffect(() => {
-    console.log("hoveredItem changed", hoveredItem);
+    // console.log("hoveredItem changed", hoveredItem);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
@@ -274,39 +267,13 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
     }
   }, [hoveredItem]);
 
-  // const initialFilterAppliedRef = useRef(false);
-
-  // useEffect(() => {
-  //   console.log("initialFilterAppliedRef", initialFilterAppliedRef.current);
-  //   if (filter && !initialFilterAppliedRef.current && mapRef.current && vectorLayerExtendRef.current) {
-  //     const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
-  //     mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
-  //       size: mapRef.current.getSize(),
-  //       maxZoom: 18,
-  //     });
-  //     debouncedUpdateVisibleFeatures();
-  //     initialFilterAppliedRef.current = true;
-  //   }
-  // }, [filter]);
-
-  // useEffect(() => {
-  //   console.log("filter changed", filter);
-  //   if (filter !== prevFilterRef.current && mapRef.current && vectorLayerExtendRef.current) {
-  //     const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
-  //     mapRef.current.getView().fit(vectorSourceExtend.getExtent(), {
-  //       size: mapRef.current.getSize(),
-  //       maxZoom: 18,
-  //     });
-  //     debouncedUpdateVisibleFeatures();
-  //     prevFilterRef.current = filter;
-  //   }
-  // }, [filter, debouncedUpdateVisibleFeatures]);
 
   useEffect(() => {
-    console.log("useEffect on moveend");
+    // console.log("useEffect on moveend");
     if (mapRef.current) {
       const moveEndListener = () => {
         debouncedUpdateVisibleFeatures();
+        setUserInteracted(true);
       };
       mapRef.current.on('moveend', moveEndListener);
       return () => {
@@ -316,10 +283,6 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
       };
     }
   }, [debouncedUpdateVisibleFeatures]);
-
-  // useEffect(() => {
-  //   setUserInteracted(false);
-  // }, [filter]);
 
   return (
     <div
