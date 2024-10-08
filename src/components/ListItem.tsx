@@ -63,7 +63,7 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
               onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
             >
               {/* {item.admin_level_3} */}
-              {item.admin_level_3 && item.admin_level_3.slice(0, 18) + (item.admin_level_3.length > 18 ? "." : "")}
+              {item.admin_level_3 && item.admin_level_3.slice(0, 18) + (item.admin_level_3.length > 18 ? "..." : "")}
 
             </Button>
           </Tooltip>
