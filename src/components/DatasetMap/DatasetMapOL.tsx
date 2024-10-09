@@ -144,7 +144,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
           setHoveredItem(featureId);
           map.getTargetElement().style.cursor = "pointer";
           tooltip.setPosition(evt.coordinate);
-          tooltip.getElement().innerHTML = hoveredFeature.get("title");
+          tooltip.getElement().innerHTML = hoveredFeature.get("title") + " (" + hoveredFeature.get("date") + ")";
           tooltip.getElement().classList.remove("hidden");
 
           // Apply hover styles
@@ -216,6 +216,15 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
           extentFeature.setProperties({
             id: dataset.id,
             title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
+            date: new Date(
+              dataset.aquisition_year,
+              dataset.aquisition_month,
+              dataset.aquisition_day,
+            ).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }).toString(),
           });
           extentFeature.setStyle(defaultExtendStyle);
           vectorSourceExtend.addFeature(extentFeature);
@@ -225,6 +234,15 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
           pointFeature.setProperties({
             id: dataset.id,
             title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, '_'),
+            date: new Date(
+              dataset.aquisition_year,
+              dataset.aquisition_month,
+              dataset.aquisition_day,
+            ).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }).toString(),
           });
           pointFeature.setStyle(defaultMarkerStyle);
 
