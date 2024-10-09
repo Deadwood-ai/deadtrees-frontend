@@ -61,6 +61,7 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   const fetchData = async () => {
+    console.log("fetching data from", Settings.DATA_TABLE_FULL);
     const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
     if (error) {
       console.error("Error fetching data from", Settings.DATA_TABLE_FULL, ":", error);
@@ -71,13 +72,14 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   useEffect(() => {
+    console.log('initial data fetch');
     fetchData();
     fetchCollaborators();
   }, []);
 
   useEffect(() => {
     if (!rawData.length) return;
-
+    console.log('filtering data');
     const filteredData = filter
       ? rawData.filter((item) => {
         switch (filterTag) {

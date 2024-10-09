@@ -71,7 +71,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
   );
 
   useEffect(() => {
-    // console.log("initial map useEffect");
+    console.log("initial map useEffect");
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
         center: DatasetViewport.center,
@@ -193,7 +193,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
   }, [data, hoveredItem]);
 
   useEffect(() => {
-    // console.log("updating data");
+    console.log("updating data");
     if (
       vectorLayerExtendRef.current &&
       vectorLayerMarkerRef.current &&
@@ -268,7 +268,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
 
 
   useEffect(() => {
-    // console.log("hoveredItem changed", hoveredItem);
+    console.log("hoveredItem changed", hoveredItem);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
@@ -287,7 +287,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
 
 
   useEffect(() => {
-    // console.log("useEffect on moveend");
+    console.log("useEffect on moveend");
     if (mapRef.current) {
       const moveEndListener = () => {
         debouncedUpdateVisibleFeatures();
