@@ -125,7 +125,7 @@ export default function DatasetDetails() {
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
-                {(dataset.file_size / 1000000).toFixed(0)} MB
+                {(dataset.file_size / 1024 / 1024).toFixed(0)} MB
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
