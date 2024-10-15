@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button, Col, Row, Tag, Input } from "antd";
 import { ArrowDownOutlined } from "@ant-design/icons";
 
@@ -10,12 +10,15 @@ import { CloseOutlined } from "@ant-design/icons";
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
-  // filter for elements of data with status "processed"
-  // console.log("data in Dataset", data);
+  const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
 
-  const processedData = data?.filter((d) => d.status === "processed" && d.admin_level_1);
-  // console.log("processedData in Dataset", processedData);
-  // const [uuidHovered, setUuidHovered] = useState<string | null>(null);
+
+  const processedData = useMemo(() =>
+    data?.filter((d) => d.status === "processed" && d.admin_level_1),
+    [data]
+  );
+  console.log('rerender dataset');
+
 
   return (
     <Row
@@ -65,7 +68,7 @@ export default function Dataset() {
           </div>
         </div> */}
         {processedData ? (
-          <DataList data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
+          <DataList data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} visibleFeatures={visibleFeatures} />
         ) : (
           // <div>test</div>
           <div>Loading...</div>
@@ -75,7 +78,7 @@ export default function Dataset() {
         {/* <Map data={processedData} uuidHovered={uuidHovered} /> */}
 
         {processedData && processedData.length > 0 ? (
-          <DatasetMapOL data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />
+          <DatasetMapOL data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} setVisibleFeatures={setVisibleFeatures} />
         ) : (
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
             <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>

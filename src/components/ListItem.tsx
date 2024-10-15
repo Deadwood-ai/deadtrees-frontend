@@ -10,7 +10,7 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
   const navigate = useNavigate();
 
   const handleMouseEnter = () => {
-    console.log("hoveredItem", hoveredItem);
+    // console.log("hoveredItem", hoveredItem);
 
     setHoveredItem(item.id);
 
@@ -23,7 +23,7 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
   };
 
   const onClickHandler = (item) => {
-    console.log("clicked item", item);
+    // console.log("clicked item", item);
     // if (item.id && item.file_size < 1000000000) {
     navigate(`/dataset/${item.id}`);
     // } else {

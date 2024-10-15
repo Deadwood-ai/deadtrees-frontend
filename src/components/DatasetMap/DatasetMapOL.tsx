@@ -48,18 +48,19 @@ const hoverMarkerStyle = new Style({
   }),
 });
 
-const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[], hoveredItem: number | null, setHoveredItem: (id: number | null) => void }) => {
+const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }: { data: IDataset[], hoveredItem: number | null, setHoveredItem: (id: number | null) => void, setVisibleFeatures: (ids: string[]) => void }) => {
   const navigate = useNavigate();
   const mapRef = useRef<Map | null>(null);
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
-  const { filter, setVisibleFeatures, setFilter } = useData();
+  const { filter, setFilter } = useData();
   const [userInteracted, setUserInteracted] = useState(false);
 
   const debouncedUpdateVisibleFeatures = useCallback(
     debounce(() => {
+      console.log("debouncedUpdateVisibleFeatures");
       if (mapRef.current && vectorLayerExtendRef.current) {
         const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
         const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
@@ -118,13 +119,13 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
       map.addOverlay(tooltip);
 
       map.on("moveend", () => {
+        console.log("moveend");
         const newViewport = {
           center: map.getView().getCenter() as number[],
           zoom: map.getView().getZoom() as number,
         };
         setDatasetViewport(newViewport);
         debouncedUpdateVisibleFeatures();
-        setUserInteracted(true);
       });
 
       map.on("pointermove", (evt) => {
@@ -184,16 +185,8 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
   }, []); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
 
 
-  const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => {
-      if (a.id === hoveredItem) return 1;
-      if (b.id === hoveredItem) return -1;
-      return 0;
-    });
-  }, [data, hoveredItem]);
-
   useEffect(() => {
-    console.log("updating data");
+    console.log("updating data", data.length);
     if (
       vectorLayerExtendRef.current &&
       vectorLayerMarkerRef.current &&
@@ -205,7 +198,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
       vectorSourceExtend.clear();
       vectorSourceMarker.clear();
 
-      sortedData.forEach((dataset) => {
+      data.forEach((dataset) => {
         if (dataset.bbox) {
           const extentFeature = new Feature(
             fromExtent(parseBBox(dataset.bbox)).transform(
@@ -249,24 +242,23 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
           vectorSourceMarker.addFeature(pointFeature);
         }
       });
-
-      // Only fit the extent if the user hasn't interacted with the map
-      if (filter && !userInteracted) {
-        const extent = vectorSourceExtend.getExtent();
+      // if (filter) { // Add '!userInteracted' condition
+      if (vectorLayerExtendRef.current && mapRef.current) {
+        console.log("fit extend to filter");
+        const extent = vectorLayerExtendRef.current.getSource().getExtent();
         mapRef.current.getView().fit(extent, {
           padding: [50, 50, 50, 50],
           maxZoom: 18,
         });
       }
+      // }
+
     }
-  }, [sortedData, filter, userInteracted]);
-
-  useEffect(() => {
-    // user interacted with the map
-    setUserInteracted(false);
-  }, [filter]);
+  }, [data]);
 
 
+
+  // Handle feature highlighting separately
   useEffect(() => {
     console.log("hoveredItem changed", hoveredItem);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
@@ -275,32 +267,36 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem }: { data: IDataset[],
 
       vectorSourceExtend.getFeatures().forEach((feature) => {
         const featureId = feature.get("id");
-        feature.setStyle(featureId === hoveredItem ? hoverExtendStyle : defaultExtendStyle);
+        feature.setStyle(
+          featureId === hoveredItem ? hoverExtendStyle : defaultExtendStyle
+        );
       });
 
       vectorSourceMarker.getFeatures().forEach((feature) => {
         const featureId = feature.get("id");
-        feature.setStyle(featureId === hoveredItem ? hoverMarkerStyle : defaultMarkerStyle);
+        feature.setStyle(
+          featureId === hoveredItem ? hoverMarkerStyle : defaultMarkerStyle
+        );
       });
     }
   }, [hoveredItem]);
 
 
-  useEffect(() => {
-    console.log("useEffect on moveend");
-    if (mapRef.current) {
-      const moveEndListener = () => {
-        debouncedUpdateVisibleFeatures();
-        setUserInteracted(true);
-      };
-      mapRef.current.on('moveend', moveEndListener);
-      return () => {
-        if (mapRef.current) {
-          mapRef.current.un('moveend', moveEndListener);
-        }
-      };
-    }
-  }, [debouncedUpdateVisibleFeatures]);
+  // useEffect(() => {
+  //   console.log("useEffect on moveend");
+  //   if (mapRef.current) {
+  //     const moveEndListener = () => {
+  //       debouncedUpdateVisibleFeatures();
+  //       setUserInteracted(true);
+  //     };
+  //     mapRef.current.on('moveend', moveEndListener);
+  //     return () => {
+  //       if (mapRef.current) {
+  //         mapRef.current.un('moveend', moveEndListener);
+  //       }
+  //     };
+  //   }
+  // }, [debouncedUpdateVisibleFeatures]);
 
   return (
     <div

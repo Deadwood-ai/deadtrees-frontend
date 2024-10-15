@@ -4,12 +4,13 @@ import ListItem from "./ListItem";
 import { Button } from "antd";
 import { useData } from "../state/DataProvider";
 
-export default function DataList({ data, hoveredItem, setHoveredItem }) {
+export default function DataList({ data, hoveredItem, setHoveredItem, visibleFeatures }) {
   // console.log("mounting DataList with data:", data);
   const [nItems, setNItems] = useState(50);
-  const { visibleFeatures } = useData();
 
   const visibleData = data.filter(item => visibleFeatures.includes(item.id));
+  // console.log("visibleData", visibleData);
+  // console.log("visibleFeatures", visibleFeatures);
 
   const handleMoreItems = () => {
     setNItems(nItems + 50);

@@ -12,8 +12,6 @@ type DataContextType = {
   filter: string;
   setFilter: (filter: string) => void;
   setFilterTag: (filterTag: string) => void;
-  visibleFeatures: string[] | null;
-  setVisibleFeatures: (visibleFeatures: string[]) => void;
   thumbnails: IThumbnail[] | null;
   collaborators: ICollaborators[] | null;
 };
@@ -23,8 +21,6 @@ const DataContext = createContext<DataContextType>({
   filter: "",
   setFilter: () => { },
   setFilterTag: () => { },
-  visibleFeatures: null,
-  setVisibleFeatures: () => { },
   thumbnails: null,
   collaborators: null,
 });
@@ -36,7 +32,6 @@ const DataProvider = (props: DataProviderProps) => {
   const [filterTag, setFilterTag] = useState<string>("");
   const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
   const [collaborators, setCollaborators] = useState<ICollaborators[]>([]);
-  const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
 
   const fetchCollaborators = async () => {
     const { data, error } = await supabase.from("collaborators").select("*");
@@ -107,10 +102,8 @@ const DataProvider = (props: DataProviderProps) => {
     filter,
     setFilter,
     setFilterTag,
-    visibleFeatures,
-    setVisibleFeatures,
     collaborators,
-  }), [data, filter, visibleFeatures, collaborators]);
+  }), [data, filter, collaborators]);
   return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
 };
 
