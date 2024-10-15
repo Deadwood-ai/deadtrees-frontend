@@ -19,6 +19,7 @@ import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
 import upload from "../../api/upload";
 import { useData } from "../../hooks/useDataProvider";
+import addProcess from "../../api/addProcess";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -118,6 +119,15 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         showSuccessNotification(fileName);
 
         // Starting COG build (uncomment if needed)
+        const processCog = {
+          resolution: 0.04,
+          profile: "jpeg",
+          quality: 75,
+          force_recreate: true,
+          tiling_scheme: "web-optimized",
+        }
+        const resAddProcess = await addProcess(resUpload.id, "all", session!.access_token, processCog);
+        console.log("resAddProcess", resAddProcess);
         // const resBuildThumbnail = await buildThumbnail(resUpload.id, session!.access_token);
         // console.log("resBuildThumbnail", resBuildThumbnail);
 
