@@ -252,7 +252,7 @@ const Roadmap = () => {
           },
           {
             label: RoadmapItemDate({ date: "Q3 2024" }),
-            color: "gray",
+            color: "blue",
             children: <RoadmapItemLabel label="Automated integration and visualisation of uploaded data" />,
           },
           // Automated segmentation of dead trees in airborne and drone images
