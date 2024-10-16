@@ -55,6 +55,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     showUploadingNotification(fileName);
     logger({
       user_id: session!.user.id,
+      file_name: fileName,
       process: "upload",
       level: "info",
       message: "Upload started",
@@ -77,6 +78,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             console.log("Upload success:", response);
             logger({
               user_id: session!.user.id,
+              file_name: fileName,
               process: "upload",
               level: "info",
               message: "Upload success",
@@ -122,6 +124,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         };
         logger({
           user_id: session!.user.id,
+          file_name: fileName,
           process: "upload",
           level: "info",
           message: "Adding metadata",
@@ -135,6 +138,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         console.log("resAddMetadata", resAddMetadata);
         logger({
           user_id: session!.user.id,
+          file_name: fileName,
           process: "upload",
           level: "info",
           message: "Metadata added",
@@ -153,6 +157,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         }
         logger({
           user_id: session!.user.id,
+          file_name: fileName,
           process: "upload",
           level: "info",
           message: "Adding process",
@@ -161,6 +166,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         console.log("resAddProcess", resAddProcess);
         logger({
           user_id: session!.user.id,
+          file_name: fileName,
           process: "upload",
           level: "info",
           message: "Process added",
@@ -172,6 +178,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       console.error("Upload error:", error);
       logger({
         user_id: session!.user.id,
+        file_name: fileName,
         process: "upload",
         level: "error",
         message: `Upload error ${error}`,
