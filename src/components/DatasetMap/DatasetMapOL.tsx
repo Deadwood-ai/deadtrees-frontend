@@ -58,18 +58,15 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
   const { filter, setFilter } = useData();
   const [userInteracted, setUserInteracted] = useState(false);
 
-  const debouncedUpdateVisibleFeatures = useCallback(
-    debounce(() => {
-      console.log("debouncedUpdateVisibleFeatures");
-      if (mapRef.current && vectorLayerExtendRef.current) {
-        const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
-        const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
-        const visibleIds = visibleFeatures.map(feature => feature.get('id'));
-        setVisibleFeatures(visibleIds);
-      }
-    }, 300),
-    [setVisibleFeatures]
-  );
+  const updateVisibleFeatures = useCallback(() => {
+    console.log("updateVisibleFeatures");
+    if (mapRef.current && vectorLayerExtendRef.current) {
+      const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
+      const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
+      const visibleIds = visibleFeatures.map(feature => feature.get('id'));
+      setVisibleFeatures(visibleIds);
+    }
+  }, [setVisibleFeatures]);
 
   useEffect(() => {
     console.log("initial map useEffect");
@@ -125,7 +122,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
           zoom: map.getView().getZoom() as number,
         };
         setDatasetViewport(newViewport);
-        debouncedUpdateVisibleFeatures();
+        updateVisibleFeatures();
       });
 
       map.on("pointermove", (evt) => {
@@ -242,16 +239,16 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
           vectorSourceMarker.addFeature(pointFeature);
         }
       });
-      // if (filter) { // Add '!userInteracted' condition
-      if (vectorLayerExtendRef.current && mapRef.current) {
-        console.log("fit extend to filter");
-        const extent = vectorLayerExtendRef.current.getSource().getExtent();
-        mapRef.current.getView().fit(extent, {
-          padding: [50, 50, 50, 50],
-          maxZoom: 18,
-        });
+      if (filter) { // Add '!userInteracted' condition
+        if (vectorLayerExtendRef.current && mapRef.current) {
+          console.log("fit extend to filter");
+          const extent = vectorLayerExtendRef.current.getSource().getExtent();
+          mapRef.current.getView().fit(extent, {
+            padding: [50, 50, 50, 50],
+            maxZoom: 18,
+          });
+        }
       }
-      // }
 
     }
   }, [data]);
