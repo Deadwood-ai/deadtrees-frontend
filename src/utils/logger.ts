@@ -12,7 +12,7 @@ const logger = async ({ user_id, file_name, process, level, message }: LoggerPro
   const { data, error } = await supabase.from("deadtrees_logs").insert([
     {
       user_id,
-      file_name
+      file_name,
       process,
       level,
       message,
