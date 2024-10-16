@@ -87,6 +87,31 @@ const DataProvider = (props: DataProviderProps) => {
   }, []);
 
   useEffect(() => {
+    if (rawData) {
+      const filteredUserData = rawData.filter((item) => item.user_id === session?.user.id);
+      setUserData(filteredUserData);
+    }
+  }, [rawData, session]);
+
+  useEffect(() => {
+    if (rawData) {
+      const authors = rawData
+        .map((item) => item.authors)
+        .filter((author): author is string => author !== null);
+      const authorsUnique = [...new Set(authors)];
+      console.log("authorsUnique", authorsUnique);
+
+      const newOptions = authorsUnique.map((author) => ({
+        label: author,
+        value: author,
+      }));
+
+      setAuthors(newOptions);
+      console.log("authors", newOptions);
+    }
+  }, [rawData]);
+
+  useEffect(() => {
     if (!rawData.length) return;
     console.log('filtering data');
     const filteredData = filter
@@ -110,6 +135,38 @@ const DataProvider = (props: DataProviderProps) => {
 
     setData(filteredData);
   }, [filter, rawData, filterTag]);
+
+
+
+  useEffect(() => {
+    // if (rawData) return;
+    // console.log("fetching data");
+    const channel = supabase
+      .channel("datasets_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+        }, (payload) => {
+          console.log("Change received in DataProvider!", payload);
+          console.log('user:', session);
+          if (payload.new.user_id === session?.user.id) {
+            console.log("Change received in DataProvider with same user id!", payload);
+            fetchData();
+          }
+        }).subscribe();
+
+    fetchData();
+    fetchCollaborators();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+    // fetchThumbnails(
+    //   rawData.map((item) => item.file_name?.replace("tif", "png")),
+    // );
+  }, [supabase, session]);
 
   const value = useMemo(() => ({
     data,
