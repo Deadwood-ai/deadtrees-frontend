@@ -20,6 +20,7 @@ import PickerWithType from "./PickerWithType";
 import upload from "../../api/upload";
 import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
+import logger from "../../utils/logger";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -52,6 +53,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const handleUpload = async (values: IFormValues) => {
 
     showUploadingNotification(fileName);
+    logger({
+      user_id: session!.user.id,
+      process: "upload",
+      level: "info",
+      message: "Upload started",
+    });
 
     try {
       const uploadFile = fileList[0];
@@ -68,6 +75,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           session: session,
           onSuccess: (response) => {
             console.log("Upload success:", response);
+            logger({
+              user_id: session!.user.id,
+              process: "upload",
+              level: "info",
+              message: "Upload success",
+            });
             resolve(response);
           },
           onError: (error) => {
@@ -107,6 +120,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           citation_doi: values.doi,
           additional_information: values.additional_information,
         };
+        logger({
+          user_id: session!.user.id,
+          process: "upload",
+          level: "info",
+          message: "Adding metadata",
+        });
 
         const resAddMetadata = await addMetadata(
           resUpload.id,
@@ -114,6 +133,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           session!.access_token
         );
         console.log("resAddMetadata", resAddMetadata);
+        logger({
+          user_id: session!.user.id,
+          process: "upload",
+          level: "info",
+          message: "Metadata added",
+        });
 
         setUploadStatus("success");
         showSuccessNotification(fileName);
@@ -126,18 +151,31 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           force_recreate: true,
           tiling_scheme: "web-optimized",
         }
+        logger({
+          user_id: session!.user.id,
+          process: "upload",
+          level: "info",
+          message: "Adding process",
+        });
         const resAddProcess = await addProcess(resUpload.id, "all", session!.access_token, processCog);
         console.log("resAddProcess", resAddProcess);
-        // const resBuildThumbnail = await buildThumbnail(resUpload.id, session!.access_token);
-        // console.log("resBuildThumbnail", resBuildThumbnail);
-
-        // const resBuildCog = await buildCog(resUpload.id, session!.access_token);
-        // console.log("resBuildCog", resBuildCog);
+        logger({
+          user_id: session!.user.id,
+          process: "upload",
+          level: "info",
+          message: "Process added",
+        });
       } else {
         throw new Error("Upload failed to return an ID.");
       }
     } catch (error) {
       console.error("Upload error:", error);
+      logger({
+        user_id: session!.user.id,
+        process: "upload",
+        level: "error",
+        message: `Upload error ${error}`,
+      });
       setUploadStatus("error");
       showErrorNotification(fileName);
     }
