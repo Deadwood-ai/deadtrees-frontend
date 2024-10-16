@@ -17,7 +17,7 @@ export default function Dataset() {
     data?.filter((d) => d.status === "processed" && d.admin_level_1),
     [data]
   );
-  console.log('rerender dataset');
+  // console.log('rerender dataset');
 
 
   return (

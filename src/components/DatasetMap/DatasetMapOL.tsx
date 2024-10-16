@@ -28,7 +28,7 @@ const defaultExtendStyle = new Style({
 });
 
 const hoverExtendStyle = new Style({
-  fill: new Fill({ color: [255, 255, 255, 0.] }),  // Orange with 60% opacity
+  fill: new Fill({ color: [0, 0, 255, 0.7] }),  // Orange with 60% opacity
   stroke: new Stroke({ color: "white", width: 6 }),  // Dark orange stroke
 });
 
@@ -59,7 +59,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
   const [userInteracted, setUserInteracted] = useState(false);
 
   const updateVisibleFeatures = useCallback(() => {
-    console.log("updateVisibleFeatures");
+    // console.log("updateVisibleFeatures");
     if (mapRef.current && vectorLayerExtendRef.current) {
       const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
       const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
@@ -69,7 +69,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
   }, [setVisibleFeatures]);
 
   useEffect(() => {
-    console.log("initial map useEffect");
+    // console.log("initial map useEffect");
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
         center: DatasetViewport.center,
@@ -116,7 +116,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
       map.addOverlay(tooltip);
 
       map.on("moveend", () => {
-        console.log("moveend");
+        // console.log("moveend");
         const newViewport = {
           center: map.getView().getCenter() as number[],
           zoom: map.getView().getZoom() as number,
@@ -241,7 +241,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
       });
       if (filter) { // Add '!userInteracted' condition
         if (vectorLayerExtendRef.current && mapRef.current) {
-          console.log("fit extend to filter");
+          // console.log("fit extend to filter");
           const extent = vectorLayerExtendRef.current.getSource().getExtent();
           mapRef.current.getView().fit(extent, {
             padding: [50, 50, 50, 50],
@@ -257,7 +257,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
 
   // Handle feature highlighting separately
   useEffect(() => {
-    console.log("hoveredItem changed", hoveredItem);
+    // console.log("hoveredItem changed", hoveredItem);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
