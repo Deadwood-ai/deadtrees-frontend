@@ -1,9 +1,9 @@
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import AuthProvider from "./state/AuthProvider";
-import DataProvider from "./state/DataProvider";
-import DatasetMapProvider from "./state/DatasetMapProvider";
+import AuthProvider from "./hooks/useAuthProvider";
+import DataProvider from "./hooks/useDataProvider";
+import DatasetMapProvider from "./hooks/useDatasetMapProvider";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   // <React.StrictMode>

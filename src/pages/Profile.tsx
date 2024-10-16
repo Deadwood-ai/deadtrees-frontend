@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { Alert, Avatar, Typography, theme } from "antd";
-import { supabase } from "../components/useSupabase";
-import { useAuth } from "../state/AuthProvider";
+import { supabase } from "../hooks/useSupabase";
+import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import { Content } from "antd/es/layout/layout";
-import UploadButton from "../components/UploadButton";
+import UploadButton from "../components/Upload/UploadButton";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function ProfilePage() {
@@ -50,7 +50,7 @@ export default function ProfilePage() {
             <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
             <Typography.Text type="secondary">{user?.email}</Typography.Text>
           </div>
-          <div>
+          {/* <div>
             <Alert
               message="Upload is available!"
               description={
@@ -66,7 +66,7 @@ export default function ProfilePage() {
               type="info"
               showIcon
             />
-          </div>
+          </div> */}
         </div>
         <div className=" w-full">
           <div className="mb-4 flex justify-end">

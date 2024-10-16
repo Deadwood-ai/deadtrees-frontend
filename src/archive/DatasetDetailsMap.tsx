@@ -4,7 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { IDataset, ILabels } from "../types/dataset";
 import parseBBox from "../utils/parseBBox"; // Make sure this utility function is correctly implemented
 import { FeatureCollection } from "geojson";
-import { supabase } from "../components/useSupabase";
+import { supabase } from "../useSupabase";
 import { Alert, Radio, Slider, notification } from "antd";
 import addDeadwoodWMSLayers from "./addDeadwoodWMSToMap";
 

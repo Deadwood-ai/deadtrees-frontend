@@ -1,7 +1,7 @@
 import { Button, notification, Tooltip, Divider } from "antd";
 import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useDataProvider";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 

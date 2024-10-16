@@ -2,8 +2,8 @@ import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
 
-import { supabase } from "../components/useSupabase";
-import { useData } from "../state/DataProvider";
+import { supabase } from "../hooks/useSupabase";
+import { useData } from "../hooks/useDataProvider";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");

@@ -1,6 +1,6 @@
 import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useDataProvider";
 
 import {
   ArrowLeftOutlined,
@@ -12,7 +12,7 @@ import {
 import DatasetDetailsMap from "../archive/DatasetDetailsMap";
 import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
 import download from "../api/download";
-import { useAuth } from "../state/AuthProvider";
+import { useAuth } from "../hooks/useAuthProvider";
 import { Settings } from "../config";
 
 export default function DatasetDetails() {

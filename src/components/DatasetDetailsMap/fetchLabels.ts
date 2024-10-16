@@ -1,6 +1,6 @@
 import { Settings } from "../../config";
 import { ILabels } from "../../types/dataset";
-import { supabase } from "../useSupabase";
+import { supabase } from "../../hooks/useSupabase";
 
 const fetchLabels = async ({
   dataset_id,

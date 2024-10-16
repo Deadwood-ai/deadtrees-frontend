@@ -18,7 +18,7 @@ import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
 import createDeadwoodGeotiffLayer from "./createDeadwoodGeotiffLayer";
 import getDeadwoodCOGUrl from "../../utils/getDeadwoodCOGUrl";
 import DeadwoodCard from "./DeadwoodCard";
-import { useDatasetMap } from "../../state/DatasetMapProvider";
+import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 
 const sites = {
   Waldshut: [8.174864507120049, 47.682517904265666],

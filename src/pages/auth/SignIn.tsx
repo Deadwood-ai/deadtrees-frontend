@@ -1,9 +1,9 @@
 import { SignIn as SignInAuthUI } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "../../components/useSupabase";
+import { supabase } from "../../hooks/useSupabase";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { useAuth } from "../../state/AuthProvider";
+import { useAuth } from "../../hooks/useAuthProvider";
 
 const SignIn = () => {
   const { session, user } = useAuth();
