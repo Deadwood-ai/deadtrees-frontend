@@ -1,5 +1,4 @@
-// DataTable.js
-// "use client";
+import React from "react";
 
 import { Table, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -73,8 +72,8 @@ const DataTable = ({ supabase }) => {
           case "pending":
             return (
               <Tooltip title="Data will be processed once the audit and processing pipeline is ready.">
-                <Tag icon={<CheckCircleOutlined />} color="success">
-                  uploaded
+                <Tag icon={<ClockCircleOutlined />} color="default">
+                  waiting for processing
                 </Tag>
               </Tooltip>
             );
@@ -94,6 +93,30 @@ const DataTable = ({ supabase }) => {
             return (
               <Tag icon={<CloseCircleOutlined spin />} color="error">
                 {tag}
+              </Tag>
+            );
+          case "cog_processing":
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                COG processing
+              </Tag>
+            );
+          case "cog_error":
+            return (
+              <Tag icon={<CloseCircleOutlined spin />} color="error">
+                COG error
+              </Tag>
+            );
+          case "thumbnail_processing":
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                Thumbnail processing
+              </Tag>
+            );
+          case "thumbnail_error":
+            return (
+              <Tag icon={<CloseCircleOutlined spin />} color="error">
+                Thumbnail error
               </Tag>
             );
           default:

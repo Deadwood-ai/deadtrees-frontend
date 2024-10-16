@@ -150,14 +150,19 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
 
   return (
-    <Modal title="File Upload" open={isVisible} onCancel={onClose} footer={null}>
+    <Modal
+      title="File Upload"
+      open={isVisible}
+      onCancel={onClose}
+      footer={null}
+      maskClosable={false}
+    >
       <Alert
         message="Upload Guidelines"
         description="Providing the correct acquisition date (year, year/month, or full date) is essential for the performance of our ML pipeline."
         type="info"
         showIcon
         style={{ marginBottom: '16px' }}
-
       />
       <Form
         layout="vertical"
