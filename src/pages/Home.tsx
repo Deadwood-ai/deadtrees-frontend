@@ -2,7 +2,7 @@ import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
 
-import { supabase } from "../useSupabase";
+import { supabase } from "../hooks/useSupabase";
 import { useData } from "../hooks/useDataProvider";
 
 const Hero = () => {

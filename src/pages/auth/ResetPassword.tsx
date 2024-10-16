@@ -1,6 +1,6 @@
 // import { UpdatePassword as UpdatePasswordAuthUI } from "@supabase/auth-ui-react";
 // import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "../../useSupabase";
+import { supabase } from "../../hooks/useSupabase";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Input from "antd/es/input/Input";

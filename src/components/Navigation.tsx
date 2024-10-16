@@ -45,15 +45,13 @@ export default function Navigation() {
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
-          <img src="assets/tree-icon.png" alt="deadtrees.earth" className="mr-3 h-8 w-8" />
-          <div className="flex">
-            <h1 className="text-3xl font-semibold text-gray-600 md:text-2xl">deadtrees.earth</h1>
-            <div>
-              <p className="absolute ml-2 inline-block rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600">
-                BETA
-              </p>
-            </div>
+          <img src="assets/logo.PNG" alt="deadtrees.earth" className="mr-3 h-12" />
+          <div>
+            <p className="rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600 -mt-2">
+              BETA
+            </p>
           </div>
+
         </div>
         <div>
           <Menu

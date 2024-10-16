@@ -1,6 +1,6 @@
 import { ForgottenPassword as ForgotpasswordAuthUI } from "@supabase/auth-ui-react";
 import { ThemeSupa, } from "@supabase/auth-ui-shared";
-import { supabase } from "../../useSupabase";
+import { supabase } from "../../hooks/useSupabase";
 import { Link } from "react-router-dom";
 
 const Forgotpassword = () => {

@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { supabase } from "../hooks/useSupabase";
 import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
 import { Settings } from "../config";
-import { supabase } from "../useSupabase";
 import { useAuth } from "./useAuthProvider";
 
 
@@ -70,6 +70,7 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   const fetchData = async () => {
+    console.log("fetching data from", Settings.DATA_TABLE_FULL);
     const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
     if (error) {
       console.error("Error fetching data from", Settings.DATA_TABLE_FULL, ":", error);
@@ -80,109 +81,16 @@ const DataProvider = (props: DataProviderProps) => {
   };
 
   useEffect(() => {
-    if (rawData) {
-      const filteredUserData = rawData.filter((item) => item.user_id === session?.user.id);
-      setUserData(filteredUserData);
-    }
-  }, [rawData, session]);
-
-  useEffect(() => {
-    if (rawData) {
-      const authors = rawData
-        .map((item) => item.authors)
-        .filter((author): author is string => author !== null);
-      const authorsUnique = [...new Set(authors)];
-      console.log("authorsUnique", authorsUnique);
-
-      const newOptions = authorsUnique.map((author) => ({
-        label: author,
-        value: author,
-      }));
-
-      setAuthors(newOptions);
-      console.log("authors", newOptions);
-    }
-  }, [rawData]);
-
-
-  useEffect(() => {
-    // if (rawData) return;
-    // console.log("fetching data");
-    const channel = supabase
-      .channel("datasets_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-        }, (payload) => {
-          console.log("Change received in DataProvider!", payload);
-          console.log('user:', session);
-          if (payload.new.user_id === session?.user.id) {
-            console.log("Change received in DataProvider with same user id!", payload);
-            fetchData();
-          }
-        }).subscribe();
-
+    console.log('initial data fetch');
     fetchData();
     fetchCollaborators();
+  }, []);
 
-    return () => {
-      supabase.removeChannel(channel);
-    }
-    // fetchThumbnails(
-    //   rawData.map((item) => item.file_name?.replace("tif", "png")),
-    // );
-  }, [supabase, session]);
-
-  // const callWebhook = async (payload: any) => {
-  //   const webhookURL = "https://processor.deadtrees.earth/api/dev/dispatch/" + payload.new.uuid;
-  //   const webhookResponse = fetch(webhookURL, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify({
-  //       type: "INSERT",
-  //       schema: "public",
-  //       table: "upload_files_dev",
-  //       record: payload.new,
-  //     }),
-  //   });
-  // };
-  // subscription to webhook
-  // useEffect(() => {
-  //   console.log("subscribing to webhook");
-  //   const channel = supabase
-  //     .channel("metadata_changes")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "INSERT",
-  //         schema: "public",
-  //         table: "v1_metadata",
-  //       },
-  //       (payload) => {
-  //         console.log("Change received via insert!", payload);
-  //         // if (payload.eventType === "INSERT" && payload.new.status === "pending") {
-  //         fetchData();
-  //       },
-  //     )
-  //     .subscribe();
-
-  //   // fetchData();
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, []);
-
-  // filtering data
   useEffect(() => {
-    if (!rawData) return; // Early exit if data is null
-    console.log("filtering data");
-    if (filter) {
-      console.log("filtering");
-      const filteredData = rawData.filter((item) => {
+    if (!rawData.length) return;
+    console.log('filtering data');
+    const filteredData = filter
+      ? rawData.filter((item) => {
         switch (filterTag) {
           case "platform":
             return item.platform === filter;
@@ -197,15 +105,13 @@ const DataProvider = (props: DataProviderProps) => {
           default:
             return false;
         }
-      });
+      })
+      : rawData;
 
-      setData(filteredData);
-    } else {
-      setData(rawData);
-    }
+    setData(filteredData);
   }, [filter, rawData, filterTag]);
 
-  const value = {
+  const value = useMemo(() => ({
     data,
     userData,
     authors,
@@ -213,7 +119,7 @@ const DataProvider = (props: DataProviderProps) => {
     setFilter,
     setFilterTag,
     collaborators,
-  };
+  }), [data, filter, collaborators]);
   return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
 };
 

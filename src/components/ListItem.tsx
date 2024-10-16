@@ -5,14 +5,15 @@ import { useData } from "../hooks/useDataProvider";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 
-const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any; setHoveredItem: ((id: number | null) => void) | undefined }) => {
+const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset; index: any; setHoveredItem: ((id: number | null) => void) | undefined, hoveredItem: number | null }) => {
   const { setFilter, setFilterTag } = useData();
   const navigate = useNavigate();
 
   const handleMouseEnter = () => {
-    if (setHoveredItem) {
-      setHoveredItem(item.id);
-    }
+    // console.log("hoveredItem", hoveredItem);
+
+    setHoveredItem(item.id);
+
   };
 
   const handleMouseLeave = () => {
@@ -22,7 +23,7 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
   };
 
   const onClickHandler = (item) => {
-    console.log("clicked item", item);
+    // console.log("clicked item", item);
     // if (item.id && item.file_size < 1000000000) {
     navigate(`/dataset/${item.id}`);
     // } else {
@@ -43,7 +44,8 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
   return (
     <div
       key={index}
-      className="flex rounded-md bg-white p-3 transition duration-150 ease-in-out hover:bg-gray-200"
+      className={`flex rounded-md p-3 transition duration-150 ease-in-out ${hoveredItem === item.id ? 'bg-gray-200' : 'bg-white hover:bg-gray-100'
+        }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => onClickHandler(item)}
@@ -63,7 +65,7 @@ const ListItme = ({ item, index, setHoveredItem }: { item: IDataset; index: any;
               onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
             >
               {/* {item.admin_level_3} */}
-              {item.admin_level_3 && item.admin_level_3.slice(0, 18) + (item.admin_level_3.length > 18 ? "." : "")}
+              {item.admin_level_3 && item.admin_level_3.slice(0, 18) + (item.admin_level_3.length > 18 ? "..." : "")}
 
             </Button>
           </Tooltip>
