@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { createContext, useContext, useMemo, useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../hooks/useSupabase";
-import { IDataset, IThumbnail, IStats, ICollaborators } from "../types/dataset";
+import { IDataset, IThumbnail, ICollaborators } from "../types/dataset";
 import { Settings } from "../config";
 import { useAuth } from "./useAuthProvider";
-
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -15,132 +15,101 @@ interface AuthorOption {
 }
 
 type DataContextType = {
-  data: IDataset[] | null;
+  data: IDataset[] | undefined;
   filter: string;
   setFilter: (filter: string) => void;
   setFilterTag: (filterTag: string) => void;
-  thumbnails: IThumbnail[] | null;
-  collaborators: ICollaborators[] | null;
-  authors: AuthorOption[] | null;
-  userData: IDataset[] | null;
+  thumbnails: IThumbnail[] | undefined;
+  collaborators: ICollaborators[] | undefined;
+  authors: AuthorOption[] | undefined;
+  userData: IDataset[] | undefined;
+  isLoading: boolean;
 };
 
 const DataContext = createContext<DataContextType>({
-  data: null,
+  data: undefined,
   filter: "",
   setFilter: () => { },
   setFilterTag: () => { },
-  authors: null,
-  thumbnails: null,
-  collaborators: null,
-  userData: null,
+  authors: undefined,
+  thumbnails: undefined,
+  collaborators: undefined,
+  userData: undefined,
+  isLoading: false,
 });
 
-const DataProvider = (props: DataProviderProps) => {
-  const [rawData, setRawData] = useState<IDataset[]>([]);
-  const [userData, setUserData] = useState<IDataset[]>([]);
-  const [authors, setAuthors] = useState<AuthorOption[]>([]);
-  const [data, setData] = useState<IDataset[]>([]);
-  const [filter, setFilter] = useState<string>("");
-  const [filterTag, setFilterTag] = useState<string>("");
-  const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
-  const [collaborators, setCollaborators] = useState<ICollaborators[]>([]);
+const fetchData = async () => {
+  const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
+  // console.log("fetchData", data);
+  if (error) throw error;
+  return data;
+};
+
+const fetchCollaborators = async () => {
+  const { data, error } = await supabase.from("collaborators").select("*");
+  if (error) throw error;
+  return data;
+};
+
+const DataProvider = ({ children }: DataProviderProps) => {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
 
-  const fetchCollaborators = async () => {
-    const { data, error } = await supabase.from("collaborators").select("*");
-    if (error) {
-      console.error("Error fetching data:", error);
-    } else {
-      console.log("collaborators fetched :", data);
-      setCollaborators(data);
-    }
-  };
+  const { data: rawData, isLoading: isLoadingRawData } = useQuery({
+    queryKey: ['datasets'],
+    queryFn: fetchData,
+    // staleTime: 0,
+  });
 
-  const fetchThumbnails = async (filname_list: string[]) => {
-    console.log("fetching thumbnails with:", filname_list);
-    const publicURLs = filname_list.map((file_name) => {
-      return {
-        file_name: file_name,
-        url: supabase.storage.from("thumbnails").getPublicUrl(file_name).data.publicUrl,
-      };
-    });
-    console.log("publicURLs", publicURLs);
-    setThumbnails(publicURLs);
-  };
+  const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery({
+    queryKey: ['collaborators'],
+    queryFn: fetchCollaborators,
+  });
 
-  const fetchData = async () => {
-    console.log("fetching data from", Settings.DATA_TABLE_FULL);
-    const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
-    if (error) {
-      console.error("Error fetching data from", Settings.DATA_TABLE_FULL, ":", error);
-    } else {
-      console.log(Settings.DATA_TABLE_FULL, "fetched :", data);
-      setRawData(data);
-    }
-  };
+  const { data: userData } = useQuery({
+    queryKey: ['userData', session?.user.id, rawData],
+    enabled: !!session && !!rawData,
+    queryFn: () => rawData?.filter((item) => item.user_id === session?.user.id) || [],
+  });
 
-  useEffect(() => {
-    console.log('initial data fetch');
-    fetchData();
-    fetchCollaborators();
-  }, []);
-
-  useEffect(() => {
-    if (rawData) {
-      const filteredUserData = rawData.filter((item) => item.user_id === session?.user.id);
-      setUserData(filteredUserData);
-    }
-  }, [rawData, session]);
-
-  useEffect(() => {
-    if (rawData) {
-      const authors = rawData
-        .map((item) => item.authors)
-        .filter((author): author is string => author !== null);
-      const authorsUnique = [...new Set(authors)];
-      console.log("authorsUnique", authorsUnique);
-
-      const newOptions = authorsUnique.map((author) => ({
+  const { data: authors } = useQuery({
+    queryKey: ['authors', rawData],
+    enabled: !!rawData,
+    queryFn: () => {
+      const authorsUnique = [...new Set(rawData?.map((item) => item.authors).filter(Boolean))];
+      return authorsUnique.map((author) => ({
         label: author,
         value: author,
       }));
+    },
+  });
 
-      setAuthors(newOptions);
-      console.log("authors", newOptions);
-    }
-  }, [rawData]);
+  // ... other state management (filter, filterTag, etc.) remains the same
+  const [filter, setFilter] = useState<string>("");
+  const [filterTag, setFilterTag] = useState<string>("");
 
-  useEffect(() => {
-    if (!rawData.length) return;
-    console.log('filtering data');
-    const filteredData = filter
-      ? rawData.filter((item) => {
-        switch (filterTag) {
-          case "platform":
-            return item.platform === filter;
-          case "license":
-            return item.license === filter;
-          case "authors_image":
-            return item.authors === filter;
-          case "admin_level_1":
-            return item.admin_level_1 === filter;
-          case "admin_level_3":
-            return item.admin_level_3 === filter;
-          default:
-            return false;
-        }
-      })
-      : rawData;
-
-    setData(filteredData);
+  const filteredData = useMemo(() => {
+    if (!rawData || !filter) return rawData;
+    return rawData.filter((item) => {
+      switch (filterTag) {
+        case "platform":
+          return item.platform === filter;
+        case "license":
+          return item.license === filter;
+        case "authors_image":
+          return item.authors === filter;
+        case "admin_level_1":
+          return item.admin_level_1 === filter;
+        case "admin_level_3":
+          return item.admin_level_3 === filter;
+        default:
+          return false;
+      }
+    });
   }, [filter, rawData, filterTag]);
 
-
-
+  // Set up real-time subscription
   useEffect(() => {
-    // if (rawData) return;
-    // console.log("fetching data");
     const channel = supabase
       .channel("datasets_changes")
       .on(
@@ -148,40 +117,38 @@ const DataProvider = (props: DataProviderProps) => {
         {
           event: "*",
           schema: "public",
-        }, (payload) => {
-          console.log("Change received in DataProvider!", payload);
-          console.log('user:', session);
+        },
+        (payload) => {
           if (payload.new.user_id === session?.user.id) {
-            console.log("Change received in DataProvider with same user id!", payload);
-            fetchData();
+            console.log("Invalidating datasets query, running refetch");
+            queryClient.invalidateQueries({ queryKey: ['datasets'] });
           }
-        }).subscribe();
-
-    fetchData();
-    fetchCollaborators();
+        }
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-    }
-    // fetchThumbnails(
-    //   rawData.map((item) => item.file_name?.replace("tif", "png")),
-    // );
-  }, [supabase, session]);
+    };
+  }, [queryClient, session]);
 
-  const value = useMemo(() => ({
-    data,
-    userData,
-    authors,
-    filter,
-    setFilter,
-    setFilterTag,
-    collaborators,
-  }), [data, filter, collaborators]);
-  return <DataContext.Provider value={value}>{props.children}</DataContext.Provider>;
+  const value = useMemo(
+    () => ({
+      data: filteredData,
+      userData,
+      authors,
+      filter,
+      setFilter,
+      setFilterTag,
+      collaborators,
+      isLoading: isLoadingRawData || isLoadingCollaborators,
+    }),
+    [filteredData, userData, authors, filter, collaborators, isLoadingRawData, isLoadingCollaborators]
+  );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-export const useData = () => {
-  return useContext(DataContext);
-};
+export const useData = () => useContext(DataContext);
 
 export default DataProvider;
