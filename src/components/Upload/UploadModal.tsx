@@ -40,7 +40,7 @@ interface UploadModalProps {
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["date", "month", "year"];
 
-  const { fileList, fileName, onFileChange, beforeUpload } = useFileUpload();
+  const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
@@ -52,10 +52,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const handleUpload = async (values: IFormValues) => {
 
-    showUploadingNotification(fileName);
+    showUploadingNotification(fileNameFull);
     logger({
       user_id: session!.user.id,
-      file_name: fileName,
+      file_name: fileNameFull,
       process: "upload",
       level: "info",
       message: "Upload started",
@@ -78,7 +78,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             console.log("Upload success:", response);
             logger({
               user_id: session!.user.id,
-              file_name: fileName,
+              file_name: fileNameFull,
               process: "upload",
               level: "info",
               message: "Upload success",
@@ -92,7 +92,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           onProgress: (event) => {
             const percent = Math.round(event.percent);
             setUploadProgress(percent);
-            updateNotification(percent, "uploading", fileName);
+            updateNotification(percent, "uploading", fileNameFull);
           },
         });
       });
@@ -124,7 +124,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         };
         logger({
           user_id: session!.user.id,
-          file_name: fileName,
+          file_name: fileNameFull,
           process: "upload",
           level: "info",
           message: "Adding metadata",
@@ -138,14 +138,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         console.log("resAddMetadata", resAddMetadata);
         logger({
           user_id: session!.user.id,
-          file_name: fileName,
+          file_name: fileNameFull,
           process: "upload",
           level: "info",
           message: "Metadata added",
         });
 
         setUploadStatus("success");
-        showSuccessNotification(fileName);
+        showSuccessNotification(fileNameFull);
 
         // Starting COG build (uncomment if needed)
         const processCog = {
@@ -157,7 +157,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         }
         logger({
           user_id: session!.user.id,
-          file_name: fileName,
+          file_name: fileNameFull,
           process: "upload",
           level: "info",
           message: "Adding process",
@@ -166,7 +166,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         console.log("resAddProcess", resAddProcess);
         logger({
           user_id: session!.user.id,
-          file_name: fileName,
+          file_name: fileNameFull,
           process: "upload",
           level: "info",
           message: "Process added",
@@ -178,13 +178,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       console.error("Upload error:", error);
       logger({
         user_id: session!.user.id,
-        file_name: fileName,
+        file_name: fileNameFull,
         process: "upload",
         level: "error",
         message: `Upload error ${error}`,
       });
       setUploadStatus("error");
-      showErrorNotification(fileName);
+      showErrorNotification(fileNameFull);
     }
   };
 
