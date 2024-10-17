@@ -25,6 +25,7 @@ import logger from "../../utils/logger";
 interface IFormValues {
   license: ILicense;
   platform: IPlatform;
+  spectral_properties: string;
   aquisition_date: any;
   author: string[];
   doi: string;
@@ -45,14 +46,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState("");
+  // const [uploadStatus, setUploadStatus] = useState("");
   const { authors } = useData();
   console.log("authors in upload modal", authors);
-  const { updateNotification, showUploadingNotification, showSuccessNotification, showErrorNotification } = useUploadNotification(uploadKey, fileName);
+  const {
+    showUploadingNotification,
+    updateUploadProgress,
+    showSuccessNotification,
+    showErrorNotification
+  } = useUploadNotification(uploadKey, fileName);
 
   const handleUpload = async (values: IFormValues) => {
-
-    showUploadingNotification(fileNameFull);
+    showUploadingNotification();
     logger({
       user_id: session!.user.id,
       file_name: fileNameFull,
@@ -92,14 +97,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           onProgress: (event) => {
             const percent = Math.round(event.percent);
             setUploadProgress(percent);
-            updateNotification(percent, "uploading", fileNameFull);
+            updateUploadProgress(percent);
           },
         });
       });
 
       console.log("resUpload", resUpload);
-      setUploadStatus("processing");
-      setUploadProgress(100);
+      // setUploadStatus("processing");
+      // setUploadProgress(100);
 
       if (resUpload.id) {
         console.log("values", values);
@@ -110,6 +115,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           name: uploadFile.name,
           license: values.license,
           platform: values.platform,
+          spectral_properties: values.spectral_properties,
           aquisition_year: values.aquisition_date.year(),
           aquisition_month:
             pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
@@ -144,8 +150,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           message: "Metadata added",
         });
 
-        setUploadStatus("success");
-        showSuccessNotification(fileNameFull);
+        // setUploadStatus("success");
+        showSuccessNotification();
 
         // Starting COG build (uncomment if needed)
         const processCog = {
@@ -183,8 +189,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         level: "error",
         message: `Upload error ${error}`,
       });
-      setUploadStatus("error");
-      showErrorNotification(fileNameFull);
+      // setUploadStatus("error");
+      showErrorNotification();
     }
   };
 
@@ -201,96 +207,107 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       onCancel={onClose}
       footer={null}
       maskClosable={false}
+      width={1000}
     >
-      <Alert
-        message="Upload Guidelines"
-        description="Providing the correct acquisition date (year, year/month, or full date) is essential for the performance of our ML pipeline."
-        type="info"
-        showIcon
-        style={{ marginBottom: '16px' }}
-      />
-      <Form
-        layout="vertical"
-        onFinish={onFormFinish}
-        initialValues={{ platform: "drone", license: "CC BY" }}
-      >
-        <Form.Item
-          label="Orthophoto (GeoTIFF format)"
-          rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
-        >
-          <Upload
-            fileList={fileList}
-            onChange={onFileChange}
-            beforeUpload={beforeUpload}
-            listType="text"
-            maxCount={1}
-          >
-            <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
-          </Upload>
-        </Form.Item>
-        <Form.Item
-          rules={[{ required: true, message: "Please enter the authors" }]}
-          label="Authors of the orthophoto"
-          name="author"
-        >
-          {authors?.at(0)?.label ? (
-            <Select
-              mode="tags"
-              style={{ width: "100%" }}
-              options={authors}
-              placeholder="Authors"
-            />
-          ) : (
-            <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
-          )}
-        </Form.Item>
-        <Form.Item
-          label="Acquisition Date (prioritize correctness over precision)"
-          name="aquisition_date"
-          rules={[{ required: true, message: "Please select a date" }]}
-        >
-          <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
-        </Form.Item>
-        <Form.Item label="Platform" name="platform">
-          <Radio.Group>
-            <Radio value="drone">Drone</Radio>
-            <Radio value="airborne">Airborne</Radio>
-            <Radio value="satellite">Satellite</Radio>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item label="License" name="license">
-          <Radio.Group>
-            <Radio value="CC BY">CC BY</Radio>
-            <Radio value="CC BY-SA">CC BY SA</Radio>
-            <Radio value="CC BY-NC-SA">CC BY NC SA</Radio>
-            <Radio value="MIT">MIT</Radio>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item label="DOI" name="doi">
-          <Input type="name" placeholder="DOI" />
-        </Form.Item>
-        <Form.Item label="Additional Information" name="additional_information">
-          <Input.TextArea
-            autoSize={{ minRows: 2, maxRows: 5 }}
-            placeholder="Additional Information for the Dataset"
+      <div className="flex">
+        <div className="w-1/2">
+          <Alert
+            message="Upload Guidelines"
+            description="Providing the correct acquisition date (year, year/month, or full date) is essential for the performance of our ML pipeline."
+            type="info"
+            showIcon
+            className="mr-16 py-4 mt-4"
           />
-        </Form.Item>
-        <Form.Item>
-          <Space>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={fileList.length === 0}
+        </div>
+        <Form
+          layout="vertical"
+          onFinish={onFormFinish}
+          initialValues={{ platform: "drone", license: "CC BY", spectral_properties: "RGB" }}
+        >
+          <Form.Item
+            label="Orthophoto (GeoTIFF format)"
+            rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
+          >
+            <Upload
+              fileList={fileList}
+              onChange={onFileChange}
+              beforeUpload={beforeUpload}
+              listType="text"
+              maxCount={1}
             >
-              Upload
-            </Button>
-            <Button type="default" onClick={onClose}>
-              Cancel
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
-    </Modal>
+              <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
+            </Upload>
+          </Form.Item>
+          <Form.Item
+            rules={[{ required: true, message: "Please enter the authors" }]}
+            label="Authors of the orthophoto"
+            name="author"
+          >
+            {authors?.at(0)?.label ? (
+              <Select
+                mode="tags"
+                style={{ width: "100%" }}
+                options={authors}
+                placeholder="Authors"
+              />
+            ) : (
+              <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
+            )}
+          </Form.Item>
+          <Form.Item
+            label="Acquisition Date (prioritize correctness over precision)"
+            name="aquisition_date"
+            rules={[{ required: true, message: "Please select a date" }]}
+          >
+            <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
+          </Form.Item>
+          <Form.Item label="Platform" name="platform">
+            <Radio.Group>
+              <Radio value="drone">Drone</Radio>
+              <Radio value="airborne">Airborne</Radio>
+              <Radio value="satellite">Satellite</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="Spectral Properties" name="spectral_properties">
+            <Radio.Group>
+              <Radio value="RGB">RGB</Radio>
+              <Radio value="NIRRGB">NIRRGB</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="License" name="license">
+            <Radio.Group>
+              <Radio value="CC BY">CC BY</Radio>
+              <Radio value="CC BY-SA">CC BY SA</Radio>
+              <Radio value="CC BY-NC-SA">CC BY NC SA</Radio>
+              <Radio value="MIT">MIT</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="DOI" name="doi">
+            <Input type="name" placeholder="DOI" />
+          </Form.Item>
+          <Form.Item label="Additional Information" name="additional_information">
+            <Input.TextArea
+              autoSize={{ minRows: 2, maxRows: 5 }}
+              placeholder="Additional Information for the Dataset"
+            />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={fileList.length === 0}
+              >
+                Upload
+              </Button>
+              <Button type="default" onClick={onClose}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </div>
+    </Modal >
   );
 };
 

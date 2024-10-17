@@ -111,6 +111,12 @@ export enum IPlatform {
   "airborne",
   "satellite",
 }
+
+export enum ISpectralProperties {
+  "RGB",
+  "NIRRGB",
+}
+
 export enum IStatus {
   "pending",
   "processing",
