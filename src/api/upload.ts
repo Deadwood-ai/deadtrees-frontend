@@ -1,6 +1,7 @@
+import axios from "axios";
 import { Settings } from "../config";
 
-interface IUploadOptions {
+interface UploadOptions {
   file: File;
   onProgress: (progress: { percent: number }) => void;
   onSuccess: (response: any) => void;
@@ -9,59 +10,104 @@ interface IUploadOptions {
   session: any;
 }
 
-const upload = (options: IUploadOptions) => {
+interface ChunkInfo {
+  index: number;
+  start: number;
+  end: number;
+  data: Blob;
+}
+
+const CHUNK_SIZE = 100 * 1024 * 1024; // 100 MB
+
+const upload = async (options: UploadOptions) => {
   const { file, onProgress, onSuccess, onError, uploadId, session } = options;
-  const CHUNK_SIZE = 40 * 1024 * 1024; // 50 MB
-  const chunks = Math.ceil(file.size / CHUNK_SIZE);
-  let currentChunk = 0;
+  const uploadStartTime = Date.now();
 
-  const uploadStartTime = Date.now(); // Set the upload start time
-
-  const uploadChunk = (start) => {
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    const chunk = file.slice(start, end);
-    const copyTime = Math.round((Date.now() - uploadStartTime) / 1000); // Convert to seconds
-
-    const formData = new FormData();
-    formData.append("file", chunk, file.name);
-    formData.append("chunk_index", currentChunk.toString());
-    formData.append("chunks_total", chunks.toString());
-    formData.append("filename", file.name);
-    formData.append("upload_id", uploadId);
-    formData.append("copy_time", copyTime.toString());
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${Settings.API_URL}/datasets/chunk`);
-    xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percentComplete = Math.round(((currentChunk * CHUNK_SIZE + event.loaded) / file.size) * 100);
-        onProgress({ percent: percentComplete });
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        currentChunk++;
-        if (currentChunk < chunks) {
-          uploadChunk(currentChunk * CHUNK_SIZE);
-        } else {
-          onSuccess(JSON.parse(xhr.response));
-        }
-      } else {
-        onError(new Error(xhr.statusText));
-      }
-    };
-
-    xhr.onerror = () => {
-      onError(new Error("Upload failed."));
-    };
-
-    xhr.send(formData);
-  };
-
-  uploadChunk(0);
+  try {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const resUpload = await uploadChunks(file, totalChunks, uploadStartTime, options);
+    onSuccess(resUpload);
+  } catch (error) {
+    handleError(error, onError);
+  }
 };
+
+async function uploadChunks(file: File, totalChunks: number, uploadStartTime: number, options: UploadOptions) {
+  let resUpload;
+
+  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    const chunkInfo = getChunkInfo(file, chunkIndex);
+    const formData = createFormData(chunkInfo, totalChunks, file.name, options.uploadId, uploadStartTime);
+
+    resUpload = await uploadSingleChunk(formData, chunkInfo, file.size, options);
+  }
+
+  return resUpload?.data;
+}
+
+function getChunkInfo(file: File, chunkIndex: number): ChunkInfo {
+  const start = chunkIndex * CHUNK_SIZE;
+  const end = Math.min(start + CHUNK_SIZE, file.size);
+  return {
+    index: chunkIndex,
+    start,
+    end,
+    data: file.slice(start, end),
+  };
+}
+
+function createFormData(
+  chunkInfo: ChunkInfo,
+  totalChunks: number,
+  fileName: string,
+  uploadId: string,
+  startTime: number,
+): FormData {
+  const formData = new FormData();
+  formData.append("file", chunkInfo.data, fileName);
+  formData.append("chunk_index", chunkInfo.index.toString());
+  formData.append("chunks_total", totalChunks.toString());
+  formData.append("filename", fileName);
+  formData.append("upload_id", uploadId);
+  formData.append("copy_time", calculateCopyTime(startTime).toString());
+  return formData;
+}
+
+function calculateCopyTime(startTime: number): number {
+  return Math.round((Date.now() - startTime) / 1000);
+}
+
+async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
+  const { session, onProgress } = options;
+
+  try {
+    const resUpload = await axios.post(`${Settings.API_URL}/datasets/chunk`, formData, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentComplete = calculateProgress(chunkInfo, progressEvent, fileSize);
+          onProgress({ percent: percentComplete });
+        }
+      },
+      timeout: 1000 * 60 * 10, // 10 minutes
+    });
+    return resUpload;
+  } catch (error) {
+    throw new Error(`Failed to upload chunk ${chunkInfo.index}`);
+  }
+}
+
+function calculateProgress(chunkInfo: ChunkInfo, progressEvent: any, fileSize: number): number {
+  const chunkProgress = progressEvent.loaded / progressEvent.total;
+  const overallProgress = (chunkInfo.index * CHUNK_SIZE + chunkProgress * (chunkInfo.end - chunkInfo.start)) / fileSize;
+  return Math.round(overallProgress * 100);
+}
+
+function handleError(error: unknown, onError: (error: Error) => void) {
+  onError(error instanceof Error ? error : new Error("Upload failed"));
+}
 
 export default upload;
