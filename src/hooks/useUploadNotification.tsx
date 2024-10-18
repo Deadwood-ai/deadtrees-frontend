@@ -14,7 +14,7 @@ export const useUploadNotification = (uploadKey: string, fileName: string) => {
           : 'Upload Failed',
       description: (
         <div>
-          <div className="mt-2">{fileName}</div>
+          <div className="mt-2">{percent === 100 ? 'Data is imported into the database' : fileName}</div>
           {percent !== undefined && (
             <Progress
               percent={percent}
