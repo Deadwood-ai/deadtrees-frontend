@@ -319,11 +319,14 @@ const FAQ = () => {
           </p>
           <p className="text-md font-semibold">Data Contributors and collaborators:</p>
           <ul className="text-md">
-            {collaborators!
-              .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
-              .map((collaborator) => {
-                return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
-              })}
+            {collaborators && collaborators.length > 0
+              ? collaborators
+                .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
+                .map((collaborator) => {
+                  return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
+                })
+              : <li>Loading collaborators...</li>
+            }
           </ul>
         </div>
       ),
