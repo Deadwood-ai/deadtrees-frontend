@@ -1,4 +1,4 @@
-export const isTokenExpiringSoon = (session: any, thresholdSeconds: number = 5) => {
+export const isTokenExpiringSoon = (session: any, thresholdMinutes: number = 30) => {
   if (!session || !session.expires_at) {
     return true; // If we don't have a session or expiration time, assume it's expiring soon
   }
@@ -8,5 +8,5 @@ export const isTokenExpiringSoon = (session: any, thresholdSeconds: number = 5) 
   const timeUntilExpiry = (expiresAt - now) / 60000; // Convert to minutes
   //   console.log("timeUntilExpiry (minutes)", timeUntilExpiry - thresholdSeconds);
 
-  return timeUntilExpiry < thresholdSeconds;
+  return timeUntilExpiry < thresholdMinutes;
 };
