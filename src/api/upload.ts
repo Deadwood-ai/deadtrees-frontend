@@ -1,5 +1,7 @@
 import axios from "axios";
 import { Settings } from "../config";
+import { supabase } from "../hooks/useSupabase";
+import { isTokenExpiringSoon } from "../utils/isTokenExpiringSoon";
 
 interface UploadOptions {
   file: File;
@@ -19,6 +21,15 @@ interface ChunkInfo {
 
 const CHUNK_SIZE = 100 * 1024 * 1024; // 100 MB
 
+const refreshToken = async () => {
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error) {
+    console.error("Error refreshing token:", error);
+    throw error;
+  }
+  return data.session?.access_token;
+};
+
 const upload = async (options: UploadOptions) => {
   const { file, onProgress, onSuccess, onError, uploadId, session } = options;
   const uploadStartTime = Date.now();
@@ -34,12 +45,28 @@ const upload = async (options: UploadOptions) => {
 
 async function uploadChunks(file: File, totalChunks: number, uploadStartTime: number, options: UploadOptions) {
   let resUpload;
+  let currentSession = options.session;
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+    // Check if token needs refresh before each chunk upload
+    if (isTokenExpiringSoon(currentSession)) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error("Error refreshing token:", error);
+        throw error;
+      }
+      currentSession = data.session;
+      console.log("Token refreshed");
+      console.log("currentSession", currentSession);
+    }
+
     const chunkInfo = getChunkInfo(file, chunkIndex);
     const formData = createFormData(chunkInfo, totalChunks, file.name, options.uploadId, uploadStartTime);
 
-    resUpload = await uploadSingleChunk(formData, chunkInfo, file.size, options);
+    resUpload = await uploadSingleChunk(formData, chunkInfo, file.size, {
+      ...options,
+      session: currentSession,
+    });
   }
 
   return resUpload?.data;
