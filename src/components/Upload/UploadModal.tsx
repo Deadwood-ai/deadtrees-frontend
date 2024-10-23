@@ -9,8 +9,12 @@ import {
   Alert,
   Input,
   Select,
+  Tooltip,
+  Divider,
+  Checkbox,
+  Typography,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, UploadOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
 import { ILicense, IPlatform } from "../../types/dataset";
@@ -55,6 +59,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     showSuccessNotification,
     showErrorNotification
   } = useUploadNotification(uploadKey, fileName);
+
+  const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
   const handleUpload = async (values: IFormValues) => {
     showUploadingNotification();
@@ -207,107 +213,225 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       onCancel={onClose}
       footer={null}
       maskClosable={false}
-      width={1000}
+      width={1200}
+    // width="100%"
     >
-      <div className="flex">
-        <div className="w-1/2">
-          <Alert
-            message="Upload Guidelines"
-            description="Providing the correct acquisition date (year, year/month, or full date) is essential for the performance of our ML pipeline."
-            type="info"
-            showIcon
-            className="mr-16 py-4 mt-4"
-          />
-        </div>
-        <Form
-          layout="vertical"
-          onFinish={onFormFinish}
-          initialValues={{ platform: "drone", license: "CC BY", spectral_properties: "RGB" }}
-        >
-          <Form.Item
-            label="Orthophoto (GeoTIFF format)"
-            rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
-          >
-            <Upload
-              fileList={fileList}
-              onChange={onFileChange}
-              beforeUpload={beforeUpload}
-              listType="text"
-              maxCount={1}
+      <Form
+        layout="vertical"
+        onFinish={onFormFinish}
+        initialValues={{ platform: "drone", data_access: "public", spectral_properties: "RGB" }}
+        // className="space-y-4" // Add vertical spacing between form items
+        variant="filled"
+      >
+        <div className="flex justify-center space-x-16"> {/* Center the content */}
+
+          <div className="w-full max-w-md"> {/* Limit the form width */}
+            <Typography.Title level={4}>Orthophoto</Typography.Title>
+            <Form.Item
+              // label="Orthophoto (GeoTIFF format)"
+              label={
+                <div>
+                  <Tooltip title="Upload an orthophoto in GeoTIFF format. This georeferenced image is essential for our analysis.">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  Orthophoto (GeoTIFF)
+                </div>
+              }
+              rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
             >
-              <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
-            </Upload>
-          </Form.Item>
-          <Form.Item
-            rules={[{ required: true, message: "Please enter the authors" }]}
-            label="Authors of the orthophoto"
-            name="author"
-          >
-            {authors?.at(0)?.label ? (
-              <Select
-                mode="tags"
-                style={{ width: "100%" }}
-                options={authors}
-                placeholder="Authors"
-              />
-            ) : (
-              <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
-            )}
-          </Form.Item>
-          <Form.Item
-            label="Acquisition Date (prioritize correctness over precision)"
-            name="aquisition_date"
-            rules={[{ required: true, message: "Please select a date" }]}
-          >
-            <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
-          </Form.Item>
-          <Form.Item label="Platform" name="platform">
-            <Radio.Group>
-              <Radio value="drone">Drone</Radio>
-              <Radio value="airborne">Airborne</Radio>
-              <Radio value="satellite">Satellite</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="Spectral Properties" name="spectral_properties">
-            <Radio.Group>
-              <Radio value="RGB">RGB</Radio>
-              <Radio value="NIRRGB">NIRRGB</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="License" name="license">
-            <Radio.Group>
-              <Radio value="CC BY">CC BY</Radio>
-              <Radio value="CC BY-SA">CC BY SA</Radio>
-              <Radio value="CC BY-NC-SA">CC BY NC SA</Radio>
-              <Radio value="MIT">MIT</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="DOI" name="doi">
-            <Input type="name" placeholder="DOI" />
-          </Form.Item>
-          <Form.Item label="Additional Information" name="additional_information">
-            <Input.TextArea
-              autoSize={{ minRows: 2, maxRows: 5 }}
-              placeholder="Additional Information for the Dataset"
-            />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                disabled={fileList.length === 0}
+              <Upload
+                fileList={fileList}
+                onChange={onFileChange}
+                beforeUpload={beforeUpload}
+                accept=".tif,.tiff"
+                listType="text"
+                maxCount={1}
               >
-                Upload
-              </Button>
-              <Button type="default" onClick={onClose}>
-                Cancel
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </div>
-    </Modal >
+                <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
+              </Upload>
+            </Form.Item>
+            <Form.Item
+              rules={[{ required: true, message: "Please enter the authors" }]}
+              // label="Authors of the orthophoto"
+              label={
+                <div>
+                  <Tooltip title="Select or add authors of the orthophoto. You can choose existing authors or type new names to add them.">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  Authors of the orthophoto
+                </div>
+              }
+              name="author"
+            >
+              {authors?.at(0)?.label ? (
+                <Select
+                  mode="tags"
+                  style={{ width: "100%" }}
+                  options={authors}
+                  placeholder="Authors"
+                />
+              ) : (
+                <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
+              )}
+            </Form.Item>
+            <Form.Item
+              // label="Acquisition Date (prioritize correctness over precision)"
+              label={
+                <div>
+                  <Tooltip title="Specify the orthophoto's acquisition date as accurately as possible. This information is crucial for temporal analysis and model training. If uncertain about the exact date, provide the most precise timeframe you're confident about (e.g., month or year).">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  Acquisition Date
+                </div>
+              }
+              name="aquisition_date"
+              rules={[{ required: true, message: "Please select a date" }]}
+            >
+              <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
+            </Form.Item>
+            <Divider />
+            <Form.Item label={
+              <div>
+                <Tooltip title="Select the platform used to acquire the orthophoto.">
+                  <InfoCircleOutlined className="mr-2" />
+                </Tooltip>
+                Platform
+              </div>
+            } name="platform">
+              <Radio.Group>
+                <Radio value="drone">Drone</Radio>
+                <Radio value="airborne">Airborne</Radio>
+                <Radio value="satellite">Satellite</Radio>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item label={
+              <div>
+                <Tooltip title="Select the spectral properties of the orthophoto. Either RGB or NIRRGB.">
+                  <InfoCircleOutlined className="mr-2" />
+                </Tooltip>
+                Spectral Properties
+              </div>
+            } name="spectral_properties">
+              <Radio.Group>
+                <Radio value="RGB">RGB</Radio>
+                <Radio value="NIRRGB">NIRRGB</Radio>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item
+              label={
+                <div>
+                  <Tooltip title="Public: Data is fully accessible and downloadable. View-Only: Data is visible but not downloadable. Private: Data is not accessible. Note: All data is used for model training.">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  Data Access
+                </div>
+              } name="data_access">
+              <Radio.Group>
+                <Radio value="public">Public</Radio>
+                <Radio value="viewonly">View Only</Radio>
+                <Radio value="private">Private</Radio>
+              </Radio.Group>
+            </Form.Item>
+            <Divider />
+            <Form.Item
+              label={
+                <div>
+                  <Tooltip title="Enter the DOI of a related publication.">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  DOI
+                </div>
+              } name="doi">
+              <Input type="name" placeholder="DOI" />
+            </Form.Item>
+            <Form.Item
+              label={
+                <div>
+                  <Tooltip title="Provide any additional information about the orthophoto.">
+                    <InfoCircleOutlined className="mr-2" />
+                  </Tooltip>
+                  Additional Information
+                </div>
+              } name="additional_information">
+              <Input.TextArea
+                autoSize={{ minRows: 2, maxRows: 5 }}
+                placeholder="Additional Information for the Dataset"
+              />
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  disabled={fileList.length === 0}
+                >
+                  Upload
+                </Button>
+                <Button type="default" onClick={onClose}>
+                  Cancel
+                </Button>
+              </Space>
+            </Form.Item>
+          </div>
+          <div className={`${enableLabelUpload ? ' w-full max-w-md' : ''}`}>
+            <Form.Item>
+              <Checkbox
+                checked={enableLabelUpload}
+                onChange={(e) => setEnableLabelUpload(e.target.checked)}
+              >
+                Enable Label Upload
+              </Checkbox>
+            </Form.Item>
+
+            {enableLabelUpload && (
+              <div className="w-full pt-2">
+                <>
+                  <Form.Item
+                    label={
+                      <div>
+                        <Tooltip title="Upload a labels file (e.g., GeoJSON) associated with your orthophoto.">
+                          <InfoCircleOutlined className="mr-2" />
+                        </Tooltip>
+                        Labels File (GeoJSON)
+                      </div>
+                    }
+                    name="labels_file"
+                    rules={[{ required: true, message: "Please upload a labels file" }]}
+                  >
+                    <Upload
+                      // fileList={labelsFileList}
+                      // onChange={onLabelsFileChange}
+                      // beforeUpload={beforeLabelsUpload}
+                      accept=".geojson,.json"
+                      listType="text"
+                      maxCount={1}
+                    >
+                      <Button icon={<UploadOutlined />}>Select Labels File</Button>
+                    </Upload>
+                  </Form.Item>
+                  <Form.Item
+                    label={
+                      <div>
+                        <Tooltip title="Provide additional information about the labels.">
+                          <InfoCircleOutlined className="mr-2" />
+                        </Tooltip>
+                        Labels Description
+                      </div>
+                    }
+                    name="labels_description"
+                  >
+                    <Input.TextArea
+                      autoSize={{ minRows: 4, maxRows: 10 }}
+                      placeholder="Additional information about the labels"
+                    />
+                  </Form.Item>
+                </>
+              </div>
+            )}
+          </div>
+        </div>
+      </Form>
+    </Modal>
   );
 };
 

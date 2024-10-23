@@ -9,6 +9,11 @@ export interface IThumbnail {
   file_name: string;
   url: string;
 }
+export enum IDataAccess {
+  "public",
+  "viewonly",
+  "private",
+}
 
 export interface IDataset {
   id: number;
@@ -30,6 +35,7 @@ export interface IDataset {
   spectral_properties: string | null;
   citation_doi: string | null;
   additional_information: string | null;
+  data_access: IDataAccess;
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
