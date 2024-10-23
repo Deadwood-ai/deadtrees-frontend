@@ -214,7 +214,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       footer={null}
       maskClosable={false}
       width={1200}
-    // width="100%"
     >
       <Form
         layout="vertical"
@@ -389,10 +388,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   <Form.Item
                     label={
                       <div>
-                        <Tooltip title="Upload a labels file (e.g., GeoJSON) associated with your orthophoto.">
+                        <Tooltip title="Upload a labels file associated with your orthophoto. Accepted formats: GeoJSON, zipped Shapefile (single file), or GeoPackage.">
                           <InfoCircleOutlined className="mr-2" />
                         </Tooltip>
-                        Labels File (GeoJSON)
+                        Labels File
                       </div>
                     }
                     name="labels_file"
@@ -402,7 +401,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       // fileList={labelsFileList}
                       // onChange={onLabelsFileChange}
                       // beforeUpload={beforeLabelsUpload}
-                      accept=".geojson,.json"
+                      // accept=".geojson,.json"
                       listType="text"
                       maxCount={1}
                     >
