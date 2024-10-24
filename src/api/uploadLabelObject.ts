@@ -4,7 +4,7 @@ import { Settings } from "../config";
 const uploadLabelObject = async (labelObject: FormData, token: string) => {
   try {
     const res = await fetch(`${Settings.API_URL}/datasets/${labelObject.get("dataset_id")}/label-object`, {
-      method: "PUT",
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         // Don't set Content-Type here, it will be automatically set with the correct boundary
