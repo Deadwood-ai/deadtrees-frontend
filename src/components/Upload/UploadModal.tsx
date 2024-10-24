@@ -17,13 +17,16 @@ import {
 import { InfoCircleOutlined, UploadOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
-import { ILicense, IPlatform } from "../../types/dataset";
+import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/dataset";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
-import upload from "../../api/upload";
+import upload from "../../api/uploadOrtho";
 import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
+import uploadLabelObject from "../../api/uploadLabelObject";
+import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
+
 import logger from "../../utils/logger";
 // New interfaces
 interface IFormValues {
@@ -34,6 +37,8 @@ interface IFormValues {
   author: string[];
   doi: string;
   additional_information: string;
+  labels_description: string;
+  data_access: IDataAccess;
 }
 
 interface UploadModalProps {
@@ -46,6 +51,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const pickerTypeOptions = ["date", "month", "year"];
 
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
+  const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
+
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
@@ -119,7 +126,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           dataset_id: resUpload.id.toString(),
           user_id: session!.user.id,
           name: uploadFile.name,
-          license: values.license,
+          data_access: values.data_access,
           platform: values.platform,
           spectral_properties: values.spectral_properties,
           aquisition_year: values.aquisition_date.year(),
@@ -155,7 +162,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           level: "info",
           message: "Metadata added",
         });
+        console.log("labelsFileList", labelsFileList);
 
+        const labelObject = new FormData();
+        labelObject.append("dataset_id", resUpload.id.toString());
+        labelObject.append("user_id", session!.user.id);
+        labelObject.append("file", labelsFileList[0].originFileObj!);
+        labelObject.append("file_alias", labelsFileList[0].name.split(".")[0]);
+        labelObject.append("label_description", values.labels_description);
+        labelObject.append("file_type", labelsFileList[0].name!.split(".")[1]);
+
+        const resUploadLabelObject = await uploadLabelObject(labelObject, session!.access_token);
+        console.log("resUploadLabelObject", resUploadLabelObject);
         // setUploadStatus("success");
         showSuccessNotification();
 
@@ -319,7 +337,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             <Form.Item
               label={
                 <div>
-                  <Tooltip title="Public: Data is fully accessible and downloadable. View-Only: Data is visible but not downloadable. Private: Data is not accessible. Note: All data is used for model training.">
+                  <Tooltip title="Public: Data is fully accessible and downloadable. Private: Data is not accessible. Note: All data is used for model training.">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
                   Data Access
@@ -327,7 +345,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               } name="data_access">
               <Radio.Group>
                 <Radio value="public">Public</Radio>
-                <Radio value="viewonly">View Only</Radio>
                 <Radio value="private">Private</Radio>
               </Radio.Group>
             </Form.Item>
@@ -395,13 +412,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       </div>
                     }
                     name="labels_file"
-                    rules={[{ required: true, message: "Please upload a labels file" }]}
+                    rules={[{ required: true, message: "Please upload a labels file in GeoJSON, Shapefile as zip, or GeoPackage format" }]}
                   >
                     <Upload
-                      // fileList={labelsFileList}
-                      // onChange={onLabelsFileChange}
-                      // beforeUpload={beforeLabelsUpload}
-                      // accept=".geojson,.json"
+                      fileList={labelsFileList}
+                      onChange={onLabelsFileChange}
+                      beforeUpload={beforeLabelsUpload}
+                      accept=".geojson,.json,.zip,.gpkg"
                       listType="text"
                       maxCount={1}
                     >
@@ -411,7 +428,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   <Form.Item
                     label={
                       <div>
-                        <Tooltip title="Provide additional information about the labels.">
+                        <Tooltip title="Provide additional information about the labels, like the type of labels or the source of the labels.">
                           <InfoCircleOutlined className="mr-2" />
                         </Tooltip>
                         Labels Description
