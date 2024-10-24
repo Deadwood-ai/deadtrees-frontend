@@ -395,7 +395,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 checked={enableLabelUpload}
                 onChange={(e) => setEnableLabelUpload(e.target.checked)}
               >
-                Enable Label Upload
+                Additional Labels Upload
               </Checkbox>
             </Form.Item>
 
@@ -435,10 +435,11 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       </div>
                     }
                     name="labels_description"
+                    rules={[{ required: true, message: "Please provide additional information about the labels" }]}
                   >
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}
-                      placeholder="Additional information about the labels"
+                      placeholder="Provide details about the labels, such as the source, type, and any other relevant information. This helps us understand the context and quality of the labels."
                     />
                   </Form.Item>
                 </>
