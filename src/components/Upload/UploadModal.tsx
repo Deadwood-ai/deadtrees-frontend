@@ -13,6 +13,7 @@ import {
   Divider,
   Checkbox,
   Typography,
+  Collapse,
 } from "antd";
 import { InfoCircleOutlined, UploadOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
@@ -57,7 +58,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
   const [uploadProgress, setUploadProgress] = useState(0);
-  // const [uploadStatus, setUploadStatus] = useState("");
   const { authors } = useData();
   console.log("authors in upload modal", authors);
   const {
@@ -128,7 +128,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           name: uploadFile.name,
           data_access: values.data_access,
           platform: values.platform,
-          spectral_properties: values.spectral_properties,
+          spectral_properties: "RGB",
           aquisition_year: values.aquisition_date.year(),
           aquisition_month:
             pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
@@ -226,29 +226,30 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   return (
     <Modal
-      title="File Upload"
+      // title="Upload Orthophoto and Optional Labels for Spatial Analysis"
       open={isVisible}
+      centered
       onCancel={onClose}
       footer={null}
       maskClosable={false}
-      width={1200}
+      width={1000}
     >
       <Form
         layout="vertical"
         onFinish={onFormFinish}
-        initialValues={{ platform: "drone", data_access: "public", spectral_properties: "RGB" }}
-        // className="space-y-4" // Add vertical spacing between form items
+        initialValues={{ platform: "drone", data_access: "public" }}
         variant="filled"
       >
         <div className="flex justify-center space-x-16"> {/* Center the content */}
-
           <div className="w-full max-w-md"> {/* Limit the form width */}
-            <Typography.Title level={4}>Orthophoto</Typography.Title>
+            <Typography.Title level={4}>Orthophoto Upload</Typography.Title>
+            <Typography.Paragraph type="secondary">
+              Upload your orthophoto in GeoTIFF format. This georeferenced image is essential for spatial analysis.
+            </Typography.Paragraph>
             <Form.Item
-              // label="Orthophoto (GeoTIFF format)"
               label={
                 <div>
-                  <Tooltip title="Upload an orthophoto in GeoTIFF format. This georeferenced image is essential for our analysis.">
+                  <Tooltip title="Upload your orthophoto in GeoTIFF format. Accepted formats: .tif, .tiff">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
                   Orthophoto (GeoTIFF)
@@ -269,13 +270,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             </Form.Item>
             <Form.Item
               rules={[{ required: true, message: "Please enter the authors" }]}
-              // label="Authors of the orthophoto"
               label={
                 <div>
-                  <Tooltip title="Select or add authors of the orthophoto. You can choose existing authors or type new names to add them.">
+                  <Tooltip title="Provide the names of individuals or organizations responsible for capturing the orthophoto. You can either select from existing authors or type new names.">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
-                  Authors of the orthophoto
+                  Authors of the Orthophoto
                 </div>
               }
               name="author"
@@ -285,17 +285,16 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   mode="tags"
                   style={{ width: "100%" }}
                   options={authors}
-                  placeholder="Authors"
+                  placeholder="Enter or select authors"
                 />
               ) : (
                 <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
               )}
             </Form.Item>
             <Form.Item
-              // label="Acquisition Date (prioritize correctness over precision)"
               label={
                 <div>
-                  <Tooltip title="Specify the orthophoto's acquisition date as accurately as possible. This information is crucial for temporal analysis and model training. If uncertain about the exact date, provide the most precise timeframe you're confident about (e.g., month or year).">
+                  <Tooltip title="Specify the acquisition date of the orthophoto. If you're unsure of the exact date, you can provide a broader timeframe (e.g., month or year).">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
                   Acquisition Date
@@ -306,10 +305,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             >
               <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
             </Form.Item>
-            <Divider />
+            {/* <Divider /> */}
+            <Typography.Title level={5}>Orthophoto Metadata</Typography.Title>
+            <Typography.Paragraph type="secondary">
+              Provide details about the orthophoto, including its source, acquisition date, and platform used for capturing it.
+            </Typography.Paragraph>
             <Form.Item label={
               <div>
-                <Tooltip title="Select the platform used to acquire the orthophoto.">
+                <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
                   <InfoCircleOutlined className="mr-2" />
                 </Tooltip>
                 Platform
@@ -321,7 +324,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio value="satellite">Satellite</Radio>
               </Radio.Group>
             </Form.Item>
-            <Form.Item label={
+            {/* <Form.Item label={
               <div>
                 <Tooltip title="Select the spectral properties of the orthophoto. Either RGB or NIRRGB.">
                   <InfoCircleOutlined className="mr-2" />
@@ -333,7 +336,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio value="RGB">RGB</Radio>
                 <Radio value="NIRRGB">NIRRGB</Radio>
               </Radio.Group>
-            </Form.Item>
+            </Form.Item> */}
             <Form.Item
               label={
                 <div>
@@ -348,34 +351,39 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio value="private">Private</Radio>
               </Radio.Group>
             </Form.Item>
-            <Divider />
+            {/* <Divider /> */}
+            {/* <Collapse> */}
+            {/* <Collapse.Panel header="Additional Metadata (Optional)" key="1"> */}
             <Form.Item
               label={
                 <div>
-                  <Tooltip title="Enter the DOI of a related publication.">
+                  <Tooltip title="Enter the DOI of any associated publication.">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
                   DOI
                 </div>
-              } name="doi">
-              <Input type="name" placeholder="DOI" />
+              }
+              name="doi"
+            >
+              <Input placeholder="Enter DOI (if applicable)" />
             </Form.Item>
             <Form.Item
               label={
                 <div>
-                  <Tooltip title="Provide any additional information about the orthophoto.">
+                  <Tooltip title="Provide any additional context for the orthophoto.">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
                   Additional Information
                 </div>
-              } name="additional_information">
-              <Input.TextArea
-                autoSize={{ minRows: 2, maxRows: 5 }}
-                placeholder="Additional Information for the Dataset"
-              />
+              }
+              name="additional_information"
+            >
+              <Input.TextArea placeholder="Enter additional information (optional)" />
             </Form.Item>
+            {/* </Collapse.Panel> */}
+            {/* </Collapse> */}
             <Form.Item>
-              <Space>
+              <Space className="pt-6">
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -389,18 +397,27 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               </Space>
             </Form.Item>
           </div>
-          <div className={`${enableLabelUpload ? ' w-full max-w-md' : ''}`}>
-            <Form.Item>
+          <div className={`${enableLabelUpload ? ' w-full max-w-md' : ''} pt-6`}>
+            {/* <Form.Item> */}
+            <div>
               <Checkbox
                 checked={enableLabelUpload}
                 onChange={(e) => setEnableLabelUpload(e.target.checked)}
+                className="text-lg font-semibold"
               >
                 Additional Labels Upload
               </Checkbox>
-            </Form.Item>
+            </div>
+            <div className="py-3 max-w-md">
+
+              {/* </Form.Item> */}
+              <Typography.Paragraph type="secondary">
+                Upload labels associated with your orthophoto if available.
+              </Typography.Paragraph>
+            </div>
 
             {enableLabelUpload && (
-              <div className="w-full pt-2">
+              <div className="w-full">
                 <>
                   <Form.Item
                     label={
@@ -408,7 +425,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                         <Tooltip title="Upload a labels file associated with your orthophoto. Accepted formats: GeoJSON, zipped Shapefile (single file), or GeoPackage.">
                           <InfoCircleOutlined className="mr-2" />
                         </Tooltip>
-                        Labels File
+                        Labels File (GeoJSON, Shapefile (zip), GeoPackage)
                       </div>
                     }
                     name="labels_file"
@@ -439,13 +456,16 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   >
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}
-                      placeholder="Provide details about the labels, such as the source, type, and any other relevant information. This helps us understand the context and quality of the labels."
+                      placeholder="Example: Type - Forest Boundaries, Source - XYZ Survey 2023"
                     />
                   </Form.Item>
                 </>
+
               </div>
             )}
+
           </div>
+
         </div>
       </Form>
     </Modal>
