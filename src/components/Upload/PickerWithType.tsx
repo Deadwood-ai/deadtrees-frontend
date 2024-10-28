@@ -1,16 +1,34 @@
 import { DatePicker, Select, Space } from "antd";
+import { Dayjs } from "dayjs";
 
-const PickerWithType = ({ value, onChange, pickerTypeOptions, pickerType, setPickerType }) => {
+interface PickerWithTypeProps {
+    value?: Dayjs | null;
+    onChange: (date: Dayjs | null) => void;
+    pickerTypeOptions: string[];
+    pickerType: string;
+    setPickerType: (type: string) => void;
+}
 
-    const pickerTypeToAntdPicker = {
-        "Year/Month/Day": 'date',
-        "Year/Month": 'month',
-        Year: 'year'
-    }
+const pickerTypeToAntdPicker: Record<string, 'date' | 'month' | 'year'> = {
+    "Year/Month/Day": 'date',
+    "Year/Month": 'month',
+    "Year": 'year'
+} as const;
 
+const PickerWithType = ({
+    value,
+    onChange,
+    pickerTypeOptions,
+    pickerType,
+    setPickerType
+}: PickerWithTypeProps) => {
     return (
         <Space>
-            <Select style={{ width: '160px' }} value={pickerType} onChange={(value) => setPickerType(value)}>
+            <Select
+                style={{ width: '160px' }}
+                value={pickerType}
+                onChange={setPickerType}
+            >
                 {pickerTypeOptions.map((option) => (
                     <Select.Option key={option} value={option}>
                         {option}
@@ -19,9 +37,7 @@ const PickerWithType = ({ value, onChange, pickerTypeOptions, pickerType, setPic
             </Select>
             <DatePicker
                 picker={pickerTypeToAntdPicker[pickerType]}
-                onChange={(date) => {
-                    onChange(date);
-                }}
+                onChange={onChange}
                 value={value}
             />
         </Space>

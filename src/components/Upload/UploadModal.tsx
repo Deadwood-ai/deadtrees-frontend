@@ -51,6 +51,7 @@ interface UploadModalProps {
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
 
+
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
 
@@ -301,6 +302,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               )}
             </Form.Item>
             <Form.Item
+              className="mb-1"
               label={
                 <div>
                   <Tooltip title="Specify the acquisition date of the orthophoto. If you're unsure of the exact date, you can provide a broader timeframe (e.g., month or year).">
@@ -312,10 +314,11 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               name="aquisition_date"
               rules={[{ required: true, message: "Please select a date" }]}
             >
-              <Typography.Paragraph type="secondary">
-                If unsure, give a broader timeframe (e.g., month or year).              </Typography.Paragraph>
               <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
             </Form.Item>
+            <Typography.Paragraph className="p-0" type="secondary">
+              If you're unsure of the exact date, provide a broader timeframe (e.g., month or year).
+            </Typography.Paragraph>
             {/* <Divider /> */}
             {/* <Typography.Title level={5}>Orthophoto Metadata</Typography.Title> */}
             {/* <Typography.Paragraph type="secondary">
