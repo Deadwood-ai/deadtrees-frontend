@@ -317,10 +317,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
             </Form.Item>
             {/* <Divider /> */}
-            <Typography.Title level={5}>Orthophoto Metadata</Typography.Title>
-            <Typography.Paragraph type="secondary">
+            {/* <Typography.Title level={5}>Orthophoto Metadata</Typography.Title> */}
+            {/* <Typography.Paragraph type="secondary">
               Provide details about the orthophoto, including its source, acquisition date, and platform used for capturing it.
-            </Typography.Paragraph>
+            </Typography.Paragraph> */}
             <Form.Item label={
               <div>
                 <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
