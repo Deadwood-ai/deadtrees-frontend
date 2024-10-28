@@ -43,13 +43,13 @@ export default function ProfilePage() {
     // );
   } else {
     return (
-      <div className=" m-auto h-full max-w-7xl">
+      <div className=" m-auto w-full max-w-7xl min-h-screen">
         <div className="flex pt-12 pb-8">
-          <div className="w-1/2">
+          <div className="w-1/2" >
             <Avatar size={84} src="https://avatar.iran.liara.run/public" />
             <Typography.Title style={{ marginBottom: '4px' }}>Profile</Typography.Title>
             <Typography.Text className="p-0 m-0 text-lg" type="secondary">{user?.email}</Typography.Text>
-          </div>
+          </div >
           <div>
             <Alert
               message="Upload is available!"
@@ -64,7 +64,7 @@ export default function ProfilePage() {
                   </p>
                   {/* <p className="font-semibold p-0 m-0">Requirements for upload:</p> */}
                   <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
-                    <li>📏 <strong>Resolution:</strong> Higher than 10 cm</li>
+                    <li>📏 <strong>Resolution:</strong> Higher than 20 cm</li>
                     <li>🌈 <strong>Color:</strong> RGB format</li>
                     <li>🗺️ <strong>File Format:</strong> GeoTIFF</li>
                     <li>🌐 <strong>Reference Systems:</strong> All supported</li>
@@ -75,14 +75,14 @@ export default function ProfilePage() {
               showIcon
             />
           </div>
-        </div>
+        </div >
         <div className=" w-full">
           <div className="mb-4 flex justify-end">
             <UploadButton />
           </div>
           <DataTable supabase={supabase} /> {/* Use the new DataTable component */}
         </div>
-      </div>
+      </div >
     );
   }
 }

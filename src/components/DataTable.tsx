@@ -162,7 +162,7 @@ const DataTable = ({ supabase }) => {
       rowKey={"id"}
       dataSource={userData}
       columns={columns}
-      pagination={{ pageSize: 7 }}
+      pagination={{ pageSize: 6 }}
 
     // size="small"
     />

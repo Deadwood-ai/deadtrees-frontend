@@ -49,7 +49,7 @@ interface UploadModalProps {
 }
 
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
-  const pickerTypeOptions = ["date", "month", "year"];
+  const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
 
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
@@ -249,7 +249,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         initialValues={{ platform: "drone", data_access: "public" }}
         variant="filled"
       >
-        <div className="flex justify-center space-x-16"> {/* Center the content */}
+        <div className="flex justify-center space-x-12"> {/* Center the content */}
           <div className="w-full max-w-md"> {/* Limit the form width */}
             <Typography.Title level={4}>Orthophoto Upload</Typography.Title>
             <Typography.Paragraph type="secondary">
@@ -306,12 +306,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   <Tooltip title="Specify the acquisition date of the orthophoto. If you're unsure of the exact date, you can provide a broader timeframe (e.g., month or year).">
                     <InfoCircleOutlined className="mr-2" />
                   </Tooltip>
-                  Acquisition Date
+                  Acquisition Date of the Orthophoto
                 </div>
               }
               name="aquisition_date"
               rules={[{ required: true, message: "Please select a date" }]}
             >
+              <Typography.Paragraph type="secondary">
+                If unsure, give a broader timeframe (e.g., month or year).              </Typography.Paragraph>
               <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
             </Form.Item>
             {/* <Divider /> */}
@@ -414,14 +416,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 onChange={(e) => setEnableLabelUpload(e.target.checked)}
                 className="text-lg font-semibold"
               >
-                Additional Labels Upload
+                Upload Labels (Optional)
               </Checkbox>
             </div>
             <div className="py-3 max-w-md">
-
-              {/* </Form.Item> */}
               <Typography.Paragraph type="secondary">
-                Upload labels associated with your orthophoto if available.
+                Upload standing deadwood labels (points, polygons, boxes) associated with your orthophoto.
               </Typography.Paragraph>
             </div>
 

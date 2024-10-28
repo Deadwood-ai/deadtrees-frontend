@@ -22,7 +22,7 @@ export default function App() {
         <Layout
           style={{
             margin: "0 auto",
-            padding: 24,
+            padding: 16,
             height: "100vh",
             backgroundColor: "transparent",
           }}
