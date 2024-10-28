@@ -9,6 +9,20 @@ export interface IThumbnail {
   file_name: string;
   url: string;
 }
+export enum IDataAccess {
+  "public",
+  "private",
+  "viewonly",
+}
+
+export interface ILabelObject {
+  dataset_id: number;
+  user_id: string;
+  file: File;
+  file_alias: string;
+  labels_description: string;
+  file_type: string;
+}
 
 export interface IDataset {
   id: number;
@@ -30,6 +44,7 @@ export interface IDataset {
   spectral_properties: string | null;
   citation_doi: string | null;
   additional_information: string | null;
+  data_access: IDataAccess;
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
@@ -44,48 +59,6 @@ export interface IDataset {
   label_type: string | null;
   thumbnail_path: string | null;
 }
-
-// export interface Dataset {
-//   aquisition_date: string;
-//   bbox: string | null;
-//   compress_time: number | null;
-//   content_type: string;
-//   copy_time: number;
-//   created_at: string;
-//   file_id: string;
-//   file_name: string;
-//   file_size: number;
-//   id: number;
-//   license: string;
-//   // platform: Platform;
-//   platform: string;
-//   processed_path: string;
-//   raw_path: string;
-//   sha256: string;
-//   status: Status;
-//   target_path: string;
-//   upload_date: string;
-//   user_id: string;
-//   uuid: string;
-//   wms_source: string | null;
-//   // labels
-//   // aoi: FeatureCollection | null;
-//   // standing_deadwood: FeatureCollection | null;
-//   project_id: string | null;
-//   authors_image: string | null;
-//   label_type: string | null;
-//   label_source: string | null;
-//   image_spectral_properties: string | null;
-//   citation_doi: string | null;
-//   label_quality: string | null;
-//   has_labels: boolean | null;
-//   public: boolean | null;
-//   display_filename: string | null;
-//   gadm_NAME_0: string | null;
-//   gadm_NAME_1: string | null;
-//   gadm_NAME_2: string | null;
-//   gadm_NAME_3: string | null;
-// }
 
 export interface ILabels {
   id: number;

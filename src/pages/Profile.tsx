@@ -50,13 +50,12 @@ export default function ProfilePage() {
             <Typography.Title className="font-3xl m-0">Profile</Typography.Title>
             <Typography.Text type="secondary">{user?.email}</Typography.Text>
           </div>
-          {/* <div>
+          <div>
             <Alert
               message="Upload is available!"
               description={
                 <>
-                  You can upload your data now, but integration and visualization on the platform are still in
-                  development. Full functionality will be available soon. For any questions, please{" "}
+                  You can now upload orthophotos and labels. The data is integrated and will be visualized on the platform. For any questions, please{" "}
                   <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
                     contact
                   </a>{" "}
@@ -66,7 +65,7 @@ export default function ProfilePage() {
               type="info"
               showIcon
             />
-          </div> */}
+          </div>
         </div>
         <div className=" w-full">
           <div className="mb-4 flex justify-end">
