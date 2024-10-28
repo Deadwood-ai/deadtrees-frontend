@@ -1,6 +1,7 @@
 import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
+import { useNavigate } from "react-router-dom";
 
 import { supabase } from "../hooks/useSupabase";
 import { useData } from "../hooks/useDataProvider";
@@ -280,6 +281,7 @@ const Roadmap = () => {
 };
 
 const GetInContact = () => {
+  const navigate = useNavigate();
   return (
     <div className="m-auto mt-24 max-w-6xl rounded-xl bg-slate-100 p-8">
       <p className="m-0 text-center text-3xl font-semibold text-gray-800 md:text-4xl">Want to join?</p>
@@ -288,9 +290,11 @@ const GetInContact = () => {
         <em>optionally</em>
         {` any labels for standing deadwood? We'd be excited to have you collaborate with us on this project.`}
       </p>
-      <div className="flex justify-center pt-8">
+      <div className="flex justify-center pt-8 space-x-4">
+        <Button type="primary" size="large" onClick={() => navigate("/profile")}>
+          Upload imagery
+        </Button>
         <Button
-          type="primary"
           size="large"
           href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
         >

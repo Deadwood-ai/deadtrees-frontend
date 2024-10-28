@@ -163,17 +163,26 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           message: "Metadata added",
         });
         console.log("labelsFileList", labelsFileList);
+        if (labelsFileList.length > 0) {
 
-        const labelObject = new FormData();
-        labelObject.append("dataset_id", resUpload.id.toString());
-        labelObject.append("user_id", session!.user.id);
-        labelObject.append("file", labelsFileList[0].originFileObj!);
-        labelObject.append("file_alias", labelsFileList[0].name.split(".")[0]);
-        labelObject.append("label_description", values.labels_description);
-        labelObject.append("file_type", labelsFileList[0].name!.split(".")[1]);
+          const labelObject = new FormData();
+          labelObject.append("dataset_id", resUpload.id.toString());
+          labelObject.append("user_id", session!.user.id);
+          labelObject.append("file", labelsFileList[0].originFileObj!);
+          labelObject.append("file_alias", labelsFileList[0].name.split(".")[0]);
+          labelObject.append("label_description", values.labels_description);
+          labelObject.append("file_type", labelsFileList[0].name!.split(".")[1]);
 
-        const resUploadLabelObject = await uploadLabelObject(labelObject, session!.access_token);
-        console.log("resUploadLabelObject", resUploadLabelObject);
+          const resUploadLabelObject = await uploadLabelObject(labelObject, session!.access_token);
+          console.log("resUploadLabelObject", resUploadLabelObject);
+          logger({
+            user_id: session!.user.id,
+            file_name: fileNameFull,
+            process: "upload",
+            level: "info",
+            message: "Labels uploaded",
+          });
+        }
         // setUploadStatus("success");
         showSuccessNotification();
 

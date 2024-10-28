@@ -1,14 +1,16 @@
 import React from "react";
 
-import { Table, Tag, Tooltip } from "antd";
+import { Button, Table, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  MapOutlined,
   LinkOutlined,
   SyncOutlined,
+  EnvironmentOutlined,
 } from "@ant-design/icons";
 import { Settings } from "../config";
 
@@ -34,7 +36,7 @@ const DataTable = ({ supabase }) => {
       ),
     },
     { title: "File", dataIndex: "file_alias", key: "file_alias" },
-    { title: "License", dataIndex: "license", key: "license" },
+    // { title: "License", dataIndex: "license", key: "license" },
 
     {
       title: "Platform",
@@ -44,22 +46,20 @@ const DataTable = ({ supabase }) => {
     },
 
     {
-      title: "Map",
+      title: "Location",
       dataIndex: "id",
       key: "id",
       render: (tag) => {
-        if (userData?.find((d) => d.id === tag).status == "processed") {
+        if (userData?.find((d) => d.id === tag)?.admin_level_1) {
           return (
             <Tooltip title="View data on the map">
-              <Tag color="green" onClick={() => nav(`/dataset/${tag}`)} icon={<LinkOutlined />}></Tag>
+              <Tag color="green">
+                {userData?.find((d) => d.id === tag)?.admin_level_1}, {userData?.find((d) => d.id === tag)?.admin_level_3}
+              </Tag>
             </Tooltip>
           );
         } else {
-          return (
-            <Tooltip title="Data is being processed">
-              <Tag icon={<ClockCircleOutlined />} color="default" />
-            </Tooltip>
-          );
+          return (<Tag icon={<ClockCircleOutlined />} color="default"></Tag>);
         }
       },
     },
@@ -74,14 +74,6 @@ const DataTable = ({ supabase }) => {
               <Tooltip title="Data will be processed shortly">
                 <Tag icon={<ClockCircleOutlined />} color="default">
                   waiting for processing
-                </Tag>
-              </Tooltip>
-            );
-          case "uploading":
-            return (
-              <Tooltip title="Data is being uploaded">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  uploading
                 </Tag>
               </Tooltip>
             );
@@ -143,10 +135,39 @@ const DataTable = ({ supabase }) => {
             );
         }
       },
+
+    },
+    {
+      title: "Actions",
+      dataIndex: "id",
+      key: "id",
+      render: (tag) => {
+        if (userData?.find((d) => d.id === tag)?.status == "processed") {
+          return (
+            <Button size="small" type="primary" icon={<EnvironmentOutlined />} onClick={() => nav(`/dataset/${tag}`)}>
+              View
+            </Button>
+          );
+        } else {
+          return (<Button disabled size="small" type="primary" icon={<EnvironmentOutlined />} onClick={() => nav(`/dataset/${tag}`)}>
+            View
+          </Button>)
+        }
+      },
     },
   ];
 
-  return <Table rowKey={"id"} dataSource={userData} columns={columns} pagination={{ pageSize: 10 }} />;
+  return (
+    <Table
+      rowKey={"id"}
+      dataSource={userData}
+      columns={columns}
+      pagination={{ pageSize: 7 }}
+
+    // size="small"
+    />
+  );
 };
 
 export default DataTable;
+

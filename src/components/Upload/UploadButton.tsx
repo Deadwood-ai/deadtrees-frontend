@@ -17,7 +17,7 @@ const UploadButton = () => {
 
   return (
     <>
-      <Button icon={<UploadOutlined />} type="primary" onClick={showModal}>
+      <Button size="large" icon={<UploadOutlined />} type="primary" onClick={showModal}>
         Upload
       </Button>
       {modals.map(modal => (
