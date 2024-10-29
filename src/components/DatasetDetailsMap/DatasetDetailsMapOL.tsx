@@ -26,8 +26,21 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [sliderValueSatellite, setSliderValueSatellite] = useState<number>(1);
   const [labelsFetched, setLabelsFetched] = useState<boolean>(false);
 
+  // Store layer references for cleanup
+  const layerRefs = useRef<{
+    basemap?: TileLayer;
+    orthoCog?: TileLayerWebGL;
+    geotiff2018?: TileLayerWebGL;
+    geotiff2019?: TileLayerWebGL;
+    geotiff2020?: TileLayerWebGL;
+    geotiff2021?: TileLayerWebGL;
+    vectorAOI?: VectorLayer;
+    vectorLabels?: VectorLayer;
+  }>({});
+
   useEffect(() => {
     if (!mapRef.current && data?.file_name) {
+      // Create base map layer
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -35,7 +48,9 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       });
+      layerRefs.current.basemap = basemapLayer;
 
+      // Create ortho layer
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
           sources: [
@@ -44,26 +59,24 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
               nodata: 0,
             },
           ],
-          // projection: "EPSG:4326",
           convertToRGB: true,
-          // normalize: false,
-          // interpolate: false,
         }),
-
         maxZoom: 20,
         cacheSize: 4096,
         preload: 4,
-        // zIndex: 99,
       });
-      // console.log("orthoCogLayer", orthoCogLayer);
-      // console.log("ortho props:", orthoCogLayer.getSource());
-      // console.log("extend of ortho is:", orthoCogLayer.getSource().getExtent());
+      layerRefs.current.orthoCog = orthoCogLayer;
 
+      // Create geotiff layers
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-      // console.log("geotifLayer2018", geotifLayer2018);
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
       const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
       const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
+
+      layerRefs.current.geotiff2018 = geotifLayer2018;
+      layerRefs.current.geotiff2019 = geotifLayer2019;
+      layerRefs.current.geotiff2020 = geotifLayer2020;
+      layerRefs.current.geotiff2021 = geotifLayer2021;
 
       const newMap = new Map({
         target: mapContainer.current,
@@ -76,86 +89,95 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         overlays: [],
         controls: [],
       });
+
+      // Add layers to map
       newMap.addLayer(orthoCogLayer);
       newMap.addLayer(geotifLayer2018);
       newMap.addLayer(geotifLayer2019);
       newMap.addLayer(geotifLayer2020);
       newMap.addLayer(geotifLayer2021);
       newMap.setView(orthoCogLayer.getSource().getView());
-      console.log("newMap", newMap.getView());
 
+      // Fetch and add labels
       fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
-        // console.log("labelsData", labelsData);
-        const vectorLayerAOI = new VectorLayer({
-          source: new VectorSource({
-            features: new GeoJSON().readFeatures(labelsData?.aoi, {
-              dataProjection: "EPSG:4326",
-              featureProjection: "EPSG:3857",
+        if (labelsData && mapRef.current) {
+          const vectorLayerAOI = new VectorLayer({
+            source: new VectorSource({
+              features: new GeoJSON().readFeatures(labelsData?.aoi, {
+                dataProjection: "EPSG:4326",
+                featureProjection: "EPSG:3857",
+              }),
             }),
-          }),
-          style: {
-            "stroke-color": "blue",
-            "stroke-width": 1,
-            "fill-color": "rgba(0, 0, 255, 0)",
-          },
-        });
-        // console.log('aoi layer', vectorLayerAOI);
-        const vectorLayerLabels = new VectorLayer({
-          source: new VectorSource({
-            features: new GeoJSON().readFeatures(labelsData?.label, {
-              dataProjection: "EPSG:4326",
-              featureProjection: "EPSG:3857",
-            }),
-          }),
-          className: "labels",
-          style: {
-            "stroke-color": "red",
-            "stroke-width": 1,
-            "fill-color": "rgba(255, 0, 0, 0.8)",
-          },
-        });
-        // console.log(
-        //   "projection:",
-        //   orthoCogLayer
-        //     .getSource()
-        //     ?.getView()
-        //     .then((view) => console.log(view.projection())),
-        // );
-        console.log("map properties: ", newMap.getProperties());
-        newMap.addLayer(vectorLayerAOI);
-        newMap.addLayer(vectorLayerLabels);
+            style: {
+              "stroke-color": "blue",
+              "stroke-width": 1,
+              "fill-color": "rgba(0, 0, 255, 0)",
+            },
+          });
+          layerRefs.current.vectorAOI = vectorLayerAOI;
 
-        // fit view to extent of orthoCogLayer
-        // newMap.getView().fit(vectorLayerAOI.getSource().getExtent(), {
-        //   size: newMap.getSize(),
-        //   maxZoom: 18,
-        // });
-        setLabelsFetched(true);
-        // newMap.setView(vectorLayerAOI.getSource().getView());
+          const vectorLayerLabels = new VectorLayer({
+            source: new VectorSource({
+              features: new GeoJSON().readFeatures(labelsData?.label, {
+                dataProjection: "EPSG:4326",
+                featureProjection: "EPSG:3857",
+              }),
+            }),
+            className: "labels",
+            style: {
+              "stroke-color": "red",
+              "stroke-width": 1,
+              "fill-color": "rgba(255, 0, 0, 0.8)",
+            },
+          });
+          layerRefs.current.vectorLabels = vectorLayerLabels;
+
+          newMap.addLayer(vectorLayerAOI);
+          newMap.addLayer(vectorLayerLabels);
+          setLabelsFetched(true);
+        }
       });
 
       mapRef.current = newMap;
     }
 
+    // Cleanup function
     return () => {
       if (mapRef.current) {
-        // Perform cleanup on mapRef.current
-        // Remove event listeners
-        mapRef.current.setTarget(null);
+        // Clean up layers
+        Object.values(layerRefs.current).forEach(layer => {
+          if (layer) {
+            // Remove from map
+            mapRef.current?.removeLayer(layer);
 
-        // Dispose layers
-        mapRef.current.getLayers().forEach((layer) => {
-          mapRef.current.removeLayer(layer);
+            // Clean up source
+            const source = layer.getSource();
+            if (source) {
+              if ('clear' in source) {
+                source.clear();
+              }
+              if ('dispose' in source) {
+                source.dispose();
+              }
+            }
+
+            // Clean up layer
+            if ('cleanup' in layer) {
+              layer.cleanup();
+            } else {
+              layer.dispose();
+            }
+          }
         });
 
-        // Clear collections
-        mapRef.current.getControls().clear();
-        mapRef.current.getInteractions().clear();
-        mapRef.current.getOverlays().clear();
+        // Clear layer references
+        layerRefs.current = {};
 
-        // Dispose of the map
+        // Clean up map
+        mapRef.current.setTarget(undefined);
         mapRef.current.dispose();
         mapRef.current = null;
+        console.log("map disposed");
       }
       setLabelsFetched(false);
     };

@@ -2,19 +2,21 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import getDeadwoodCOGUrl from "../../utils/getDeadwoodCOGUrl";
 
-const createDeadwoodGeotiffLayer = (year) => {
-  const geotiffLayer = new TileLayerWebGL({
-    source: new GeoTIFF({
-      sources: [
-        {
-          url: getDeadwoodCOGUrl(year),
-          min: 0,
-          max: 10000,
-        },
-      ],
-      interpolate: false,
-      normalize: true,
-    }),
+const createDeadwoodGeotiffLayer = (year: string) => {
+  const source = new GeoTIFF({
+    sources: [
+      {
+        url: getDeadwoodCOGUrl(year),
+        min: 0,
+        max: 10000,
+      },
+    ],
+    interpolate: false,
+    normalize: true,
+  });
+
+  const layer = new TileLayerWebGL({
+    source,
     className: "geotiff-layer" + year,
     style: {
       color: [
@@ -35,9 +37,16 @@ const createDeadwoodGeotiffLayer = (year) => {
         [129, 176, 247, 1],
       ],
     },
-    visible: true ? year === "2018" : false,
+    visible: year === "2018",
   });
-  return geotiffLayer;
+
+  layer.cleanup = () => {
+    source.clear();
+    source.dispose();
+    layer.dispose();
+  };
+
+  return layer;
 };
 
 export default createDeadwoodGeotiffLayer;

@@ -48,9 +48,17 @@ const hoverMarkerStyle = new Style({
   }),
 });
 
+interface MapRef extends Map {
+  moveEndListener?: () => void;
+  pointerMoveListener?: (evt: any) => void;
+  selectOnClick?: Select;
+  selectListener?: (e: any) => void;
+  tooltip?: Overlay;
+}
+
 const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }: { data: IDataset[], hoveredItem: number | null, setHoveredItem: (id: number | null) => void, setVisibleFeatures: (ids: string[]) => void }) => {
   const navigate = useNavigate();
-  const mapRef = useRef<Map | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
   const vectorLayerExtendRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -115,15 +123,21 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
       });
       map.addOverlay(tooltip);
 
-      map.on("moveend", () => {
-        // console.log("moveend");
+      // Store listener references
+      const moveEndListener = () => {
         const newViewport = {
           center: map.getView().getCenter() as number[],
           zoom: map.getView().getZoom() as number,
         };
         setDatasetViewport(newViewport);
         updateVisibleFeatures();
-      });
+      };
+      map.on('moveend', moveEndListener);
+
+      // Store references for cleanup
+      mapRef.current = map;
+      mapRef.current.moveEndListener = moveEndListener;
+      mapRef.current.tooltip = tooltip;
 
       map.on("pointermove", (evt) => {
         if (evt.dragging) return;
@@ -174,12 +188,62 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
 
       return () => {
         if (mapRef.current) {
-          mapRef.current.setTarget(null);
+          const map = mapRef.current;
+
+          // Dispose of select interaction
+          if (map.selectOnClick) {
+            map.selectOnClick.dispose();
+          }
+
+          // Remove and dispose of tooltip overlay
+          if (map.tooltip) {
+            map.removeOverlay(map.tooltip);
+            map.tooltip.dispose();
+          }
+
+          // Dispose of vector sources
+          vectorLayerExtendRef.current?.getSource().dispose();
+          vectorLayerMarkerRef.current?.getSource().dispose();
+
+          // Dispose of vector layers
+          vectorLayerExtendRef.current?.dispose();
+          vectorLayerMarkerRef.current?.dispose();
+
+          // Remove event listeners
+          if (map.moveEndListener) {
+            map.un('moveend', map.moveEndListener);
+          }
+          if (map.pointerMoveListener) {
+            map.un('pointermove', map.pointerMoveListener);
+          }
+
+          // Remove overlays and dispose layers
+          if (map.tooltip) {
+            map.removeOverlay(map.tooltip);
+          }
+
+          map.getLayers().forEach((layer) => {
+            const source = layer?.getSource();
+            if (source && 'dispose' in source) {
+              source.dispose();
+            }
+            map.removeLayer(layer);
+          });
+
+          // Clear collections and dispose
+          map.getControls().clear();
+          map.getInteractions().clear();
+          map.getOverlays().clear();
+          map.setTarget(null);
+
+          // Clear refs
           mapRef.current = null;
+          vectorLayerExtendRef.current = null;
+          vectorLayerMarkerRef.current = null;
         }
       };
     }
-  }, []); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
+  }, [updateVisibleFeatures, setHoveredItem]); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
 
 
   useEffect(() => {
@@ -294,6 +358,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
   //     };
   //   }
   // }, [debouncedUpdateVisibleFeatures]);
+
 
   return (
     <div
