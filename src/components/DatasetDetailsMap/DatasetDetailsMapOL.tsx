@@ -17,7 +17,7 @@ import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 
 const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
-  const [map, setMap] = useState(null);
+  const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef();
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
 
@@ -27,7 +27,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [labelsFetched, setLabelsFetched] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!map && data?.file_name) {
+    if (!mapRef.current && data?.file_name) {
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -134,63 +134,50 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         // newMap.setView(vectorLayerAOI.getSource().getView());
       });
 
-      setMap(newMap);
+      mapRef.current = newMap;
     }
 
     return () => {
-      if (map) {
-        // Remove all layers
-        map
-          .getLayers()
-          .getArray()
-          .slice()
-          .forEach((layer) => map.removeLayer(layer));
+      if (mapRef.current) {
+        // Perform cleanup on mapRef.current
+        // Remove event listeners
+        mapRef.current.setTarget(null);
 
-        // Remove all controls
-        map
-          .getControls()
-          .getArray()
-          .slice()
-          .forEach((control) => map.removeControl(control));
+        // Dispose layers
+        mapRef.current.getLayers().forEach((layer) => {
+          mapRef.current.removeLayer(layer);
+        });
 
-        // Remove all interactions
-        map
-          .getInteractions()
-          .getArray()
-          .slice()
-          .forEach((interaction) => map.removeInteraction(interaction));
-
-        // Remove all overlays
-        map
-          .getOverlays()
-          .getArray()
-          .slice()
-          .forEach((overlay) => map.removeOverlay(overlay));
+        // Clear collections
+        mapRef.current.getControls().clear();
+        mapRef.current.getInteractions().clear();
+        mapRef.current.getOverlays().clear();
 
         // Dispose of the map
-        map.setTarget(null);
-        map.dispose();
+        mapRef.current.dispose();
+        mapRef.current = null;
       }
+      setLabelsFetched(false);
     };
   }, [data]);
 
   // update label opacity on slider change
   useEffect(() => {
-    if (map && labelsFetched) {
+    if (mapRef.current && labelsFetched) {
       // const deadwoodLayer = map.getLayers().getArray()[7];
       // get layers with className_ === "labels"
-      const labelsLayer = map
+      const labelsLayer = mapRef.current
         .getLayers()
         .getArray()
         .filter((layer) => layer.className_ === "labels")[0];
       labelsLayer.setOpacity(sliderValueLabels);
     }
-  }, [sliderValueLabels, map]);
+  }, [sliderValueLabels]);
 
   // update satellite layer opacity on slider change
   useEffect(() => {
-    if (map) {
-      const layers = map.getLayers().getArray();
+    if (mapRef.current) {
+      const layers = mapRef.current.getLayers().getArray();
       layers.forEach((layer, index) => {
         // if has geotif in name
         // console.log("layer", layer.className_);
@@ -200,12 +187,12 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         }
       });
     }
-  }, [sliderValueSatellite, map]);
+  }, [sliderValueSatellite]);
 
   // update visibility of geotiff layers based on selectedYear
   useEffect(() => {
-    if (map) {
-      const layers = map.getLayers().getArray();
+    if (mapRef.current) {
+      const layers = mapRef.current.getLayers().getArray();
       layers.forEach((layer, index) => {
         // if (layer instanceof TileLayerWebGL) {
         if (layer.className_?.includes("geotiff")) {
@@ -213,12 +200,12 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         }
       });
     }
-  }, [selectedYear, map]);
+  }, [selectedYear]);
 
   // update on mapStyle change
   useEffect(() => {
-    if (map) {
-      const layer = map.getLayers().getArray()[0]; // basemap layer
+    if (mapRef.current) {
+      const layer = mapRef.current.getLayers().getArray()[0]; // basemap layer
       // console.log(layer);
       layer.setSource(
         new BingMaps({
@@ -228,7 +215,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         }),
       );
     }
-  }, [mapStyle, map]);
+  }, [mapStyle]);
 
   return (
     <div className="h-full w-full">
