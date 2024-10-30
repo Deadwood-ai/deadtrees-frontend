@@ -77,6 +77,12 @@ const DataTable = ({ supabase }) => {
                 </Tag>
               </Tooltip>
             );
+          case "uploading":
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                uploading
+              </Tag>
+            );
           case "uploaded":
             return (
               <Tooltip title="Data will be processed shortly">
