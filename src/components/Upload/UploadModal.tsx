@@ -50,6 +50,67 @@ interface UploadModalProps {
   uploadKey: string;
 }
 
+// Add these types near the top of the file
+interface UploadResponse {
+  id: string;
+  [key: string]: any;
+}
+
+interface MetadataPayload {
+  dataset_id: string;
+  user_id: string;
+  name: string;
+  data_access: IDataAccess;
+  platform: IPlatform;
+  spectral_properties: string;
+  aquisition_year: number;
+  aquisition_month: number | null;
+  aquisition_day: number | null;
+  authors: string;
+  citation_doi: string;
+  additional_information: string;
+}
+
+// Add these utility functions before the component
+function createMetadataPayload(
+  datasetId: string,
+  userId: string,
+  values: IFormValues,
+  fileName: string,
+  pickerType: string
+): MetadataPayload {
+  return {
+    dataset_id: datasetId,
+    user_id: userId,
+    name: fileName,
+    data_access: values.data_access,
+    platform: values.platform,
+    spectral_properties: "RGB",
+    aquisition_year: values.aquisition_date.year(),
+    aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
+    aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
+    authors: values.author.length > 1 ? values.author.join(" and ") : values.author[0],
+    citation_doi: values.doi,
+    additional_information: values.additional_information,
+  };
+}
+
+function createLabelObjectFormData(
+  datasetId: string,
+  userId: string,
+  labelFile: RcFile,
+  labelDescription: string
+): FormData {
+  const formData = new FormData();
+  formData.append("dataset_id", datasetId);
+  formData.append("user_id", userId);
+  formData.append("file", labelFile);
+  formData.append("file_alias", labelFile.name.split(".")[0]);
+  formData.append("label_description", labelDescription);
+  formData.append("file_type", labelFile.name.split(".")[1]);
+  return formData;
+}
+
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
 
@@ -72,6 +133,69 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
+  const uploadOrthophoto = async (file: RcFile): Promise<UploadResponse> => {
+    return new Promise((resolve, reject) => {
+      uploadOrtho({
+        uploadId: uploadKey,
+        file,
+        session,
+        onSuccess: (response) => {
+          logger({
+            user_id: session!.user.id,
+            file_name: fileNameFull,
+            process: "upload",
+            level: "info",
+            message: "Upload success",
+          });
+          resolve(response);
+        },
+        onError: (error) => {
+          logger({
+            user_id: session!.user.id,
+            file_name: fileNameFull,
+            process: "upload",
+            level: "error",
+            message: `Upload error: ${error}`,
+          });
+          reject(error);
+        },
+        onProgress: (event) => {
+          const percent = Math.round(event.percent);
+          updateUploadProgress(percent);
+        },
+      });
+    });
+  };
+
+  const getValidAccessToken = async (): Promise<string> => {
+    if (isTokenExpiringSoon(session)) {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      return data.session!.access_token;
+    }
+    return session!.access_token;
+  };
+
+  const processDataset = async (datasetId: string, token: string) => {
+    const processCog = {
+      resolution: 0.04,
+      profile: "jpeg",
+      quality: 75,
+      force_recreate: true,
+      tiling_scheme: "web-optimized",
+    };
+
+    logger({
+      user_id: session!.user.id,
+      file_name: fileNameFull,
+      process: "upload",
+      level: "info",
+      message: "Adding process",
+    });
+
+    await addProcess(datasetId, "all", token, processCog);
+  };
+
   const handleUpload = async (values: IFormValues) => {
     showUploadingNotification();
     logger({
@@ -83,153 +207,49 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     });
 
     try {
+      // Validate file
       const uploadFile = fileList[0];
-
-      if (!uploadFile || !uploadFile.originFileObj) {
+      if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
 
-      // Execute custom request here
-      const resUpload = await new Promise<any>((resolve, reject) => {
-        uploadOrtho({
-          uploadId: uploadKey,
-          file: uploadFile.originFileObj,
-          session: session,
-          onSuccess: (response) => {
-            console.log("Upload success:", response);
-            logger({
-              user_id: session!.user.id,
-              file_name: fileNameFull,
-              process: "upload",
-              level: "info",
-              message: "Upload success",
-            });
-            resolve(response);
-          },
-          onError: (error) => {
-            console.error("Upload error:", error);
-            reject(error);
-          },
-          onProgress: (event) => {
-            const percent = Math.round(event.percent);
-            setUploadProgress(percent);
-            updateUploadProgress(percent);
-          },
-        });
-      });
-
-      console.log("resUpload", resUpload);
-
-      if (resUpload.id) {
-
-        let validAccessToken: string;
-
-        if (isTokenExpiringSoon(session)) {
-          const { data, error } = await supabase.auth.refreshSession();
-          console.log("refreshed token", data.session);
-          if (error) {
-            console.error("Error refreshing token:", error);
-            throw error;
-          }
-          validAccessToken = data.session!.access_token;
-        } else {
-          console.log("using existing token", session);
-          validAccessToken = session!.access_token;
-        }
-
-        console.log("values", values);
-        // Adding metadata
-        const metadata = {
-          dataset_id: resUpload.id.toString(),
-          user_id: session!.user.id,
-          name: uploadFile.name,
-          data_access: values.data_access,
-          platform: values.platform,
-          spectral_properties: "RGB",
-          aquisition_year: values.aquisition_date.year(),
-          aquisition_month:
-            pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
-          aquisition_day:
-            pickerType === "date" ? values.aquisition_date.date() : null,
-          authors:
-            values.author.length > 1
-              ? values.author.join(" and ")
-              : values.author[0],
-          citation_doi: values.doi,
-          additional_information: values.additional_information,
-        };
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "info",
-          message: "Adding metadata",
-        });
-
-        const resAddMetadata = await addMetadata(
-          resUpload.id,
-          metadata,
-          validAccessToken
-        );
-        console.log("resAddMetadata", resAddMetadata);
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "info",
-          message: "Metadata added",
-        });
-        console.log("labelsFileList", labelsFileList);
-        if (labelsFileList.length > 0) {
-
-          const labelObject = new FormData();
-          labelObject.append("dataset_id", resUpload.id.toString());
-          labelObject.append("user_id", session!.user.id);
-          labelObject.append("file", labelsFileList[0].originFileObj!);
-          labelObject.append("file_alias", labelsFileList[0].name.split(".")[0]);
-          labelObject.append("label_description", values.labels_description);
-          labelObject.append("file_type", labelsFileList[0].name!.split(".")[1]);
-
-          const resUploadLabelObject = await uploadLabelObject(labelObject, validAccessToken);
-          console.log("resUploadLabelObject", resUploadLabelObject);
-          logger({
-            user_id: session!.user.id,
-            file_name: fileNameFull,
-            process: "upload",
-            level: "info",
-            message: "Labels uploaded",
-          });
-        }
-        // setUploadStatus("success");
-        showSuccessNotification();
-
-        // Starting COG build (uncomment if needed)
-        const processCog = {
-          resolution: 0.04,
-          profile: "jpeg",
-          quality: 75,
-          force_recreate: true,
-          tiling_scheme: "web-optimized",
-        }
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "info",
-          message: "Adding process",
-        });
-        const resAddProcess = await addProcess(resUpload.id, "all", validAccessToken, processCog);
-        console.log("resAddProcess", resAddProcess);
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "info",
-          message: "Process added",
-        });
-      } else {
+      // Upload orthophoto
+      const uploadResponse = await uploadOrthophoto(uploadFile.originFileObj);
+      if (!uploadResponse.id) {
         throw new Error("Upload failed to return an ID.");
       }
+
+      // Get valid access token
+      const validAccessToken = await getValidAccessToken();
+
+      // Add metadata
+      const metadata = createMetadataPayload(
+        uploadResponse.id.toString(),
+        session!.user.id,
+        values,
+        uploadFile.name,
+        pickerType
+      );
+      await addMetadata(uploadResponse.id, metadata, validAccessToken);
+
+      // Upload labels if present
+      if (labelsFileList.length > 0) {
+        const labelFile = labelsFileList[0].originFileObj;
+        if (labelFile) {
+          const labelFormData = createLabelObjectFormData(
+            uploadResponse.id.toString(),
+            session!.user.id,
+            labelFile,
+            values.labels_description
+          );
+          await uploadLabelObject(labelFormData, validAccessToken);
+        }
+      }
+
+      // Process dataset
+      await processDataset(uploadResponse.id, validAccessToken);
+
+      showSuccessNotification();
     } catch (error) {
       console.error("Upload error:", error);
       logger({
@@ -237,9 +257,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         file_name: fileNameFull,
         process: "upload",
         level: "error",
-        message: `Upload error ${error}`,
+        message: `Upload error: ${error}`,
       });
-      // setUploadStatus("error");
       showErrorNotification();
     }
   };
