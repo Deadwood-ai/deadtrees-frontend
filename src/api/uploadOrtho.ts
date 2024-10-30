@@ -21,16 +21,16 @@ interface ChunkInfo {
 
 const CHUNK_SIZE = 100 * 1024 * 1024; // 100 MB
 
-const refreshToken = async () => {
-  const { data, error } = await supabase.auth.refreshSession();
-  if (error) {
-    console.error("Error refreshing token:", error);
-    throw error;
-  }
-  return data.session?.access_token;
-};
+// const refreshToken = async () => {
+//   const { data, error } = await supabase.auth.refreshSession();
+//   if (error) {
+//     console.error("Error refreshing token:", error);
+//     throw error;
+//   }
+//   return data.session?.access_token;
+// };
 
-const upload = async (options: UploadOptions) => {
+const uploadOrtho = async (options: UploadOptions) => {
   const { file, onProgress, onSuccess, onError, uploadId, session } = options;
   const uploadStartTime = Date.now();
 
@@ -137,4 +137,4 @@ function handleError(error: unknown, onError: (error: Error) => void) {
   onError(error instanceof Error ? error : new Error("Upload failed"));
 }
 
-export default upload;
+export default uploadOrtho;

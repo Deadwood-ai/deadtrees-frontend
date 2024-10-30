@@ -22,13 +22,15 @@ import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/data
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
-import upload from "../../api/uploadOrtho";
+import uploadOrtho from "../../api/uploadOrtho";
 import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 
 import logger from "../../utils/logger";
+import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
+import { supabase } from "../../hooks/useSupabase";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -89,7 +91,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
       // Execute custom request here
       const resUpload = await new Promise<any>((resolve, reject) => {
-        upload({
+        uploadOrtho({
           uploadId: uploadKey,
           file: uploadFile.originFileObj,
           session: session,
@@ -117,10 +119,24 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       });
 
       console.log("resUpload", resUpload);
-      // setUploadStatus("processing");
-      // setUploadProgress(100);
 
       if (resUpload.id) {
+
+        let validAccessToken: string;
+
+        if (isTokenExpiringSoon(session)) {
+          const { data, error } = await supabase.auth.refreshSession();
+          console.log("refreshed token", data.session);
+          if (error) {
+            console.error("Error refreshing token:", error);
+            throw error;
+          }
+          validAccessToken = data.session!.access_token;
+        } else {
+          console.log("using existing token", session);
+          validAccessToken = session!.access_token;
+        }
+
         console.log("values", values);
         // Adding metadata
         const metadata = {
@@ -153,7 +169,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         const resAddMetadata = await addMetadata(
           resUpload.id,
           metadata,
-          session!.access_token
+          validAccessToken
         );
         console.log("resAddMetadata", resAddMetadata);
         logger({
@@ -174,7 +190,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           labelObject.append("label_description", values.labels_description);
           labelObject.append("file_type", labelsFileList[0].name!.split(".")[1]);
 
-          const resUploadLabelObject = await uploadLabelObject(labelObject, session!.access_token);
+          const resUploadLabelObject = await uploadLabelObject(labelObject, validAccessToken);
           console.log("resUploadLabelObject", resUploadLabelObject);
           logger({
             user_id: session!.user.id,
@@ -202,7 +218,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           level: "info",
           message: "Adding process",
         });
-        const resAddProcess = await addProcess(resUpload.id, "all", session!.access_token, processCog);
+        const resAddProcess = await addProcess(resUpload.id, "all", validAccessToken, processCog);
         console.log("resAddProcess", resAddProcess);
         logger({
           user_id: session!.user.id,
@@ -236,7 +252,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   return (
     <Modal
-      // title="Upload Orthophoto and Optional Labels for Spatial Analysis"
       open={isVisible}
       centered
       onCancel={onClose}
@@ -319,11 +334,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             <Typography.Paragraph className="p-0" type="secondary">
               If you're unsure of the exact date, provide a broader timeframe (e.g., month or year).
             </Typography.Paragraph>
-            {/* <Divider /> */}
-            {/* <Typography.Title level={5}>Orthophoto Metadata</Typography.Title> */}
-            {/* <Typography.Paragraph type="secondary">
-              Provide details about the orthophoto, including its source, acquisition date, and platform used for capturing it.
-            </Typography.Paragraph> */}
             <Form.Item label={
               <div>
                 <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
@@ -338,19 +348,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio value="satellite">Satellite</Radio>
               </Radio.Group>
             </Form.Item>
-            {/* <Form.Item label={
-              <div>
-                <Tooltip title="Select the spectral properties of the orthophoto. Either RGB or NIRRGB.">
-                  <InfoCircleOutlined className="mr-2" />
-                </Tooltip>
-                Spectral Properties
-              </div>
-            } name="spectral_properties">
-              <Radio.Group>
-                <Radio value="RGB">RGB</Radio>
-                <Radio value="NIRRGB">NIRRGB</Radio>
-              </Radio.Group>
-            </Form.Item> */}
             <Form.Item
               label={
                 <div>
@@ -365,9 +362,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio value="private">Private</Radio>
               </Radio.Group>
             </Form.Item>
-            {/* <Divider /> */}
-            {/* <Collapse> */}
-            {/* <Collapse.Panel header="Additional Metadata (Optional)" key="1"> */}
             <Form.Item
               label={
                 <div>
@@ -412,7 +406,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             </Form.Item>
           </div>
           <div className={`${enableLabelUpload ? ' w-full max-w-md' : ''} pt-6`}>
-            {/* <Form.Item> */}
             <div>
               <Checkbox
                 checked={enableLabelUpload}
@@ -472,12 +465,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     />
                   </Form.Item>
                 </>
-
               </div>
             )}
-
           </div>
-
         </div>
       </Form>
     </Modal>

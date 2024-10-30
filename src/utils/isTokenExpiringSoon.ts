@@ -1,4 +1,4 @@
-export const isTokenExpiringSoon = (session: any, thresholdMinutes: number = 30) => {
+export const isTokenExpiringSoon = (session: any, thresholdMinutes: number = 59) => {
   if (!session || !session.expires_at) {
     return true; // If we don't have a session or expiration time, assume it's expiring soon
   }
