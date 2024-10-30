@@ -109,12 +109,12 @@ export default function DatasetDetails() {
             </div>
 
             <div className="mt-4 rounded-md bg-white p-4">
-              <div className="flex justify-between p-2">
+              {/* <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">License: </Typography.Text>
                 </Typography.Text>
                 <Tag color="blue">{dataset.license}</Tag>
-              </div>
+              </div> */}
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">Platform: </Typography.Text>
