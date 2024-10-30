@@ -121,7 +121,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
 
-  const [uploadProgress, setUploadProgress] = useState(0);
   const { authors } = useData();
   console.log("authors in upload modal", authors);
   const {
@@ -205,6 +204,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       level: "info",
       message: "Upload started",
     });
+    console.log('form values', values);
 
     try {
       // Validate file
