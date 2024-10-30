@@ -21,7 +21,7 @@ const DataTable = ({ supabase }) => {
   console.log("userData", userData);
 
   const columns = [
-    { title: "ID", dataIndex: "id", key: "id" },
+    { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: 'descend', sorter: (a, b) => a.id - b.id, },
     {
       title: "Date",
       dataIndex: "aquisition_day",
