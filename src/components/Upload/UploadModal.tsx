@@ -79,6 +79,28 @@ function createMetadataPayload(
   fileName: string,
   pickerType: string
 ): MetadataPayload {
+  let year = null;
+  let month = null;
+  let day = null;
+
+  if (values.aquisition_date) {
+    // Handle different picker types
+    switch (pickerType) {
+      case "Year":
+        year = values.aquisition_date.year();
+        break;
+      case "Year/Month":
+        year = values.aquisition_date.year();
+        month = values.aquisition_date.month() + 1; // Adding 1 because months are 0-based
+        break;
+      case "Year/Month/Day":
+        year = values.aquisition_date.year();
+        month = values.aquisition_date.month() + 1;
+        day = values.aquisition_date.date();
+        break;
+    }
+  }
+
   return {
     dataset_id: datasetId,
     user_id: userId,
@@ -86,9 +108,9 @@ function createMetadataPayload(
     data_access: values.data_access,
     platform: values.platform,
     spectral_properties: "RGB",
-    aquisition_year: values.aquisition_date.year(),
-    aquisition_month: pickerType !== "year" ? values.aquisition_date.month() + 1 : null,
-    aquisition_day: pickerType === "date" ? values.aquisition_date.date() : null,
+    aquisition_year: year,
+    aquisition_month: month,
+    aquisition_day: day,
     authors: values.author.length > 1 ? values.author.join(" and ") : values.author[0],
     citation_doi: values.doi,
     additional_information: values.additional_information,

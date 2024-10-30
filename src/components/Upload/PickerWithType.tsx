@@ -22,12 +22,41 @@ const PickerWithType = ({
     pickerType,
     setPickerType
 }: PickerWithTypeProps) => {
+    const handleDateChange = (date: Dayjs | null) => {
+        if (date) {
+            // Normalize the date based on picker type
+            let normalizedDate: Dayjs | null = date;
+
+            switch (pickerType) {
+                case "Year":
+                    // Set to January 1st of selected year
+                    normalizedDate = date.startOf('year');
+                    break;
+                case "Year/Month":
+                    // Set to first day of selected month
+                    normalizedDate = date.startOf('month');
+                    break;
+                case "Year/Month/Day":
+                    // Keep the full date
+                    normalizedDate = date;
+                    break;
+            }
+            onChange(normalizedDate);
+        } else {
+            onChange(null);
+        }
+    };
+
     return (
         <Space>
             <Select
                 style={{ width: '160px' }}
                 value={pickerType}
-                onChange={setPickerType}
+                onChange={(newType) => {
+                    setPickerType(newType);
+                    // Reset date when changing picker type
+                    onChange(null);
+                }}
             >
                 {pickerTypeOptions.map((option) => (
                     <Select.Option key={option} value={option}>
@@ -37,8 +66,16 @@ const PickerWithType = ({
             </Select>
             <DatePicker
                 picker={pickerTypeToAntdPicker[pickerType]}
-                onChange={onChange}
+                onChange={handleDateChange}
                 value={value}
+                // Format the display based on picker type
+                format={
+                    pickerType === "Year"
+                        ? "YYYY"
+                        : pickerType === "Year/Month"
+                            ? "YYYY-MM"
+                            : "YYYY-MM-DD"
+                }
             />
         </Space>
     );
