@@ -1,10 +1,10 @@
-import { Button, notification, Tooltip, Divider } from "antd";
+import { Button, notification, Tooltip, Divider, Tag } from "antd";
 import { InfoCircleTwoTone } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
-
+import countryList from "../utils/countryList";
 const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset; index: any; setHoveredItem: ((id: number | null) => void) | undefined, hoveredItem: number | null }) => {
   const { setFilter, setFilterTag } = useData();
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
   return (
     <div
       key={index}
-      className={`flex rounded-md p-3 transition duration-150 ease-in-out ${hoveredItem === item.id ? 'bg-gray-200' : 'bg-white hover:bg-gray-100'
+      className={`flex rounded-md p-2 transition duration-150 ease-in-out ${hoveredItem === item.id ? 'bg-gray-200' : 'bg-white hover:bg-gray-100'
         }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -56,49 +56,61 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
         loading="lazy"
       />
       <div className="flex flex-1 flex-col justify-between pl-3">
-        <div className="flex items-baseline">
-          <Tooltip title={item.admin_level_3}>
+        <div className="flex justify-between">
+          <div className="flex items-baseline">
+            <Tooltip title={item.admin_level_3}>
+              <Button
+                type="text"
+                size="small"
+                className=" max-content font-semibold m-0 ml-1 p-0"
+                onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
+              >
+                {/* {item.admin_level_3} */}
+                {item.admin_level_3 && item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+
+              </Button>
+            </Tooltip>
+            ,
             <Button
               type="text"
               size="small"
-              className=" max-content font-semibold m-0 ml-1 p-0"
-              onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
+              className="max-content font-semibold m-0 p-0 ml-1"
+              onClick={(e) => onClickFilterHandler(e, item.admin_level_1, "admin_level_1")}
             >
-              {/* {item.admin_level_3} */}
-              {item.admin_level_3 && item.admin_level_3.slice(0, 18) + (item.admin_level_3.length > 18 ? "..." : "")}
-
+              {countryList[item.admin_level_1 as keyof typeof countryList]}
             </Button>
-          </Tooltip>
-          ,
-          <Button
-            type="text"
-            size="small"
-            className="max-content font-semibold m-0 p-0 ml-1"
-            onClick={(e) => onClickFilterHandler(e, item.admin_level_1, "admin_level_1")}
-          >
-            {item.admin_level_1}
-          </Button>
 
 
-          {/* <p className="m-0 flex-1 font-semibold">
+            {/* <p className="m-0 flex-1 font-semibold">
             {item.admin_level_3}, {item.admin_level_1}
           </p> */}
 
 
 
-          {/* {(item.wms_source === null || item.file_size > 1000000000) && (
+            {/* {(item.wms_source === null || item.file_size > 1000000000) && (
             <div>
               <Tooltip title="This dataset is not yet available">
                 <InfoCircleTwoTone />
               </Tooltip>
             </div>
           )} */}
+          </div>
+          <div className="text-xs pt-0.5">
+            {
+              new Date(item.aquisition_year, item.aquisition_month, item.aquisition_day).toLocaleDateString("en-US", {
+                year: "numeric",
+                ...(item.aquisition_month && { month: "numeric" }),
+                ...(item.aquisition_day && { day: "numeric" })
+              })
+            }
+
+          </div>
         </div>
         <div className="flex space-x-1">
           <div className="flex-1">
             <Tooltip title={item.authors}>
               <Button
-                type="text"
+                // type="text"
                 size="small"
                 className="font-medium"
                 onClick={(e) => onClickFilterHandler(e, item.authors, "authors_image")}
@@ -107,14 +119,8 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
               </Button>
             </Tooltip>
           </div>
-          <Button
-            className="max-content"
-            type="text"
-            size="small"
-            onClick={(e) => onClickFilterHandler(e, item.platform, "platform")}
-          >
-            {item.platform}
-          </Button>
+
+          <Tag onClick={(e) => onClickFilterHandler(e, item.platform, "platform")}>{item.platform}</Tag>
         </div>
       </div>
     </div>
