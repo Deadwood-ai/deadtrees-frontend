@@ -133,6 +133,18 @@ const DataTable = ({ supabase }) => {
                 Thumbnail error
               </Tag>
             );
+          case "deadwood_prediction":
+            return (
+              <Tag icon={<SyncOutlined spin />} color="processing">
+                Deadwood prediction
+              </Tag>
+            );
+          case "deadwood_errored":
+            return (
+              <Tag icon={<CloseCircleOutlined spin />} color="error">
+                Deadwood error
+              </Tag>
+            );
           default:
             return (
               <Tag icon={<ClockCircleOutlined />} color="default">
