@@ -21,6 +21,7 @@ export default function DatasetDetails() {
   const { session } = useAuth();
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
+  console.log(dataset);
   // notification.info({
   //   message: "Loading data can be slow and could fail",
   //   description: "The Applikation is not optimized yet. We are working on it.",
@@ -53,7 +54,7 @@ export default function DatasetDetails() {
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
                   {/* {dataset.admin_level_3 ? dataset.admin_level_3 : "Unknown"} */}
-                  {`${dataset.admin_level_3}, ${dataset.admin_level_1}`}
+                  {`${dataset.admin_level_3}, ${dataset.admin_level_1?.slice(0, 2) ?? ''}`}
                 </Typography.Title>
               </div>
 
@@ -86,12 +87,12 @@ export default function DatasetDetails() {
                     // })
                     new Date(
                       dataset.aquisition_year,
-                      dataset.aquisition_month,
-                      dataset.aquisition_day,
+                      dataset.aquisition_month ?? 0,
+                      dataset.aquisition_day ?? 1
                     ).toLocaleDateString("en-US", {
                       year: "numeric",
-                      month: "long",
-                      day: "numeric",
+                      ...(dataset.aquisition_month && { month: "long" }),
+                      ...(dataset.aquisition_day && { day: "numeric" })
                     })
                   }
                 </Typography.Text>
@@ -125,7 +126,9 @@ export default function DatasetDetails() {
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
-                {(dataset.file_size / 1024 / 1024).toFixed(0)} MB
+                {dataset.file_size > 1024 * 1024 * 1024
+                  ? `${(dataset.file_size / 1024 / 1024 / 1024).toFixed(1)} GB`
+                  : `${(dataset.file_size / 1024 / 1024).toFixed(0)} MB`}
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>

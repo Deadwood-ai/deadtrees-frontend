@@ -17,8 +17,8 @@ const fetchLabels = async ({
     return null;
   } else {
     // setLabels(data[0]);
-    return data[0];
     console.log("Data fetched:", data);
+    return data[0];
   }
 };
 export default fetchLabels;
