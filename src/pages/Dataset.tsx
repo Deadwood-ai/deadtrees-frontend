@@ -1,24 +1,71 @@
 import { useMemo, useState } from "react";
-import { Button, Col, Row, Tag, Input } from "antd";
-import { ArrowDownOutlined } from "@ant-design/icons";
+import { Button, Col, Row, Tag, Input, Segmented } from "antd";
+import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
 import { useData } from "../hooks/useDataProvider";
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMapOL";
 import { CloseOutlined } from "@ant-design/icons";
 
+type SearchField = 'authors' | 'location';
+type SortDirection = 'asc' | 'desc';
+
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
+  const [searchField, setSearchField] = useState<SearchField>('authors');
+  const [searchValue, setSearchValue] = useState('');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
+  const handleSearch = (value: string) => {
+    setSearchValue(value.toLowerCase());
+  };
 
-  const processedData = useMemo(() =>
-    data?.filter((d) => d.status === "processed" && d.admin_level_1),
-    [data]
-  );
-  // console.log('rerender dataset');
+  const toggleSort = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
 
+  const processedData = useMemo(() => {
+    if (!data) return null;
+
+    const filtered = data.filter((d) => {
+      const baseCondition = d.status === "processed" && d.admin_level_1;
+
+      if (!searchValue) return baseCondition;
+
+      let searchMatch = false;
+      switch (searchField) {
+        case 'authors':
+          searchMatch = (d.authors?.toLowerCase() || '').includes(searchValue);
+          break;
+        case 'location': {
+          const locationString = `${d.admin_level_3 || ''}, ${d.admin_level_1 || ''}`.toLowerCase();
+          searchMatch = locationString.includes(searchValue);
+          break;
+        }
+      }
+      return baseCondition && searchMatch;
+    });
+
+    // Sort by date
+    return filtered.sort((a, b) => {
+      const dateA = new Date(
+        parseInt(a.aquisition_year),
+        a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
+        a.aquisition_day ? parseInt(a.aquisition_day) : 1
+      );
+      const dateB = new Date(
+        parseInt(b.aquisition_year),
+        b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
+        b.aquisition_day ? parseInt(b.aquisition_day) : 1
+      );
+
+      return sortDirection === 'asc'
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
+    });
+  }, [data, searchField, searchValue, sortDirection]);
 
   return (
     <Row
@@ -27,7 +74,7 @@ export default function Dataset() {
         height: "100%",
       }}
     >
-      <Col className="flex h-full w-96 flex-col  py-4 pr-4 align-middle">
+      <Col className="flex h-full w-96 flex-col py-4 pr-4 align-middle">
         {filter ? (
           <div className="flex justify-between pb-2">
             <div className="flex items-center">
@@ -61,24 +108,58 @@ export default function Dataset() {
           </div>
         )}
 
-        {/* <div className="flex pb-4">
-          <Input.Search placeholder="Search" />
-          <div className="pl-4">
-            <Button icon={<ArrowDownOutlined />} type="primary"></Button>
+        <div className="flex flex-col gap-2 pb-4">
+          <Segmented
+            value={searchField}
+            onChange={(value) => setSearchField(value as SearchField)}
+            options={[
+              { label: 'Authors', value: 'authors' },
+              { label: 'Location (City, State)', value: 'location' },
+            ]}
+            className="pb-2"
+            block
+          />
+
+          <div className="flex">
+            <Input.Search
+              placeholder={searchField === 'location'
+                ? "Search by City or State"
+                : "Search by Authors"}
+              onSearch={handleSearch}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="flex-1"
+              allowClear
+            />
+            <div className="pl-4">
+              <Button
+                icon={sortDirection === 'asc' ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
+                onClick={toggleSort}
+                type="primary"
+                title={`Sort by date ${sortDirection === 'asc' ? 'oldest first' : 'newest first'}`}
+              />
+            </div>
           </div>
-        </div> */}
+        </div>
+
         {processedData ? (
-          <DataList data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} visibleFeatures={visibleFeatures} />
+          <DataList
+            data={processedData}
+            hoveredItem={hoveredItem}
+            setHoveredItem={setHoveredItem}
+            visibleFeatures={visibleFeatures}
+          />
         ) : (
-          // <div>test</div>
           <div>Loading...</div>
         )}
       </Col>
       <Col className="flex-1 py-4">
-        {/* <Map data={processedData} uuidHovered={uuidHovered} /> */}
-
         {processedData && processedData.length > 0 ? (
-          <DatasetMapOL data={processedData} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} setVisibleFeatures={setVisibleFeatures} />
+          <DatasetMapOL
+            data={processedData}
+            hoveredItem={hoveredItem}
+            setHoveredItem={setHoveredItem}
+            setVisibleFeatures={setVisibleFeatures}
+          />
         ) : (
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
             <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>
