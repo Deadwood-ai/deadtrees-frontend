@@ -57,6 +57,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             {
               url: Settings.COG_BASE_URL + data.cog_url,
               nodata: 0,
+              bands: [1, 2, 3], // Specify RGB bands if it's a color image
             },
           ],
           convertToRGB: true,
@@ -66,6 +67,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         preload: 4,
       });
       layerRefs.current.orthoCog = orthoCogLayer;
+      console.log("orthoCogLayer", orthoCogLayer);
 
       // Create geotiff layers
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
