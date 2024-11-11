@@ -21,6 +21,7 @@ import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import "./tooltip.css";
 import { useData } from "../../hooks/useDataProvider";
 import { debounce } from 'lodash';
+import { Settings } from "../../config";
 
 const defaultExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.4] }),
@@ -153,10 +154,25 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
 
         if (hoveredFeature) {
           const featureId = hoveredFeature.get("id");
+          const thumbnailPath = hoveredFeature.get("thumbnail_path");
           setHoveredItem(featureId);
           map.getTargetElement().style.cursor = "pointer";
           tooltip.setPosition(evt.coordinate);
-          tooltip.getElement().innerHTML = hoveredFeature.get("title") + " (" + hoveredFeature.get("date") + ")";
+
+          // Create tooltip content with thumbnail
+          // <img 
+          //   class="tooltip-thumbnail" 
+          //   src="${thumbnailPath ? Settings.THUMBNAIL_URL + thumbnailPath : "/assets/tree-icon.png"}"
+          //   alt="${hoveredFeature.get("title")}"
+          // />
+          const tooltipContent = `
+            <div class="tooltip-content">
+
+              <div>${hoveredFeature.get("title")} (${hoveredFeature.get("date")})</div>
+            </div>
+          `;
+
+          tooltip.getElement().innerHTML = tooltipContent;
           tooltip.getElement().classList.remove("hidden");
 
           // Apply hover styles
@@ -270,6 +286,7 @@ const DatasetMapOL = ({ data, hoveredItem, setHoveredItem, setVisibleFeatures }:
           extentFeature.setProperties({
             id: dataset.id,
             title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
+            thumbnail_path: dataset.thumbnail_path,
             date: new Date(
               dataset.aquisition_year,
               dataset.aquisition_month,
