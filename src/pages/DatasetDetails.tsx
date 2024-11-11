@@ -14,6 +14,7 @@ import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsM
 import download from "../api/download";
 import { useAuth } from "../hooks/useAuthProvider";
 import { Settings } from "../config";
+import countryList from "../utils/countryList";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function DatasetDetails() {
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
                   {/* {dataset.admin_level_3 ? dataset.admin_level_3 : "Unknown"} */}
-                  {`${dataset.admin_level_3}, ${dataset.admin_level_1?.slice(0, 2) ?? ''}`}
+                  {`${dataset.admin_level_3}, ${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ''}`}
                 </Typography.Title>
               </div>
 
