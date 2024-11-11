@@ -25,7 +25,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   const [sliderValueLabels, setSliderValueLabels] = useState<number>(0.6);
   const [sliderValueSatellite, setSliderValueSatellite] = useState<number>(1);
   const [labelsFetched, setLabelsFetched] = useState<boolean>(false);
-
+  const [labels, setLabels] = useState<ILabels | null>(null);
   // Store layer references for cleanup
   const layerRefs = useRef<{
     basemap?: TileLayer;
@@ -101,6 +101,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
       // Fetch and add labels
       fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
         if (labelsData && mapRef.current) {
+          setLabels(labelsData);
           const vectorLayerAOI = new VectorLayer({
             source: new VectorSource({
               features: new GeoJSON().readFeatures(labelsData?.aoi, {
@@ -257,6 +258,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
         </div>
         <div className="absolute bottom-6 right-2 z-50 ">
           <DeadwoodCardDetails
+            labels={labels}
             year={selectedYear}
             setSelectedYear={setSelectedYear}
             sliderValueLabels={sliderValueLabels}
