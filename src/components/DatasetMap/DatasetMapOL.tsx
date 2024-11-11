@@ -29,14 +29,14 @@ const defaultExtendStyle = new Style({
 
 const hoverExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.7] }),  // Orange with 60% opacity
-  stroke: new Stroke({ color: "white", width: 6 }),  // Dark orange stroke
+  stroke: new Stroke({ color: "white", width: 4 }),  // Dark orange stroke
 });
 
 const defaultMarkerStyle = new Style({
   image: new Circle({
-    radius: 10,
+    radius: 5,
     fill: new Fill({ color: [0, 0, 255, 0.5] }),
-    stroke: new Stroke({ color: "black", width: 2 }),
+    stroke: new Stroke({ color: "black", width: 1 }),
   }),
 });
 
@@ -44,7 +44,7 @@ const hoverMarkerStyle = new Style({
   image: new Circle({
     radius: 10,
     fill: new Fill({ color: [0, 0, 255, 0.5] }),
-    stroke: new Stroke({ color: "white", width: 6 }),
+    stroke: new Stroke({ color: "white", width: 4 }),
   }),
 });
 
