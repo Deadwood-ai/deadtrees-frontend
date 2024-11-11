@@ -175,7 +175,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       <div className="absolute bottom-8 right-2 z-20 flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1 shadow-xl">
         <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {selectedYear}</p>
         <div className="mb-2 flex w-full items-end">
-          <p className="m-0 w-full text-xs text-gray-600">Drone-based label</p>
+          {
+            <p className="m-0 w-full text-xs text-gray-600">Drone-based label</p>
+
+          }
           <div className="w-2/3">
             <p className="m-0 w-full text-xs text-gray-600">opacity</p>
 
