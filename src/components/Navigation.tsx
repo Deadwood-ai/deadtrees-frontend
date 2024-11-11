@@ -1,6 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } from "antd";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 const { Header } = Layout;
 
 import { useAuth } from "../hooks/useAuthProvider";
@@ -28,9 +28,15 @@ const navigation = [
 export default function Navigation() {
   const { session, signOut } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
+
+  // Get the base path for matching navigation
+  const currentPath = '/' + location.pathname.split('/')[1];
+
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
   return (
     <div className="hidden md:block">
       <Header
@@ -45,20 +51,18 @@ export default function Navigation() {
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
-          <img src="assets/logo.png" alt="deadtrees.earth" className="mr-3 h-12" />
+          <img src="/assets/logo.png" alt="deadtrees.earth" className="mr-3 h-12" />
           <div>
             <p className="rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600 -mt-2">
               BETA
             </p>
           </div>
-
         </div>
         <div>
           <Menu
             mode="horizontal"
-            defaultSelectedKeys={["1"]}
+            selectedKeys={[currentPath === '/' ? '/home' : currentPath]}
             items={navigation}
-            defaultActiveFirst
             style={{
               justifyContent: "end",
               flex: 1,
