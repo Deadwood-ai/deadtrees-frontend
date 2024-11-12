@@ -51,7 +51,7 @@ export default function Navigation() {
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
-          <img src="/assets/logo.png" alt="deadtrees.earth" className="mr-3 h-12" />
+          <img src="/assets/logo.png" alt="deadtrees.earth" onClick={() => nav("/")} className="mr-3 h-12 cursor-pointer" />
           <div>
             <p className="rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600 -mt-2">
               BETA
