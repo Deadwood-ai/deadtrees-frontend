@@ -20,6 +20,7 @@ export default function Dataset() {
 
   const handleSearch = (value: string) => {
     setSearchValue(value.toLowerCase());
+    console.log("searchValue", searchValue);
   };
 
   const toggleSort = () => {
@@ -36,12 +37,31 @@ export default function Dataset() {
 
       let searchMatch = false;
       switch (searchField) {
-        case 'authors':
-          searchMatch = (d.authors?.toLowerCase() || '').includes(searchValue);
+        case 'authors': {
+          if (!searchValue.trim()) {
+            searchMatch = true;
+            break;
+          }
+          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
+          const authorWords = (d.authors?.toLowerCase() || '').split(/[\s,]+/).filter(Boolean);
+
+          searchMatch = searchTerms.every(searchTerm =>
+            authorWords.some(word => word.includes(searchTerm))
+          );
           break;
+        }
         case 'location': {
-          const locationString = `${d.admin_level_3 || ''}, ${d.admin_level_1 || ''}`.toLowerCase();
-          searchMatch = locationString.includes(searchValue);
+          if (!searchValue.trim()) {
+            searchMatch = true;
+            break;
+          }
+          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
+          const locationWords = `${d.admin_level_3 || ''}, ${d.admin_level_1 || ''}`.toLowerCase()
+            .split(/[\s,]+/).filter(Boolean);
+
+          searchMatch = searchTerms.every(searchTerm =>
+            locationWords.some(word => word.includes(searchTerm))
+          );
           break;
         }
       }
