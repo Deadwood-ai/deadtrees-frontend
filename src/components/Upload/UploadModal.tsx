@@ -427,7 +427,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               }
               name="additional_information"
             >
-              <Input.TextArea placeholder="Enter additional information (optional)" />
+              <Input.TextArea placeholder="Enter additional information (optional)" autoSize={{ minRows: 3, maxRows: 6 }} />
             </Form.Item>
             {/* </Collapse.Panel> */}
             {/* </Collapse> */}
