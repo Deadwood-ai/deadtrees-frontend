@@ -160,7 +160,7 @@ export default function DatasetDetails() {
                 </div>
               </div>
             )}
-            {dataset.label_source ? (
+            {/* {dataset.label_source ? (
               <Button
                 href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
                 type="primary"
@@ -180,7 +180,7 @@ export default function DatasetDetails() {
               >
                 Download Ortho
               </Button>
-            )}
+            )} */}
           </div>
         ) : (
           <div>Loading...</div>

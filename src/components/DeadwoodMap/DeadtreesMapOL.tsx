@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Radio } from "antd";
+import { Alert, Radio } from "antd";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
@@ -258,6 +258,13 @@ const DeadtreesMapOL = () => {
               placeSelect={(place) => setBounds(place.bbox)}
             />
           </GeoapifyContext>
+
+          {/* <Notification
+            message="This is a notification"
+            description="This is the description of the notification"
+            type="info"
+          /> */}
+
         </div>
         <div className="absolute left-8 top-28 z-50">
           <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
