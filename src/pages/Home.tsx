@@ -42,8 +42,8 @@ const Hero = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-around">
-      <div className="md:max-w-md">
+    <div className="flex flex-col items-center justify-center">
+      <div>
         <div className="md:hidden">
           <Alert
             message="Mobile version is limited"
