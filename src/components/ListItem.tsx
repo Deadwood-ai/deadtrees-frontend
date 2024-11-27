@@ -97,7 +97,7 @@ const ListItme = ({ item, index, setHoveredItem, hoveredItem }: { item: IDataset
           </div>
           <div className="text-xs pt-0.5">
             {
-              new Date(item.aquisition_year, item.aquisition_month, item.aquisition_day).toLocaleDateString("en-US", {
+              new Date(item.aquisition_year, item.aquisition_month ?? 0, item.aquisition_day ?? 1).toLocaleDateString("en-US", {
                 year: "numeric",
                 ...(item.aquisition_month && { month: "numeric" }),
                 ...(item.aquisition_day && { day: "numeric" })
