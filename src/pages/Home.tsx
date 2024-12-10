@@ -1,12 +1,15 @@
-import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
-import { useState } from "react";
+import { Input, Button, Collapse, notification, Alert, Timeline, Carousel } from "antd";
+import { useState, useMemo, useRef } from "react";
 import Slider from "react-slick";
 import { useNavigate } from "react-router-dom";
-import { PlayCircleFilled } from "@ant-design/icons";
+import { PlayCircleFilled, LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ReactPlayer from 'react-player';
 
 import { supabase } from "../hooks/useSupabase";
 import { useData } from "../hooks/useDataProvider";
+import { Tooltip, Tag } from "antd";
+import { Settings } from "../config";
+import countryList from "../utils/countryList";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");
@@ -124,9 +127,45 @@ const Hero = () => {
   );
 };
 
+
+
+
+
+
+const LogoBanner = ({ logoPath }: { logoPath: string }) => {
+  return (
+    <div className="m-auto w-full">
+      <div className="flex items-baseline justify-center">
+        <div className="w-36 flex items-center justify-center">
+          <img src={logoPath} alt="deadtrees.earth" className="w-full" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LogoBannerBand = () => {
+  return (
+    <div className="pt-12">
+      <p className="mb-8 text-md text-center text-gray-600">Supported by</p>
+      <div className="flex justify-around flex-row w-full">
+        <LogoBanner logoPath="assets/logos/bml.png" />
+        <LogoBanner logoPath="assets/logos/esa.jpg" />
+        <LogoBanner logoPath="assets/logos/dfg.jpeg" />
+        <LogoBanner logoPath="assets/logos/uni-freiburg.png" />
+        <LogoBanner logoPath="assets/logos/NFDI4Earth_logo.jpg" />
+      </div>
+    </div>
+  )
+}
+
+
+
+
+
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
-    <div className="m-auto rounded-xl  px-6 py-6 md:bg-white">
+    <div className="m-auto rounded-xl px-6 w-full mx-8">
       <div className="flex items-baseline justify-center">
         <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
         <p className="m-0 pl-1 text-lg font-medium  text-blue-500">{unit}</p>
@@ -138,7 +177,7 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
 
 const Stats = () => {
   return (
-    <div className="mt-24 flex flex-col justify-center py-4 align-middle md:mt-0">
+    <div className="flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center">
         {/* <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p> */}
       </div>
@@ -154,49 +193,132 @@ const Stats = () => {
 };
 
 const Gallery = () => {
+  const { data } = useData();
+  const carouselRef = useRef<any>(null);
+  const navigate = useNavigate();
+
+  // Sort by id and filter for unique authors
+  const sortedUniqueData = useMemo(() => {
+    if (!data) return [];
+
+    const sorted = [...data].sort((a, b) => b.id - a.id);
+
+    const authorMap = new Map();
+    return sorted.filter(item => {
+      if (!item.authors) return false;
+      if (!authorMap.has(item.authors)) {
+        authorMap.set(item.authors, true);
+        return true;
+      }
+      return false;
+    });
+  }, [data]);
+
+  const onClickHandler = (id: number) => {
+    navigate(`/dataset/${id}`);
+  };
+
+  const next = () => carouselRef.current?.next();
+  const previous = () => carouselRef.current?.prev();
+
   const settings = {
-    // dots: true,
+    dots: false,
     infinite: true,
     speed: 500,
     slidesToShow: 4,
     slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 2000,
-    // adding buttons
-
+    arrows: false,
     responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1,
+        }
+      },
       {
         breakpoint: 640,
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
-        },
-      },
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 2,
-          slidesToScroll: 2,
-        },
-      },
-    ],
+        }
+      }
+    ]
   };
+
   return (
-    <div className="m-auto w-full pt-12 md:w-full md:pt-24">
-      <p className="pb-8 text-center text-lg font-semibold uppercase text-blue-600">Some of the imagery</p>
-      <Slider {...settings}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((i) => {
-          return (
-            <div className="m-auto" key={i}>
-              <img
-                className="aspect-square w-full items-center rounded-xl md:w-56"
-                src={`assets/compressed/image${i}.png`}
-                alt="deadtrees.earth"
-              />
-            </div>
-          );
-        })}
-      </Slider>
+    <div className="m-auto w-full rounded-xl md:w-full md:mt-36 bg-gradient-to-t from-white to-purple-50 p-8">
+      {/* bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text  */}
+      {/* <p className="text-center text-4xl font-semibold text-transparent">
+        Latest Datasets
+      </p> */}
+      <p className="text-lg text-center font-semibold text-blue-600">EXPLORE OUR DATABASE</p>
+      <p className="m-0 text-4xl font-semibold md:text-5xl text-center">Global Archive of Tree Mortality Imagery</p>
+      <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
+        Browse our growing collection of aerial imagery datasets showing tree mortality patterns. Each dataset includes high-resolution orthophotos and optional polygon annotations of dead trees, contributed by researchers worldwide.
+      </p>
+      <div className="relative px-4 pt-8">
+        {/* Navigation Buttons */}
+        <Button
+          className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
+          icon={<LeftOutlined />}
+          onClick={previous}
+          shape="circle"
+        />
+        <Button
+          className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
+          icon={<RightOutlined />}
+          onClick={next}
+          shape="circle"
+        />
+
+        {/* Carousel */}
+        <div className="mx-8">
+          <Carousel ref={carouselRef} {...settings}>
+            {sortedUniqueData.map((item) => (
+              <div key={item.id} className="px-2 py-4">
+                <div
+                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                  onClick={() => onClickHandler(item.id)}
+                >
+                  <img
+                    src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"}
+                    className="h-48 w-full object-cover rounded-t-lg"
+                    loading="lazy"
+                    alt={`Dataset ${item.id}`}
+                  />
+                  <div className="p-4">
+                    <div className="flex justify-between items-baseline mb-2">
+                      <Tooltip title={item.admin_level_3}>
+                        <span className="font-semibold truncate max-w-[70%]">
+                          {item.admin_level_3 && item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+                        </span>
+                      </Tooltip>
+                      <span className="text-xs text-gray-500">
+                        {new Date(item.aquisition_year, item.aquisition_month, item.aquisition_day).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          ...(item.aquisition_month && { month: "numeric" }),
+                          ...(item.aquisition_day && { day: "numeric" })
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Tooltip title={item.authors}>
+                        <span className="text-sm text-gray-600 truncate max-w-[70%]">
+                          {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
+                        </span>
+                      </Tooltip>
+                      <Tag>{item.platform}</Tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </Carousel>
+        </div>
+        <Stats />
+      </div>
     </div>
   );
 };
@@ -450,12 +572,12 @@ export default function HomePage() {
       {/* <div className="m-auto flex max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around"> */}
       <Hero />
       {/* <div className="hidden md:block"> */}
-      <Stats />
       {/* </div> */}
       {/* </div> */}
       {/* <div className="md:hidden"> */}
       {/* <Stats /> */}
       {/* </div> */}
+      <LogoBannerBand />
       <Gallery />
       <Features />
       <Roadmap />

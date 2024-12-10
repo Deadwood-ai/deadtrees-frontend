@@ -18,7 +18,7 @@ const { Content } = Layout;
 export default function App() {
   const LayoutWrapper = () => {
     return (
-      <div className="md:bg-slate-100">
+      <div className="bg-gradient-to-b from-white to-purple-100">
         <Layout
           style={{
             margin: "0 auto",
