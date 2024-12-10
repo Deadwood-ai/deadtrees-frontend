@@ -2,12 +2,15 @@ import { Input, Button, Collapse, notification, Alert, Timeline } from "antd";
 import { useState } from "react";
 import Slider from "react-slick";
 import { useNavigate } from "react-router-dom";
+import { PlayCircleFilled } from "@ant-design/icons";
+import ReactPlayer from 'react-player';
 
 import { supabase } from "../hooks/useSupabase";
 import { useData } from "../hooks/useDataProvider";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const emailCheck = (email: string) => {
     const re = /\S+@\S+\.\S+/;
@@ -41,8 +44,21 @@ const Hero = () => {
     }
   };
 
+  const toggleVideo = () => {
+    const video = document.querySelector('video');
+    if (video) {
+      if (video.paused) {
+        video.play();
+        setIsPlaying(true);
+      } else {
+        video.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center">
       <div>
         <div className="md:hidden">
           <Alert
@@ -53,34 +69,97 @@ const Hero = () => {
             closable
           />
         </div>
-        <div>
-          <p className="text-md inline-block rounded-3xl bg-yellow-400 p-2  font-semibold text-gray-600">BETA</p>
+        <div className="flex justify-center pt-12">
+          <p className="inline-block rounded-3xl bg-yellow-400 p-2 text-center font-semibold text-gray-600">
+            BETA
+          </p>
         </div>
-        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-4 text-4xl font-bold text-gray-800 text-transparent md:text-5xl">
+        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent md:text-7xl">
           deadtrees.earth
         </h1>
-        <p className="m-0 text-lg text-gray-500 md:max-w-md">
-          An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality
-          data.
+        <p className="m-auto text-center text-xl text-gray-500 md:max-w-xl">
+          An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality data.
         </p>
-        <div className="pt-16">
-          <p className="m-0 pb-1 text-sm text-gray-500">Get notified as soon as the service is up and running.</p>
-          <div className="grid space-y-2 pt-2 md:flex md:space-y-0">
+        <div className="pt-8 ">
+          <p className="pb-1 text-center text-md text-gray-500 max-w-xl">
+            Stay informed about new features and the latest developments.
+          </p>
+          <div className=" flex justify-center gap-2 pt-0 md:flex md:gap-0">
             <Input
-              // className="max-w-xs"
               size="large"
+              className="w-80"
               placeholder="Enter email..."
               onChange={(e) => setEmail(e.target.value)}
             />
-            <Button onClick={addSubscriber} className="md:ml-4" type="primary" size="large">
+            <Button
+              onClick={addSubscriber}
+              className="md:ml-4"
+              type="primary"
+              size="large"
+            >
               Get notified
             </Button>
           </div>
         </div>
       </div>
-      <div className="mt-16 hidden md:mt-0 md:block  md:p-8">
-        <img src="assets/compressed/hero-image.jpg" alt="deadtrees.earth" className="w-full rounded-3xl md:max-w-96" />
+      {/* Video Section */}
+      <div className="relative mx-auto mt-32 aspect-video w-full max-w-5xl overflow-hidden bg-gray-100 shadow-2xl rounded-2xl">
+        {!isPlaying && (
+          <PlayCircleFilled className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 text-blue-600 hover:text-blue-900 transition-colors text-6xl z-50" />
+        )}
+        <ReactPlayer
+          url="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/deadtrees_V2_final.mp4"
+          width="100%"
+          height="100%"
+          controls={true}
+          // playsinline
+          loop={true}
+          light="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/image.png?t=2024-12-10T11%3A01%3A12.395Z" // Add this line with your thumbnail image path
+          // muted={true}
+          config={{
+            file: {
+              attributes: {
+                // style: {
+                //   // borderRadius: '1rem',
+                //   // objectFit: 'contain'
+                // },
+                controlsList: 'nodownload',
+              },
+            },
+          }}
+          playing={isPlaying}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
       </div>
+
+      {/* 
+      <div className="hidden w-full pt-20 md:block">
+        <div className="mx-auto max-w-[1200px] overflow-hidden rounded-2xl shadow-xl transition-all hover:shadow-2xl">
+          <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-800">
+            <ReactPlayer
+              url="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/deadtrees_V2_final.mp4?t=2024-12-10T10%3A15%3A08.877Z"
+              width="100%"
+              height="100%"
+              // playing={true}
+              // loop={true}
+              muted={true}
+              // playsinline={true}
+              className="h-full w-full rounded-2xl"
+              config={{
+                file: {
+                  attributes: {
+                    style: {
+                      objectFit: 'cover',
+                    }
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div> */}
+
     </div>
   );
 };
@@ -408,15 +487,15 @@ const FAQ = () => {
 export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl pb-1">
-      <div className="m-auto flex max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around">
-        <Hero />
-        <div className="hidden md:block">
-          <Stats />
-        </div>
-      </div>
-      <div className="md:hidden">
-        <Stats />
-      </div>
+      {/* <div className="m-auto flex max-w-lg flex-col justify-around md:h-[calc(100vh-74px)] md:max-w-6xl md:justify-around"> */}
+      <Hero />
+      {/* <div className="hidden md:block"> */}
+      <Stats />
+      {/* </div> */}
+      {/* </div> */}
+      {/* <div className="md:hidden"> */}
+      {/* <Stats /> */}
+      {/* </div> */}
       <Gallery />
       <Features />
       <Roadmap />
