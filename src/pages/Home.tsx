@@ -44,21 +44,8 @@ const Hero = () => {
     }
   };
 
-  const toggleVideo = () => {
-    const video = document.querySelector('video');
-    if (video) {
-      if (video.paused) {
-        video.play();
-        setIsPlaying(true);
-      } else {
-        video.pause();
-        setIsPlaying(false);
-      }
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center pb-12 pt-24">
       <div>
         <div className="md:hidden">
           <Alert
@@ -69,7 +56,7 @@ const Hero = () => {
             closable
           />
         </div>
-        <div className="flex justify-center pt-12">
+        <div className="flex justify-center">
           <p className="inline-block rounded-3xl bg-yellow-400 p-2 text-center font-semibold text-gray-600">
             BETA
           </p>
@@ -105,24 +92,25 @@ const Hero = () => {
       {/* Video Section */}
       <div className="relative mx-auto mt-32 aspect-video w-full max-w-5xl overflow-hidden bg-gray-100 shadow-2xl rounded-2xl">
         {!isPlaying && (
-          <PlayCircleFilled className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 text-blue-600 hover:text-blue-900 transition-colors text-6xl z-50" />
+          <PlayCircleFilled
+            onClick={(e) => {
+              setIsPlaying(true);
+            }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full p-1 text-blue-600 hover:text-blue-900 transition-colors text-6xl z-50 pointer-events-none"
+          />
         )}
         <ReactPlayer
           url="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/deadtrees_V2_final.mp4"
           width="100%"
           height="100%"
           controls={true}
-          // playsinline
+          playsinline
           loop={true}
           light="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/image.png?t=2024-12-10T11%3A01%3A12.395Z" // Add this line with your thumbnail image path
-          // muted={true}
           config={{
             file: {
               attributes: {
-                // style: {
-                //   // borderRadius: '1rem',
-                //   // objectFit: 'contain'
-                // },
+
                 controlsList: 'nodownload',
               },
             },
@@ -132,34 +120,6 @@ const Hero = () => {
           onPause={() => setIsPlaying(false)}
         />
       </div>
-
-      {/* 
-      <div className="hidden w-full pt-20 md:block">
-        <div className="mx-auto max-w-[1200px] overflow-hidden rounded-2xl shadow-xl transition-all hover:shadow-2xl">
-          <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-800">
-            <ReactPlayer
-              url="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/deadtrees_V2_final.mp4?t=2024-12-10T10%3A15%3A08.877Z"
-              width="100%"
-              height="100%"
-              // playing={true}
-              // loop={true}
-              muted={true}
-              // playsinline={true}
-              className="h-full w-full rounded-2xl"
-              config={{
-                file: {
-                  attributes: {
-                    style: {
-                      objectFit: 'cover',
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-        </div>
-      </div> */}
-
     </div>
   );
 };
@@ -178,9 +138,9 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
 
 const Stats = () => {
   return (
-    <div className="mt-16 flex flex-col justify-center py-4 align-middle md:mt-0">
+    <div className="mt-24 flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center">
-        <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p>
+        {/* <p className="text-xl font-semibold text-blue-600">CURRENT STATS</p> */}
       </div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
         {/* <Stat title="covered" value="75k" unit="ha" /> */}
