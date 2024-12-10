@@ -60,9 +60,7 @@ const Hero = () => {
           />
         </div>
         <div className="flex justify-center pt-12 md:pt-24">
-          <p className="inline-block rounded-3xl bg-yellow-400 p-2 text-center font-semibold text-gray-600">
-            BETA
-          </p>
+          <Tag className="text-xl mb-4" color="warning">BETA</Tag>
         </div>
         <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent md:text-7xl">
           deadtrees.earth

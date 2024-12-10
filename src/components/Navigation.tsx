@@ -1,5 +1,5 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image } from "antd";
+import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image, Tag } from "antd";
 import { Link, useLocation } from "react-router-dom";
 const { Header } = Layout;
 
@@ -20,6 +20,10 @@ const navigation = [
     label: <Link to="/dataset">Dataset</Link>,
   },
   {
+    key: "/about",
+    label: <Link to="/about">About</Link>,
+  },
+  {
     key: "/profile",
     label: <Link to="/profile">Profile</Link>,
   },
@@ -38,12 +42,12 @@ export default function Navigation() {
   } = theme.useToken();
 
   return (
-    <div className="hidden md:block">
+    <div className="hidden md:block bg-slate-200 rounded-lg">
       <Header
         style={{
           display: "flex",
           alignItems: "center",
-          background: colorBgContainer,
+          background: '#f8fafc',
           position: "sticky",
           top: 0,
           zIndex: 1,
@@ -52,22 +56,19 @@ export default function Navigation() {
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
           <img src="/assets/logo.png" alt="deadtrees.earth" onClick={() => nav("/")} className="mr-3 h-12 cursor-pointer" />
-          <div>
-            <p className="rounded-2xl bg-yellow-400 p-1.5 align-text-top text-xs font-semibold text-gray-600 -mt-2">
-              BETA
-            </p>
-          </div>
+          <Tag color="warning">BETA</Tag>
         </div>
-        <div>
+        <div style={{ flex: 1, backgroundColor: '#f8fafc' }}>
           <Menu
             mode="horizontal"
             selectedKeys={[currentPath === '/' ? '/home' : currentPath]}
             items={navigation}
             style={{
               justifyContent: "end",
-              flex: 1,
               minWidth: 0,
               borderBottom: "none",
+              backgroundColor: '#f8fafc',
+              width: '100%'
             }}
           />
         </div>

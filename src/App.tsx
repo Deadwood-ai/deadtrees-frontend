@@ -12,13 +12,15 @@ import SignUp from "./pages/auth/SignUp";
 import SignIn from "./pages/auth/SignIn";
 import Forgotpassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import About from "./pages/About";
 
 const { Content } = Layout;
 
 export default function App() {
   const LayoutWrapper = () => {
     return (
-      <div className="bg-gradient-to-b from-white to-purple-100">
+      // className="bg-gradient-to-b from-white to-purple-100"
+      <div >
         <Layout
           style={{
             margin: "0 auto",
@@ -46,6 +48,7 @@ export default function App() {
             <Route path="dataset" element={<Dataset />} />
             <Route path="dataset/:id" element={<DatasetDetails />} />
             <Route path="deadtrees" element={<Deadtrees />} />
+            <Route path="about" element={<About />} />
             <Route path="sign-up" element={<SignUp />}></Route>
             <Route path="sign-in" element={<SignIn />}></Route>
             <Route path="forgot-password" element={<Forgotpassword />}></Route>
