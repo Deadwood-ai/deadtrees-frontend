@@ -299,7 +299,6 @@ const Gallery = () => {
                           })}
                         </span>
                       </div>
-
                       <div className="flex items-center justify-between">
                         <Tooltip title={item.authors}>
                           <span className="text-sm text-gray-600 truncate max-w-[70%]">
