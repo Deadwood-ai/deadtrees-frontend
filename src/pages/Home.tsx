@@ -201,7 +201,7 @@ const Gallery = () => {
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
 
-    const sorted = [...data].sort((a, b) => b.id - a.id);
+    const sorted = [...data].sort((a, b) => b.id + a.id);
 
     const authorMap = new Map();
     return sorted.filter(item => {
@@ -316,8 +316,13 @@ const Gallery = () => {
           </div>
           <Stats />
         </div>
+        <div className="flex justify-center pt-8">
+          <Button type="primary" size="large" onClick={() => navigate("/dataset")}>
+            Explore all datasets
+          </Button>
+        </div>
       </div>
-    </div>
+    </div >
   );
 };
 
