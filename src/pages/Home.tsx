@@ -48,18 +48,18 @@ const Hero = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pb-12 pt-24">
+    <div className="flex flex-col items-center pb-12">
       <div>
         <div className="md:hidden">
           <Alert
             message="Mobile version is limited"
-            description="Please use a desktop browser for the best experience."
+            description="Please use a desktop browser for full functionality. Features like the interactive map, data visualization, and dataset uploads are optimized for desktop devices."
             type="info"
             showIcon
             closable
           />
         </div>
-        <div className="flex justify-center">
+        <div className="flex justify-center pt-12 md:pt-24">
           <p className="inline-block rounded-3xl bg-yellow-400 p-2 text-center font-semibold text-gray-600">
             BETA
           </p>
@@ -70,20 +70,20 @@ const Hero = () => {
         <p className="m-auto text-center text-xl text-gray-500 md:max-w-xl">
           An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality data.
         </p>
-        <div className="pt-8 ">
+        <div className="pt-8">
           <p className="pb-1 text-center text-md text-gray-500 max-w-xl">
             Stay informed about new features and the latest developments.
           </p>
-          <div className=" flex justify-center gap-2 pt-0 md:flex md:gap-0">
+          <div className="flex flex-col md:flex-row w-full justify-center gap-2 pt-0">
             <Input
               size="large"
-              className="w-80"
+              className="w-full md:w-80"
               placeholder="Enter email..."
               onChange={(e) => setEmail(e.target.value)}
             />
             <Button
               onClick={addSubscriber}
-              className="md:ml-4"
+              className="w-full md:w-auto"
               type="primary"
               size="large"
             >
@@ -93,7 +93,7 @@ const Hero = () => {
         </div>
       </div>
       {/* Video Section */}
-      <div className="relative mx-auto mt-32 aspect-video w-full max-w-5xl overflow-hidden bg-gray-100 shadow-2xl rounded-2xl">
+      <div className="relative mx-auto mt-12 md:mt-32 aspect-video w-full max-w-5xl overflow-hidden bg-gray-100 shadow-2xl rounded-2xl">
         {!isPlaying && (
           <PlayCircleFilled
             onClick={(e) => {
@@ -132,9 +132,9 @@ const Hero = () => {
 
 
 
-const LogoBanner = ({ logoPath }: { logoPath: string }) => {
+const LogoBanner = ({ logoPath, className = "" }: { logoPath: string; className?: string }) => {
   return (
-    <div className="m-auto w-full">
+    <div className={`m-auto w-full ${className}`}>
       <div className="flex items-baseline justify-center">
         <div className="w-36 flex items-center justify-center">
           <img src={logoPath} alt="deadtrees.earth" className="w-full" />
@@ -148,15 +148,15 @@ const LogoBannerBand = () => {
   return (
     <div className="pt-12">
       <p className="mb-8 text-md text-center text-gray-600">Supported by</p>
-      <div className="flex justify-around flex-row w-full">
+      <div className="grid grid-cols-2 gap-4 md:flex md:justify-around w-full">
         <LogoBanner logoPath="assets/logos/bml.png" />
         <LogoBanner logoPath="assets/logos/esa.jpg" />
         <LogoBanner logoPath="assets/logos/dfg.jpeg" />
         <LogoBanner logoPath="assets/logos/uni-freiburg.png" />
-        <LogoBanner logoPath="assets/logos/NFDI4Earth_logo.jpg" />
+        <LogoBanner logoPath="assets/logos/NFDI4Earth_logo.jpg" className="md:block hidden" />
       </div>
     </div>
-  )
+  );
 }
 
 
@@ -247,77 +247,75 @@ const Gallery = () => {
   };
 
   return (
-    <div className="m-auto w-full rounded-xl md:w-full md:mt-36 bg-gradient-to-t from-white to-purple-50 p-8">
-      {/* bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text  */}
-      {/* <p className="text-center text-4xl font-semibold text-transparent">
-        Latest Datasets
-      </p> */}
-      <p className="text-lg text-center font-semibold text-blue-600">EXPLORE OUR DATABASE</p>
-      <p className="m-0 text-4xl font-semibold md:text-5xl text-center">Global Archive of Tree Mortality Imagery</p>
-      <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
-        Browse our growing collection of aerial imagery datasets showing tree mortality patterns. Each dataset includes high-resolution orthophotos and optional polygon annotations of dead trees, contributed by researchers worldwide.
-      </p>
-      <div className="relative px-4 pt-8">
-        {/* Navigation Buttons */}
-        <Button
-          className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
-          icon={<LeftOutlined />}
-          onClick={previous}
-          shape="circle"
-        />
-        <Button
-          className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
-          icon={<RightOutlined />}
-          onClick={next}
-          shape="circle"
-        />
+    <div className="hidden md:block">
+      <div className="m-auto w-full rounded-xl md:w-full md:mt-36 bg-gradient-to-t from-white to-purple-50 p-8">
+        <p className="text-lg text-center font-semibold text-blue-600">EXPLORE OUR DATABASE</p>
+        <p className="m-0 text-4xl font-semibold md:text-5xl text-center">Global Tree Mortality Atlas</p>
+        <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
+          Browse our growing collection of aerial imagery datasets showing tree mortality patterns. Each dataset includes high-resolution orthophotos and optional polygon annotations of dead trees, contributed by researchers worldwide.
+        </p>
+        <div className="relative px-4 pt-8">
+          {/* Navigation Buttons */}
+          <Button
+            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
+            icon={<LeftOutlined />}
+            onClick={previous}
+            shape="circle"
+          />
+          <Button
+            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
+            icon={<RightOutlined />}
+            onClick={next}
+            shape="circle"
+          />
 
-        {/* Carousel */}
-        <div className="mx-8">
-          <Carousel ref={carouselRef} {...settings}>
-            {sortedUniqueData.map((item) => (
-              <div key={item.id} className="px-2 py-4">
-                <div
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                  onClick={() => onClickHandler(item.id)}
-                >
-                  <img
-                    src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"}
-                    className="h-48 w-full object-cover rounded-t-lg"
-                    loading="lazy"
-                    alt={`Dataset ${item.id}`}
-                  />
-                  <div className="p-4">
-                    <div className="flex justify-between items-baseline mb-2">
-                      <Tooltip title={item.admin_level_3}>
-                        <span className="font-semibold truncate max-w-[70%]">
-                          {item.admin_level_3 && item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+          {/* Carousel */}
+          <div className="mx-8">
+            <Carousel ref={carouselRef} {...settings}>
+              {sortedUniqueData.map((item) => (
+                <div key={item.id} className="px-2 py-4">
+                  <div
+                    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                    onClick={() => onClickHandler(item.id)}
+                  >
+                    <img
+                      src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"}
+                      className="h-48 w-full object-cover rounded-t-lg"
+                      loading="lazy"
+                      alt={`Dataset ${item.id}`}
+                    />
+                    <div className="p-4">
+                      <div className="flex justify-between items-baseline mb-2">
+                        <Tooltip title={item.admin_level_3}>
+                          <span className="font-semibold truncate max-w-[70%]">
+                            {item.admin_level_3 && item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+                          </span>
+                        </Tooltip>
+                        <span className="text-xs text-gray-500">
+                          {new Date(item.aquisition_year, item.aquisition_month, item.aquisition_day).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            ...(item.aquisition_month && { month: "numeric" }),
+                            ...(item.aquisition_day && { day: "numeric" })
+                          })}
                         </span>
-                      </Tooltip>
-                      <span className="text-xs text-gray-500">
-                        {new Date(item.aquisition_year, item.aquisition_month, item.aquisition_day).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          ...(item.aquisition_month && { month: "numeric" }),
-                          ...(item.aquisition_day && { day: "numeric" })
-                        })}
-                      </span>
-                    </div>
+                      </div>
 
-                    <div className="flex items-center justify-between">
-                      <Tooltip title={item.authors}>
-                        <span className="text-sm text-gray-600 truncate max-w-[70%]">
-                          {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
-                        </span>
-                      </Tooltip>
-                      <Tag>{item.platform}</Tag>
+                      <div className="flex items-center justify-between">
+                        <Tooltip title={item.authors}>
+                          <span className="text-sm text-gray-600 truncate max-w-[70%]">
+                            {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
+                          </span>
+                        </Tooltip>
+                        <Tag>{item.platform}</Tag>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </Carousel>
+              ))}
+            </Carousel>
+          </div>
+          <Stats />
         </div>
-        <Stats />
       </div>
     </div>
   );
@@ -344,7 +342,7 @@ const Feature = ({ title, description, iconPath }: { title: string; description:
 
 const Features = () => {
   return (
-    <div className="pt-16 md:pt-36 md:text-center ">
+    <div className="pt-24 md:pt-36 md:text-center ">
       <p className="text-lg font-semibold text-blue-600">OUR SERVICES TO THE COMMUNITY</p>
       <p className="m-0 text-4xl font-semibold md:text-6xl">Revealing tree mortality patterns</p>
       <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
@@ -390,7 +388,7 @@ const RoadmapItemLabel = ({ label }: { label: string }) => {
 
 const Roadmap = () => {
   return (
-    <div className="m-auto flex max-w-3xl flex-col pt-24  md:flex-row">
+    <div className="m-auto flex max-w-4xl flex-col pt-24  md:flex-row">
       <div className="mb-8 text-center md:text-left">
         <p className="m-auto text-2xl font-semibold text-blue-600 md:mt-0">OUR ROADMAP</p>
         <p className="text-lg text-gray-500">Our vision and goals for the future</p>
@@ -399,29 +397,9 @@ const Roadmap = () => {
         mode="left"
         items={[
           {
-            label: RoadmapItemDate({ date: "Q2 2024" }),
-            color: "blue",
-            children: (
-              <RoadmapItemLabel label="Public release of a beta version of the platform and start of data collection" />
-            ),
-          },
-          {
-            label: RoadmapItemDate({ date: "Q2 2024" }),
-            color: "blue",
-            children: (
-              <RoadmapItemLabel label="Download and upload functionality of drone images and tree mortality labels" />
-            ),
-          },
-          {
-            label: RoadmapItemDate({ date: "Q3 2024" }),
-            color: "blue",
-            children: <RoadmapItemLabel label="Automated integration and visualisation of uploaded data" />,
-          },
-          // Automated segmentation of dead trees in airborne and drone images
-          {
-            label: RoadmapItemDate({ date: "Q4 2024" }),
-            color: "blue",
-            children: <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />,
+            label: RoadmapItemDate({ date: "Q1 2025" }),
+            color: "gray",
+            children: <RoadmapItemLabel label="Analysis ready training data for AI models" />,
           },
           {
             label: RoadmapItemDate({ date: "Q1 2025" }),
@@ -431,9 +409,28 @@ const Roadmap = () => {
             ),
           },
           {
-            label: RoadmapItemDate({ date: "Q1 2025" }),
-            color: "gray",
-            children: <RoadmapItemLabel label="Analysis ready training data for AI models" />,
+            label: RoadmapItemDate({ date: "Q4 2024" }),
+            color: "blue",
+            children: <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />,
+          },
+          {
+            label: RoadmapItemDate({ date: "Q3 2024" }),
+            color: "blue",
+            children: <RoadmapItemLabel label="Automated integration and visualisation of uploaded data" />,
+          },
+          {
+            label: RoadmapItemDate({ date: "Q2 2024" }),
+            color: "blue",
+            children: (
+              <RoadmapItemLabel label="Download and upload functionality of drone images and tree mortality labels" />
+            ),
+          },
+          {
+            label: RoadmapItemDate({ date: "Q2 2024" }),
+            color: "blue",
+            children: (
+              <RoadmapItemLabel label="Public release of a beta version of the platform and start of data collection" />
+            ),
           },
         ]}
       />
@@ -452,7 +449,7 @@ const GetInContact = () => {
         {` any labels for standing deadwood? We'd be excited to have you collaborate with us on this project.`}
       </p>
       <div className="flex justify-center pt-8 space-x-4">
-        <Button type="primary" size="large" onClick={() => navigate("/profile")}>
+        <Button className="md:block hidden" type="primary" size="large" onClick={() => navigate("/profile")}>
           Upload imagery
         </Button>
         <Button
