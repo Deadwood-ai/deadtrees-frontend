@@ -78,12 +78,12 @@ const FAQ = () => {
     },
     {
       key: "3",
-      label: <span className="m-0 pt-4 text-lg text-gray-500">Why can't I download the data?</span>,
-
+      label: <span className="m-0 pt-4 text-lg text-gray-500">Why can't I download all the data at once?</span>,
       children: (
         <p className="text-md">
-          We are currently working on the download and upload functionality which will be available soon. To stay
-          updated, please subscribe to our newsletter. For more information, check out our roadmap or contact us.
+          Individual datasets are available for download right now. However, since our complete database is several
+          terabytes in size, we are still optimizing our infrastructure to enable bulk downloads of the entire dataset.
+          This feature will be available soon. To stay updated on our progress, please subscribe to our newsletter.
         </p>
       ),
       style: {
