@@ -43,7 +43,7 @@ const Hero = () => {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center pb-12">
-      <div className="absolute inset-0 bg-[radial-gradient(600px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-white"></div>
+      <div className="absolute inset-0 hidden bg-[radial-gradient(600px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-white md:block"></div>
       <div className="relative z-10">
         <div className="md:hidden">
           <Alert
