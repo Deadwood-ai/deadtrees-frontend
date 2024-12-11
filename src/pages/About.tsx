@@ -236,7 +236,7 @@ export default function About() {
           items={[
             {
               key: "1",
-              label: <span className="m-0 pt-4 text-lg text-gray-500">Want to see all contributors?</span>,
+              label: <span className="text-md m-0 pt-4 text-gray-500">Want to see all contributors?</span>,
               children: (
                 <div>
                   <p className="text-md font-semibold">Data Contributors and collaborators:</p>
@@ -254,12 +254,11 @@ export default function About() {
                 </div>
               ),
               style: {
-                border: "none",
                 borderRadius: "0.5rem",
                 marginBottom: "12px",
-                paddingLeft: "12px",
+                paddingLeft: "0px",
                 paddingRight: "12px",
-                paddingTop: "8px",
+                paddingTop: "0px",
                 paddingBottom: "8px",
                 backgroundColor: "rgb(241 245 249)",
               },
