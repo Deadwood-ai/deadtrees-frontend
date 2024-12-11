@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { BingMaps } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
-import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
+import GeoJSON from "ol/format/GeoJSON";
 
 import { IDataset, ILabels } from "../../types/dataset";
 import fetchLabels from "./fetchLabels";
@@ -15,10 +14,11 @@ import Legend from "../DeadwoodMap/Legend";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
+import VectorSource from "ol/source/Vector";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const mapRef = useRef<Map | null>(null);
-  const mapContainer = useRef();
+  const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
 
   const [selectedYear, setSelectedYear] = useState<string>("2018");
@@ -40,7 +40,24 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   useEffect(() => {
     if (!mapRef.current && data?.file_name) {
-      // Create base map layer
+      // Create ortho layer first
+      const orthoCogLayer = new TileLayerWebGL({
+        source: new GeoTIFF({
+          sources: [
+            {
+              url: Settings.COG_BASE_URL + data.cog_url,
+              nodata: 0,
+              bands: [1, 2, 3],
+            },
+          ],
+          convertToRGB: true,
+        }),
+        maxZoom: 22,
+        cacheSize: 4096,
+        preload: 4,
+      });
+
+      // Create all other layers before map initialization
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -48,103 +65,107 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       });
-      layerRefs.current.basemap = basemapLayer;
-
-      // Create ortho layer
-      const orthoCogLayer = new TileLayerWebGL({
-        source: new GeoTIFF({
-          sources: [
-            {
-              url: Settings.COG_BASE_URL + data.cog_url,
-              nodata: 0,
-              bands: [1, 2, 3], // Specify RGB bands if it's a color image
-            },
-          ],
-          convertToRGB: true,
-        }),
-        maxZoom: 20,
-        cacheSize: 4096,
-        preload: 4,
-      });
-      layerRefs.current.orthoCog = orthoCogLayer;
-      console.log("orthoCogLayer", orthoCogLayer);
 
       // Create geotiff layers
-      const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-      const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
-      const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
-      const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
+      const geotiff2018 = createDeadwoodGeotiffLayer("2018");
+      const geotiff2019 = createDeadwoodGeotiffLayer("2019");
+      const geotiff2020 = createDeadwoodGeotiffLayer("2020");
+      const geotiff2021 = createDeadwoodGeotiffLayer("2021");
 
-      layerRefs.current.geotiff2018 = geotifLayer2018;
-      layerRefs.current.geotiff2019 = geotifLayer2019;
-      layerRefs.current.geotiff2020 = geotifLayer2020;
-      layerRefs.current.geotiff2021 = geotifLayer2021;
+      // Store references
+      layerRefs.current = {
+        basemap: basemapLayer,
+        orthoCog: orthoCogLayer,
+        geotiff2018,
+        geotiff2019,
+        geotiff2020,
+        geotiff2021,
+      };
 
-      const newMap = new Map({
-        target: mapContainer.current,
-        layers: [basemapLayer],
-        view: new View({
-          center: [0, 0],
-          zoom: 2,
-          projection: "EPSG:3857",
-        }),
-        overlays: [],
-        controls: [],
-      });
+      // Wait for the source to be ready and create map
+      orthoCogLayer.getSource().getView()
+        .then((viewOptions) => {
+          if (!viewOptions?.extent) {
+            console.error('No extent found in viewOptions');
+            return;
+          }
 
-      // Add layers to map
-      newMap.addLayer(orthoCogLayer);
-      newMap.addLayer(geotifLayer2018);
-      newMap.addLayer(geotifLayer2019);
-      newMap.addLayer(geotifLayer2020);
-      newMap.addLayer(geotifLayer2021);
-      newMap.setView(orthoCogLayer.getSource().getView());
-
-      // Fetch and add labels
-      fetchLabels({ dataset_id: data.dataset_id }).then((labelsData) => {
-        if (labelsData && mapRef.current) {
-          setLabels(labelsData);
-          const vectorLayerAOI = new VectorLayer({
-            source: new VectorSource({
-              features: new GeoJSON().readFeatures(labelsData?.aoi, {
-                dataProjection: "EPSG:4326",
-                featureProjection: "EPSG:3857",
-              }),
-            }),
-            style: {
-              "stroke-color": "blue",
-              "stroke-width": 1,
-              "fill-color": "rgba(0, 0, 255, 0)",
-            },
+          const MapView = new View({
+            center: viewOptions.center,
+            extent: viewOptions.extent,
+            maxZoom: 22,
+            projection: "EPSG:3857",
+            constrainOnlyCenter: true,
           });
-          layerRefs.current.vectorAOI = vectorLayerAOI;
 
-          const vectorLayerLabels = new VectorLayer({
-            source: new VectorSource({
-              features: new GeoJSON().readFeatures(labelsData?.label, {
-                dataProjection: "EPSG:4326",
-                featureProjection: "EPSG:3857",
-              }),
-            }),
-            className: "labels",
-            style: {
-              "stroke-color": "red",
-              "stroke-width": 1,
-              "fill-color": "rgba(255, 0, 0, 0.8)",
-            },
+          const newMap = new Map({
+            target: mapContainer.current,
+            layers: [
+              basemapLayer,
+              orthoCogLayer,
+              geotiff2018,
+              geotiff2019,
+              geotiff2020,
+              geotiff2021,
+            ],
+            view: MapView,
+            overlays: [],
+            controls: [],
           });
-          layerRefs.current.vectorLabels = vectorLayerLabels;
 
-          newMap.addLayer(vectorLayerAOI);
-          newMap.addLayer(vectorLayerLabels);
-          setLabelsFetched(true);
-        }
-      });
+          MapView.fit(viewOptions.extent);
 
-      mapRef.current = newMap;
+          fetchLabels({ dataset_id: data.dataset_id })
+            .then((labelsData) => {
+              if (labelsData && mapRef.current) {
+                setLabels(labelsData);
+                const vectorLayerAOI = new VectorLayer({
+                  source: new VectorSource({
+                    features: new GeoJSON().readFeatures(labelsData?.aoi, {
+                      dataProjection: "EPSG:4326",
+                      featureProjection: "EPSG:3857",
+                    }),
+                  }),
+                  style: {
+                    "stroke-color": "blue",
+                    "stroke-width": 1,
+                    "fill-color": "rgba(0, 0, 255, 0)",
+                  },
+                });
+                layerRefs.current.vectorAOI = vectorLayerAOI;
+
+                const vectorLayerLabels = new VectorLayer({
+                  source: new VectorSource({
+                    features: new GeoJSON().readFeatures(labelsData?.label, {
+                      dataProjection: "EPSG:4326",
+                      featureProjection: "EPSG:3857",
+                    }),
+                  }),
+                  className: "labels",
+                  style: {
+                    "stroke-color": "red",
+                    "stroke-width": 1,
+                    "fill-color": "rgba(255, 0, 0, 0.8)",
+                  },
+                });
+                layerRefs.current.vectorLabels = vectorLayerLabels;
+
+                newMap.addLayer(vectorLayerAOI);
+                newMap.addLayer(vectorLayerLabels);
+                setLabelsFetched(true);
+              }
+            })
+            .catch((error) => {
+              console.error('Error fetching labels:', error);
+            });
+
+          mapRef.current = newMap;
+        })
+        .catch((error) => {
+          console.error('Error initializing map:', error);
+        });
     }
 
-    // Cleanup function
     return () => {
       if (mapRef.current) {
         // Clean up layers
@@ -184,7 +205,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       }
       setLabelsFetched(false);
     };
-  }, [data]);
+  }, [data, mapStyle]);
 
   // update label opacity on slider change
   useEffect(() => {
