@@ -20,7 +20,7 @@ export default function App() {
   const LayoutWrapper = () => {
     return (
       // className="bg-gradient-to-b from-white to-purple-100"
-      <div >
+      <div>
         <Layout
           style={{
             margin: "0 auto",

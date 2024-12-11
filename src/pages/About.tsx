@@ -4,6 +4,7 @@ import { ExportOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
+import LogoBannerBand from "../components/Home/LogoBanner";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
@@ -58,6 +59,12 @@ export default function About() {
           mortality patterns. By combining aerial imagery, Earth observation data, and machine learning, we're creating
           a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
           worldwide to understand tree mortality dynamics.
+        </Paragraph>
+        <Paragraph className="mt-4 text-base text-gray-600">
+          This initiative is being led by Prof. Dr. Teja Kattenborn from{" "}
+          <a href="https://geosense.uni-freiburg.de/en">geosense</a> and Clemens Mosig from{" "}
+          <a href="https://rsc4earth.de/">RSC4Earth</a> / <a href="https://scads.ai/">ScaDS.AI</a>, and the service is
+          being built by <a href="https://hydrocode.de/home">hydrocode</a>.
         </Paragraph>
         {/* <div className="mt-6 flex gap-4">
                     <Button type="primary" size="large" onClick={() => navigate("/dataset")}>
@@ -169,11 +176,19 @@ export default function About() {
           and analyze data, fostering a collaborative approach to understanding and addressing the challenges of forest
           dieback in the face of climate change.
         </Paragraph>
+        <Paragraph className="text-gray-600">
+          We are always looking for new contributors to join our project. If you have high-resolution (&lt;20cm)
+          orthoimagery and optionally any labels for standing deadwood, we would be excited to have you collaborate with
+          us on this project.
+        </Paragraph>
         {/* get in contact with us */}
-        <Button className="mt-4" type="primary" onClick={() => navigate("/contact")}>
+        <div className="mt-4 text-center"></div>
+        <Button className="mb-8 mt-4" type="primary" onClick={() => navigate("/contact")}>
           Get in Contact
         </Button>
       </Card>
+
+      <LogoBannerBand />
     </div>
   );
 }
