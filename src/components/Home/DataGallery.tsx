@@ -117,12 +117,12 @@ const DataGallery = () => {
                     className="cursor-pointer rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg"
                     onClick={() => onClickHandler(item.id)}
                   >
-                    <div className="relative overflow-hidden rounded-lg">
+                    <div className="relative m-2 mt-2 overflow-hidden rounded-lg">
                       <img
                         src={
                           item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"
                         }
-                        className="h-48 w-full scale-150 rounded-t-lg object-cover"
+                        className="h-36 w-48 scale-150 rounded-t-lg object-cover"
                         loading="lazy"
                         alt={`Dataset ${item.id}`}
                       />
