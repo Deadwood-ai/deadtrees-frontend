@@ -2,7 +2,8 @@ import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } fro
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 
-import { ArrowLeftOutlined, EnvironmentOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
+import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import countryList from "../utils/countryList";
 
