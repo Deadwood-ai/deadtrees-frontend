@@ -42,8 +42,9 @@ const Hero = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pb-12">
-      <div>
+    <div className="relative flex min-h-screen flex-col items-center pb-12">
+      <div className="absolute inset-0 bg-[radial-gradient(600px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-50 via-blue-50 to-white"></div>
+      <div className="relative z-10">
         <div className="md:hidden">
           <Alert
             message="Mobile version is limited"
