@@ -35,19 +35,19 @@ export default function Navigation() {
   const location = useLocation();
 
   // Get the base path for matching navigation
-  const currentPath = '/' + location.pathname.split('/')[1];
+  const currentPath = "/" + location.pathname.split("/")[1];
 
   const {
     token: { colorBgContainer },
   } = theme.useToken();
 
   return (
-    <div className="hidden md:block bg-slate-200 rounded-lg">
+    <div className="hidden rounded-lg bg-slate-200 md:block">
       <Header
         style={{
           display: "flex",
           alignItems: "center",
-          background: '#f8fafc',
+          background: "#f8fafc",
           position: "sticky",
           top: 0,
           zIndex: 1,
@@ -55,20 +55,25 @@ export default function Navigation() {
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
-          <img src="/assets/logo.png" alt="deadtrees.earth" onClick={() => nav("/")} className="mr-3 h-12 cursor-pointer" />
+          <img
+            src="/assets/logo.png"
+            alt="deadtrees.earth"
+            onClick={() => nav("/")}
+            className="mr-3 h-12 cursor-pointer"
+          />
           <Tag color="warning">BETA</Tag>
         </div>
-        <div style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <div style={{ flex: 1, backgroundColor: "#f8fafc" }}>
           <Menu
             mode="horizontal"
-            selectedKeys={[currentPath === '/' ? '/home' : currentPath]}
+            selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
             items={navigation}
             style={{
               justifyContent: "end",
               minWidth: 0,
               borderBottom: "none",
-              backgroundColor: '#f8fafc',
-              width: '100%'
+              backgroundColor: "#f8fafc",
+              width: "100%",
             }}
           />
         </div>
