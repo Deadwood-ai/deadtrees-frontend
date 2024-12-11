@@ -10,7 +10,7 @@ const LogoBannerBand = () => {
   ];
 
   return (
-    <div className="pt-12">
+    <div className="pt-0 md:pt-12">
       <p className="text-md mb-8 text-center text-gray-600">Supported by</p>
       <div className="logo-scroll">
         <div className="logo-container">
