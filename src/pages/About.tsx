@@ -1,6 +1,6 @@
 import { Typography, Button, Card, Tabs, Tag, Statistic, Row, Col } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ExportOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExportOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
@@ -48,6 +48,13 @@ export default function About() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
       {/* Introduction Section */}
+      {/* if on mobile add a button to go back to home use tailwind */}
+      <div className="md:hidden">
+        <Button className="mb-8" type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
+          Back to Home
+        </Button>
+      </div>
+
       <div className="mb-16">
         <div className="flex items-center gap-3">
           <Title level={1} className="m-0">
@@ -87,13 +94,15 @@ export default function About() {
         ) : publications && publications.length > 0 ? (
           publications.map((pub, index) => (
             <Card key={index} className="mb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Text strong>{pub.title}</Text>
-                  <br />
-                  <Text type="secondary">{pub.authors}</Text>
-                  <br />
-                  <Text type="secondary">
+              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+                <div className="w-full sm:w-auto">
+                  <Text strong className="block">
+                    {pub.title}
+                  </Text>
+                  <Text type="secondary" className="block">
+                    {pub.authors}
+                  </Text>
+                  <Text type="secondary" className="block">
                     {pub.publisher}, {pub.year}
                   </Text>
                 </div>
@@ -117,13 +126,17 @@ export default function About() {
             ) : contributions.upcoming.length > 0 ? (
               contributions.upcoming.map((contribution, index) => (
                 <Card key={index} className="mb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Text strong>{contribution.title}</Text>
-                      <br />
-                      <Text type="secondary">{contribution.date}</Text>
-                      <br />
-                      <Text type="secondary">{contribution.event}</Text>
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+                    <div className="w-full sm:w-auto">
+                      <Text strong className="block">
+                        {contribution.title}
+                      </Text>
+                      <Text type="secondary" className="block">
+                        {contribution.date}
+                      </Text>
+                      <Text type="secondary" className="block">
+                        {contribution.event}
+                      </Text>
                     </div>
                     <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
                       View Details
@@ -141,13 +154,17 @@ export default function About() {
             ) : contributions.past.length > 0 ? (
               contributions.past.map((contribution, index) => (
                 <Card key={index} className="mb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Text strong>{contribution.title}</Text>
-                      <br />
-                      <Text type="secondary">{contribution.date}</Text>
-                      <br />
-                      <Text type="secondary">{contribution.event}</Text>
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+                    <div className="w-full sm:w-auto">
+                      <Text strong className="block">
+                        {contribution.title}
+                      </Text>
+                      <Text type="secondary" className="block">
+                        {contribution.date}
+                      </Text>
+                      <Text type="secondary" className="block">
+                        {contribution.event}
+                      </Text>
                     </div>
                     <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
                       View Details

@@ -21,7 +21,7 @@ const Feature = ({ title, description, iconPath }: { title: string; description:
 
 const Features = () => {
   return (
-    <div className="pt-24 md:pt-36 md:text-center">
+    <div className="pt-24 md:pt-48 md:text-center">
       <p className="text-lg font-semibold text-blue-600">OUR SERVICES TO THE COMMUNITY</p>
       <p className="m-0 text-4xl font-semibold md:text-6xl">Revealing tree mortality patterns</p>
       <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">

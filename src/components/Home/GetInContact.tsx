@@ -51,13 +51,17 @@ const UpcomingConferences = () => {
       <div className="m-auto mt-4 max-w-4xl space-y-3">
         {upcomingContributions.map((contribution, index) => (
           <Card key={index} className="mb-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Text strong>{contribution.title}</Text>
-                <br />
-                <Text type="secondary">{contribution.date}</Text>
-                <br />
-                <Text type="secondary">{contribution.event}</Text>
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+              <div className="w-full sm:w-auto">
+                <Text strong className="block">
+                  {contribution.title}
+                </Text>
+                <Text type="secondary" className="block">
+                  {contribution.date}
+                </Text>
+                <Text type="secondary" className="block">
+                  {contribution.event}
+                </Text>
               </div>
               <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
                 View Details
@@ -67,7 +71,13 @@ const UpcomingConferences = () => {
         ))}
       </div>
       <div className="mt-4 text-center">
-        <Button type="link" onClick={() => navigate("/about")}>
+        <Button
+          type="link"
+          onClick={() => {
+            window.scrollTo(0, 0);
+            navigate("/about");
+          }}
+        >
           Learn more about us →
         </Button>
       </div>
@@ -79,7 +89,7 @@ const GetInContact = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="m-auto mt-24 max-w-6xl rounded-xl bg-slate-100 p-8">
+    <div className="m-auto mt-48 max-w-6xl rounded-xl bg-slate-100 p-8">
       <p className="m-0 text-center text-3xl font-semibold text-gray-800 md:text-4xl">Want to join?</p>
       <p className="m-auto max-w-3xl pt-8 text-center text-lg text-gray-500">
         {`Do you have high-resolution (<20cm) orthoimagery and `}
