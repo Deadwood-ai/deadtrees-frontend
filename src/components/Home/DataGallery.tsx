@@ -43,7 +43,8 @@ const DataGallery = () => {
 
     const authorMap = new Map();
     return sorted.filter((item) => {
-      if (!item.authors) return false;
+      if (!item.authors || !item.thumbnail_path || !item.admin_level_1) return false;
+
       if (!authorMap.has(item.authors)) {
         authorMap.set(item.authors, true);
         return true;

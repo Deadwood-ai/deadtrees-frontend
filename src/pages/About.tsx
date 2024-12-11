@@ -1,10 +1,12 @@
-import { Typography, Button, Card, Tabs, Tag, Statistic, Row, Col } from "antd";
+import { Typography, Button, Card, Tabs, Collapse } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, ExportOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
 import LogoBannerBand from "../components/Home/LogoBanner";
+import { useData } from "../hooks/useDataProvider";
+import { useState, useEffect } from "react";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
@@ -13,6 +15,8 @@ export default function About() {
   const navigate = useNavigate();
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
+  const { collaborators } = useData();
+  console.log("collaborators:", collaborators);
 
   const today = new Date();
 
@@ -44,6 +48,23 @@ export default function About() {
       { upcoming: [], past: [] },
     );
   }, [presentations]);
+
+  const [displayedCollaborators, setDisplayedCollaborators] = useState<Array<any>>([]);
+
+  useEffect(() => {
+    if (!collaborators?.length) return;
+
+    shuffleCollaborators();
+
+    const interval = setInterval(shuffleCollaborators, 5000);
+
+    return () => clearInterval(interval);
+
+    function shuffleCollaborators() {
+      const shuffled = [...collaborators].sort(() => Math.random() - 0.5);
+      setDisplayedCollaborators(shuffled.slice(0, 20));
+    }
+  }, [collaborators]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -200,11 +221,52 @@ export default function About() {
         </Paragraph>
         {/* get in contact with us */}
         <div className="mt-4 text-center"></div>
-        <Button className="mb-8 mt-4" type="primary" onClick={() => navigate("/contact")}>
+        <Button
+          className="mb-8 mt-4"
+          type="primary"
+          href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
+        >
           Get in Contact
         </Button>
-      </Card>
 
+        <Collapse
+          bordered={false}
+          style={{ backgroundColor: "transparent" }}
+          className="mt-0"
+          items={[
+            {
+              key: "1",
+              label: <span className="m-0 pt-4 text-lg text-gray-500">Want to see all contributors?</span>,
+              children: (
+                <div>
+                  <p className="text-md font-semibold">Data Contributors and collaborators:</p>
+                  <ul className="text-md">
+                    {collaborators && collaborators.length > 0 ? (
+                      collaborators
+                        .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
+                        .map((collaborator) => {
+                          return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
+                        })
+                    ) : (
+                      <li>Loading collaborators...</li>
+                    )}
+                  </ul>
+                </div>
+              ),
+              style: {
+                border: "none",
+                borderRadius: "0.5rem",
+                marginBottom: "12px",
+                paddingLeft: "12px",
+                paddingRight: "12px",
+                paddingTop: "8px",
+                paddingBottom: "8px",
+                backgroundColor: "rgb(241 245 249)",
+              },
+            },
+          ]}
+        />
+      </Card>
       <LogoBannerBand />
     </div>
   );
