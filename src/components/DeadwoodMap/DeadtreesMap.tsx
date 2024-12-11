@@ -33,11 +33,11 @@ const yearByIndex = {
   4: "2021",
 };
 
-const DeadtreesMapOL = () => {
+const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const [bounds, setBounds] = useState([]);
-  const [selectedSite, setSelectedSite] = useState<string>();
+  const [selectedSite, setSelectedSite] = useState<string>("Harz");
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
@@ -258,13 +258,15 @@ const DeadtreesMapOL = () => {
               placeSelect={(place) => setBounds(place.bbox)}
             />
           </GeoapifyContext>
-
-          {/* <Notification
-            message="This is a notification"
-            description="This is the description of the notification"
-            type="info"
-          /> */}
-
+          <div className="mt-4">
+            <Alert
+              message="Prototype Version"
+              description="This is a prototype visualization. A much more comprehensive and optimized version is currently in development. Stay tuned for updates!"
+              type="info"
+              showIcon
+              closable
+            />
+          </div>
         </div>
         <div className="absolute left-8 top-28 z-50">
           <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
@@ -286,7 +288,7 @@ const DeadtreesMapOL = () => {
   );
 };
 
-export default DeadtreesMapOL;
+export default DeadtreesMap;
 
 // view: geotiffSource.getView(),
 // view: new View({

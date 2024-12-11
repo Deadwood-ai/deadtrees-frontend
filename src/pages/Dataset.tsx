@@ -4,19 +4,19 @@ import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
 import { useData } from "../hooks/useDataProvider";
 import DataList from "../components/DataList";
-import DatasetMapOL from "../components/DatasetMap/DatasetMapOL";
+import DatasetMapOL from "../components/DatasetMap/DatasetMap";
 import { CloseOutlined } from "@ant-design/icons";
 
-type SearchField = 'authors' | 'location';
-type SortDirection = 'asc' | 'desc';
+type SearchField = "authors" | "location";
+type SortDirection = "asc" | "desc";
 
 export default function Dataset() {
   const { data, filter, setFilter } = useData();
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
-  const [searchField, setSearchField] = useState<SearchField>('authors');
-  const [searchValue, setSearchValue] = useState('');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [searchField, setSearchField] = useState<SearchField>("authors");
+  const [searchValue, setSearchValue] = useState("");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const handleSearch = (value: string) => {
     setSearchValue(value.toLowerCase());
@@ -24,7 +24,7 @@ export default function Dataset() {
   };
 
   const toggleSort = () => {
-    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
   const processedData = useMemo(() => {
@@ -37,31 +37,29 @@ export default function Dataset() {
 
       let searchMatch = false;
       switch (searchField) {
-        case 'authors': {
+        case "authors": {
           if (!searchValue.trim()) {
             searchMatch = true;
             break;
           }
           const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const authorWords = (d.authors?.toLowerCase() || '').split(/[\s,]+/).filter(Boolean);
+          const authorWords = (d.authors?.toLowerCase() || "").split(/[\s,]+/).filter(Boolean);
 
-          searchMatch = searchTerms.every(searchTerm =>
-            authorWords.some(word => word.includes(searchTerm))
-          );
+          searchMatch = searchTerms.every((searchTerm) => authorWords.some((word) => word.includes(searchTerm)));
           break;
         }
-        case 'location': {
+        case "location": {
           if (!searchValue.trim()) {
             searchMatch = true;
             break;
           }
           const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const locationWords = `${d.admin_level_3 || ''}, ${d.admin_level_1 || ''}`.toLowerCase()
-            .split(/[\s,]+/).filter(Boolean);
+          const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
+            .toLowerCase()
+            .split(/[\s,]+/)
+            .filter(Boolean);
 
-          searchMatch = searchTerms.every(searchTerm =>
-            locationWords.some(word => word.includes(searchTerm))
-          );
+          searchMatch = searchTerms.every((searchTerm) => locationWords.some((word) => word.includes(searchTerm)));
           break;
         }
       }
@@ -73,22 +71,21 @@ export default function Dataset() {
       const dateA = new Date(
         parseInt(a.aquisition_year),
         a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
-        a.aquisition_day ? parseInt(a.aquisition_day) : 1
+        a.aquisition_day ? parseInt(a.aquisition_day) : 1,
       );
       const dateB = new Date(
         parseInt(b.aquisition_year),
         b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
-        b.aquisition_day ? parseInt(b.aquisition_day) : 1
+        b.aquisition_day ? parseInt(b.aquisition_day) : 1,
       );
 
-      return sortDirection === 'asc'
-        ? dateA.getTime() - dateB.getTime()
-        : dateB.getTime() - dateA.getTime();
+      return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
   }, [data, searchField, searchValue, sortDirection]);
 
   return (
     <Row
+      className="bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
@@ -133,8 +130,8 @@ export default function Dataset() {
             value={searchField}
             onChange={(value) => setSearchField(value as SearchField)}
             options={[
-              { label: 'Authors', value: 'authors' },
-              { label: 'Location (City, State)', value: 'location' },
+              { label: "Authors", value: "authors" },
+              { label: "Location (City, State)", value: "location" },
             ]}
             className="pb-2"
             block
@@ -142,9 +139,7 @@ export default function Dataset() {
 
           <div className="flex">
             <Input.Search
-              placeholder={searchField === 'location'
-                ? "Search by City or State"
-                : "Search by Authors"}
+              placeholder={searchField === "location" ? "Search by City or State" : "Search by Authors"}
               onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
               className="flex-1"
@@ -152,10 +147,10 @@ export default function Dataset() {
             />
             <div className="pl-4">
               <Button
-                icon={sortDirection === 'asc' ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
+                icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
                 onClick={toggleSort}
                 type="primary"
-                title={`Sort by date ${sortDirection === 'asc' ? 'oldest first' : 'newest first'}`}
+                title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}
               />
             </div>
           </div>

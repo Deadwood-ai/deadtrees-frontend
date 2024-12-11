@@ -2,24 +2,14 @@ import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } fro
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 
-import {
-  ArrowLeftOutlined,
-  BackwardFilled,
-  DownloadOutlined,
-  EnvironmentFilled,
-  EnvironmentOutlined,
-} from "@ant-design/icons";
-import DatasetDetailsMap from "../archive/DatasetDetailsMap";
-import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
-import download from "../api/download";
-import { useAuth } from "../hooks/useAuthProvider";
+import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Settings } from "../config";
+import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import countryList from "../utils/countryList";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { session } = useAuth();
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
   console.log(dataset);
@@ -32,6 +22,7 @@ export default function DatasetDetails() {
   // });
   return (
     <Row
+      className="bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
@@ -55,7 +46,7 @@ export default function DatasetDetails() {
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
                   {/* {dataset.admin_level_3 ? dataset.admin_level_3 : "Unknown"} */}
-                  {`${dataset.admin_level_3}, ${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ''}`}
+                  {`${dataset.admin_level_3}, ${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`}
                 </Typography.Title>
               </div>
 
@@ -89,11 +80,11 @@ export default function DatasetDetails() {
                     new Date(
                       dataset.aquisition_year,
                       dataset.aquisition_month ?? 0,
-                      dataset.aquisition_day ?? 1
+                      dataset.aquisition_day ?? 1,
                     ).toLocaleDateString("en-US", {
                       year: "numeric",
                       ...(dataset.aquisition_month && { month: "long" }),
-                      ...(dataset.aquisition_day && { day: "numeric" })
+                      ...(dataset.aquisition_day && { day: "numeric" }),
                     })
                   }
                 </Typography.Text>
@@ -188,7 +179,7 @@ export default function DatasetDetails() {
       </Col>
       <Col className="flex-1 py-4">
         {/* <DatasetDetailsMap data={dataset} /> */}
-        <DatasetDetailsMapOL data={dataset} />
+        <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>
   );
