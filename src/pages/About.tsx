@@ -2,68 +2,16 @@ import { Typography, Button, Card, Tabs, Tag, Statistic, Row, Col } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ExportOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
+import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
 
-const publications = [
-  {
-    title: "Global patterns of tree mortality: insights from remote sensing",
-    authors: "Smith, J., Johnson, M., et al.",
-    journal: "Nature Climate Change",
-    year: "2024",
-    doi: "#",
-  },
-  {
-    title: "Machine learning approaches for detecting forest dieback",
-    authors: "Johnson, M., Williams, R., et al.",
-    journal: "Remote Sensing of Environment",
-    year: "2023",
-    doi: "#",
-  },
-];
-
-const upcomingContributions = [
-  {
-    title: "Mapping Global Tree Mortality Patterns",
-    event: "EGU 2025",
-    date: "April 15, 2025",
-    link: "#",
-  },
-  {
-    title: "AI-Driven Forest Health Monitoring",
-    event: "ForestTech Conference 2025",
-    date: "June 1, 2025",
-    link: "#",
-  },
-];
-
-const pastContributions = [
-  {
-    title: "Remote Sensing Applications in Forest Health",
-    event: "IUFRO World Congress",
-    date: "October 10, 2024",
-    link: "#",
-  },
-  {
-    title: "Crowd-sourced Data for Environmental Monitoring",
-    event: "ESA Living Planet Symposium",
-    date: "May 15, 2024",
-    link: "#",
-  },
-];
-
-const stats = [
-  { value: "1000+", label: "Orthophotos" },
-  { value: "40k", label: "Labeled Polygons" },
-  { value: "63", label: "Countries" },
-  { value: "43", label: "Institutions" },
-];
-
 export default function About() {
   const navigate = useNavigate();
-  const { data: presentations, isLoading } = usePresentations();
+  const { data: publications, isLoading: isLoadingPublications } = usePublications();
+  const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
 
   const today = new Date();
 
@@ -120,7 +68,6 @@ export default function About() {
                     </Button>
                 </div> */}
       </div>
-
       {/* Publications Section */}
       <div className="mb-16">
         <Title level={2}>Publications</Title>
@@ -128,32 +75,37 @@ export default function About() {
           Our work has been featured in various peer-reviewed journals and preprints, advancing the understanding of
           forest dieback and global tree mortality mapping.
         </Paragraph>
-        {publications.map((pub, index) => (
-          <Card key={index} className="mb-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <Text strong>{pub.title}</Text>
-                <br />
-                <Text type="secondary">{pub.authors}</Text>
-                <br />
-                <Text type="secondary">
-                  {pub.journal}, {pub.year}
-                </Text>
+        {isLoadingPublications ? (
+          <div>Loading...</div>
+        ) : publications && publications.length > 0 ? (
+          publications.map((pub, index) => (
+            <Card key={index} className="mb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <Text strong>{pub.title}</Text>
+                  <br />
+                  <Text type="secondary">{pub.authors}</Text>
+                  <br />
+                  <Text type="secondary">
+                    {pub.publisher}, {pub.year}
+                  </Text>
+                </div>
+                <Button type="link" icon={<ExportOutlined />} href={pub.url} target="_blank">
+                  View Paper
+                </Button>
               </div>
-              <Button type="link" icon={<ExportOutlined />} href={pub.doi} target="_blank">
-                View Paper
-              </Button>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))
+        ) : (
+          <div>No publications available</div>
+        )}
       </div>
-
       {/* Contributions Section */}
       <div className="mb-16">
         <Title level={2}>Conference Contributions</Title>
         <Tabs defaultActiveKey="upcoming">
           <TabPane tab="Upcoming" key="upcoming">
-            {isLoading ? (
+            {isLoadingPresentations ? (
               <div>Loading...</div>
             ) : contributions.upcoming.length > 0 ? (
               contributions.upcoming.map((contribution, index) => (
@@ -177,7 +129,7 @@ export default function About() {
             )}
           </TabPane>
           <TabPane tab="Past" key="past">
-            {isLoading ? (
+            {isLoadingPresentations ? (
               <div>Loading...</div>
             ) : contributions.past.length > 0 ? (
               contributions.past.map((contribution, index) => (
@@ -202,7 +154,6 @@ export default function About() {
           </TabPane>
         </Tabs>
       </div>
-
       {/* Mission Section */}
       <Card className="mb-16 bg-slate-100 text-white">
         <Title level={2} className="text-white">
@@ -223,17 +174,6 @@ export default function About() {
           Get in Contact
         </Button>
       </Card>
-
-      {/* Stats Section */}
-      <Row gutter={[16, 16]}>
-        {stats.map((stat, index) => (
-          <Col key={index} xs={12} sm={6}>
-            <Card>
-              <Statistic value={stat.value} title={stat.label} valueStyle={{ color: "#1890ff" }} />
-            </Card>
-          </Col>
-        ))}
-      </Row>
     </div>
   );
 }
