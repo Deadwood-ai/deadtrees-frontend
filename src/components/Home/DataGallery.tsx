@@ -116,12 +116,16 @@ const DataGallery = () => {
                     className="cursor-pointer rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg"
                     onClick={() => onClickHandler(item.id)}
                   >
-                    <img
-                      src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"}
-                      className="h-48 w-full rounded-t-lg object-cover"
-                      loading="lazy"
-                      alt={`Dataset ${item.id}`}
-                    />
+                    <div className="relative overflow-hidden rounded-lg">
+                      <img
+                        src={
+                          item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"
+                        }
+                        className="h-48 w-full scale-150 rounded-t-lg object-cover"
+                        loading="lazy"
+                        alt={`Dataset ${item.id}`}
+                      />
+                    </div>
                     <div className="p-4">
                       <div className="mb-2 flex items-baseline justify-between">
                         <Tooltip title={item.admin_level_3}>

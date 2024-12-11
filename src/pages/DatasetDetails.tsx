@@ -2,24 +2,13 @@ import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } fro
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../hooks/useDataProvider";
 
-import {
-  ArrowLeftOutlined,
-  BackwardFilled,
-  DownloadOutlined,
-  EnvironmentFilled,
-  EnvironmentOutlined,
-} from "@ant-design/icons";
-import DatasetDetailsMap from "../archive/DatasetDetailsMap";
-import DatasetDetailsMapOL from "../components/DatasetDetailsMap/DatasetDetailsMapOL";
-import download from "../api/download";
-import { useAuth } from "../hooks/useAuthProvider";
-import { Settings } from "../config";
+import { ArrowLeftOutlined, EnvironmentOutlined } from "@ant-design/icons";
+import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import countryList from "../utils/countryList";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { session } = useAuth();
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
   console.log(dataset);
@@ -32,6 +21,7 @@ export default function DatasetDetails() {
   // });
   return (
     <Row
+      className="bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
@@ -188,7 +178,7 @@ export default function DatasetDetails() {
       </Col>
       <Col className="flex-1 py-4">
         {/* <DatasetDetailsMap data={dataset} /> */}
-        <DatasetDetailsMapOL data={dataset} />
+        <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>
   );

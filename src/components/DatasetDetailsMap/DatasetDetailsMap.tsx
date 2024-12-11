@@ -16,7 +16,7 @@ import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLaye
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 
-const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
+const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef();
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
@@ -148,7 +148,7 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
     return () => {
       if (mapRef.current) {
         // Clean up layers
-        Object.values(layerRefs.current).forEach(layer => {
+        Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {
             // Remove from map
             mapRef.current?.removeLayer(layer);
@@ -156,16 +156,16 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
             // Clean up source
             const source = layer.getSource();
             if (source) {
-              if ('clear' in source) {
+              if ("clear" in source) {
                 source.clear();
               }
-              if ('dispose' in source) {
+              if ("dispose" in source) {
                 source.dispose();
               }
             }
 
             // Clean up layer
-            if ('cleanup' in layer) {
+            if ("cleanup" in layer) {
               layer.cleanup();
             } else {
               layer.dispose();
@@ -274,4 +274,4 @@ const DatasetDetailsMapOL = ({ data }: { data: IDataset }) => {
   );
 };
 
-export default DatasetDetailsMapOL;
+export default DatasetDetailsMap;

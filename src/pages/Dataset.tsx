@@ -85,6 +85,7 @@ export default function Dataset() {
 
   return (
     <Row
+      className="bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
