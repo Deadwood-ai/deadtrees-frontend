@@ -1,6 +1,8 @@
 import { Typography, Button, Card, Tabs, Tag, Statistic, Row, Col } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ExportOutlined } from "@ant-design/icons";
+import { usePresentations } from "../hooks/usePresentations";
+import { useMemo } from "react";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
@@ -61,6 +63,38 @@ const stats = [
 
 export default function About() {
   const navigate = useNavigate();
+  const { data: presentations, isLoading } = usePresentations();
+
+  const today = new Date();
+
+  const contributions = useMemo(() => {
+    if (!presentations) return { upcoming: [], past: [] };
+
+    return presentations.reduce(
+      (acc, presentation) => {
+        const presentationDate = new Date(presentation.date);
+        const item = {
+          title: presentation.title,
+          event: presentation.event,
+          date: new Date(presentation.date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          link: presentation.url,
+        };
+
+        if (presentationDate > today) {
+          acc.upcoming.push(item);
+        } else {
+          acc.past.push(item);
+        }
+
+        return acc;
+      },
+      { upcoming: [], past: [] },
+    );
+  }, [presentations]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -119,40 +153,52 @@ export default function About() {
         <Title level={2}>Conference Contributions</Title>
         <Tabs defaultActiveKey="upcoming">
           <TabPane tab="Upcoming" key="upcoming">
-            {upcomingContributions.map((contribution, index) => (
-              <Card key={index} className="mb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Text strong>{contribution.title}</Text>
-                    <br />
-                    <Text type="secondary">{contribution.date}</Text>
-                    <br />
-                    <Text type="secondary">{contribution.event}</Text>
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : contributions.upcoming.length > 0 ? (
+              contributions.upcoming.map((contribution, index) => (
+                <Card key={index} className="mb-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Text strong>{contribution.title}</Text>
+                      <br />
+                      <Text type="secondary">{contribution.date}</Text>
+                      <br />
+                      <Text type="secondary">{contribution.event}</Text>
+                    </div>
+                    <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
+                      View Details
+                    </Button>
                   </div>
-                  <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            ) : (
+              <div>No upcoming presentations</div>
+            )}
           </TabPane>
           <TabPane tab="Past" key="past">
-            {pastContributions.map((contribution, index) => (
-              <Card key={index} className="mb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Text strong>{contribution.title}</Text>
-                    <br />
-                    <Text type="secondary">{contribution.date}</Text>
-                    <br />
-                    <Text type="secondary">{contribution.event}</Text>
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : contributions.past.length > 0 ? (
+              contributions.past.map((contribution, index) => (
+                <Card key={index} className="mb-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Text strong>{contribution.title}</Text>
+                      <br />
+                      <Text type="secondary">{contribution.date}</Text>
+                      <br />
+                      <Text type="secondary">{contribution.event}</Text>
+                    </div>
+                    <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
+                      View Details
+                    </Button>
                   </div>
-                  <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
-                    View Details
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            ) : (
+              <div>No past presentations</div>
+            )}
           </TabPane>
         </Tabs>
       </div>
