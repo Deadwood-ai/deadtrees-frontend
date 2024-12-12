@@ -92,8 +92,9 @@ export default function About() {
           This initivative is being led by Prof. Dr. Teja Kattenborn from{" "}
           <a href="https://geosense.uni-freiburg.de/en">geosense</a> and Clemens Mosig from{" "}
           <a href="https://rsc4earth.de/">RSC4Earth</a> / <a href="https://scads.ai/">ScaDS.AI</a>, and the service is
-          being built by <a href="https://hydrocode.de/home">hydrocode</a>. deadtrees.earth would not be possible
-          without the nummerous collaborators and data contributors of more than 60 institutions.
+          being built by Janusch Vajna-Jehle from <a href="https://geosense.uni-freiburg.de/en">geosense</a> and{" "}
+          <a href="https://hydrocode.de/home">hydrocode</a>. deadtrees.earth would not be possible without the nummerous
+          collaborators and data contributors of more than 60 institutions.
         </Paragraph>
         <Collapse
           bordered={false}
