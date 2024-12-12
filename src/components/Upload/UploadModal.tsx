@@ -15,7 +15,7 @@ import {
   Typography,
   Collapse,
 } from "antd";
-import { InfoCircleOutlined, UploadOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, UploadOutlined, InboxOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
 import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/dataset";
@@ -31,6 +31,8 @@ import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
+import { RcFile } from "antd/es/upload";
+import Marquee from "react-fast-marquee";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -41,7 +43,6 @@ interface IFormValues {
   doi: string;
   additional_information: string;
   labels_description: string;
-  data_access: IDataAccess;
 }
 
 interface UploadModalProps {
@@ -60,6 +61,7 @@ interface MetadataPayload {
   dataset_id: string;
   user_id: string;
   name: string;
+  license: ILicense;
   data_access: IDataAccess;
   platform: IPlatform;
   spectral_properties: string;
@@ -77,7 +79,7 @@ function createMetadataPayload(
   userId: string,
   values: IFormValues,
   fileName: string,
-  pickerType: string
+  pickerType: string,
 ): MetadataPayload {
   let year = null;
   let month = null;
@@ -105,7 +107,8 @@ function createMetadataPayload(
     dataset_id: datasetId,
     user_id: userId,
     name: fileName,
-    data_access: values.data_access,
+    data_access: IDataAccess.public,
+    license: ILicense["CC BY"],
     platform: values.platform,
     spectral_properties: "RGB",
     aquisition_year: year,
@@ -121,7 +124,7 @@ function createLabelObjectFormData(
   datasetId: string,
   userId: string,
   labelFile: RcFile,
-  labelDescription: string
+  labelDescription: string,
 ): FormData {
   const formData = new FormData();
   formData.append("dataset_id", datasetId);
@@ -136,7 +139,6 @@ function createLabelObjectFormData(
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
 
-
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
 
@@ -145,12 +147,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const { authors } = useData();
   console.log("authors in upload modal", authors);
-  const {
-    showUploadingNotification,
-    updateUploadProgress,
-    showSuccessNotification,
-    showErrorNotification
-  } = useUploadNotification(uploadKey, fileName);
+  const { showUploadingNotification, updateUploadProgress, showSuccessNotification, showErrorNotification } =
+    useUploadNotification(uploadKey, fileName);
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
@@ -226,7 +224,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       level: "info",
       message: "Upload started",
     });
-    console.log('form values', values);
+    console.log("form values", values);
 
     try {
       // Validate file
@@ -250,7 +248,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         session!.user.id,
         values,
         uploadFile.name,
-        pickerType
+        pickerType,
       );
       await addMetadata(uploadResponse.id, metadata, validAccessToken);
 
@@ -262,7 +260,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             uploadResponse.id.toString(),
             session!.user.id,
             labelFile,
-            values.labels_description
+            values.labels_description,
           );
           await uploadLabelObject(labelFormData, validAccessToken);
         }
@@ -290,227 +288,198 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     handleUpload(values); // Start the upload process
   };
 
-
   return (
     <Modal
       open={isVisible}
       centered
       onCancel={onClose}
       footer={null}
+      style={{ padding: 0, margin: 0 }}
       maskClosable={false}
-      width={1000}
+      width={1200}
     >
-      <Form
-        layout="vertical"
-        onFinish={onFormFinish}
-        initialValues={{ platform: "drone", data_access: "public" }}
-        variant="filled"
-      >
-        <div className="flex justify-center space-x-12"> {/* Center the content */}
-          <div className="w-full max-w-md"> {/* Limit the form width */}
-            <Typography.Title level={4}>Orthophoto Upload</Typography.Title>
-            <Typography.Paragraph type="secondary">
-              Upload your orthophoto in GeoTIFF format. This georeferenced image is essential for spatial analysis.
-            </Typography.Paragraph>
-            <Form.Item
-              label={
-                <div>
-                  <Tooltip title="Upload your orthophoto in GeoTIFF format. Accepted formats: .tif, .tiff">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  Orthophoto (GeoTIFF)
-                </div>
-              }
-              rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
-            >
-              <Upload
-                fileList={fileList}
-                onChange={onFileChange}
-                beforeUpload={beforeUpload}
-                accept=".tif,.tiff"
-                listType="text"
-                maxCount={1}
-              >
-                <Button icon={<UploadOutlined />}>Select GeoTIFF file</Button>
-              </Upload>
-            </Form.Item>
-            <Form.Item
-              rules={[{ required: true, message: "Please enter the authors" }]}
-              label={
-                <div>
-                  <Tooltip title="Provide the names of individuals or organizations responsible for capturing the orthophoto. You can either select from existing authors or type new names.">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  Authors of the Orthophoto
-                </div>
-              }
-              name="author"
-            >
-              {authors?.at(0)?.label ? (
-                <Select
-                  mode="tags"
-                  style={{ width: "100%" }}
-                  options={authors}
-                  placeholder="Enter or select authors"
-                />
-              ) : (
-                <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
-              )}
-            </Form.Item>
-            <Form.Item
-              className="mb-1"
-              label={
-                <div>
-                  <Tooltip title="Specify the acquisition date of the orthophoto. If you're unsure of the exact date, you can provide a broader timeframe (e.g., month or year).">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  Acquisition Date of the Orthophoto
-                </div>
-              }
-              name="aquisition_date"
-              rules={[{ required: true, message: "Please select a date" }]}
-            >
-              <PickerWithType pickerTypeOptions={pickerTypeOptions} pickerType={pickerType} setPickerType={setPickerType} />
-            </Form.Item>
-            <Typography.Paragraph className="p-0" type="secondary">
-              If you're unsure of the exact date, provide a broader timeframe (e.g., month or year).
-            </Typography.Paragraph>
-            <Form.Item label={
-              <div>
-                <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
-                  <InfoCircleOutlined className="mr-2" />
-                </Tooltip>
-                Platform
-              </div>
-            } name="platform">
-              <Radio.Group>
-                <Radio value="drone">Drone</Radio>
-                <Radio value="airborne">Airborne</Radio>
-                <Radio value="satellite">Satellite</Radio>
-              </Radio.Group>
-            </Form.Item>
-            <Form.Item
-              label={
-                <div>
-                  <Tooltip title="Public: Data is fully accessible and downloadable. Private: Data is not accessible. Note: All data is used for model training.">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  Data Access
-                </div>
-              } name="data_access">
-              <Radio.Group>
-                <Radio value="public">Public</Radio>
-                <Radio value="private">Private</Radio>
-              </Radio.Group>
-            </Form.Item>
-            <Form.Item
-              label={
-                <div>
-                  <Tooltip title="Enter the DOI of any associated publication.">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  DOI
-                </div>
-              }
-              name="doi"
-            >
-              <Input placeholder="Enter DOI (if applicable)" />
-            </Form.Item>
-            <Form.Item
-              label={
-                <div>
-                  <Tooltip title="Provide any additional context for the orthophoto.">
-                    <InfoCircleOutlined className="mr-2" />
-                  </Tooltip>
-                  Additional Information
-                </div>
-              }
-              name="additional_information"
-            >
-              <Input.TextArea placeholder="Enter additional information (optional)" autoSize={{ minRows: 3, maxRows: 6 }} />
-            </Form.Item>
-            {/* </Collapse.Panel> */}
-            {/* </Collapse> */}
-            <Form.Item>
-              <Space className="pt-6">
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  disabled={fileList.length === 0}
-                >
-                  Upload
-                </Button>
-                <Button type="default" onClick={onClose}>
-                  Cancel
-                </Button>
-              </Space>
-            </Form.Item>
-          </div>
-          <div className={`${enableLabelUpload ? ' w-full max-w-md' : ''} pt-6`}>
-            <div>
-              <Checkbox
-                checked={enableLabelUpload}
-                onChange={(e) => setEnableLabelUpload(e.target.checked)}
-                className="text-lg font-semibold"
-              >
-                Upload Labels (Optional)
-              </Checkbox>
-            </div>
-            <div className="py-3 max-w-md">
-              <Typography.Paragraph type="secondary">
-                Upload standing deadwood labels (points, polygons, boxes) associated with your orthophoto.
-              </Typography.Paragraph>
-            </div>
+      <div className="m-0 px-4 py-0">
+        <Alert
+          banner
+          message={
+            <Marquee pauseOnHover gradient={false} speed={50} delay={0} gradientWidth={0} style={{ padding: "2px 0" }}>
+              By uploading, you agree to make your data public under the CC BY license. Contributors will be credited.
+              For private data,&nbsp;
+              <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth private data collaboration">
+                contact us
+              </a>
+              .&nbsp;&nbsp;&nbsp;
+            </Marquee>
+          }
+          className="mb-4"
+        />
 
-            {enableLabelUpload && (
+        <Typography.Title style={{ margin: 0, paddingBottom: 16 }} level={4}>
+          Orthophoto Upload
+        </Typography.Title>
+        <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone" }} variant="filled">
+          <div className="flex w-full justify-center space-x-12">
+            <div className="w-full">
+              <Form.Item
+                label="Orthophoto (GeoTIFF)"
+                rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
+              >
+                <Upload.Dragger
+                  fileList={fileList}
+                  onChange={onFileChange}
+                  beforeUpload={beforeUpload}
+                  accept=".tif,.tiff"
+                  maxCount={1}
+                  className="w-full"
+                >
+                  <div className="flex">
+                    <p className="ant-upload-drag-icon px-8">
+                      <InboxOutlined />
+                    </p>
+                    <div className="text-start">
+                      <p className="ant-upload-text mb-0">Click or drag GeoTIFF file to this area</p>
+                      <p className="ant-upload-hint mb-0">
+                        Upload your orthophoto in GeoTIFF format (.tif, .tiff). This georeferenced image is essential
+                        for spatial analysis.
+                      </p>
+                    </div>
+                  </div>
+                </Upload.Dragger>
+              </Form.Item>
+              <Form.Item
+                rules={[{ required: true, message: "Please enter the authors" }]}
+                label={
+                  <div>
+                    <Tooltip title="Provide the names of individuals or organizations responsible for capturing the orthophoto. You can either select from existing authors or type new names.">
+                      <InfoCircleOutlined className="mr-2" />
+                    </Tooltip>
+                    Authors of the Orthophoto
+                  </div>
+                }
+                name="author"
+              >
+                {authors?.at(0)?.label ? (
+                  <Select
+                    mode="tags"
+                    style={{ width: "100%" }}
+                    options={authors}
+                    placeholder="Enter or select authors"
+                  />
+                ) : (
+                  <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
+                )}
+              </Form.Item>
+              <Form.Item
+                className="mb-1 w-full"
+                label={
+                  <div>
+                    <Tooltip title="Specify the acquisition date of the orthophoto. If you're unsure of the exact date, you can provide a broader timeframe (e.g., month or year).">
+                      <InfoCircleOutlined className="mr-2" />
+                    </Tooltip>
+                    Acquisition Date of the Orthophoto
+                  </div>
+                }
+                name="aquisition_date"
+                rules={[{ required: true, message: "Please select a date" }]}
+              >
+                <PickerWithType
+                  pickerTypeOptions={pickerTypeOptions}
+                  pickerType={pickerType}
+                  setPickerType={setPickerType}
+                />
+              </Form.Item>
+              <Typography.Paragraph className="p-0" type="secondary">
+                If you're unsure of the exact date, provide a broader timeframe (e.g., month or year).
+              </Typography.Paragraph>
+
+              <Form.Item
+                label={
+                  <div>
+                    <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
+                      <InfoCircleOutlined className="mr-2" />
+                    </Tooltip>
+                    Platform
+                  </div>
+                }
+                name="platform"
+              >
+                <Radio.Group>
+                  <Radio value="drone">Drone</Radio>
+                  <Radio value="airborne">Airborne</Radio>
+                  <Radio value="satellite">Satellite</Radio>
+                </Radio.Group>
+              </Form.Item>
+              <Form.Item label="DOI" name="doi">
+                <Input placeholder="Enter DOI, URL, or publication reference (if applicable)" />
+              </Form.Item>
+              <Form.Item label="Additional Information" name="additional_information">
+                <Input.TextArea
+                  placeholder="Enter project or data information (e.g., project name, data collection context, processing details)"
+                  autoSize={{ minRows: 3, maxRows: 6 }}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Space className="pt-6">
+                  <Button type="primary" htmlType="submit" disabled={fileList.length === 0}>
+                    Upload
+                  </Button>
+                  <Button type="default" onClick={onClose}>
+                    Cancel
+                  </Button>
+                </Space>
+              </Form.Item>
+            </div>
+            <div className="w-full">
               <div className="w-full">
-                <>
+                <div>
                   <Form.Item
-                    label={
-                      <div>
-                        <Tooltip title="Upload a labels file associated with your orthophoto. Accepted formats: GeoJSON, zipped Shapefile (single file), or GeoPackage.">
-                          <InfoCircleOutlined className="mr-2" />
-                        </Tooltip>
-                        Labels File (GeoJSON, Shapefile (zip), GeoPackage)
-                      </div>
-                    }
+                    label="Labels File"
                     name="labels_file"
-                    rules={[{ required: true, message: "Please upload a labels file in GeoJSON, Shapefile as zip, or GeoPackage format" }]}
+                    rules={[
+                      {
+                        required: false,
+                        message: "Please upload a labels file in GeoJSON, Shapefile as zip, or GeoPackage format",
+                      },
+                    ]}
                   >
-                    <Upload
+                    <Upload.Dragger
                       fileList={labelsFileList}
                       onChange={onLabelsFileChange}
                       beforeUpload={beforeLabelsUpload}
                       accept=".geojson,.json,.zip,.gpkg"
-                      listType="text"
                       maxCount={1}
+                      className="w-full"
                     >
-                      <Button icon={<UploadOutlined />}>Select Labels File</Button>
-                    </Upload>
+                      <div className="flex">
+                        <p className="ant-upload-drag-icon px-8 text-center">
+                          <InboxOutlined />
+                        </p>
+                        <div className="text-start">
+                          <p className="ant-upload-text mb-0">Click or drag labels file to this area</p>
+                          <p className="ant-upload-hint mb-0">
+                            Upload standing deadwood labels in GeoJSON, Shapefile (zip), or GeoPackage format
+                          </p>
+                        </div>
+                      </div>
+                    </Upload.Dragger>
                   </Form.Item>
                   <Form.Item
-                    label={
-                      <div>
-                        <Tooltip title="Provide additional information about the labels, like the type of labels or the source of the labels.">
-                          <InfoCircleOutlined className="mr-2" />
-                        </Tooltip>
-                        Labels Description
-                      </div>
-                    }
+                    label="Labels Description"
                     name="labels_description"
-                    rules={[{ required: true, message: "Please provide additional information about the labels" }]}
+                    rules={[{ required: false, message: "Please provide additional information about the labels" }]}
                   >
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}
                       placeholder="Example: Type - Forest Boundaries, Source - XYZ Survey 2023"
                     />
                   </Form.Item>
-                </>
+                  <div className="mb-6"></div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </Form>
+        </Form>
+      </div>
     </Modal>
   );
 };
