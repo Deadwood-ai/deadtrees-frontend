@@ -71,6 +71,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const geotiff2019 = createDeadwoodGeotiffLayer("2019");
       const geotiff2020 = createDeadwoodGeotiffLayer("2020");
       const geotiff2021 = createDeadwoodGeotiffLayer("2021");
+      const geotiff2022 = createDeadwoodGeotiffLayer("2022");
 
       // Store references
       layerRefs.current = {
@@ -80,13 +81,16 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         geotiff2019,
         geotiff2020,
         geotiff2021,
+        geotiff2022,
       };
 
       // Wait for the source to be ready and create map
-      orthoCogLayer.getSource().getView()
+      orthoCogLayer
+        .getSource()
+        .getView()
         .then((viewOptions) => {
           if (!viewOptions?.extent) {
-            console.error('No extent found in viewOptions');
+            console.error("No extent found in viewOptions");
             return;
           }
 
@@ -100,14 +104,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
           const newMap = new Map({
             target: mapContainer.current,
-            layers: [
-              basemapLayer,
-              orthoCogLayer,
-              geotiff2018,
-              geotiff2019,
-              geotiff2020,
-              geotiff2021,
-            ],
+            layers: [basemapLayer, orthoCogLayer, geotiff2018, geotiff2019, geotiff2020, geotiff2021, geotiff2022],
             view: MapView,
             overlays: [],
             controls: [],
@@ -156,13 +153,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               }
             })
             .catch((error) => {
-              console.error('Error fetching labels:', error);
+              console.error("Error fetching labels:", error);
             });
 
           mapRef.current = newMap;
         })
         .catch((error) => {
-          console.error('Error initializing map:', error);
+          console.error("Error initializing map:", error);
         });
     }
 
@@ -276,7 +273,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-6 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className="absolute bottom-52 right-2 z-50">
+        <div className={`absolute bottom-${labels ? "60" : "52"} right-2 z-50`}>
           <Legend />
         </div>
         <div className="absolute bottom-6 right-2 z-50 ">
