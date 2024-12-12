@@ -39,7 +39,7 @@ const DataGallery = () => {
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
 
-    const sorted = [...data].sort((a, b) => b.id + a.id);
+    const sorted = [...data].sort((a, b) => a.id - b.id);
 
     const authorMap = new Map();
     return sorted.filter((item) => {
