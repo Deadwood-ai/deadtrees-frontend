@@ -59,7 +59,7 @@ const Hero = () => {
             BETA
           </Tag>
         </div>
-        <h1 className="m-0 bg-gradient-to-r from-blue-700 to-purple-500 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent md:text-7xl">
+        <h1 className="m-0 bg-gradient-to-br from-blue-800 via-blue-600 via-purple-500 to-purple-700 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent drop-shadow-sm md:text-7xl">
           deadtrees.earth
         </h1>
         <p className="m-auto text-center text-xl text-gray-500 md:max-w-xl">

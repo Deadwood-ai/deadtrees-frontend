@@ -88,20 +88,49 @@ export default function About() {
           a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
           worldwide to understand tree mortality dynamics.
         </Paragraph>
-        <Paragraph className="mt-4 text-base text-gray-600">
-          This initiative is being led by Prof. Dr. Teja Kattenborn from{" "}
+        <Paragraph className="mt-4 text-lg text-gray-600">
+          This initivative is being led by Prof. Dr. Teja Kattenborn from{" "}
           <a href="https://geosense.uni-freiburg.de/en">geosense</a> and Clemens Mosig from{" "}
           <a href="https://rsc4earth.de/">RSC4Earth</a> / <a href="https://scads.ai/">ScaDS.AI</a>, and the service is
-          being built by <a href="https://hydrocode.de/home">hydrocode</a>.
+          being built by <a href="https://hydrocode.de/home">hydrocode</a>. deadtrees.earth would not be possible
+          without the nummerous collaborators and data contributors of more than 60 institutions.
         </Paragraph>
-        {/* <div className="mt-6 flex gap-4">
-                    <Button type="primary" size="large" onClick={() => navigate("/dataset")}>
-                        Explore the Database
-                    </Button>
-                    <Button size="large" onClick={() => navigate("/profile")}>
-                        Contribute Data
-                    </Button>
-                </div> */}
+        <Collapse
+          bordered={false}
+          style={{ backgroundColor: "transparent" }}
+          className="mt-0"
+          items={[
+            {
+              key: "1",
+              label: <span className="m-0 pt-6 text-lg text-gray-500">Want to see all contributors?</span>,
+              children: (
+                <div>
+                  <p className="text-md font-semibold">Data Contributors and collaborators:</p>
+                  <ul className="text-md">
+                    {collaborators && collaborators.length > 0 ? (
+                      collaborators
+                        .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
+                        .map((collaborator) => {
+                          return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
+                        })
+                    ) : (
+                      <li>Loading collaborators...</li>
+                    )}
+                  </ul>
+                </div>
+              ),
+              style: {
+                borderRadius: "0.5rem",
+                marginBottom: "12px",
+                paddingLeft: "0px",
+                paddingRight: "12px",
+                paddingTop: "0px",
+                paddingBottom: "8px",
+                // backgroundColor: "rgb(241 245 249)",
+              },
+            },
+          ]}
+        />
       </div>
       {/* Publications Section */}
       <div className="mb-16">
@@ -228,43 +257,6 @@ export default function About() {
         >
           Get in Contact
         </Button>
-
-        <Collapse
-          bordered={false}
-          style={{ backgroundColor: "transparent" }}
-          className="mt-0"
-          items={[
-            {
-              key: "1",
-              label: <span className="text-md m-0 pt-4 text-gray-500">Want to see all contributors?</span>,
-              children: (
-                <div>
-                  <p className="text-md font-semibold">Data Contributors and collaborators:</p>
-                  <ul className="text-md">
-                    {collaborators && collaborators.length > 0 ? (
-                      collaborators
-                        .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
-                        .map((collaborator) => {
-                          return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
-                        })
-                    ) : (
-                      <li>Loading collaborators...</li>
-                    )}
-                  </ul>
-                </div>
-              ),
-              style: {
-                borderRadius: "0.5rem",
-                marginBottom: "12px",
-                paddingLeft: "0px",
-                paddingRight: "12px",
-                paddingTop: "0px",
-                paddingBottom: "8px",
-                backgroundColor: "rgb(241 245 249)",
-              },
-            },
-          ]}
-        />
       </Card>
       <LogoBannerBand />
     </div>
