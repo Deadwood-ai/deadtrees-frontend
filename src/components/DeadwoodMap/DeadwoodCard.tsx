@@ -32,7 +32,7 @@ const DeadwoodCard = ({
             />
           </div>
         </div>
-        <div className="mb-6 flex items-center space-x-2">
+        <div className="mb-4 flex items-center space-x-2">
           <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
           <a
             className="m-0 italic underline"

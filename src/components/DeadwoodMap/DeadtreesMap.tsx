@@ -31,13 +31,14 @@ const yearByIndex = {
   2: "2019",
   3: "2020",
   4: "2021",
+  5: "2022",
 };
 
 const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
-  const [selectedYear, setSelectedYear] = useState<string>("2018");
+  const [selectedYear, setSelectedYear] = useState<string>("2022");
   const [bounds, setBounds] = useState([]);
-  const [selectedSite, setSelectedSite] = useState<string>("Harz");
+  const [selectedSite, setSelectedSite] = useState<string>("Bayern");
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
@@ -86,10 +87,11 @@ const DeadtreesMap = () => {
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
       const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
       const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
+      const geotifLayer2022 = createDeadwoodGeotiffLayer("2022");
 
       const newMap = new Map({
         target: mapContainer.current,
-        layers: [basemapLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021],
+        layers: [basemapLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021, geotifLayer2022],
         view: initialView,
         overlays: [],
         controls: [],
@@ -272,7 +274,7 @@ const DeadtreesMap = () => {
           <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
         </div>
         <SideSelectionButtons />
-        <div className="absolute bottom-56 right-8 z-50">
+        <div className="absolute bottom-60 right-8 z-50">
           <Legend />
         </div>
         <div className="absolute bottom-12 right-8 z-50">
