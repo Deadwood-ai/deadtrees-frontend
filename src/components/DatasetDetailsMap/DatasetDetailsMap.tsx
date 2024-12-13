@@ -116,6 +116,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             .then((labelsData) => {
               if (labelsData && mapRef.current) {
                 setLabels(labelsData);
+                const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
                 const vectorLayerAOI = new VectorLayer({
                   source: new VectorSource({
                     features: new GeoJSON().readFeatures(labelsData?.aoi, {
@@ -260,6 +261,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [mapStyle]);
 
+  const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
+
   return (
     <div className="h-full w-full">
       <div
@@ -273,7 +276,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-6 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className={`absolute bottom-${labels !== null ? "60" : "52"} right-2 z-50`}>
+        <div className={`absolute ${legendPosition} right-2 z-50`}>
           <Legend />
         </div>
         <div className="absolute bottom-6 right-2 z-50 ">
