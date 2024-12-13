@@ -320,10 +320,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone" }} variant="filled">
           <div className="flex w-full justify-center space-x-12">
             <div className="w-full">
-              <Form.Item
-                label="Orthophoto (GeoTIFF)"
-                rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}
-              >
+              <Form.Item label="Orthophoto" rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}>
                 <Upload.Dragger
                   fileList={fileList}
                   onChange={onFileChange}
@@ -353,11 +350,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
 
-                      const hasAndPattern = value.some((author: string) => author.toLowerCase().includes(" and "));
+                      const hasAndPattern = value.some(
+                        (author: string) =>
+                          author.toLowerCase().includes(" and ") || author.toLowerCase().includes(","),
+                      );
 
                       if (hasAndPattern) {
                         return Promise.reject(
-                          'Please add authors individually instead of using "and". Use separate entries for each author.',
+                          'Please add authors individually instead of using "and" or ",". Use separate entries for each author.',
                         );
                       }
                       return Promise.resolve();
@@ -373,14 +373,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   </div>
                 }
                 name="author"
-                extra="Add each author separately instead of using 'and' (e.g., 'John Smith', 'Jane Doe')"
+                // extra="Add each author separately
               >
                 {authors?.at(0)?.label ? (
                   <Select
                     mode="tags"
                     style={{ width: "100%" }}
                     options={authors}
-                    placeholder="Enter or select authors (one author per entry)"
+                    placeholder="Enter author names separately (e.g. 'John Smith')"
                   />
                 ) : (
                   <Select mode="tags" style={{ width: "100%" }} placeholder="Enter authors (one author per entry)" />
@@ -460,7 +460,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <div className="w-full">
                 <div>
                   <Form.Item
-                    label="Labels File"
+                    label="Labels File (optional)"
                     name="labels_file"
                     rules={[
                       {
