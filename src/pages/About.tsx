@@ -7,6 +7,8 @@ import { useMemo } from "react";
 import LogoBannerBand from "../components/Home/LogoBanner";
 import { useData } from "../hooks/useDataProvider";
 import { useState, useEffect } from "react";
+import ReactPlayer from "react-player";
+import { PlayCircleFilled } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
@@ -17,6 +19,8 @@ export default function About() {
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
   const { collaborators } = useData();
   console.log("collaborators:", collaborators);
+
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const today = new Date();
 
@@ -88,6 +92,26 @@ export default function About() {
           a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
           worldwide to understand tree mortality dynamics.
         </Paragraph>
+        <div className="relative  my-8 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-8">
+          <ReactPlayer
+            url="https://www.youtube.com/watch?v=IKbFopiTcWY"
+            width="100%"
+            height="100%"
+            controls={true}
+            playsinline
+            loop={true}
+            config={{
+              file: {
+                attributes: {
+                  controlsList: "nodownload",
+                },
+              },
+            }}
+            playing={isPlaying}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+        </div>
         <Paragraph className="mt-4 text-lg text-gray-600">
           This initivative is being led by Prof. Dr. Teja Kattenborn from{" "}
           <a href="https://geosense.uni-freiburg.de/en">geosense</a> and Clemens Mosig from{" "}
