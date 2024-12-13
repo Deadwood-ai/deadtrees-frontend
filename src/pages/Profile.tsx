@@ -39,23 +39,7 @@ export default function ProfilePage() {
   }, [session, navigate]);
 
   if (!session) {
-    return null; //
-    // return (
-    //   <div className="m-auto flex h-full max-w-7xl items-center justify-center">
-    //     <div className="w-96 rounded-md bg-white p-8 ">
-    //       <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign in</h1>
-
-    //       <Auth
-    //         redirectTo={window.origin + "/profile"}
-    //         supabaseClient={supabase}
-    //         appearance={{ theme: ThemeSupa }}
-    //         showLinks={true}            // providers={["google", "github"]}
-    //         providers={[]}
-    //         view="update_password"
-    //       />
-    //     </div>
-    //   </div>
-    // );
+    return null;
   } else {
     return (
       <div className=" m-auto min-h-screen w-full max-w-7xl">
