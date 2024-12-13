@@ -60,21 +60,24 @@ export function DeadwoodCardDetails({
         )}
 
         {isGermany && (
-          <div className="mb-2 flex w-full items-end">
-            <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
-            <div className="w-2/3">
-              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
-              <Slider
-                className="m-0 w-full"
-                defaultValue={1}
-                step={0.01}
-                max={1}
-                value={sliderValueYear}
-                onChange={(value) => setSliderValueYear(value as number)}
-                min={0}
-              />
+          <>
+            <div className="mb-2 flex w-full items-end">
+              <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
+              <div className="w-2/3">
+                <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+                <Slider
+                  className="m-0 w-full"
+                  defaultValue={1}
+                  step={0.01}
+                  max={1}
+                  value={sliderValueYear}
+                  onChange={(value) => setSliderValueYear(value as number)}
+                  min={0}
+                />
+              </div>
             </div>
-          </div>
+            <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
+          </>
         )}
 
         <div className="mb-4 flex items-center space-x-2">
@@ -86,7 +89,6 @@ export function DeadwoodCardDetails({
             Schiefer et al., 2023
           </a>
         </div>
-        <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
       </div>
     </div>
   );
