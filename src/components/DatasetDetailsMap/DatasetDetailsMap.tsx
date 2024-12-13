@@ -26,6 +26,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [sliderValueSatellite, setSliderValueSatellite] = useState<number>(1);
   const [labelsFetched, setLabelsFetched] = useState<boolean>(false);
   const [labels, setLabels] = useState<ILabels | null>(null);
+  const [isLegendVisible, setIsLegendVisible] = useState(false);
   // Store layer references for cleanup
   const layerRefs = useRef<{
     basemap?: TileLayer;
@@ -276,24 +277,24 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-6 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        {data.admin_level_1 == "Germany" && (
-          <div>
-            <div className={`absolute ${legendPosition} right-2 z-50`}>
-              <Legend />
-            </div>
-            <div className="absolute bottom-6 right-2 z-50 ">
-              <DeadwoodCardDetails
-                labels={labels}
-                year={selectedYear}
-                setSelectedYear={setSelectedYear}
-                sliderValueLabels={sliderValueLabels}
-                setSliderValueLabels={setSliderValueLabels}
-                sliderValueYear={sliderValueSatellite}
-                setSliderValueYear={setSliderValueSatellite}
-              />
-            </div>
+        {isLegendVisible && data.admin_level_1 === "Germany" && (
+          <div className={`absolute ${legendPosition} right-2 z-50`}>
+            <Legend />
           </div>
         )}
+        <div className="absolute bottom-6 right-2 z-50 ">
+          <DeadwoodCardDetails
+            labels={labels}
+            year={selectedYear}
+            setSelectedYear={setSelectedYear}
+            sliderValueLabels={sliderValueLabels}
+            setSliderValueLabels={setSliderValueLabels}
+            sliderValueYear={sliderValueSatellite}
+            setSliderValueYear={setSliderValueSatellite}
+            adminLevel1={data.admin_level_1}
+            showLegend={setIsLegendVisible}
+          />
+        </div>
       </div>
     </div>
   );
