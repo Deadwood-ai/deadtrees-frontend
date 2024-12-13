@@ -73,6 +73,7 @@ const UpcomingConferences = () => {
       <div className="mt-4 text-center">
         <Button
           type="link"
+          className="mt-4"
           onClick={() => {
             window.scrollTo(0, 0);
             navigate("/about");
@@ -101,6 +102,7 @@ const GetInContact = () => {
           Upload imagery
         </Button>
         <Button
+          className="mt-0"
           size="large"
           href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
         >
