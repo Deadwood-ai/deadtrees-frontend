@@ -347,26 +347,43 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 </Upload.Dragger>
               </Form.Item>
               <Form.Item
-                rules={[{ required: true, message: "Please enter the authors" }]}
+                rules={[
+                  { required: true, message: "Please enter the authors" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+
+                      const hasAndPattern = value.some((author: string) => author.toLowerCase().includes(" and "));
+
+                      if (hasAndPattern) {
+                        return Promise.reject(
+                          'Please add authors individually instead of using "and". Use separate entries for each author.',
+                        );
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
                 label={
                   <div>
-                    <Tooltip title="Provide the names of individuals or organizations responsible for capturing the orthophoto. You can either select from existing authors or type new names.">
+                    <Tooltip title="Provide the names of individuals or organizations responsible for capturing the orthophoto. Add authors individually - one entry per author.">
                       <InfoCircleOutlined className="mr-2" />
                     </Tooltip>
                     Authors of the Orthophoto
                   </div>
                 }
                 name="author"
+                extra="Add each author separately instead of using 'and' (e.g., 'John Smith', 'Jane Doe')"
               >
                 {authors?.at(0)?.label ? (
                   <Select
                     mode="tags"
                     style={{ width: "100%" }}
                     options={authors}
-                    placeholder="Enter or select authors"
+                    placeholder="Enter or select authors (one author per entry)"
                   />
                 ) : (
-                  <Select mode="tags" style={{ width: "100%" }} placeholder="Authors" />
+                  <Select mode="tags" style={{ width: "100%" }} placeholder="Enter authors (one author per entry)" />
                 )}
               </Form.Item>
               <Form.Item
@@ -381,6 +398,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 }
                 name="aquisition_date"
                 rules={[{ required: true, message: "Please select a date" }]}
+                extra="If you're unsure of the exact date, provide a broader timeframe (e.g., month or year)."
               >
                 <PickerWithType
                   pickerTypeOptions={pickerTypeOptions}
@@ -388,9 +406,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   setPickerType={setPickerType}
                 />
               </Form.Item>
-              <Typography.Paragraph className="p-0" type="secondary">
+              {/* <Typography.Paragraph className="p-0" type="secondary">
                 If you're unsure of the exact date, provide a broader timeframe (e.g., month or year).
-              </Typography.Paragraph>
+              </Typography.Paragraph> */}
 
               <Form.Item
                 label={

@@ -92,7 +92,7 @@ export default function About() {
           a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
           worldwide to understand tree mortality dynamics.
         </Paragraph>
-        <div className="relative  my-8 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-8">
+        <div className="relative  my-8 aspect-video w-full max-w-3xl overflow-hidden rounded-2xl bg-gray-100 md:mt-8">
           <ReactPlayer
             url="https://www.youtube.com/watch?v=IKbFopiTcWY"
             width="100%"
