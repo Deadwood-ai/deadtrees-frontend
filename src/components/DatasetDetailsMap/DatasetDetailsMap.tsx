@@ -276,20 +276,24 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-6 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className={`absolute ${legendPosition} right-2 z-50`}>
-          <Legend />
-        </div>
-        <div className="absolute bottom-6 right-2 z-50 ">
-          <DeadwoodCardDetails
-            labels={labels}
-            year={selectedYear}
-            setSelectedYear={setSelectedYear}
-            sliderValueLabels={sliderValueLabels}
-            setSliderValueLabels={setSliderValueLabels}
-            sliderValueYear={sliderValueSatellite}
-            setSliderValueYear={setSliderValueSatellite}
-          />
-        </div>
+        {data.admin_level_1 == "Germany" && (
+          <div>
+            <div className={`absolute ${legendPosition} right-2 z-50`}>
+              <Legend />
+            </div>
+            <div className="absolute bottom-6 right-2 z-50 ">
+              <DeadwoodCardDetails
+                labels={labels}
+                year={selectedYear}
+                setSelectedYear={setSelectedYear}
+                sliderValueLabels={sliderValueLabels}
+                setSliderValueLabels={setSliderValueLabels}
+                sliderValueYear={sliderValueSatellite}
+                setSliderValueYear={setSliderValueSatellite}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
