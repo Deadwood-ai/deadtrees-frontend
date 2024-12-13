@@ -409,7 +409,16 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   <Radio value="satellite">Satellite</Radio>
                 </Radio.Group>
               </Form.Item>
-              <Form.Item label="DOI" name="doi">
+              <Form.Item
+                label="DOI"
+                name="doi"
+                rules={[
+                  {
+                    type: "url",
+                    message: "Please enter a valid URL",
+                  },
+                ]}
+              >
                 <Input placeholder="Enter DOI, URL, or publication reference (if applicable)" />
               </Form.Item>
               <Form.Item label="Additional Information" name="additional_information">
@@ -464,9 +473,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     </Upload.Dragger>
                   </Form.Item>
                   <Form.Item
-                    label="Labels Description"
+                    label="Labels Description (required when uploading labels)"
                     name="labels_description"
-                    rules={[{ required: false, message: "Please provide additional information about the labels" }]}
+                    rules={[
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (labelsFileList.length > 0 && !value) {
+                            return Promise.reject("Please provide a description for the uploaded labels");
+                          }
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
                   >
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}

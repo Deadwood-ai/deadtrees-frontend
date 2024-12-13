@@ -61,9 +61,12 @@ export default function DatasetDetails() {
               {dataset.citation_doi && (
                 <div className="flex justify-between p-1">
                   <Typography.Text className="pr-2">DOI: </Typography.Text>
-                  {/* <Typography.Text strong> */}
-                  <a href={dataset.citation_doi}>link</a>
-                  {/* {dataset.citation_doi} */}
+                  <Tooltip title={dataset.citation_doi}>
+                    <a href={dataset.citation_doi}>
+                      {dataset.citation_doi &&
+                        dataset.citation_doi.slice(0, 30) + (dataset.citation_doi.length > 30 ? "..." : "")}
+                    </a>
+                  </Tooltip>
 
                   {/* </Typography.Text> */}
                 </div>

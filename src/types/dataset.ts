@@ -10,9 +10,9 @@ export interface IThumbnail {
   url: string;
 }
 export enum IDataAccess {
-  "public",
-  "private",
-  "viewonly",
+  public = "public",
+  private = "private",
+  viewonly = "viewonly",
 }
 
 export interface ILabelObject {
@@ -73,10 +73,10 @@ export interface ILabels {
 }
 
 export enum ILicense {
-  "CC BY",
-  "CC BY-SA",
-  "CC BY-NC-SA",
-  "MIT",
+  "CC BY" = "CC BY",
+  "CC BY-SA" = "CC BY-SA",
+  "CC BY-NC-SA" = "CC BY-NC-SA",
+  "MIT" = "MIT",
 }
 
 export enum IPlatform {
