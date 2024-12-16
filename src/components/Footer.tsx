@@ -22,19 +22,19 @@ export default function Footer({ className = "" }: FooterProps) {
           <div className="flex flex-col space-y-2 underline md:flex-row md:space-x-8 md:space-y-0">
             <Link
               to="/impressum"
-              className="font-inter text-sm font-medium tracking-wide text-gray-600 hover:text-gray-900"
+              className="font-inter text-sm font-light tracking-wide text-gray-600 hover:text-gray-900"
             >
               Impressum
             </Link>
             <Link
               to="/datenschutzerklaerung"
-              className="font-inter text-sm font-medium tracking-wide text-gray-600 underline hover:text-gray-900"
+              className="font-inter text-sm font-light tracking-wide text-gray-600 underline hover:text-gray-900"
             >
               Datenschutzerklärung
             </Link>
             <Link
               to="/terms-of-services"
-              className="font-inter text-sm font-medium tracking-wide text-gray-600 underline hover:text-gray-900"
+              className="font-inter text-sm font-light tracking-wide text-gray-600 underline hover:text-gray-900"
             >
               Nutzungsbedingungen
             </Link>
