@@ -136,6 +136,18 @@ function createLabelObjectFormData(
   return formData;
 }
 
+const TermsLink = () => (
+  <Typography.Link href="/terms-of-services" target="_blank">
+    terms of service
+  </Typography.Link>
+);
+
+const PrivacyLink = () => (
+  <Typography.Link href="/datenschutzerklaerung" target="_blank">
+    privacy policy
+  </Typography.Link>
+);
+
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
 
@@ -317,7 +329,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         <Typography.Title style={{ margin: 0, paddingBottom: 16 }} level={4}>
           Orthophoto Upload
         </Typography.Title>
-        <Form layout="vertical" onFinish={onFormFinish} initialValues={{ platform: "drone" }} variant="filled">
+        <Form
+          layout="vertical"
+          onFinish={onFormFinish}
+          initialValues={{ platform: "drone", agreement: false }}
+          variant="filled"
+        >
           <div className="flex w-full justify-center space-x-12">
             <div className="w-full">
               <Form.Item label="Orthophoto" rules={[{ required: true, message: "Please upload a GeoTIFF file" }]}>
@@ -446,14 +463,36 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 />
               </Form.Item>
               <Form.Item>
-                <Space className="pt-6">
-                  <Button type="primary" htmlType="submit" disabled={fileList.length === 0}>
-                    Upload
-                  </Button>
-                  <Button type="default" onClick={onClose}>
-                    Cancel
-                  </Button>
-                </Space>
+                <div className="space-y-4">
+                  <Form.Item
+                    name="agreement"
+                    valuePropName="checked"
+                    rules={[
+                      {
+                        validator: (_, value) =>
+                          value
+                            ? Promise.resolve()
+                            : Promise.reject("Please accept the terms of service and privacy policy"),
+                      },
+                    ]}
+                  >
+                    <div className="flex items-start">
+                      <Checkbox className="mt-1" />
+                      <div className="ml-4 text-sm">
+                        I agree to the <TermsLink /> and <PrivacyLink />. I confirm that I have the rights to share this
+                        data and agree to make it available under the CC BY license.
+                      </div>
+                    </div>
+                  </Form.Item>
+                  <Space>
+                    <Button type="primary" htmlType="submit" disabled={fileList.length === 0}>
+                      Upload
+                    </Button>
+                    <Button type="default" onClick={onClose}>
+                      Cancel
+                    </Button>
+                  </Space>
+                </div>
               </Form.Item>
             </div>
             <div className="w-full">

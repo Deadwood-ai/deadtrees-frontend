@@ -91,7 +91,7 @@ export default function Dataset() {
         height: "100%",
       }}
     >
-      <Col className="flex h-full w-96 flex-col py-4 pr-4 align-middle">
+      <Col className="flex h-full w-96 flex-col px-2 align-middle">
         {filter ? (
           <div className="flex justify-between pb-2">
             <div className="flex items-center">
@@ -167,7 +167,7 @@ export default function Dataset() {
           <div>Loading...</div>
         )}
       </Col>
-      <Col className="flex-1 py-4">
+      <Col className="flex-1 pt-2">
         {processedData && processedData.length > 0 ? (
           <DatasetMapOL
             data={processedData}
