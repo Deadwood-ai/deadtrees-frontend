@@ -14,6 +14,16 @@ import { Tooltip } from "antd";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
 
+const logos = [
+  { path: "assets/logos/bml.png" },
+  { path: "assets/logos/esa.jpg" },
+  { path: "assets/logos/dfg.jpeg" },
+  { path: "assets/logos/uni-freiburg.png" },
+  { text: "RSC4Earth" },
+  { path: "assets/logos/NFDI4Earth_logo.jpg" },
+  { path: "assets/logos/scads.png" },
+];
+
 const FAQ = () => {
   const { collaborators } = useData();
 
@@ -119,7 +129,7 @@ export default function HomePage() {
   return (
     <div className="m-auto max-w-6xl pb-1">
       <Hero />
-      <LogoBannerBand />
+      <LogoBannerBand logos={logos} title="Supported by" />
       <DataGallery />
       <Features />
       <Roadmap />

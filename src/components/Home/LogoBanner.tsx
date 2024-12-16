@@ -1,17 +1,15 @@
-const LogoBannerBand = () => {
-  const logos = [
-    { path: "assets/logos/bml.png" },
-    { path: "assets/logos/esa.jpg" },
-    { path: "assets/logos/dfg.jpeg" },
-    { path: "assets/logos/uni-freiburg.png" },
-    { text: "RSC4Earth" },
-    { path: "assets/logos/NFDI4Earth_logo.jpg" },
-    { path: "assets/logos/scads.png" },
-  ];
+interface LogoBannerProps {
+  logos: Array<{
+    path?: string;
+    text?: string;
+  }>;
+  title: string;
+}
 
+export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
   return (
     <div className="pt-0 md:pt-12">
-      <p className="text-md mb-8 text-center text-gray-600">Supported by</p>
+      <p className="text-md mb-8 text-center text-gray-600">{title}</p>
       <div className="logo-scroll">
         <div className="logo-container">
           {/* First set of logos */}
@@ -42,6 +40,4 @@ const LogoBannerBand = () => {
       </div>
     </div>
   );
-};
-
-export default LogoBannerBand;
+}

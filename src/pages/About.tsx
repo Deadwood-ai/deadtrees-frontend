@@ -14,6 +14,15 @@ const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
 
 export default function About() {
+  const logos = [
+    { path: "assets/logos/copenhagen.png" },
+    { path: "assets/logos/ecosystem-health-observatory.jpg" },
+    { path: "assets/logos/julius-kuenen-institut.svg" },
+    { path: "assets/logos/tree-mortality-network.png" },
+    { path: "assets/logos/NFDI4Earth_logo.jpg" },
+    { path: "assets/logos/esa.jpg" },
+  ];
+
   const navigate = useNavigate();
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
@@ -283,7 +292,7 @@ export default function About() {
           Get in Contact
         </Button>
       </Card>
-      <LogoBannerBand />
+      <LogoBannerBand logos={logos} title="Research Networks and associated partners" />
     </div>
   );
 }
