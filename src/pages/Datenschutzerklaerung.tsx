@@ -95,11 +95,10 @@ export default function Datenschutzerklaerung() {
           <Title level={3}>Cookies</Title>
           <Paragraph>
             Wir setzen Cookies ein, sobald Sie ein Nutzerkonto erstellen und sich anmelden. Diese Cookies dienen dazu,
-            Ihre Sitzung aufrechtzuerhalten und den erneuten Login zu erleichtern. Die Cookies sind dabei [expiry
-            date/time]. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer
-            nutzerfreundlichen Gestaltung). Sie werden darauf hingewiesen, dass die Nutzung dieser Webseite Cookies
-            setzt. Sie können Cookies im Browser löschen oder blockieren; dies kann jedoch zu Funktionseinschränkungen
-            führen.
+            Ihre Sitzung aufrechtzuerhalten und den erneuten Login zu erleichtern. Die Cookies sind dabei 30 Tage
+            gültig. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer nutzerfreundlichen
+            Gestaltung). Sie werden darauf hingewiesen, dass die Nutzung dieser Webseite Cookies setzt. Sie können
+            Cookies im Browser löschen oder blockieren; dies kann jedoch zu Funktionseinschränkungen führen.
           </Paragraph>
         </section>
 
