@@ -1,10 +1,16 @@
-import { Typography } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { Button, Typography } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Paragraph } = Typography;
 
 export default function Impressum() {
+  const navigate = useNavigate();
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
+      <Button type="default" size="large" icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
+        Zurück
+      </Button>
       <Title level={1}>Impressum</Title>
 
       <div className="space-y-8">

@@ -110,7 +110,7 @@ const FAQ = () => {
   ];
 
   return (
-    <div className="my-24 md:mt-36">
+    <div className="my-24 px-4 md:mt-36">
       <h1 className="m-auto text-center text-3xl font-semibold text-gray-800 md:text-4xl">
         Frequently Asked Questions
       </h1>
@@ -127,7 +127,7 @@ const FAQ = () => {
 
 export default function HomePage() {
   return (
-    <div className="m-auto max-w-6xl pb-1">
+    <div className="m-auto max-w-6xl px-4 pb-1 md:px-0">
       <Hero />
       <LogoBannerBand logos={logos} title="Supported by" />
       <DataGallery />
