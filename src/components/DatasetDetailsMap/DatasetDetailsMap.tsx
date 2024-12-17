@@ -17,6 +17,8 @@ import { Settings } from "../../config";
 import VectorSource from "ol/source/Vector";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
+  if (!data) return null;
+
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
@@ -263,7 +265,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   }, [mapStyle]);
 
   const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
-
   return (
     <div className="h-full w-full">
       <div

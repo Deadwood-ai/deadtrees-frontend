@@ -12,14 +12,11 @@ export default function DatasetDetails() {
   const { id } = useParams();
   const data = useData();
   const dataset = data.data?.find((d) => d.id.toString() === id);
-  console.log(dataset);
-  // notification.info({
-  //   message: "Loading data can be slow and could fail",
-  //   description: "The Applikation is not optimized yet. We are working on it.",
 
-  //   // placement: "bottomLeft",
-  //   // duration: 10,
-  // });
+  if (!dataset) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Row
       className="bg-slate-50"
@@ -181,7 +178,6 @@ export default function DatasetDetails() {
         )}
       </Col>
       <Col className="flex-1 py-4">
-        {/* <DatasetDetailsMap data={dataset} /> */}
         <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>

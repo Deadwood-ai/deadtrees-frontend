@@ -11,7 +11,7 @@ interface DeadwoodCardDetailsProps {
   setSliderValueYear: React.Dispatch<React.SetStateAction<number>>;
   setSelectedYear: React.Dispatch<React.SetStateAction<string>>;
   labels: ILabels | null;
-  adminLevel1: string | null;
+  adminLevel1: string | null | undefined;
   showLegend: (show: boolean) => void;
 }
 
@@ -28,6 +28,7 @@ export function DeadwoodCardDetails({
 }: DeadwoodCardDetailsProps) {
   const isGermany = adminLevel1 === "Germany";
 
+  if (!adminLevel1) return null;
   if (!labels && !isGermany) return null;
 
   useEffect(() => {
