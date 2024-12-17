@@ -8,7 +8,13 @@ export default function TermsOfService() {
   const navigate = useNavigate();
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <Button type="default" size="large" icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
+      <Button
+        className="md:hidden"
+        type="default"
+        size="large"
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate("/")}
+      >
         Zurück
       </Button>
       <Title level={1}>Nutzungsbedingungen (Terms of Service)</Title>
