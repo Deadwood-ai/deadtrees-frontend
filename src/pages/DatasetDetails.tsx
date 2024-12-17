@@ -151,27 +151,16 @@ export default function DatasetDetails() {
                 </div>
               </div>
             )}
-            {dataset.label_source ? (
-              <Button
-                href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
-                type="primary"
-                icon={<DownloadOutlined />}
-                className="mt-6"
-                onClick={() => message.info("Downloading Dataset, please wait...")}
-              >
-                Download Ortho & Labels
-              </Button>
-            ) : (
-              <Button
-                href={`${Settings.API_URL}/download/datasets/${dataset.id}/ortho.tif`}
-                type="primary"
-                icon={<DownloadOutlined />}
-                className="mt-6"
-                onClick={() => message.info("Downloading Orthoimage, please wait...")}
-              >
-                Download Ortho
-              </Button>
-            )}
+
+            <Button
+              href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
+              type="primary"
+              icon={<DownloadOutlined />}
+              className="mt-6"
+              onClick={() => message.info("Downloading Dataset, please wait...")}
+            >
+              Download Dataset
+            </Button>
           </div>
         ) : (
           <div>Loading...</div>
