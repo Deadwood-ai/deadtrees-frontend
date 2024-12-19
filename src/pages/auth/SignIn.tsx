@@ -16,8 +16,8 @@ const SignIn = () => {
   }, [session, navigate]);
 
   return (
-    <div className="m-auto flex h-full max-w-7xl items-center justify-center">
-      <div className="w-96 rounded-md bg-white p-8">
+    <div className="m-auto flex h-full  max-w-7xl items-center justify-center">
+      <div className="w-96 rounded-md p-8">
         <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign In</h1>
         <SignInAuthUI
           supabaseClient={supabase}

@@ -1,5 +1,6 @@
 // const USE_LOCAL_SERVER = false;
-const LOCAL_SERVER_URL = "http://0.0.0.0:8762";
+// const LOCAL_SERVER_URL = "http://0.0.0.0:8762";
+const LOCAL_SERVER_URL = "http://localhost:8080";
 // const PRODUCTION_SERVER_URL = "https://data.deadtrees.earth/api/v1";
 const PRODUCTION_SERVER_URL = "https://data.deadtrees.earth/";
 

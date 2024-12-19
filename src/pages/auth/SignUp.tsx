@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 const SignUp = () => {
   return (
     <div className="m-auto flex h-full max-w-7xl items-center justify-center">
-      <div className="w-96 rounded-md bg-white p-8">
+      <div className="w-96 rounded-md p-8">
         <h1 className="mb-8 text-3xl font-semibold text-gray-600">Sign Up</h1>
         <SignUpAuthUI
           providers={[]}

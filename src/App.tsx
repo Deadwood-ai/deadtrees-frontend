@@ -20,7 +20,7 @@ const { Content } = Layout;
 
 function LayoutWrapper() {
   const location = useLocation();
-  const fullHeightPaths = ["/dataset", "/deadtrees"];
+  const fullHeightPaths = ["/dataset", "/deadtrees", "/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
 
   const shouldUseFullHeight = fullHeightPaths.some((path) => location.pathname.startsWith(path));
 
