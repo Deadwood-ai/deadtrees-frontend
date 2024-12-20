@@ -79,7 +79,7 @@ export default function DatasetDetails() {
                     // })
                     new Date(
                       dataset.aquisition_year,
-                      dataset.aquisition_month ?? 0,
+                      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
                       dataset.aquisition_day ?? 1,
                     ).toLocaleDateString("en-US", {
                       year: "numeric",
