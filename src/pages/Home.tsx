@@ -15,7 +15,7 @@ import { Settings } from "../config";
 import countryList from "../utils/countryList";
 
 const logos = [
-  { path: "assets/logos/bml.png" },
+  { path: "assets/logos/MLR.png" },
   { path: "assets/logos/esa.jpg" },
   { path: "assets/logos/dfg.jpeg" },
   { path: "assets/logos/uni-freiburg.png" },
