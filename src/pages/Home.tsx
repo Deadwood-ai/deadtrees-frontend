@@ -15,13 +15,13 @@ import { Settings } from "../config";
 import countryList from "../utils/countryList";
 
 const logos = [
-  { path: "assets/logos/MLR.png" },
   { path: "assets/logos/esa.jpg" },
   { path: "assets/logos/dfg.jpeg" },
   { path: "assets/logos/uni-freiburg.png" },
   { text: "RSC4Earth" },
   { path: "assets/logos/NFDI4Earth_logo.jpg" },
   { path: "assets/logos/scads.png" },
+  { path: "assets/logos/MLR.png" },
 ];
 
 const FAQ = () => {
