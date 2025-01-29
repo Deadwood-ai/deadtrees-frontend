@@ -2,13 +2,7 @@ import { Settings } from "../../config";
 import { ILabels } from "../../types/dataset";
 import { supabase } from "../../hooks/useSupabase";
 
-const fetchLabels = async ({
-  dataset_id,
-  // setLabels,
-}: {
-  dataset_id: number;
-  // setLabels: React.Dispatch<React.SetStateAction<ILabels | null>>;
-}): Promise<ILabels | null> => {
+const fetchLabels = async ({ dataset_id }: { dataset_id: number }): Promise<ILabels | null> => {
   console.log("dataset_id", dataset_id);
   const { data, error } = await supabase.from(Settings.LABELS_TABLE).select("*").eq("dataset_id", dataset_id);
 
@@ -16,9 +10,20 @@ const fetchLabels = async ({
     console.error("Error fetching data:", error);
     return null;
   } else {
-    // setLabels(data[0]);
     console.log("Data fetched:", data);
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    // If multiple labels exist, prioritize 'model_prediction'
+    if (data.length > 1) {
+      const modelPrediction = data.find((label) => label.label_source === "model_prediction");
+      return modelPrediction || data[0];
+    }
+
     return data[0];
   }
 };
+
 export default fetchLabels;

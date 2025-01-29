@@ -118,26 +118,32 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           fetchLabels({ dataset_id: data.dataset_id })
             .then((labelsData) => {
               if (labelsData && mapRef.current) {
+                console.log("labelsData", labelsData);
                 setLabels(labelsData);
                 const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
-                const vectorLayerAOI = new VectorLayer({
-                  source: new VectorSource({
-                    features: new GeoJSON().readFeatures(labelsData?.aoi, {
-                      dataProjection: "EPSG:4326",
-                      featureProjection: "EPSG:3857",
+
+                // Only create and add AOI layer if labelsData.aoi exists
+                if (labelsData.aoi) {
+                  const vectorLayerAOI = new VectorLayer({
+                    source: new VectorSource({
+                      features: new GeoJSON().readFeatures(labelsData.aoi, {
+                        dataProjection: "EPSG:4326",
+                        featureProjection: "EPSG:3857",
+                      }),
                     }),
-                  }),
-                  style: {
-                    "stroke-color": "blue",
-                    "stroke-width": 1,
-                    "fill-color": "rgba(0, 0, 255, 0)",
-                  },
-                });
-                layerRefs.current.vectorAOI = vectorLayerAOI;
+                    style: {
+                      "stroke-color": "blue",
+                      "stroke-width": 1,
+                      "fill-color": "rgba(0, 0, 255, 0)",
+                    },
+                  });
+                  layerRefs.current.vectorAOI = vectorLayerAOI;
+                  newMap.addLayer(vectorLayerAOI);
+                }
 
                 const vectorLayerLabels = new VectorLayer({
                   source: new VectorSource({
-                    features: new GeoJSON().readFeatures(labelsData?.label, {
+                    features: new GeoJSON().readFeatures(labelsData.label, {
                       dataProjection: "EPSG:4326",
                       featureProjection: "EPSG:3857",
                     }),
@@ -150,8 +156,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                   },
                 });
                 layerRefs.current.vectorLabels = vectorLayerLabels;
-
-                newMap.addLayer(vectorLayerAOI);
                 newMap.addLayer(vectorLayerLabels);
                 setLabelsFetched(true);
               }
