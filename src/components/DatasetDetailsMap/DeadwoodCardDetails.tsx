@@ -78,18 +78,17 @@ export function DeadwoodCardDetails({
               </div>
             </div>
             <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
+            <div className="mb-4 flex items-center space-x-2">
+              <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
+              <a
+                className="m-0 italic underline"
+                href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
+              >
+                Schiefer et al., 2023
+              </a>
+            </div>
           </>
         )}
-
-        <div className="mb-4 flex items-center space-x-2">
-          <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
-          <a
-            className="m-0 italic underline"
-            href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
-          >
-            Schiefer et al., 2023
-          </a>
-        </div>
       </div>
     </div>
   );
