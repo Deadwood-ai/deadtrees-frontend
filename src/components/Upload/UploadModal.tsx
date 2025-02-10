@@ -137,7 +137,7 @@ function createLabelObjectFormData(
 }
 
 const TermsLink = () => (
-  <Typography.Link href="/terms-of-services" target="_blank">
+  <Typography.Link href="/terms-of-service" target="_blank">
     terms of service
   </Typography.Link>
 );
