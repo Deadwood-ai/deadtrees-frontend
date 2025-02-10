@@ -164,12 +164,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
-  const uploadOrthophoto = async (file: RcFile): Promise<UploadResponse> => {
+  const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
       uploadOrtho({
         uploadId: uploadKey,
         file,
         session,
+        metadata,
         onSuccess: (response) => {
           logger({
             user_id: session!.user.id,
@@ -207,15 +208,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     return session!.access_token;
   };
 
-  const processDataset = async (datasetId: string, token: string) => {
-    const processCog = {
-      resolution: 0.04,
-      profile: "jpeg",
-      quality: 75,
-      force_recreate: true,
-      tiling_scheme: "web-optimized",
-    };
-
+  const processDataset = async (datasetId: number, token: string) => {
     logger({
       user_id: session!.user.id,
       file_name: fileNameFull,
@@ -224,7 +217,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       message: "Adding process",
     });
 
-    await addProcess(datasetId, "all", token, processCog);
+    await addProcess(datasetId, ["cog", "thumbnail", "metadata"], token);
   };
 
   const handleUpload = async (values: IFormValues) => {
@@ -236,33 +229,35 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       level: "info",
       message: "Upload started",
     });
-    console.log("form values", values);
 
     try {
-      // Validate file
       const uploadFile = fileList[0];
       if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
 
-      // Upload orthophoto
-      const uploadResponse = await uploadOrthophoto(uploadFile.originFileObj);
+      // Create metadata object
+      const metadata = {
+        license: values.license,
+        platform: values.platform,
+        authors: values.author.join(" and "),
+        project_id: undefined,
+        aquisition_year: values.aquisition_date?.year(),
+        aquisition_month: values.aquisition_date?.month() + 1,
+        aquisition_day: values.aquisition_date?.date(),
+        additional_information: values.additional_information,
+        data_access: "public",
+        citation_doi: values.doi,
+      };
+
+      // Upload orthophoto with metadata
+      const uploadResponse = await uploadOrthophoto(uploadFile.originFileObj, metadata);
       if (!uploadResponse.id) {
         throw new Error("Upload failed to return an ID.");
       }
 
       // Get valid access token
       const validAccessToken = await getValidAccessToken();
-
-      // Add metadata
-      const metadata = createMetadataPayload(
-        uploadResponse.id.toString(),
-        session!.user.id,
-        values,
-        uploadFile.name,
-        pickerType,
-      );
-      await addMetadata(uploadResponse.id, metadata, validAccessToken);
 
       // Upload labels if present
       if (labelsFileList.length > 0) {

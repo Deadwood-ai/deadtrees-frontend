@@ -3,17 +3,20 @@
 const DEV = import.meta.env.VITE_MODE === "development";
 console.log("DEV", DEV);
 
-const STORAGE_SERVER_DEV = "http://localhost:8080/";
-const STORAGE_SERVER_URL = "https://data.deadtrees.earth/";
+const STORAGE_SERVER_DEV = "http://localhost:8017";
+const STORAGE_SERVER_URL = "https://data.deadtrees.earth";
 
 const API_URL_DEV = STORAGE_SERVER_DEV;
 const API_URL_PROD = STORAGE_SERVER_URL + "/api/v1";
 
-const COG_BASE_URL_DEV = STORAGE_SERVER_DEV + "cogs/v1/";
-const COG_BASE_URL_PROD = STORAGE_SERVER_URL + "cogs/v1/";
+const API_URL_UPLOAD_ENDPOINT_DEV = STORAGE_SERVER_DEV + "/datasets/chunk";
+const API_URL_UPLOAD_ENDPOINT_PROD = STORAGE_SERVER_URL + "/datasets/chunk";
 
-const THUMBNAIL_URL_DEV = STORAGE_SERVER_DEV + "thumbnails/v1/";
-const THUMBNAIL_URL_PROD = STORAGE_SERVER_URL + "thumbnails/v1/";
+const COG_BASE_URL_DEV = STORAGE_SERVER_DEV + "/cogs/v1/";
+const COG_BASE_URL_PROD = STORAGE_SERVER_URL + "/cogs/v1/";
+
+const THUMBNAIL_URL_DEV = STORAGE_SERVER_DEV + "/thumbnails/v1/";
+const THUMBNAIL_URL_PROD = STORAGE_SERVER_URL + "/thumbnails/v1/";
 
 const SUPABASE_URL_DEV = "http://127.0.0.1:54321";
 const SUPABASE_URL_PROD = import.meta.env.VITE_SUPABASE_URL;
@@ -27,6 +30,7 @@ export const Settings = {
   THUMBNAIL_URL: DEV ? THUMBNAIL_URL_DEV : THUMBNAIL_URL_PROD,
   SUPABASE_URL: DEV ? SUPABASE_URL_DEV : SUPABASE_URL_PROD,
   SUPABASE_ANON_KEY: DEV ? SUPABASE_ANON_KEY_DEV : SUPABASE_ANON_KEY_PROD,
+  API_URL_UPLOAD_ENDPOINT: DEV ? API_URL_UPLOAD_ENDPOINT_DEV : API_URL_UPLOAD_ENDPOINT_PROD,
 
   DATA_TABLE_FULL: "v1_full_dataset_view",
   THUMBNAILS_TABLE: "v1_thumbnails",
