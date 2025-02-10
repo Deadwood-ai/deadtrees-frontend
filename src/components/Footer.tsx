@@ -36,7 +36,7 @@ export default function Footer({ className = "" }: FooterProps) {
               Datenschutzerklärung
             </Link>
             <Link
-              to="/terms-of-services"
+              to="/terms-of-service"
               onClick={() => window.scrollTo(0, 0)}
               className="font-inter text-sm font-light tracking-wide text-gray-600 underline hover:text-gray-900"
             >
