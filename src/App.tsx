@@ -15,7 +15,7 @@ import About from "./pages/About";
 import Impressum from "./pages/Impressum";
 import Footer from "./components/Footer";
 import Datenschutzerklaerung from "./pages/Datenschutzerklaerung";
-import TermsOfServices from "./pages/TermsOfServices";
+import TermsOfService from "./pages/TermsOfService";
 const { Content } = Layout;
 
 function LayoutWrapper() {
@@ -57,7 +57,7 @@ export default function App() {
           <Route path="about" element={<About />} />
           <Route path="impressum" element={<Impressum />} />
           <Route path="datenschutzerklaerung" element={<Datenschutzerklaerung />} />
-          <Route path="terms-of-services" element={<TermsOfServices />} />
+          <Route path="terms-of-service" element={<TermsOfService />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="sign-in" element={<SignIn />} />
           <Route path="forgot-password" element={<Forgotpassword />} />
