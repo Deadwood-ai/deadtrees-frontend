@@ -1,21 +1,37 @@
 // const USE_LOCAL_SERVER = false;
 // const LOCAL_SERVER_URL = "http://0.0.0.0:8762";
-const LOCAL_SERVER_URL = "http://localhost:8080/api/v1";
-// const PRODUCTION_SERVER_URL = "https://data.deadtrees.earth/api/v1";
-const PRODUCTION_SERVER_URL = "https://data.deadtrees.earth/";
-
 const DEV = import.meta.env.VITE_MODE === "development";
 console.log("DEV", DEV);
 
+const STORAGE_SERVER_DEV = "http://localhost:8080/";
+const STORAGE_SERVER_URL = "https://data.deadtrees.earth/";
+
+const API_URL_DEV = STORAGE_SERVER_DEV;
+const API_URL_PROD = STORAGE_SERVER_URL + "/api/v1";
+
+const COG_BASE_URL_DEV = STORAGE_SERVER_DEV + "cogs/v1/";
+const COG_BASE_URL_PROD = STORAGE_SERVER_URL + "cogs/v1/";
+
+const THUMBNAIL_URL_DEV = STORAGE_SERVER_DEV + "thumbnails/v1/";
+const THUMBNAIL_URL_PROD = STORAGE_SERVER_URL + "thumbnails/v1/";
+
+const SUPABASE_URL_DEV = "http://127.0.0.1:54321";
+const SUPABASE_URL_PROD = import.meta.env.VITE_SUPABASE_URL;
+
+const SUPABASE_ANON_KEY_DEV = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_ANON_KEY_PROD = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 export const Settings = {
+  API_URL: DEV ? API_URL_DEV : API_URL_PROD,
+  COG_BASE_URL: DEV ? COG_BASE_URL_DEV : COG_BASE_URL_PROD,
+  THUMBNAIL_URL: DEV ? THUMBNAIL_URL_DEV : THUMBNAIL_URL_PROD,
+  SUPABASE_URL: DEV ? SUPABASE_URL_DEV : SUPABASE_URL_PROD,
+  SUPABASE_ANON_KEY: DEV ? SUPABASE_ANON_KEY_DEV : SUPABASE_ANON_KEY_PROD,
+
+  DATA_TABLE_FULL: "v1_full_dataset_view",
+  THUMBNAILS_TABLE: "v1_thumbnails",
   COLLABORATORS_TABLE: "collaborators",
-  DATA_TABLE_FULL: DEV ? "dev_full_dataset_view" : "v1_full_dataset_view",
-  THUMBNAILS_BUCKET: DEV ? "dev_thumbnails" : "v1_thumbnails",
-  // LABELS_TABLE: DEV ? "dev_labels" : "v1_labels",
   LABELS_TABLE: "v1_labels",
-  API_URL: DEV ? LOCAL_SERVER_URL : PRODUCTION_SERVER_URL + "api/v1",
-  METADATA_TABLE: DEV ? "dev_metadata" : "v1_metadata",
-  DATA_TABLE: DEV ? "dev_datasets" : "v1_datasets",
-  COG_BASE_URL: PRODUCTION_SERVER_URL + "cogs/v1/",
-  THUMBNAIL_URL: PRODUCTION_SERVER_URL + "thumbnails/v1/",
+  METADATA_TABLE: "v1_metadata",
+  DATA_TABLE: "v1_datasets",
 };
