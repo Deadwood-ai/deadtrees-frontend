@@ -3,14 +3,14 @@
 const DEV = import.meta.env.VITE_MODE === "development";
 console.log("DEV", DEV);
 
-const STORAGE_SERVER_DEV = "http://localhost:8017";
+const STORAGE_SERVER_DEV = "http://localhost:8080";
 const STORAGE_SERVER_URL = "https://data.deadtrees.earth";
 
-const API_URL_DEV = STORAGE_SERVER_DEV;
+const API_URL_DEV = STORAGE_SERVER_DEV + "/api/v1";
 const API_URL_PROD = STORAGE_SERVER_URL + "/api/v1";
 
-const API_URL_UPLOAD_ENDPOINT_DEV = STORAGE_SERVER_DEV + "/datasets/chunk";
-const API_URL_UPLOAD_ENDPOINT_PROD = STORAGE_SERVER_URL + "/datasets/chunk";
+const API_URL_UPLOAD_ENDPOINT_DEV = API_URL_DEV + "/datasets/chunk";
+const API_URL_UPLOAD_ENDPOINT_PROD = API_URL_PROD + "/datasets/chunk";
 
 const COG_BASE_URL_DEV = STORAGE_SERVER_DEV + "/cogs/v1/";
 const COG_BASE_URL_PROD = STORAGE_SERVER_URL + "/cogs/v1/";
