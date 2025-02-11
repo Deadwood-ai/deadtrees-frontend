@@ -31,7 +31,7 @@ interface ChunkInfo {
   data: Blob;
 }
 
-const CHUNK_SIZE = 300 * 1024 * 1024; // 100 MB
+const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
 
 // const refreshToken = async () => {
 //   const { data, error } = await supabase.auth.refreshSession();
