@@ -34,8 +34,6 @@ export default function ProfilePage() {
   console.log(window.origin);
   console.log("session", session);
 
-
-
   useEffect(() => {
     if (!session) {
       navigate("/sign-in");
@@ -43,8 +41,6 @@ export default function ProfilePage() {
   }, [session, navigate]);
 
   if (!session) {
-
-
     return null;
   } else {
     return (
@@ -52,7 +48,7 @@ export default function ProfilePage() {
         <div className="flex items-center pb-8 pt-12">
           <div className="w-1/2">
             <ProfileAvatar email={user?.email ?? ""} />
-            <Typography.Title style={{ marginBottom: "4px" }}>Profile 1234 123</Typography.Title>
+            <Typography.Title style={{ marginBottom: "4px" }}>Profile</Typography.Title>
             <Typography.Text className="m-0 p-0 text-lg" type="secondary">
               {user?.email}
             </Typography.Text>

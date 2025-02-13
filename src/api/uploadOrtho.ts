@@ -152,10 +152,10 @@ function calculateCopyTime(startTime: number): number {
 async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
   const { session, onProgress } = options;
 
-  console.log("FormData contents:");
-  for (const pair of formData.entries()) {
-    console.log(pair[0], pair[1]);
-  }
+  // console.log("FormData contents:");
+  // for (const pair of formData.entries()) {
+  //   console.log(pair[0], pair[1]);
+  // }
 
   try {
     const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {

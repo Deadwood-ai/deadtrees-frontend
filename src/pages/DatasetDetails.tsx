@@ -6,12 +6,14 @@ import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-d
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import countryList from "../utils/countryList";
+import { useDatasets } from "../hooks/useDatasets";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const data = useData();
-  const dataset = data.data?.find((d) => d.id.toString() === id);
+  const { data: datasets } = useDatasets();
+
+  const dataset = datasets?.find((d) => d.id.toString() === id);
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -119,8 +121,8 @@ export default function DatasetDetails() {
                   <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
                 {dataset.file_size > 1024 * 1024 * 1024
-                  ? `${(dataset.file_size / 1024 / 1024 / 1024).toFixed(1)} GB`
-                  : `${(dataset.file_size / 1024 / 1024).toFixed(0)} MB`}
+                  ? `${dataset.ortho_file_size.toFixed(1)} MB`
+                  : `${dataset.ortho_file_size.toFixed(0)} MB`}
               </div>
               <div className="flex justify-between p-2">
                 <Typography.Text style={{ margin: 0 }}>

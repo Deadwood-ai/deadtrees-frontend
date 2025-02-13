@@ -2,23 +2,27 @@ import { useMemo, useState } from "react";
 import { Button, Col, Row, Tag, Input, Segmented } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
-import { useData } from "../hooks/useDataProvider";
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMap";
 import { CloseOutlined } from "@ant-design/icons";
+import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
+import { useDatasets } from "../hooks/useDatasets";
 
 type SearchField = "authors" | "location";
 type SortDirection = "asc" | "desc";
 
 export default function Dataset() {
-  const { data, filter, setFilter } = useData();
+  // const { data, filter, setFilter } = useData();
+  // add useFilteredDatasets
+  const { data: allData, isLoading: isLoadingData } = useDatasets();
+  const { filteredData, setFilter, setFilterTag, filter } = useFilteredDatasets(allData);
+  console.log("filteredData", filteredData);
+
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchField, setSearchField] = useState<SearchField>("authors");
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-
-  console.log("data", data);
 
   const handleSearch = (value: string) => {
     setSearchValue(value.toLowerCase());
@@ -30,10 +34,11 @@ export default function Dataset() {
   };
 
   const processedData = useMemo(() => {
-    if (!data) return null;
+    if (!filteredData) return null;
 
-    const filtered = data.filter((d) => {
-      const baseCondition = d.status === "processed" && d.admin_level_1;
+    const filtered = filteredData.filter((d) => {
+      const baseCondition =
+        d.is_upload_done && d.is_cog_done && d.is_ortho_done && d.is_metadata_done && !d.has_error && d.admin_level_1;
 
       if (!searchValue) return baseCondition;
 
@@ -71,19 +76,19 @@ export default function Dataset() {
     // Sort by date
     return filtered.sort((a, b) => {
       const dateA = new Date(
-        parseInt(a.aquisition_year),
+        a.aquisition_year,
         a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
         a.aquisition_day ? parseInt(a.aquisition_day) : 1,
       );
       const dateB = new Date(
-        parseInt(b.aquisition_year),
+        b.aquisition_year,
         b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
         b.aquisition_day ? parseInt(b.aquisition_day) : 1,
       );
 
       return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
-  }, [data, searchField, searchValue, sortDirection]);
+  }, [filteredData, searchField, searchValue, sortDirection]);
 
   return (
     <Row

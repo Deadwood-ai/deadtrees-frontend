@@ -2,7 +2,8 @@ import React from "react";
 
 import { Button, Table, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
-import { useData } from "../hooks/useDataProvider";
+import { useUserDatasets, useDatasets, useAuthors } from "../hooks/useDatasets";
+import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -13,16 +14,16 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import { Settings } from "../config";
+import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 
-const DataTable = ({ supabase }) => {
-  // const [data, setData] = useState([]);
-  const { userData, data, isLoading, isError, authors } = useData();
+const DataTable = () => {
+  const { data: userData, isLoading: isLoadingData } = useUserDatasets();
+
   const nav = useNavigate();
-  console.log("userData", userData);
-  console.log("data", data);
-  console.log("isLoading", isLoading);
+  useDatasetSubscription();
+
   const columns = [
-    { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: 'descend', sorter: (a, b) => a.id - b.id, },
+    { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: "descend", sorter: (a, b) => a.id - b.id },
     {
       title: "Date",
       dataIndex: "aquisition_day",
@@ -55,12 +56,13 @@ const DataTable = ({ supabase }) => {
           return (
             <Tooltip title="View data on the map">
               <Tag color="green">
-                {userData?.find((d) => d.id === tag)?.admin_level_1}, {userData?.find((d) => d.id === tag)?.admin_level_3}
+                {userData?.find((d) => d.id === tag)?.admin_level_1},{" "}
+                {userData?.find((d) => d.id === tag)?.admin_level_3}
               </Tag>
             </Tooltip>
           );
         } else {
-          return (<Tag icon={<ClockCircleOutlined />} color="default"></Tag>);
+          return <Tag icon={<ClockCircleOutlined />} color="default"></Tag>;
         }
       },
     },
@@ -167,7 +169,8 @@ const DataTable = ({ supabase }) => {
       dataIndex: "id",
       key: "id",
       render: (tag, record) => {
-        const isComplete = !record.has_error &&
+        const isComplete =
+          !record.has_error &&
           record.is_upload_done &&
           record.is_ortho_done &&
           record.is_cog_done &&
@@ -190,16 +193,8 @@ const DataTable = ({ supabase }) => {
   ];
 
   return (
-    <Table
-      rowKey={"id"}
-      dataSource={userData}
-      columns={columns}
-      pagination={{ pageSize: 6 }}
-
-    // size="small"
-    />
+    <Table rowKey={"id"} dataSource={userData} columns={columns} pagination={{ pageSize: 6 }} loading={isLoadingData} />
   );
 };
 
 export default DataTable;
-
