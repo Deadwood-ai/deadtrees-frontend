@@ -40,7 +40,7 @@ const DataContext = createContext<DataContextType>({
 
 const fetchData = async () => {
   const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
-  // console.log("fetchData", data);
+  console.log("fetchData", data);
   if (error) throw error;
   return data;
 };
@@ -55,11 +55,19 @@ const DataProvider = ({ children }: DataProviderProps) => {
   const { session } = useAuth();
   const queryClient = useQueryClient();
 
+  console.log("DataProvider rendering");
+
   const { data: rawData, isLoading: isLoadingRawData } = useQuery({
     queryKey: ['datasets'],
-    queryFn: fetchData,
-    // staleTime: 0,
+    queryFn: async () => {
+      console.log("queryFn executing");
+      const result = await fetchData();
+      console.log("queryFn result:", result);
+      return result;
+    },
   });
+
+  console.log("rawData:", rawData);
 
   const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery({
     queryKey: ['collaborators'],

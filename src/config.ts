@@ -32,10 +32,8 @@ export const Settings = {
   SUPABASE_ANON_KEY: DEV ? SUPABASE_ANON_KEY_DEV : SUPABASE_ANON_KEY_PROD,
   API_URL_UPLOAD_ENDPOINT: DEV ? API_URL_UPLOAD_ENDPOINT_DEV : API_URL_UPLOAD_ENDPOINT_PROD,
 
-  DATA_TABLE_FULL: "v1_full_dataset_view",
-  THUMBNAILS_TABLE: "v1_thumbnails",
+  DATA_TABLE_FULL: "v2_full_dataset_view",
+  THUMBNAILS_TABLE: "v2_thumbnails",
   COLLABORATORS_TABLE: "collaborators",
-  LABELS_TABLE: "v1_labels",
-  METADATA_TABLE: "v1_metadata",
-  DATA_TABLE: "v1_datasets",
+  LABELS_TABLE: "v2_labels",
 };

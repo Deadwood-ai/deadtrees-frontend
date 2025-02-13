@@ -48,7 +48,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         source: new GeoTIFF({
           sources: [
             {
-              url: Settings.COG_BASE_URL + data.cog_url,
+              url: Settings.COG_BASE_URL + data.cog_path,
               nodata: 0,
               bands: [1, 2, 3],
             },

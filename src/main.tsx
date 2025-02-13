@@ -17,5 +17,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </DatasetMapProvider>
       </DataProvider>
     </AuthProvider>
-  </QueryClientProvider>,
+  </QueryClientProvider >,
 );

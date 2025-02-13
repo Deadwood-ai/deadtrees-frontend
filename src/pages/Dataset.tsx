@@ -18,6 +18,8 @@ export default function Dataset() {
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  console.log("data", data);
+
   const handleSearch = (value: string) => {
     setSearchValue(value.toLowerCase());
     console.log("searchValue", searchValue);

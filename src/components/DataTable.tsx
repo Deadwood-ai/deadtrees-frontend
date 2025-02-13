@@ -16,10 +16,11 @@ import { Settings } from "../config";
 
 const DataTable = ({ supabase }) => {
   // const [data, setData] = useState([]);
-  const { userData } = useData();
+  const { userData, data, isLoading, isError, authors } = useData();
   const nav = useNavigate();
   console.log("userData", userData);
-
+  console.log("data", data);
+  console.log("isLoading", isLoading);
   const columns = [
     { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: 'descend', sorter: (a, b) => a.id - b.id, },
     {
@@ -65,85 +66,92 @@ const DataTable = ({ supabase }) => {
     },
     {
       title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (tag) => {
+      dataIndex: "current_status",
+      key: "current_status",
+      render: (tag, record) => {
+        // Check for error state first
+        if (record.has_error) {
+          return (
+            <Tooltip title={record.error_message || "An error occurred during processing"}>
+              <Tag icon={<CloseCircleOutlined />} color="error">
+                error
+              </Tag>
+            </Tooltip>
+          );
+        }
+
         switch (tag) {
-          case "pending":
+          case "idle":
             return (
-              <Tooltip title="Data will be processed shortly">
+              <Tooltip title="Waiting to start processing">
                 <Tag icon={<ClockCircleOutlined />} color="default">
-                  waiting for processing
+                  idle
                 </Tag>
               </Tooltip>
             );
           case "uploading":
             return (
-              <Tag icon={<SyncOutlined spin />} color="processing">
-                uploading
-              </Tag>
-            );
-          case "uploaded":
-            return (
-              <Tooltip title="Data will be processed shortly">
-                <Tag icon={<ClockCircleOutlined />} color="default">
-                  waiting for processing
+              <Tooltip title="File is being uploaded">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  uploading
                 </Tag>
               </Tooltip>
             );
-          case "processed":
+          case "ortho_processing":
             return (
-              <Tag icon={<CheckCircleOutlined />} color="success">
-                {tag}
-              </Tag>
-            );
-          case "processing":
-            return (
-              <Tag icon={<SyncOutlined spin />} color="processing">
-                {tag}
-              </Tag>
-            );
-          case "errored":
-            return (
-              <Tag icon={<CloseCircleOutlined spin />} color="error">
-                {tag}
-              </Tag>
+              <Tooltip title="Processing orthophoto">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  ortho processing
+                </Tag>
+              </Tooltip>
             );
           case "cog_processing":
             return (
-              <Tag icon={<SyncOutlined spin />} color="processing">
-                COG processing
-              </Tag>
-            );
-          case "cog_error":
-            return (
-              <Tag icon={<CloseCircleOutlined spin />} color="error">
-                COG error
-              </Tag>
+              <Tooltip title="Converting to Cloud Optimized GeoTIFF">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  COG processing
+                </Tag>
+              </Tooltip>
             );
           case "thumbnail_processing":
             return (
-              <Tag icon={<SyncOutlined spin />} color="processing">
-                Thumbnail processing
-              </Tag>
+              <Tooltip title="Generating thumbnail">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  thumbnail
+                </Tag>
+              </Tooltip>
             );
-          case "thumbnail_error":
+          case "deadwood_segmentation":
             return (
-              <Tag icon={<CloseCircleOutlined spin />} color="error">
-                Thumbnail error
-              </Tag>
+              <Tooltip title="Running deadwood detection">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  deadwood detection
+                </Tag>
+              </Tooltip>
             );
-          case "deadwood_prediction":
+          case "forest_cover_segmentation":
             return (
-              <Tag icon={<SyncOutlined spin />} color="processing">
-                Deadwood prediction
-              </Tag>
+              <Tooltip title="Analyzing forest cover">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  forest cover
+                </Tag>
+              </Tooltip>
             );
-          case "deadwood_errored":
+          case "metadata_processing":
             return (
-              <Tag icon={<CloseCircleOutlined spin />} color="error">
-                Deadwood error
-              </Tag>
+              <Tooltip title="Processing metadata">
+                <Tag icon={<SyncOutlined spin />} color="processing">
+                  metadata
+                </Tag>
+              </Tooltip>
+            );
+          case "audit_in_progress":
+            return (
+              <Tooltip title="Quality check in progress">
+                <Tag icon={<SyncOutlined spin />} color="warning">
+                  audit
+                </Tag>
+              </Tooltip>
             );
           default:
             return (
@@ -153,24 +161,30 @@ const DataTable = ({ supabase }) => {
             );
         }
       },
-
     },
     {
       title: "Actions",
       dataIndex: "id",
       key: "id",
-      render: (tag) => {
-        if (userData?.find((d) => d.id === tag)?.status == "processed") {
-          return (
-            <Button size="small" type="primary" icon={<EnvironmentOutlined />} onClick={() => nav(`/dataset/${tag}`)}>
-              View
-            </Button>
-          );
-        } else {
-          return (<Button disabled size="small" type="primary" icon={<EnvironmentOutlined />} onClick={() => nav(`/dataset/${tag}`)}>
+      render: (tag, record) => {
+        const isComplete = !record.has_error &&
+          record.is_upload_done &&
+          record.is_ortho_done &&
+          record.is_cog_done &&
+          record.is_thumbnail_done &&
+          record.is_metadata_done;
+
+        return (
+          <Button
+            size="small"
+            type="primary"
+            icon={<EnvironmentOutlined />}
+            onClick={() => nav(`/dataset/${tag}`)}
+            disabled={!isComplete}
+          >
             View
-          </Button>)
-        }
+          </Button>
+        );
       },
     },
   ];

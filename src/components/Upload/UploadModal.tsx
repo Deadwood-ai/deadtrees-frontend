@@ -217,7 +217,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       message: "Adding process",
     });
 
-    await addProcess(datasetId, ["cog", "thumbnail", "metadata"], token);
+    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff"], token);
   };
 
   const handleUpload = async (values: IFormValues) => {
@@ -385,7 +385,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   </div>
                 }
                 name="author"
-                // extra="Add each author separately
+              // extra="Add each author separately
               >
                 {authors?.at(0)?.label ? (
                   <Select
