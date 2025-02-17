@@ -39,7 +39,7 @@ const DataTable = () => {
         </span>
       ),
     },
-    { title: "File", dataIndex: "file_alias", key: "file_alias" },
+    { title: "File", dataIndex: "ortho_file_name", key: "file_alias" },
     // { title: "License", dataIndex: "license", key: "license" },
 
     {

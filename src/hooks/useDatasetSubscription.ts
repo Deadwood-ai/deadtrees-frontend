@@ -19,12 +19,30 @@ export function useDatasetSubscription() {
         },
         async (payload) => {
           console.log("Status change payload:", payload);
-          // First invalidate and wait for the base dataset query
-          await queryClient.invalidateQueries({ queryKey: ["datasets"] });
-          // Then invalidate dependent queries
+
+          // Only invalidate datasets and authors when processing is complete
+          const isProcessingComplete =
+            payload.new.is_upload_done &&
+            payload.new.is_ortho_done &&
+            payload.new.is_cog_done &&
+            payload.new.is_thumbnail_done &&
+            payload.new.is_metadata_done &&
+            payload.new.is_deadwood_done;
+
+          // Always update user datasets for progress tracking
           await queryClient.invalidateQueries({
             queryKey: ["userDatasets", session?.user?.id],
           });
+
+          // Only update global datasets and authors when processing is complete
+          if (isProcessingComplete) {
+            await queryClient.invalidateQueries({
+              queryKey: ["datasets"],
+            });
+            await queryClient.invalidateQueries({
+              queryKey: ["authors"],
+            });
+          }
         },
       )
       .subscribe();
