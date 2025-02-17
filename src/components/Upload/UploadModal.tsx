@@ -217,7 +217,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       message: "Adding process",
     });
 
-    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff"], token);
+    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood"], token);
   };
 
   const handleUpload = async (values: IFormValues) => {

@@ -44,8 +44,7 @@ export default function DatasetDetails() {
               <div className="flex items-center pb-4">
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
-                  {/* {dataset.admin_level_3 ? dataset.admin_level_3 : "Unknown"} */}
-                  {`${dataset.admin_level_3}, ${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`}
+                  {`${dataset.admin_level_3 ? dataset.admin_level_3 : dataset.admin_level_2}, ${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`}
                 </Typography.Title>
               </div>
 

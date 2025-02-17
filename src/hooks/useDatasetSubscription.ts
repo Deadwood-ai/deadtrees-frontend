@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
-import { Settings } from "../config";
 
 export function useDatasetSubscription() {
   const { session } = useAuth();
@@ -10,7 +9,7 @@ export function useDatasetSubscription() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("datasets_changes")
+      .channel("status_changes")
       .on(
         "postgres_changes",
         {
@@ -18,14 +17,14 @@ export function useDatasetSubscription() {
           schema: "public",
           table: "v2_statuses",
         },
-        (payload) => {
-          console.log("payload", payload);
-          // if (payload.new.user_id === session?.user.id) {
-          console.log("payload.new.user_id", payload.new.user_id); //TODO: filter by dataset_id which belongs to a user
-          // Invalidate both datasets and user datasets queries
-          queryClient.invalidateQueries({ queryKey: ["datasets"] });
-          queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
-          // }
+        async (payload) => {
+          console.log("Status change payload:", payload);
+          // First invalidate and wait for the base dataset query
+          await queryClient.invalidateQueries({ queryKey: ["datasets"] });
+          // Then invalidate dependent queries
+          await queryClient.invalidateQueries({
+            queryKey: ["userDatasets", session?.user?.id],
+          });
         },
       )
       .subscribe();

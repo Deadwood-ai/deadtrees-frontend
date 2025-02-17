@@ -1,25 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchData, fetchCollaborators } from "../utils/dataFetching";
 import { useAuth } from "./useAuthProvider";
-import { IDataset } from "../types/dataset";
+import { supabase } from "./useSupabase";
+import { Settings } from "../config";
 
 // Base datasets hook
 export function useDatasets() {
   return useQuery({
     queryKey: ["datasets"],
-    queryFn: fetchData,
+    queryFn: async () => {
+      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 0,
+    cacheTime: 0,
   });
 }
 
 // User-specific datasets
 export function useUserDatasets() {
   const { session } = useAuth();
-  const { data: datasets } = useDatasets();
 
   return useQuery({
     queryKey: ["userDatasets", session?.user?.id],
-    enabled: !!session?.user?.id && !!datasets,
-    queryFn: () => datasets?.filter((item) => item.user_id === session?.user?.id) || [],
+    queryFn: async () => {
+      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", session?.user.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 0,
+    cacheTime: 0,
   });
 }
 

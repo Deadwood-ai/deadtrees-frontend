@@ -17,10 +17,12 @@ import { Settings } from "../config";
 import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 
 const DataTable = () => {
+  useDatasetSubscription();
+
   const { data: userData, isLoading: isLoadingData } = useUserDatasets();
 
   const nav = useNavigate();
-  useDatasetSubscription();
+  console.log("userData in DataTable", userData);
 
   const columns = [
     { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: "descend", sorter: (a, b) => a.id - b.id },
@@ -57,7 +59,8 @@ const DataTable = () => {
             <Tooltip title="View data on the map">
               <Tag color="green">
                 {userData?.find((d) => d.id === tag)?.admin_level_1},{" "}
-                {userData?.find((d) => d.id === tag)?.admin_level_3}
+                {userData?.find((d) => d.id === tag)?.admin_level_3 ||
+                  userData?.find((d) => d.id === tag)?.admin_level_2}
               </Tag>
             </Tooltip>
           );

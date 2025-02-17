@@ -78,7 +78,9 @@ const ListItme = ({
                 onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
               >
                 {/* {item.admin_level_3} */}
-                {item.admin_level_3 && item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+                {item.admin_level_3
+                  ? item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")
+                  : item.admin_level_2.slice(0, 15) + (item.admin_level_2.length > 15 ? "..." : "")}
               </Button>
             </Tooltip>
             ,
