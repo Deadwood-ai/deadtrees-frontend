@@ -8,7 +8,7 @@ interface UploadOptions {
   metadata: {
     license: string;
     platform: string;
-    authors: string;
+    authors: string[];
     project_id?: string;
     aquisition_year?: number;
     aquisition_month?: number;
@@ -111,7 +111,7 @@ function createFormData(
   metadata: {
     license: string;
     platform: string;
-    authors: string;
+    authors: string[];
     project_id?: string;
     aquisition_year?: number;
     aquisition_month?: number;
@@ -131,7 +131,11 @@ function createFormData(
   // Add metadata fields
   formData.append("license", "CC BY");
   formData.append("platform", metadata.platform);
-  formData.append("authors", metadata.authors);
+
+  // Handle authors array
+  metadata.authors.forEach((author) => {
+    formData.append("authors", author);
+  });
 
   // Optional fields
   if (metadata.project_id) formData.append("project_id", metadata.project_id);
@@ -152,10 +156,10 @@ function calculateCopyTime(startTime: number): number {
 async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
   const { session, onProgress } = options;
 
-  // console.log("FormData contents:");
-  // for (const pair of formData.entries()) {
-  //   console.log(pair[0], pair[1]);
-  // }
+  console.log("FormData contents:");
+  for (const pair of formData.entries()) {
+    console.log(pair[0], pair[1]);
+  }
 
   try {
     const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {

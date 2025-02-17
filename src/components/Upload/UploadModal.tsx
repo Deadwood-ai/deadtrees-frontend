@@ -68,7 +68,7 @@ interface MetadataPayload {
   aquisition_year: number;
   aquisition_month: number | null;
   aquisition_day: number | null;
-  authors: string;
+  authors: string[];
   citation_doi: string;
   additional_information: string;
 }
@@ -114,7 +114,7 @@ function createMetadataPayload(
     aquisition_year: year,
     aquisition_month: month,
     aquisition_day: day,
-    authors: values.author.length > 1 ? values.author.join(" and ") : values.author[0],
+    authors: values.author,
     citation_doi: values.doi,
     additional_information: values.additional_information,
   };
@@ -235,12 +235,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
-
+      console.log("values.author", values.author);
       // Create metadata object
       const metadata = {
         license: values.license,
         platform: values.platform,
-        authors: values.author.join(" and "),
+        authors: values.author,
         project_id: undefined,
         aquisition_year: values.aquisition_date?.year(),
         aquisition_month: values.aquisition_date?.month() + 1,
@@ -249,6 +249,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         data_access: "public",
         citation_doi: values.doi,
       };
+      console.log("metadata", metadata);
 
       // Upload orthophoto with metadata
       const uploadResponse = await uploadOrthophoto(uploadFile.originFileObj, metadata);
@@ -385,7 +386,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   </div>
                 }
                 name="author"
-              // extra="Add each author separately
+                // extra="Add each author separately
               >
                 {authors?.at(0)?.label ? (
                   <Select
