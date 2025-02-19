@@ -6,6 +6,10 @@ import VectorLayer from "ol/layer/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import GeoJSON from "ol/format/GeoJSON";
+import VectorTileLayer from "ol/layer/VectorTile";
+import VectorSource from "ol/source/Vector";
+import createDeadwoodVectorLayer from "./createDeadwoodVectorLayer";
+import { fromLonLat, toLonLat } from "ol/proj";
 
 import { IDataset, ILabels } from "../../types/dataset";
 import fetchLabels from "./fetchLabels";
@@ -14,7 +18,6 @@ import Legend from "../DeadwoodMap/Legend";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
-import VectorSource from "ol/source/Vector";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   if (!data) return null;
@@ -37,8 +40,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     geotiff2019?: TileLayerWebGL;
     geotiff2020?: TileLayerWebGL;
     geotiff2021?: TileLayerWebGL;
+    geotiff2022?: TileLayerWebGL;
     vectorAOI?: VectorLayer;
-    vectorLabels?: VectorLayer;
+    vectorLabels?: VectorTileLayer;
   }>({});
 
   useEffect(() => {
@@ -53,7 +57,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               bands: [1, 2, 3],
             },
           ],
-          convertToRGB: true,
+          convertToRGB: "auto",
+          normalize: true,
         }),
         maxZoom: 22,
         cacheSize: 4096,
@@ -70,21 +75,21 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
 
       // Create geotiff layers
-      const geotiff2018 = createDeadwoodGeotiffLayer("2018");
-      const geotiff2019 = createDeadwoodGeotiffLayer("2019");
-      const geotiff2020 = createDeadwoodGeotiffLayer("2020");
-      const geotiff2021 = createDeadwoodGeotiffLayer("2021");
-      const geotiff2022 = createDeadwoodGeotiffLayer("2022");
+      // const geotiff2018 = createDeadwoodGeotiffLayer("2018");
+      // const geotiff2019 = createDeadwoodGeotiffLayer("2019");
+      // const geotiff2020 = createDeadwoodGeotiffLayer("2020");
+      // const geotiff2021 = createDeadwoodGeotiffLayer("2021");
+      // const geotiff2022 = createDeadwoodGeotiffLayer("2022");
 
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
-        geotiff2018,
-        geotiff2019,
-        geotiff2020,
-        geotiff2021,
-        geotiff2022,
+        //   geotiff2018,
+        //   geotiff2019,
+        //   geotiff2020,
+        //   geotiff2021,
+        //   geotiff2022,
       };
 
       // Wait for the source to be ready and create map
@@ -96,10 +101,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             console.error("No extent found in viewOptions");
             return;
           }
+          console.log("viewOptions", viewOptions.center);
+          console.log("viewOptions", toLonLat(viewOptions.center));
 
           const MapView = new View({
             center: viewOptions.center,
             extent: viewOptions.extent,
+            // center: fromLonLat([8.5973, 54.8959]),
             maxZoom: 22,
             projection: "EPSG:3857",
             constrainOnlyCenter: true,
@@ -107,62 +115,51 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
           const newMap = new Map({
             target: mapContainer.current,
-            layers: [basemapLayer, orthoCogLayer, geotiff2018, geotiff2019, geotiff2020, geotiff2021, geotiff2022],
+            layers: [basemapLayer, orthoCogLayer],
             view: MapView,
             overlays: [],
             controls: [],
           });
 
           MapView.fit(viewOptions.extent);
+          // Create vector tile layer for labels
+          const vectorTileLayer = createDeadwoodVectorLayer();
+          console.log("vectorTileLayer", vectorTileLayer);
+          layerRefs.current.vectorLabels = vectorTileLayer;
+          newMap.addLayer(vectorTileLayer);
 
-          fetchLabels({ dataset_id: data.dataset_id })
-            .then((labelsData) => {
-              if (labelsData && mapRef.current) {
-                console.log("labelsData", labelsData);
-                setLabels(labelsData);
-                const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
+          // fetchLabels({ dataset_id: data.dataset_id })
+          //   .then((labelsData) => {
+          //     if (labelsData && mapRef.current) {
+          //       console.log("labelsData", labelsData);
+          //       setLabels(labelsData);
+          //       const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
 
-                // Only create and add AOI layer if labelsData.aoi exists
-                if (labelsData.aoi) {
-                  const vectorLayerAOI = new VectorLayer({
-                    source: new VectorSource({
-                      features: new GeoJSON().readFeatures(labelsData.aoi, {
-                        dataProjection: "EPSG:4326",
-                        featureProjection: "EPSG:3857",
-                      }),
-                    }),
-                    style: {
-                      "stroke-color": "blue",
-                      "stroke-width": 1,
-                      "fill-color": "rgba(0, 0, 255, 0)",
-                    },
-                  });
-                  layerRefs.current.vectorAOI = vectorLayerAOI;
-                  newMap.addLayer(vectorLayerAOI);
-                }
+          //       // Only create and add AOI layer if labelsData.aoi exists
+          //       if (labelsData.aoi) {
+          //         const vectorLayerAOI = new VectorLayer({
+          //           source: new VectorSource({
+          //             features: new GeoJSON().readFeatures(labelsData.aoi, {
+          //               dataProjection: "EPSG:4326",
+          //               featureProjection: "EPSG:3857",
+          //             }),
+          //           }),
+          //           style: {
+          //             "stroke-color": "blue",
+          //             "stroke-width": 1,
+          //             "fill-color": "rgba(0, 0, 255, 0)",
+          //           },
+          //         });
+          //         layerRefs.current.vectorAOI = vectorLayerAOI;
+          //         newMap.addLayer(vectorLayerAOI);
+          //       }
 
-                const vectorLayerLabels = new VectorLayer({
-                  source: new VectorSource({
-                    features: new GeoJSON().readFeatures(labelsData.label, {
-                      dataProjection: "EPSG:4326",
-                      featureProjection: "EPSG:3857",
-                    }),
-                  }),
-                  className: "labels",
-                  style: {
-                    "stroke-color": "red",
-                    "stroke-width": 1,
-                    "fill-color": "rgba(255, 0, 0, 0.8)",
-                  },
-                });
-                layerRefs.current.vectorLabels = vectorLayerLabels;
-                newMap.addLayer(vectorLayerLabels);
-                setLabelsFetched(true);
-              }
-            })
-            .catch((error) => {
-              console.error("Error fetching labels:", error);
-            });
+          //       setLabelsFetched(true);
+          //     }
+          //   })
+          //   .catch((error) => {
+          //     console.error("Error fetching labels:", error);
+          //   });
 
           mapRef.current = newMap;
         })
@@ -214,14 +211,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // update label opacity on slider change
   useEffect(() => {
-    if (mapRef.current && labelsFetched) {
-      // const deadwoodLayer = map.getLayers().getArray()[7];
-      // get layers with className_ === "labels"
-      const labelsLayer = mapRef.current
-        .getLayers()
-        .getArray()
-        .filter((layer) => layer.className_ === "labels")[0];
-      labelsLayer.setOpacity(sliderValueLabels);
+    if (mapRef.current && labelsFetched && layerRefs.current.vectorLabels) {
+      layerRefs.current.vectorLabels.setOpacity(sliderValueLabels);
     }
   }, [sliderValueLabels]);
 
