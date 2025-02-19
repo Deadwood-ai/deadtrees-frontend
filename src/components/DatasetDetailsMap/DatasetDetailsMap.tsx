@@ -65,7 +65,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         preload: 4,
       });
 
-      // Create all other layers before map initialization
+      // Create basemap layer
       const basemapLayer = new TileLayer({
         source: new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -73,6 +73,11 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       });
+      // Create vector tile layer for labels
+      // const vectorTileLayer = createDeadwoodVectorLayer();
+      // console.log("vectorTileLayer", vectorTileLayer);
+      // layerRefs.current.vectorLabels = vectorTileLayer;
+      // newMap.addLayer(vectorTileLayer);
 
       // Create geotiff layers
       // const geotiff2018 = createDeadwoodGeotiffLayer("2018");
@@ -82,15 +87,16 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       // const geotiff2022 = createDeadwoodGeotiffLayer("2022");
 
       // Store references
-      layerRefs.current = {
-        basemap: basemapLayer,
-        orthoCog: orthoCogLayer,
-        //   geotiff2018,
-        //   geotiff2019,
-        //   geotiff2020,
-        //   geotiff2021,
-        //   geotiff2022,
-      };
+      // layerRefs.current = {
+      //   basemap: basemapLayer,
+      //   orthoCog: orthoCogLayer,
+      //   vectorLabels: vectorTileLayer,
+      //   geotiff2018,
+      //   geotiff2019,
+      //   geotiff2020,
+      //   geotiff2021,
+      //   geotiff2022,
+      // };
 
       // Wait for the source to be ready and create map
       orthoCogLayer
@@ -101,13 +107,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             console.error("No extent found in viewOptions");
             return;
           }
-          console.log("viewOptions", viewOptions.center);
-          console.log("viewOptions", toLonLat(viewOptions.center));
 
           const MapView = new View({
             center: viewOptions.center,
             extent: viewOptions.extent,
-            // center: fromLonLat([8.5973, 54.8959]),
             maxZoom: 22,
             projection: "EPSG:3857",
             constrainOnlyCenter: true,
@@ -121,46 +124,19 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             controls: [],
           });
 
-          MapView.fit(viewOptions.extent);
-          // Create vector tile layer for labels
+          // Create vector layer after map view is ready
           const vectorTileLayer = createDeadwoodVectorLayer();
-          console.log("vectorTileLayer", vectorTileLayer);
-          layerRefs.current.vectorLabels = vectorTileLayer;
           newMap.addLayer(vectorTileLayer);
+          vectorTileLayer.refreshTiles(); // Force initial tile load
 
-          // fetchLabels({ dataset_id: data.dataset_id })
-          //   .then((labelsData) => {
-          //     if (labelsData && mapRef.current) {
-          //       console.log("labelsData", labelsData);
-          //       setLabels(labelsData);
-          //       const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
+          // Store all layer references
+          layerRefs.current = {
+            basemap: basemapLayer,
+            orthoCog: orthoCogLayer,
+            vectorLabels: vectorTileLayer,
+          };
 
-          //       // Only create and add AOI layer if labelsData.aoi exists
-          //       if (labelsData.aoi) {
-          //         const vectorLayerAOI = new VectorLayer({
-          //           source: new VectorSource({
-          //             features: new GeoJSON().readFeatures(labelsData.aoi, {
-          //               dataProjection: "EPSG:4326",
-          //               featureProjection: "EPSG:3857",
-          //             }),
-          //           }),
-          //           style: {
-          //             "stroke-color": "blue",
-          //             "stroke-width": 1,
-          //             "fill-color": "rgba(0, 0, 255, 0)",
-          //           },
-          //         });
-          //         layerRefs.current.vectorAOI = vectorLayerAOI;
-          //         newMap.addLayer(vectorLayerAOI);
-          //       }
-
-          //       setLabelsFetched(true);
-          //     }
-          //   })
-          //   .catch((error) => {
-          //     console.error("Error fetching labels:", error);
-          //   });
-
+          MapView.fit(viewOptions.extent);
           mapRef.current = newMap;
         })
         .catch((error) => {
@@ -170,34 +146,32 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
     return () => {
       if (mapRef.current) {
-        // Clean up layers
-        Object.values(layerRefs.current).forEach((layer) => {
-          if (layer) {
-            // Remove from map
-            mapRef.current?.removeLayer(layer);
+        // Force cleanup of vector layers
+        if (layerRefs.current.vectorLabels) {
+          console.log("Cleaning up vector labels layer");
+          const vectorLayer = layerRefs.current.vectorLabels;
+          const source = vectorLayer.getSource();
 
-            // Clean up source
-            const source = layer.getSource();
-            if (source) {
-              if ("clear" in source) {
-                source.clear();
-              }
-              if ("dispose" in source) {
-                source.dispose();
-              }
-            }
+          // Remove layer from map first
+          mapRef.current.removeLayer(vectorLayer);
 
-            // Clean up layer
-            if ("cleanup" in layer) {
-              layer.cleanup();
-            } else {
-              layer.dispose();
-            }
+          // Clear and dispose source
+          if (source) {
+            source.clear();
+            source.dispose();
           }
-        });
 
-        // Clear layer references
-        layerRefs.current = {};
+          // Force layer cleanup
+          vectorLayer.changed();
+          vectorLayer.dispose();
+          layerRefs.current.vectorLabels = undefined;
+          console.log("is vectorLayer disposed", vectorLayer);
+        }
+
+        // Clear all layer references
+        Object.keys(layerRefs.current).forEach((key) => {
+          layerRefs.current[key] = undefined;
+        });
 
         // Clean up map
         mapRef.current.setTarget(undefined);
