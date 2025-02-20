@@ -42,7 +42,7 @@ const createDeadwoodVectorLayer = () => {
       }
     },
     url: "deadwood/{z}/{x}/{y}",
-    maxZoom: 19,
+    maxZoom: 22,
     tileSize: 4096,
   });
 
@@ -57,7 +57,7 @@ const createDeadwoodVectorLayer = () => {
         width: 1,
       }),
     }),
-    maxZoom: 19,
+    maxZoom: 22,
     className: "deadwood-vector",
     renderMode: "vector",
     declutter: true,
