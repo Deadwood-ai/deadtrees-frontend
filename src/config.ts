@@ -4,7 +4,7 @@ const DEV = import.meta.env.VITE_MODE === "development";
 console.log("DEV", DEV);
 
 const STORAGE_SERVER_DEV = "http://localhost:8080";
-const STORAGE_SERVER_URL = "https://data.deadtrees.earth";
+const STORAGE_SERVER_URL = "https://data2.deadtrees.earth";
 
 const API_URL_DEV = STORAGE_SERVER_DEV + "/api/v1";
 const API_URL_PROD = STORAGE_SERVER_URL + "/api/v1";
@@ -37,3 +37,7 @@ export const Settings = {
   COLLABORATORS_TABLE: "collaborators",
   LABELS_TABLE: "v2_labels",
 };
+
+for (const key in Settings) {
+  console.log(key, Settings[key as keyof typeof Settings]);
+}
