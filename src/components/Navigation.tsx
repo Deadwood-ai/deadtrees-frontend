@@ -41,6 +41,12 @@ export default function Navigation() {
     token: { colorBgContainer },
   } = theme.useToken();
 
+  const handleSignOut = async () => {
+    await signOut();
+    // Force navigation to sign-in page immediately after sign-out
+    nav("/sign-in");
+  };
+
   return (
     <div className="hidden rounded-lg bg-slate-200 md:block">
       <Header
@@ -77,7 +83,7 @@ export default function Navigation() {
             }}
           />
         </div>
-        <Button className="ml-8" type="primary" onClick={session ? signOut : () => nav("/sign-in")}>
+        <Button className="ml-8" type="primary" onClick={session ? handleSignOut : () => nav("/sign-in")}>
           {session ? "Sign Out" : "Sign In"}
         </Button>
       </Header>
