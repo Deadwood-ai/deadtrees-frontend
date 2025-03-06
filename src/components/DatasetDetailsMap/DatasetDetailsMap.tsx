@@ -12,6 +12,7 @@ import DeadwoodCardDetails from "./DeadwoodCardDetails";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "./createVectorLayer";
+import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -32,6 +33,11 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     vectorLabels?: VectorLayer<any>;
     deadwoodVector?: VectorTileLayer;
     forestCoverVector?: VectorTileLayer;
+    geotifLayer2018?: TileLayerWebGL;
+    geotifLayer2019?: TileLayerWebGL;
+    geotifLayer2020?: TileLayerWebGL;
+    geotifLayer2021?: TileLayerWebGL;
+    geotifLayer2022?: TileLayerWebGL;
   }>({});
 
   if (!data) return null;
@@ -67,12 +73,23 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const deadwoodVectorLayer = createDeadwoodVectorLayer();
       const forestCoverVectorLayer = createForestCoverVectorLayer();
 
+      const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
+      const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
+      const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
+      const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
+      const geotifLayer2022 = createDeadwoodGeotiffLayer("2022");
+
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer,
         forestCoverVector: forestCoverVectorLayer,
+        geotifLayer2018: geotifLayer2018,
+        geotifLayer2019: geotifLayer2019,
+        geotifLayer2020: geotifLayer2020,
+        geotifLayer2021: geotifLayer2021,
+        geotifLayer2022: geotifLayer2022,
       };
 
       // Wait for the source to be ready and create map
@@ -97,7 +114,17 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             if (mapContainer.current) {
               const newMap = new Map({
                 target: mapContainer.current,
-                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, forestCoverVectorLayer],
+                layers: [
+                  basemapLayer,
+                  orthoCogLayer,
+                  deadwoodVectorLayer,
+                  forestCoverVectorLayer,
+                  geotifLayer2018,
+                  geotifLayer2019,
+                  geotifLayer2020,
+                  geotifLayer2021,
+                  geotifLayer2022,
+                ],
                 view: MapView,
                 overlays: [],
                 controls: [],
@@ -176,6 +203,20 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       );
     }
   }, [mapStyle]);
+
+  // update deadwood geotiff layer visibility based on selected year
+  useEffect(() => {
+    if (mapRef.current) {
+      // Hide all geotiff layers first
+      const years = ["2018", "2019", "2020", "2021", "2022"];
+      years.forEach((year) => {
+        const layerKey = `geotifLayer${year}` as keyof typeof layerRefs.current;
+        if (layerRefs.current[layerKey]) {
+          layerRefs.current[layerKey]!.setVisible(year === selectedYear);
+        }
+      });
+    }
+  }, [selectedYear]);
 
   return (
     <div className="h-full w-full">

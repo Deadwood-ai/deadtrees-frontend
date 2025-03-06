@@ -1,9 +1,11 @@
 import { supabase } from "../hooks/useSupabase";
 
 const getDeadwoodCOGUrl = (year: string | null) => {
-  const url = supabase.storage.from("COG").getPublicUrl(`DE-${year}-COG.tif`);
+  const baseUrl = "https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/COG/DE-";
+  const url = `${baseUrl}${year}-COG.tif`;
+
   // console.log("public URL of COG:", url);
-  return url.data.publicUrl;
+  return url;
 };
 
 export default getDeadwoodCOGUrl;

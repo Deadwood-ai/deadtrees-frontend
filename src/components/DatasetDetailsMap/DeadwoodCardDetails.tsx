@@ -38,10 +38,10 @@ export function DeadwoodCardDetails({
   return (
     <div>
       <div className="flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
-        <p className="m-0 py-2 text-lg text-gray-800">Layer Controls</p>
+        <p className="m-0 py-2 text-lg text-gray-800">Deadwood for {year}</p>
 
         {/* Satellite Layer Controls */}
-        <div className="mb-2 flex w-full items-end border-b pb-2">
+        <div className="mb-1 flex w-full items-end border-b pb-1">
           <p className="m-0 w-full text-xs text-gray-600">Satellite Image</p>
           <div className="w-2/3">
             <p className="m-0 w-full text-xs text-gray-600">opacity</p>
@@ -58,7 +58,7 @@ export function DeadwoodCardDetails({
         </div>
 
         {/* Forest Cover Layer Controls */}
-        <div className="mb-2 flex w-full items-end border-b pb-2">
+        {/* <div className="mb-2 flex w-full items-end border-b pb-2">
           <p className="m-0 w-full text-xs text-gray-600">Forest Cover</p>
           <div className="w-2/3">
             <p className="m-0 w-full text-xs text-gray-600">opacity</p>
@@ -72,7 +72,7 @@ export function DeadwoodCardDetails({
               min={0}
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Deadwood Layer Controls */}
         <div className="mb-2 flex w-full items-end">
@@ -93,6 +93,7 @@ export function DeadwoodCardDetails({
 
         {isGermany && (
           <>
+            {/* <p className="m-0 w-full text-xs text-gray-600">Deadwood</p> */}
             <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
             <div className="mb-4 flex items-center space-x-2">
               <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
