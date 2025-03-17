@@ -55,7 +55,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     maxZoom: 22,
     tileSize: 4096,
     cacheSize: 128,
-    preload: 0,
+    // preload: 0,
   });
 
   const vectorLayer = new VectorTileLayer({
