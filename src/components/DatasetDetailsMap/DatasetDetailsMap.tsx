@@ -71,7 +71,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
 
       const deadwoodVectorLayer = createDeadwoodVectorLayer();
-      const forestCoverVectorLayer = createForestCoverVectorLayer();
+      // const forestCoverVectorLayer = createForestCoverVectorLayer();
 
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
@@ -84,7 +84,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer,
-        forestCoverVector: forestCoverVectorLayer,
+        // forestCoverVector: forestCoverVectorLayer,
         geotifLayer2018: geotifLayer2018,
         geotifLayer2019: geotifLayer2019,
         geotifLayer2020: geotifLayer2020,
@@ -118,7 +118,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                   basemapLayer,
                   orthoCogLayer,
                   deadwoodVectorLayer,
-                  forestCoverVectorLayer,
+                  // forestCoverVectorLayer,
                   geotifLayer2018,
                   geotifLayer2019,
                   geotifLayer2020,
@@ -142,6 +142,45 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
     return () => {
       if (mapRef.current) {
+        // Force WebGL context cleanup
+        // const target = mapRef.current.getTargetElement();
+        // if (target) {
+        //   const canvases = target.querySelectorAll("canvas");
+        //   canvases.forEach((canvas) => {
+        //     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        //     if (gl) {
+        //       gl.getExtension("WEBGL_lose_context")?.loseContext();
+        //     }
+        //   });
+        // }
+        if (layerRefs.current.deadwoodVector) {
+          // Remove from map
+          mapRef.current.removeLayer(layerRefs.current.deadwoodVector);
+
+          // Get and clean the source
+          const source = layerRefs.current.deadwoodVector.getSource();
+          if (source) {
+            // Clear tile cache
+            // if (source.tileCache) {
+            // source.tileCache.clear();
+            // }
+
+            // Clear source
+            if (typeof source.clear === "function") {
+              source.clear();
+            }
+
+            // Dispose source
+            if (typeof source.dispose === "function") {
+              source.dispose();
+            }
+          }
+
+          // Dispose layer
+          layerRefs.current.deadwoodVector.dispose();
+          layerRefs.current.deadwoodVector = undefined;
+        }
+
         // Clean up layers
         Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {

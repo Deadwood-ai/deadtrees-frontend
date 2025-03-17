@@ -43,7 +43,6 @@ const createVectorLayer = (config: VectorLayerConfig) => {
             extent: tile.extent,
             featureProjection: "EPSG:3857",
           });
-          console.log("features", features);
 
           tile.setFeatures(features);
         }
@@ -55,6 +54,8 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     url: `${config.className}/{z}/{x}/{y}`,
     maxZoom: 22,
     tileSize: 4096,
+    cacheSize: 128,
+    preload: 0,
   });
 
   const vectorLayer = new VectorTileLayer({
@@ -74,7 +75,6 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     declutter: true,
     updateWhileAnimating: false,
     updateWhileInteracting: false,
-    preload: 0,
     useInterimTilesOnError: false,
   });
 
