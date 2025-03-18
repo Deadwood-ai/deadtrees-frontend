@@ -5,6 +5,7 @@ import AuthProvider from "./hooks/useAuthProvider";
 
 import DatasetMapProvider from "./hooks/useDatasetMapProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CookieBanner } from "./components/cookieBanner/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <AuthProvider>
       <DatasetMapProvider>
         <App />
+        <CookieBanner />
       </DatasetMapProvider>
     </AuthProvider>
   </QueryClientProvider>,

@@ -62,9 +62,10 @@
           }),
           (e.__SV = 1));
       })(document, window.posthog || []);
-      posthog.init("phc_RnLiX7SIkVuBtAdcb628PjiuOYennHWZRlUXHIcVbKA", {
-        api_host: "https://eu.posthog.com",
-      });
+      // Don't initialize here - the CookieBanner component will handle this
+      // posthog.init("phc_RnLiX7SIkVuBtAdcb628PjiuOYennHWZRlUXHIcVbKA", {
+      //   api_host: "https://eu.posthog.com",
+      // });
     </script>
   </head>
   <body style="margin: 0">
