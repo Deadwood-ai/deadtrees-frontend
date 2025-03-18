@@ -31,8 +31,8 @@ export default function ProfilePage() {
 
   const { session, user } = useAuth();
   const navigate = useNavigate();
-  console.log(window.origin);
-  console.log("session", session);
+  // console.log(window.origin);
+  // console.log("session", session);
 
   useEffect(() => {
     if (!session) {

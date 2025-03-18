@@ -68,8 +68,8 @@ async function uploadChunks(file: File, totalChunks: number, uploadStartTime: nu
         throw error;
       }
       currentSession = data.session;
-      console.log("Token refreshed");
-      console.log("currentSession", currentSession);
+      // console.log("Token refreshed");
+      // console.log("currentSession", currentSession);
     }
 
     const chunkInfo = getChunkInfo(file, chunkIndex);
