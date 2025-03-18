@@ -369,10 +369,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }}
         ref={mapContainer}
       >
-        <div className="absolute left-2 top-6 z-20">
+        <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className="absolute bottom-6 right-4 z-50 ">
+        <div className="absolute bottom-4 right-4 z-50 ">
           <DeadwoodCardDetails
             year={selectedYear}
             setSelectedYear={setSelectedYear}

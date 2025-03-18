@@ -33,7 +33,7 @@ export function DeadwoodCardDetails({
     showLegend(isGermany);
   }, [isGermany, showLegend]);
 
-  if (!adminLevel1) return null;
+  // if (!adminLevel1) return null;
 
   return (
     <div>
