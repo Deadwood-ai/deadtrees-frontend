@@ -226,7 +226,7 @@ const DeadtreesMap = () => {
 
   const SideSelectionButtons = () => {
     return (
-      <div className="absolute bottom-12 left-8 z-20">
+      <div>
         <Radio.Group
           value={selectedSite}
           // defaultValue={"Harz"}
@@ -251,7 +251,7 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       >
-        <div className="absolute right-8 top-28 z-20 w-96 rounded-sm">
+        <div className="absolute right-4 top-24 z-20 w-96 rounded-sm">
           <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
             <GeoapifyGeocoderAutocomplete
               placeholder="Enter address here"
@@ -270,14 +270,16 @@ const DeadtreesMap = () => {
             />
           </div>
         </div>
-        <div className="absolute left-8 top-28 z-50">
+        <div className="absolute left-4 top-24 z-50">
           <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
         </div>
-        <SideSelectionButtons />
-        <div className="absolute bottom-60 right-8 z-50">
+        <div className="absolute bottom-10 left-4 z-20">
+          <SideSelectionButtons />
+        </div>
+        <div className="absolute bottom-56 right-4 z-50">
           <Legend />
         </div>
-        <div className="absolute bottom-12 right-8 z-50">
+        <div className="absolute bottom-10 right-4 z-50">
           <DeadwoodCard
             year={selectedYear}
             sliderValue={sliderValue}

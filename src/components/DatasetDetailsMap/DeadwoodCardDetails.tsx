@@ -50,7 +50,7 @@ export function DeadwoodCardDetails({
               defaultValue={1}
               step={0.01}
               max={1}
-              value={satelliteOpacity}
+              value={satelliteOpacity.toFixed(1)}
               onChange={(value) => setSatelliteOpacity(value as number)}
               min={0}
             />
@@ -84,7 +84,7 @@ export function DeadwoodCardDetails({
               defaultValue={1}
               step={0.01}
               max={1}
-              value={deadwoodOpacity}
+              value={deadwoodOpacity.toFixed(1)}
               onChange={(value) => setDeadwoodOpacity(value as number)}
               min={0}
             />

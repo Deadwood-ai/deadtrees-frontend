@@ -26,7 +26,7 @@ const DeadwoodCard = ({
               defaultValue={1}
               step={0.01}
               max={1}
-              value={sliderValue}
+              value={sliderValue.toFixed(1)}
               onChange={(value) => setSliderValue(value as number)}
               min={0}
             />

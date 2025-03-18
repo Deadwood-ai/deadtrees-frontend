@@ -167,7 +167,7 @@ export default function DatasetDetails() {
           <div>Loading...</div>
         )}
       </Col>
-      <Col className="flex-1 py-4">
+      <Col className="flex-1 pt-2">
         <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>
