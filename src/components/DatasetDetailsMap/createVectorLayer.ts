@@ -24,18 +24,23 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     }),
     tileLoadFunction: async (tile, url) => {
       const [z, x, y] = url.split("/").slice(-3).map(Number);
+      // console.log(`[Tile Request] z=${z}, x=${x}, y=${y}`);
 
       try {
+        const startTime = performance.now();
         const { data, error } = await supabase.rpc(config.rpcFunctionName, {
           z,
           x,
-          y: y,
+          y,
           resolution: 4096,
         });
+        // const fetchTime = performance.now() - startTime;
 
         if (error) throw error;
 
         if (data) {
+          // console.log(`[Tile Success] z=${z}, x=${x}, y=${y}, fetch=${fetchTime.toFixed(0)}ms`);
+          // const decodeStart = performance.now();
           const uint8Array = base64ToArrayBuffer(data);
           const format = tile.getFormat();
 
@@ -44,19 +49,35 @@ const createVectorLayer = (config: VectorLayerConfig) => {
             featureProjection: "EPSG:3857",
           });
 
+          // const decodeTime = performance.now() - decodeStart;
+          // console.log(
+          // `[Tile Processed] z=${z}, x=${x}, y=${y}, features=${features.length}, decode=${decodeTime.toFixed(0)}ms`,
+          // );
+
+          // Log any extremely large features that might cause issues
+          // features.forEach((feature, i) => {
+          //   const geom = feature.getGeometry();
+          //   if (geom && geom.getType() === "Polygon") {
+          //     const coords = geom.getCoordinates();
+          //     if (coords[0] && coords[0].length > 1000) {
+          //       console.warn(`[Large Geometry] z=${z}, x=${x}, y=${y}, feature=${i}, vertices=${coords[0].length}`);
+          //     }
+          //   }
+          // });
+
           tile.setFeatures(features);
         }
       } catch (err) {
-        console.error("Error loading tile:", err);
+        console.error(`[Tile Error] z=${z}, x=${x}, y=${y}:`, err);
         tile.setState(3); // ERROR
       }
     },
     url: `${config.className}/{z}/{x}/{y}`,
     maxZoom: 22,
-    tileSize: 4096,
+    tileSize: 512,
     cacheSize: 256,
     preload: 1,
-    transition: 250,
+    maxParallelImageRequests: 6,
   });
 
   const vectorLayer = new VectorTileLayer({

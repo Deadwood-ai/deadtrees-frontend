@@ -24,6 +24,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [satelliteOpacity, setSatelliteOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [isLegendVisible, setIsLegendVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
@@ -256,6 +257,108 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
     }
   }, [selectedYear]);
+
+  // useEffect(() => {
+  //   if (mapRef.current && layerRefs.current.deadwoodVector) {
+  //     const source = layerRefs.current.deadwoodVector.getSource();
+
+  //     const loadStartHandler = () => setIsLoading(true);
+  //     const loadEndHandler = () => setIsLoading(false);
+
+  //     source.on("tileloadstart", loadStartHandler);
+  //     source.on("tileloadend", loadEndHandler);
+  //     source.on("tileloaderror", loadEndHandler);
+
+  //     return () => {
+  //       source.un("tileloadstart", loadStartHandler);
+  //       source.un("tileloadend", loadEndHandler);
+  //       source.un("tileloaderror", loadEndHandler);
+  //     };
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   if (mapRef.current) {
+  //     // Track rendering performance
+  //     mapRef.current.on("prerender", () => {
+  //       console.log("[Map] prerender", new Date().toISOString());
+  //     });
+
+  //     mapRef.current.on("postrender", () => {
+  //       console.log("[Map] postrender", new Date().toISOString());
+  //     });
+
+  //     // Track interactions
+  //     mapRef.current.on("movestart", () => console.log("[Map] movestart"));
+  //     mapRef.current.on("moveend", () => console.log("[Map] moveend"));
+
+  //     // Track WebGL context
+  //     const checkWebGLContext = () => {
+  //       const target = mapRef.current?.getTargetElement();
+  //       if (!target) return;
+
+  //       const canvases = target.querySelectorAll("canvas");
+  //       canvases.forEach((canvas, i) => {
+  //         const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+  //         if (gl) {
+  //           const isLost = gl.isContextLost?.() || false;
+  //           console.log(`[WebGL] Canvas ${i}: context ${isLost ? "LOST" : "ok"}`);
+  //         }
+  //       });
+  //     };
+
+  //     // Check WebGL context periodically
+  //     const intervalId = setInterval(checkWebGLContext, 5000);
+
+  //     return () => {
+  //       clearInterval(intervalId);
+  //       mapRef.current?.un("prerender");
+  //       mapRef.current?.un("postrender");
+  //       mapRef.current?.un("movestart");
+  //       mapRef.current?.un("moveend");
+  //     };
+  //   }
+  // }, [mapRef.current]);
+
+  // useEffect(() => {
+  //   if (!mapRef.current || !layerRefs.current.deadwoodVector) return;
+
+  //   const source = layerRefs.current.deadwoodVector.getSource();
+
+  //   // Monitor tile loading events
+  //   const tileLoadStart = (evt) => {
+  //     console.log("[Source] tileloadstart", evt.tile.tileCoord.join("/"));
+  //   };
+
+  //   const tileLoadEnd = (evt) => {
+  //     console.log("[Source] tileloadend", evt.tile.tileCoord.join("/"));
+  //   };
+
+  //   const tileLoadError = (evt) => {
+  //     console.log("[Source] tileloaderror", evt.tile.tileCoord.join("/"));
+  //   };
+
+  //   source.on("tileloadstart", tileLoadStart);
+  //   source.on("tileloadend", tileLoadEnd);
+  //   source.on("tileloaderror", tileLoadError);
+
+  //   // Log source state periodically
+  //   const logSourceState = () => {
+  //     const tileCache = source.tileCache;
+  //     if (tileCache) {
+  //       console.log(`[Source] Cache stats: size=${tileCache.getCount()}, max=${tileCache.highWaterMark}`);
+  //     }
+  //   };
+
+  //   const stateIntervalId = setInterval(logSourceState, 5000);
+
+  //   return () => {
+  //     clearInterval(stateIntervalId);
+  //     source.un("tileloadstart", tileLoadStart);
+  //     source.un("tileloadend", tileLoadEnd);
+  //     source.un("tileloaderror", tileLoadError);
+  //   };
+  // }, [layerRefs.current.deadwoodVector]);
 
   return (
     <div className="h-full w-full">
