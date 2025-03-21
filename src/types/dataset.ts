@@ -43,7 +43,6 @@ export interface IDataset {
   ortho_file_size: number;
   bbox: string | null;
   sha256: string;
-  ortho_processed: boolean;
   current_status: string;
   is_upload_done: boolean;
   is_ortho_done: boolean;
@@ -63,6 +62,7 @@ export interface IDataset {
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
+  biome_name: string | null;
 }
 
 export interface ILabels {
