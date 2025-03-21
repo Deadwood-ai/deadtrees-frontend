@@ -59,7 +59,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }),
         maxZoom: 22,
         cacheSize: 4096,
-        preload: 4,
+        // preload: 4,
       });
 
       // Create all other layers before map initialization
@@ -226,8 +226,20 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // update satellite layer opacity
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.orthoCog) {
-      layerRefs.current.orthoCog.setOpacity(satelliteOpacity);
+    if (mapRef.current) {
+      // Update orthoCog layer opacity
+      // if (layerRefs.current.orthoCog) {
+      // layerRefs.current.orthoCog.setOpacity(satelliteOpacity);
+      // }
+
+      // Update all geotiff layers opacity
+      const years = ["2018", "2019", "2020", "2021", "2022"];
+      years.forEach((year) => {
+        const layerKey = `geotifLayer${year}` as keyof typeof layerRefs.current;
+        if (layerRefs.current[layerKey]) {
+          layerRefs.current[layerKey]!.setOpacity(satelliteOpacity);
+        }
+      });
     }
   }, [satelliteOpacity]);
 
