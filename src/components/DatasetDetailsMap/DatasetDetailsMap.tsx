@@ -13,6 +13,8 @@ import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "./createVectorLayer";
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
+import { useDatasetLabels } from "../../hooks/useDatasetLabels";
+import { ILabelData } from "../../types/labels";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -24,7 +26,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [satelliteOpacity, setSatelliteOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [isLegendVisible, setIsLegendVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch label data for the current dataset
+  const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
+    datasetId: data?.id,
+    labelData: ILabelData.DEADWOOD,
+    enabled: !!data?.id,
+  });
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
@@ -44,7 +52,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   if (!data) return null;
 
   useEffect(() => {
-    if (!mapRef.current && data?.file_name) {
+    if (!mapRef.current && data?.file_name && !isLoadingLabel) {
       // Create ortho layer first
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -71,8 +79,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }),
       });
 
-      const deadwoodVectorLayer = createDeadwoodVectorLayer();
-      // const forestCoverVectorLayer = createForestCoverVectorLayer();
+      // Only create deadwood vector layer if labels exist
+      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
 
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
       const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
@@ -119,7 +127,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                   basemapLayer,
                   orthoCogLayer,
                   deadwoodVectorLayer,
-                  // forestCoverVectorLayer,
                   geotifLayer2018,
                   geotifLayer2019,
                   geotifLayer2020,
@@ -208,7 +215,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, mapStyle]);
+  }, [data, mapStyle, isLoadingLabel, labelData]);
 
   // update deadwood layer opacity
   useEffect(() => {

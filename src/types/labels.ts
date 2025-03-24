@@ -7,6 +7,13 @@ export enum LabelSource {
 }
 
 export enum LabelType {
+  SEGMENTATION = "segmentation",
+  POINT_OBSERVATION = "point_observation",
+  INSTANCE_SEGMENTATION = "instance_segmentation",
+  SEMANTIC_SEGMENTATION = "semantic_segmentation",
+}
+
+export enum ILabelData {
   DEADWOOD = "deadwood",
   FOREST_COVER = "forest_cover",
 }

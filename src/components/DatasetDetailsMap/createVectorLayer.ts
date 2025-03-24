@@ -14,6 +14,7 @@ interface VectorLayerConfig {
     strokeColor: string;
     strokeWidth: number;
   };
+  labelId?: number | null;
 }
 
 const createVectorLayer = (config: VectorLayerConfig) => {
@@ -25,6 +26,12 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     tileLoadFunction: async (tile, url) => {
       const [z, x, y] = url.split("/").slice(-3).map(Number);
       // console.log(`[Tile Request] z=${z}, x=${x}, y=${y}`);
+      // Skip API call completely if no labelId is provided
+      if (!config.labelId) {
+        // Set empty features for the tile when no label ID exists
+        tile.setFeatures([]);
+        return;
+      }
 
       try {
         const startTime = performance.now();
@@ -33,6 +40,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
           x,
           y,
           resolution: 4096,
+          filter_label_id: config.labelId || null,
         });
         // const fetchTime = performance.now() - startTime;
 
@@ -66,6 +74,8 @@ const createVectorLayer = (config: VectorLayerConfig) => {
           // });
 
           tile.setFeatures(features);
+        } else {
+          tile.setState(3); // ERROR
         }
       } catch (err) {
         console.error(`[Tile Error] z=${z}, x=${x}, y=${y}:`, err);
@@ -103,7 +113,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   return vectorLayer;
 };
 
-export const createDeadwoodVectorLayer = () =>
+export const createDeadwoodVectorLayer = (labelId?: number | null) =>
   createVectorLayer({
     rpcFunctionName: "get_deadwood_vector_tiles",
     className: "deadwood-vector",
@@ -112,9 +122,10 @@ export const createDeadwoodVectorLayer = () =>
       strokeColor: "#4285F4",
       strokeWidth: 1,
     },
+    labelId: labelId || undefined,
   });
 
-export const createForestCoverVectorLayer = () =>
+export const createForestCoverVectorLayer = (labelId?: number) =>
   createVectorLayer({
     rpcFunctionName: "get_forest_cover_vector_tiles",
     className: "forest-cover-vector",
@@ -123,4 +134,5 @@ export const createForestCoverVectorLayer = () =>
       strokeColor: "#16a34a", // Darker green for stroke
       strokeWidth: 1,
     },
+    labelId,
   });
