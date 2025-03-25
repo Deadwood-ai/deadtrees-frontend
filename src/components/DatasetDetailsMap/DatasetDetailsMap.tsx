@@ -23,9 +23,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
   const [selectedYear, setSelectedYear] = useState<string>("2018");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
-  const [satelliteOpacity, setSatelliteOpacity] = useState<number>(1);
+  const [satelliteOpacity, setSatelliteOpacity] = useState<number>(0);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [isLegendVisible, setIsLegendVisible] = useState(false);
+  const [loadedLayers, setLoadedLayers] = useState<Record<string, boolean>>({});
 
   // Fetch label data for the current dataset
   const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
@@ -82,23 +83,15 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       // Only create deadwood vector layer if labels exist
       const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
 
+      // Only create 2018 layer initially since it's the default
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-      const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
-      const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
-      const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
-      const geotifLayer2022 = createDeadwoodGeotiffLayer("2022");
 
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer,
-        // forestCoverVector: forestCoverVectorLayer,
         geotifLayer2018: geotifLayer2018,
-        geotifLayer2019: geotifLayer2019,
-        geotifLayer2020: geotifLayer2020,
-        geotifLayer2021: geotifLayer2021,
-        geotifLayer2022: geotifLayer2022,
       };
 
       // Wait for the source to be ready and create map
@@ -123,16 +116,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             if (mapContainer.current) {
               const newMap = new Map({
                 target: mapContainer.current,
-                layers: [
-                  basemapLayer,
-                  orthoCogLayer,
-                  deadwoodVectorLayer,
-                  geotifLayer2018,
-                  geotifLayer2019,
-                  geotifLayer2020,
-                  geotifLayer2021,
-                  geotifLayer2022,
-                ],
+                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, geotifLayer2018],
                 view: MapView,
                 overlays: [],
                 controls: [],
@@ -263,11 +247,26 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [mapStyle]);
 
-  // update deadwood geotiff layer visibility based on selected year
+  // Update layer loading and visibility logic
   useEffect(() => {
     if (mapRef.current) {
-      // Hide all geotiff layers first
       const years = ["2018", "2019", "2020", "2021", "2022"];
+
+      // Load the selected year's layer if not already loaded
+      if (!loadedLayers[selectedYear]) {
+        const layerKey = `geotifLayer${selectedYear}` as keyof typeof layerRefs.current;
+
+        if (!layerRefs.current[layerKey]) {
+          const newLayer = createDeadwoodGeotiffLayer(selectedYear);
+          // Set the opacity to match current satelliteOpacity when creating new layer
+          newLayer.setOpacity(satelliteOpacity);
+          layerRefs.current[layerKey] = newLayer;
+          mapRef.current.addLayer(newLayer);
+          setLoadedLayers((prev) => ({ ...prev, [selectedYear]: true }));
+        }
+      }
+
+      // Update visibility for all layers
       years.forEach((year) => {
         const layerKey = `geotifLayer${year}` as keyof typeof layerRefs.current;
         if (layerRefs.current[layerKey]) {
@@ -275,7 +274,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }
       });
     }
-  }, [selectedYear]);
+  }, [selectedYear, loadedLayers, satelliteOpacity]);
 
   // useEffect(() => {
   //   if (mapRef.current && layerRefs.current.deadwoodVector) {
