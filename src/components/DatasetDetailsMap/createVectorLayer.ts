@@ -118,8 +118,8 @@ export const createDeadwoodVectorLayer = (labelId?: number | null) =>
     rpcFunctionName: "get_deadwood_vector_tiles",
     className: "deadwood-vector",
     style: {
-      fillColor: "rgba(129, 176, 247, 0.5)",
-      strokeColor: "#4285F4",
+      fillColor: "rgba(129, 176, 247, 0.7)",
+      strokeColor: "rgba(129, 176, 247, 0.7)",
       strokeWidth: 1,
     },
     labelId: labelId || undefined,
