@@ -85,9 +85,9 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     url: `${config.className}/{z}/{x}/{y}`,
     maxZoom: 22,
     tileSize: 512,
-    cacheSize: 256,
+    cacheSize: 512,
     preload: 1,
-    maxParallelImageRequests: 6,
+    maxParallelImageRequests: 8,
   });
 
   const vectorLayer = new VectorTileLayer({
