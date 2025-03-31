@@ -39,7 +39,10 @@ const DataContext = createContext<DataContextType>({
 });
 
 const fetchData = async () => {
-  const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
+  const { data, error } = await supabase
+    .from(Settings.DATA_TABLE_FULL)
+    .select("*")
+    .filter("data_access", "eq", "public");
   if (error) throw error;
   return data;
 };

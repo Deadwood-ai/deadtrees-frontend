@@ -56,7 +56,7 @@ export default function DatasetDetails() {
                 <Typography.Text className="pr-2">Author: </Typography.Text>
                 <Tooltip title={dataset.authors}>
                   <Typography.Text strong>
-                    {dataset.authors && dataset.authors.slice(0, 30) + (dataset.authors.length > 30 ? "..." : "")}
+                    {dataset.authors && dataset.authors[0].slice(0, 30) + (dataset.authors[0].length > 30 ? "..." : "")}
                   </Typography.Text>
                 </Tooltip>
               </div>

@@ -121,10 +121,10 @@ const ListItme = ({
               <Button
                 // type="text"
                 size="small"
-                className="font-medium"
+                className="truncate font-medium"
                 onClick={(e) => onClickFilterHandler(e, item.authors, "authors_image")}
               >
-                {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
+                {item.authors && item.authors[0].slice(0, 18) + (item.authors[0].length > 18 ? "..." : "")}
               </Button>
             </Tooltip>
           </div>
