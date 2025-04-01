@@ -182,7 +182,7 @@ export default function DatasetDetails() {
                     className="w-full"
                     onClick={() => {
                       const url = labelsOnly
-                        ? `${Settings.API_URL}/datasets/${dataset.id}/labels.gpkg`
+                        ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
                         : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
 
                       window.location.href = url;
