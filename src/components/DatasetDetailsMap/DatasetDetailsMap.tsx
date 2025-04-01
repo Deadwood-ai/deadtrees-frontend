@@ -6,6 +6,10 @@ import VectorLayer from "ol/layer/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
+import { Style, Fill, Stroke } from "ol/style";
+import Feature from "ol/Feature";
+import RenderFeature from "ol/render/Feature";
+import { FeatureLike } from "ol/Feature";
 
 import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "./DeadwoodCardDetails";
@@ -27,6 +31,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [isLegendVisible, setIsLegendVisible] = useState(false);
   const [loadedLayers, setLoadedLayers] = useState<Record<string, boolean>>({});
+  const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
 
   // Fetch label data for the current dataset
   const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
@@ -48,6 +53,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     geotifLayer2020?: TileLayerWebGL;
     geotifLayer2021?: TileLayerWebGL;
     geotifLayer2022?: TileLayerWebGL;
+    selectionLayer?: VectorTileLayer;
   }>({});
 
   if (!data) return null;
@@ -86,12 +92,33 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       // Only create 2018 layer initially since it's the default
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
 
+      // Create selection layer for hover effect
+      const selectionLayer = new VectorTileLayer({
+        source: deadwoodVectorLayer.getSource(),
+        style: (feature: FeatureLike) => {
+          if (feature === hoveredFeature) {
+            return new Style({
+              fill: new Fill({
+                color: "rgba(129, 176, 247, 0.9)",
+              }),
+              stroke: new Stroke({
+                color: "rgba(129, 176, 247, 1)",
+                width: 2,
+              }),
+            });
+          }
+          return undefined;
+        },
+        renderMode: "vector",
+      });
+
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer,
         geotifLayer2018: geotifLayer2018,
+        selectionLayer: selectionLayer,
       };
 
       // Wait for the source to be ready and create map
@@ -101,7 +128,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           .getView()
           .then((viewOptions) => {
             if (!viewOptions?.extent) {
-              console.error("No extent found in viewOptions");
+              // console.error("No extent found in viewOptions");
               return;
             }
 
@@ -116,10 +143,39 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             if (mapContainer.current) {
               const newMap = new Map({
                 target: mapContainer.current,
-                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, geotifLayer2018],
+                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer, geotifLayer2018],
                 view: MapView,
                 overlays: [],
                 controls: [],
+              });
+
+              // Add pointer move event handler
+              newMap.on("pointermove", (event) => {
+                const pixel = newMap.getEventPixel(event.originalEvent);
+                const hit = newMap.hasFeatureAtPixel(pixel, {
+                  layerFilter: (layer) => layer === deadwoodVectorLayer,
+                });
+
+                const targetElement = newMap.getTargetElement();
+                if (targetElement) {
+                  targetElement.style.cursor = hit ? "pointer" : "";
+                }
+
+                if (hit) {
+                  // console.log("[Map] pointermove", targetElement.style.cursor);
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  deadwoodVectorLayer.getFeatures(pixel).then((features) => {
+                    if (features.length > 0) {
+                      setHoveredFeature(features[0]);
+                    } else {
+                      setHoveredFeature(null);
+                    }
+                  });
+                } else {
+                  setHoveredFeature(null);
+                }
               });
 
               MapView.fit(viewOptions.extent);
@@ -127,7 +183,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             }
           })
           .catch((error) => {
-            console.error("Error initializing map:", error);
+            // console.error("Error initializing map:", error);
           });
       }
     }
@@ -276,107 +332,25 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [selectedYear, loadedLayers, satelliteOpacity]);
 
-  // useEffect(() => {
-  //   if (mapRef.current && layerRefs.current.deadwoodVector) {
-  //     const source = layerRefs.current.deadwoodVector.getSource();
-
-  //     const loadStartHandler = () => setIsLoading(true);
-  //     const loadEndHandler = () => setIsLoading(false);
-
-  //     source.on("tileloadstart", loadStartHandler);
-  //     source.on("tileloadend", loadEndHandler);
-  //     source.on("tileloaderror", loadEndHandler);
-
-  //     return () => {
-  //       source.un("tileloadstart", loadStartHandler);
-  //       source.un("tileloadend", loadEndHandler);
-  //       source.un("tileloaderror", loadEndHandler);
-  //     };
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   if (mapRef.current) {
-  //     // Track rendering performance
-  //     mapRef.current.on("prerender", () => {
-  //       console.log("[Map] prerender", new Date().toISOString());
-  //     });
-
-  //     mapRef.current.on("postrender", () => {
-  //       console.log("[Map] postrender", new Date().toISOString());
-  //     });
-
-  //     // Track interactions
-  //     mapRef.current.on("movestart", () => console.log("[Map] movestart"));
-  //     mapRef.current.on("moveend", () => console.log("[Map] moveend"));
-
-  //     // Track WebGL context
-  //     const checkWebGLContext = () => {
-  //       const target = mapRef.current?.getTargetElement();
-  //       if (!target) return;
-
-  //       const canvases = target.querySelectorAll("canvas");
-  //       canvases.forEach((canvas, i) => {
-  //         const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-  //         if (gl) {
-  //           const isLost = gl.isContextLost?.() || false;
-  //           console.log(`[WebGL] Canvas ${i}: context ${isLost ? "LOST" : "ok"}`);
-  //         }
-  //       });
-  //     };
-
-  //     // Check WebGL context periodically
-  //     const intervalId = setInterval(checkWebGLContext, 5000);
-
-  //     return () => {
-  //       clearInterval(intervalId);
-  //       mapRef.current?.un("prerender");
-  //       mapRef.current?.un("postrender");
-  //       mapRef.current?.un("movestart");
-  //       mapRef.current?.un("moveend");
-  //     };
-  //   }
-  // }, [mapRef.current]);
-
-  // useEffect(() => {
-  //   if (!mapRef.current || !layerRefs.current.deadwoodVector) return;
-
-  //   const source = layerRefs.current.deadwoodVector.getSource();
-
-  //   // Monitor tile loading events
-  //   const tileLoadStart = (evt) => {
-  //     console.log("[Source] tileloadstart", evt.tile.tileCoord.join("/"));
-  //   };
-
-  //   const tileLoadEnd = (evt) => {
-  //     console.log("[Source] tileloadend", evt.tile.tileCoord.join("/"));
-  //   };
-
-  //   const tileLoadError = (evt) => {
-  //     console.log("[Source] tileloaderror", evt.tile.tileCoord.join("/"));
-  //   };
-
-  //   source.on("tileloadstart", tileLoadStart);
-  //   source.on("tileloadend", tileLoadEnd);
-  //   source.on("tileloaderror", tileLoadError);
-
-  //   // Log source state periodically
-  //   const logSourceState = () => {
-  //     const tileCache = source.tileCache;
-  //     if (tileCache) {
-  //       console.log(`[Source] Cache stats: size=${tileCache.getCount()}, max=${tileCache.highWaterMark}`);
-  //     }
-  //   };
-
-  //   const stateIntervalId = setInterval(logSourceState, 5000);
-
-  //   return () => {
-  //     clearInterval(stateIntervalId);
-  //     source.un("tileloadstart", tileLoadStart);
-  //     source.un("tileloadend", tileLoadEnd);
-  //     source.un("tileloaderror", tileLoadError);
-  //   };
-  // }, [layerRefs.current.deadwoodVector]);
+  // Add effect to update selection layer style when hover state changes
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.selectionLayer) {
+      layerRefs.current.selectionLayer.setStyle((feature: FeatureLike) => {
+        if (feature === hoveredFeature) {
+          return new Style({
+            fill: new Fill({
+              color: "rgba(129, 176, 247, 0.9)",
+            }),
+            stroke: new Stroke({
+              color: "rgba(129, 176, 247, 1)",
+              width: 2,
+            }),
+          });
+        }
+        return undefined;
+      });
+    }
+  }, [hoveredFeature]);
 
   return (
     <div className="h-full w-full">
