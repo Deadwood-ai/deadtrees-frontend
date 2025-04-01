@@ -52,7 +52,7 @@ export default function DatasetDetails() {
                 icon={<ArrowLeftOutlined />}
               ></Button>
             </div>
-            <div className="mt-4 rounded-md bg-white p-4">
+            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
               <div className="flex items-center pb-4">
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                 <Typography.Title style={{ margin: 0 }} level={5}>
@@ -62,7 +62,7 @@ export default function DatasetDetails() {
                 </Typography.Title>
               </div>
 
-              <div className="flex justify-between  p-1">
+              <div className="flex justify-between">
                 <Typography.Text className="pr-2">Author: </Typography.Text>
                 <Tooltip title={dataset.authors}>
                   <Typography.Text strong>
@@ -71,7 +71,7 @@ export default function DatasetDetails() {
                 </Tooltip>
               </div>
               {dataset.citation_doi && (
-                <div className="flex justify-between p-1">
+                <div className="flex justify-between">
                   <Typography.Text className="pr-2">DOI: </Typography.Text>
                   <Tooltip title={dataset.citation_doi}>
                     <a href={dataset.citation_doi}>
@@ -83,7 +83,7 @@ export default function DatasetDetails() {
                   {/* </Typography.Text> */}
                 </div>
               )}
-              <div className="flex justify-between p-1">
+              <div className="flex justify-between">
                 <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
                 <Typography.Text strong>
                   {
@@ -104,32 +104,28 @@ export default function DatasetDetails() {
                   }
                 </Typography.Text>
               </div>
-              {/* <div className="flex justify-between p-1">
-                <Typography.Text className="pr-2">Has Labels: </Typography.Text>
-                <Typography.Text strong>{dataset.has_labels ? "true" : "false"}</Typography.Text>
-              </div> */}
-              {/* <div className="flex justify-between p-1">
-                <Typography.Text className="pr-2">Public: </Typography.Text>
-                <Typography.Text strong>
-                  {dataset.public ? "true" : "false"}
+              <div className="flex justify-between">
+                <Typography.Text style={{ margin: 0 }}>
+                  <Typography.Text className="pr-2">Biom: </Typography.Text>
                 </Typography.Text>
-              </div> */}
+                <Tooltip title={dataset.biome_name}>
+                  <Tag color="default" className="m-0">
+                    {dataset.biome_name
+                      ? dataset.biome_name.slice(0, 30) + (dataset.biome_name.length > 30 ? "..." : "")
+                      : "Unknown"}
+                  </Tag>
+                </Tooltip>
+              </div>
             </div>
 
-            <div className="mt-4 rounded-md bg-white p-4">
-              {/* <div className="flex justify-between p-2">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">License: </Typography.Text>
-                </Typography.Text>
-                <Tag color="blue">{dataset.license}</Tag>
-              </div> */}
-              <div className="flex justify-between p-2">
+            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+              <div className="flex justify-between">
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">Platform: </Typography.Text>
                 </Typography.Text>
-                <Tag color="blue">{dataset.platform}</Tag>
+                <Tag color="default">{dataset.platform}</Tag>
               </div>
-              <div className="flex justify-between p-2">
+              <div className="flex justify-between">
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
@@ -137,37 +133,31 @@ export default function DatasetDetails() {
                   ? `${dataset.ortho_file_size.toFixed(1)} MB`
                   : `${dataset.ortho_file_size.toFixed(0)} MB`}
               </div>
-              <div className="flex justify-between p-2">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Spectral Properties : </Typography.Text>
-                </Typography.Text>
-                <Tag color="blue"> {dataset.spectral_properties ? dataset.spectral_properties : "Unknown"}</Tag>
-              </div>
             </div>
-            {dataset.label_source && (
-              <div className="mt-4 rounded-md bg-white p-4">
-                <div className="flex justify-between p-2">
+            {labelsData && (
+              <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+                <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
                     <Typography.Text className="pr-2">Label Source: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="blue">{dataset.label_source}</Tag>
+                  <Tag color="default">{labelsData.label_source}</Tag>
                 </div>
-                <div className="flex justify-between p-2">
+                <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
                     <Typography.Text className="pr-2">Label Type: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="blue">{dataset.label_type}</Tag>
+                  <Tag color="default">{labelsData.label_type}</Tag>
                 </div>
-                <div className="flex justify-between p-2">
+                <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
                     <Typography.Text className="pr-2">Label Quality: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="blue">{dataset.label_quality}</Tag>
+                  <Tag color="default">{labelsData.label_quality}</Tag>
                 </div>
               </div>
             )}
 
-            <div className="mt-6 rounded-md bg-white p-4">
+            <div className="mt-6 space-y-3 rounded-md bg-white p-4">
               <Space direction="vertical" className="w-full">
                 <Tooltip
                   title={
