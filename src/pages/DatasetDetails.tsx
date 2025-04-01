@@ -1,19 +1,29 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, notification } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { useData } from "../hooks/useDataProvider";
 
 import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import countryList from "../utils/countryList";
 import { useDatasets } from "../hooks/useDatasets";
+import { useDatasetLabels } from "../hooks/useDatasetLabels";
+import { ILabelData } from "../types/labels";
+import { useState } from "react";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { data: datasets } = useDatasets();
+  const [labelsOnly, setLabelsOnly] = useState(false);
 
   const dataset = datasets?.find((d) => d.id.toString() === id);
+
+  // Fetch labels data
+  const { data: labelsData } = useDatasetLabels({
+    datasetId: dataset?.id || 0,
+    labelData: ILabelData.DEADWOOD,
+    enabled: !!dataset?.id,
+  });
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -157,15 +167,40 @@ export default function DatasetDetails() {
               </div>
             )}
 
-            <Button
-              href={`${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`}
-              type="primary"
-              icon={<DownloadOutlined />}
-              className="mt-6"
-              onClick={() => message.info("Downloading Dataset, please wait...")}
-            >
-              Download Dataset
-            </Button>
+            <div className="mt-6 rounded-md bg-white p-4">
+              <Space direction="vertical" className="w-full">
+                <Tooltip
+                  title={
+                    labelsOnly
+                      ? "Download vector data of tree mortality predictions (GPKG format)"
+                      : "Download both orthophoto and tree mortality predictions"
+                  }
+                >
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    className="w-full"
+                    onClick={() => {
+                      const url = labelsOnly
+                        ? `${Settings.API_URL}/datasets/${dataset.id}/labels.gpkg`
+                        : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
+
+                      window.location.href = url;
+                      message.info(`Downloading ${labelsOnly ? "predictions" : "complete dataset"}, please wait...`);
+                    }}
+                  >
+                    {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
+                  </Button>
+                </Tooltip>
+                {labelsData && (
+                  <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
+                    <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
+                      Download predictions only
+                    </Checkbox>
+                  </Tooltip>
+                )}
+              </Space>
+            </div>
           </div>
         ) : (
           <div>Loading...</div>
