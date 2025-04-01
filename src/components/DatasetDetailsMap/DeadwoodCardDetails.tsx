@@ -58,7 +58,7 @@ export function DeadwoodCardDetails({
         </div>
 
         {/* Satellite Layer Controls */}
-        <div className="mb-1 flex w-full items-end border-b pb-1">
+        {/* <div className="mb-1 flex w-full items-end border-b pb-1">
           <p className="m-0 w-full text-xs text-gray-600">Satellite Imagery</p>
           <div className="w-2/3">
             <p className="m-0 w-full text-xs text-gray-600">opacity</p>
@@ -72,7 +72,7 @@ export function DeadwoodCardDetails({
               min={0}
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Forest Cover Layer Controls */}
         {/* <div className="mb-2 flex w-full items-end border-b pb-2">
@@ -93,6 +93,21 @@ export function DeadwoodCardDetails({
 
         {isGermany && (
           <>
+            <div className="mb-1 flex w-full items-end border-b pb-1">
+              <p className="m-0 w-full text-xs text-gray-600">Satellite Imagery</p>
+              <div className="w-2/3">
+                <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+                <Slider
+                  className="m-0 w-full"
+                  defaultValue={1}
+                  step={0.01}
+                  max={1}
+                  value={satelliteOpacity.toFixed(1)}
+                  onChange={(value) => setSatelliteOpacity(value as number)}
+                  min={0}
+                />
+              </div>
+            </div>
             {/* <p className="m-0 w-full text-xs text-gray-600">Deadwood</p> */}
             <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
             <div className="mb-4 flex items-center space-x-2">
