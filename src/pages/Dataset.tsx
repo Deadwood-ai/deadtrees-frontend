@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Button, Col, Row, Tag, Input } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
+import { ArrowDownOutlined, ArrowUpOutlined, FilterFilled, FilterOutlined, FilterTwoTone } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMap";
@@ -148,11 +148,12 @@ export default function Dataset() {
               allowClear
               value={searchInput}
             />
-            <div className="pl-4">
+            <div className="space-x-2 pl-4">
+              <Button icon={<FilterOutlined />} />
               <Button
                 icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
                 onClick={toggleSort}
-                type="primary"
+                // type="primary"
                 title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}
               />
             </div>
