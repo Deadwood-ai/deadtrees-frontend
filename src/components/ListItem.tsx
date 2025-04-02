@@ -116,7 +116,9 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
             </Tooltip>
           </div>
 
-          <Tag onClick={(e) => onClickFilterHandler(e, item.platform, "platform")}>{item.platform}</Tag>
+          <Button size="small" onClick={(e) => onClickFilterHandler(e, item.platform, "platform")}>
+            {item.platform}
+          </Button>
         </div>
       </div>
     </div>
