@@ -12,11 +12,8 @@ type SearchField = "authors" | "location";
 type SortDirection = "asc" | "desc";
 
 export default function Dataset() {
-  // const { data, filter, setFilter } = useData();
-  // add useFilteredDatasets
-  const { data: allData, isLoading: isLoadingData } = useDatasets();
-  const { filteredData, setFilter, setFilterTag, filter } = useFilteredDatasets(allData);
-  console.log("filteredData", filteredData);
+  const { data: allData } = useDatasets();
+  const { filteredData, setFilter, filter } = useFilteredDatasets(allData);
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
@@ -26,7 +23,6 @@ export default function Dataset() {
 
   const handleSearch = (value: string) => {
     setSearchValue(value.toLowerCase());
-    console.log("searchValue", searchValue);
   };
 
   const toggleSort = () => {
@@ -37,29 +33,26 @@ export default function Dataset() {
     if (!filteredData) return null;
 
     const filtered = filteredData.filter((d) => {
+      // Base condition for valid datasets
       const baseCondition =
         d.is_upload_done && d.is_cog_done && d.is_ortho_done && d.is_metadata_done && !d.has_error && d.admin_level_1;
 
-      if (!searchValue) return baseCondition;
+      if (!baseCondition) return false;
+
+      // If no search value, return true for the base condition
+      if (!searchValue.trim()) return true;
 
       let searchMatch = false;
       switch (searchField) {
         case "authors": {
-          if (!searchValue.trim()) {
-            searchMatch = true;
-            break;
-          }
+          if (!d.authors) return false;
           const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const authorWords = (d.authors?.toLowerCase() || "").split(/[\s,]+/).filter(Boolean);
+          const authorWords = d.authors.map((author) => author.toLowerCase());
 
-          searchMatch = searchTerms.every((searchTerm) => authorWords.some((word) => word.includes(searchTerm)));
+          searchMatch = searchTerms.every((searchTerm) => authorWords.some((author) => author.includes(searchTerm)));
           break;
         }
         case "location": {
-          if (!searchValue.trim()) {
-            searchMatch = true;
-            break;
-          }
           const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
           const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
             .toLowerCase()
@@ -70,18 +63,18 @@ export default function Dataset() {
           break;
         }
       }
-      return baseCondition && searchMatch;
+      return searchMatch;
     });
 
     // Sort by date
     return filtered.sort((a, b) => {
       const dateA = new Date(
-        a.aquisition_year,
+        parseInt(a.aquisition_year),
         a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
         a.aquisition_day ? parseInt(a.aquisition_day) : 1,
       );
       const dateB = new Date(
-        b.aquisition_year,
+        parseInt(b.aquisition_year),
         b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
         b.aquisition_day ? parseInt(b.aquisition_day) : 1,
       );
@@ -89,6 +82,8 @@ export default function Dataset() {
       return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
   }, [filteredData, searchField, searchValue, sortDirection]);
+
+  const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
   return (
     <Row
@@ -105,7 +100,9 @@ export default function Dataset() {
               <h4 className="m-0">Filtered by: </h4>
               {
                 <Tag className="m-0 ml-1" color="blue">
-                  <span className="text-sm font-medium">{filter.slice(0, 10) + (filter.length > 10 ? "..." : "")}</span>
+                  <span className="text-sm font-medium">
+                    {filterDisplay.slice(0, 10) + (filterDisplay.length > 10 ? "..." : "")}
+                  </span>
                   <Button
                     className=" ml-2 border-none bg-transparent"
                     size="small"
