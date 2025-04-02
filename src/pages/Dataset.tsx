@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button, Col, Row, Tag, Input } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
@@ -17,11 +17,21 @@ export default function Dataset() {
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  // Debounced search handler
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchValue(searchInput.toLowerCase());
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const handleSearch = (value: string) => {
-    setSearchValue(value.toLowerCase());
+    setSearchInput(value);
   };
 
   const toggleSort = () => {
@@ -131,12 +141,12 @@ export default function Dataset() {
 
         <div className="flex flex-col gap-2 pb-4">
           <div className="flex">
-            <Input.Search
+            <Input
               placeholder="Search by Authors or Location"
-              onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
               className="flex-1"
               allowClear
+              value={searchInput}
             />
             <div className="pl-4">
               <Button
