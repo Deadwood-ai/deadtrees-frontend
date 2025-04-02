@@ -9,10 +9,11 @@ import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { useDatasets } from "../hooks/useDatasets";
 
 type SortDirection = "asc" | "desc";
+type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
 
 export default function Dataset() {
   const { data: allData } = useDatasets();
-  const { filteredData, setFilter, filter } = useFilteredDatasets(allData);
+  const { filteredData, setFilter, setFilterTag, filter } = useFilteredDatasets(allData);
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
@@ -25,6 +26,11 @@ export default function Dataset() {
 
   const toggleSort = () => {
     setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
+  const handleFilterClick = (filterValue: string, filterType: FilterTag) => {
+    setFilter(filterValue);
+    setFilterTag(filterType);
   };
 
   const processedData = useMemo(() => {
@@ -84,11 +90,11 @@ export default function Dataset() {
         height: "100%",
       }}
     >
-      <Col className="flex h-full w-96 flex-col px-2 align-middle">
+      <Col className="flex h-full w-96 flex-col px-2 pt-2 align-middle">
         {filter ? (
           <div className="flex justify-between pb-2">
             <div className="flex items-center">
-              <h4 className="m-0">Filtered by: </h4>
+              <h4 className="p m-0">Filtered by: </h4>
               {
                 <Tag className="m-0 ml-1" color="blue">
                   <span className="text-sm font-medium">
@@ -98,7 +104,10 @@ export default function Dataset() {
                     className=" ml-2 border-none bg-transparent"
                     size="small"
                     shape="circle"
-                    onClick={() => setFilter("")}
+                    onClick={() => {
+                      setFilter("");
+                      setFilterTag("platform");
+                    }}
                     icon={<CloseOutlined />}
                   />
                 </Tag>
@@ -146,6 +155,7 @@ export default function Dataset() {
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             visibleFeatures={visibleFeatures}
+            onFilterClick={handleFilterClick}
           />
         ) : (
           <div>Loading...</div>

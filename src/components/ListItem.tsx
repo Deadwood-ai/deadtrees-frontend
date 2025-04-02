@@ -1,28 +1,27 @@
-import { Button, notification, Tooltip, Divider, Tag } from "antd";
-import { InfoCircleTwoTone } from "@ant-design/icons";
+import { Button, Tooltip, Tag } from "antd";
 import { useNavigate } from "react-router-dom";
-import { useData } from "../hooks/useDataProvider";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
-const ListItme = ({
-  item,
-  index,
-  setHoveredItem,
-  hoveredItem,
-}: {
+
+interface ListItemProps {
   item: IDataset;
-  index: any;
+  index: number;
   setHoveredItem: ((id: number | null) => void) | undefined;
   hoveredItem: number | null;
-}) => {
-  const { setFilter, setFilterTag } = useData();
+  onFilterClick: (
+    filterValue: string,
+    filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3",
+  ) => void;
+}
+
+const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: ListItemProps) => {
   const navigate = useNavigate();
 
   const handleMouseEnter = () => {
-    // console.log("hoveredItem", hoveredItem);
-
-    setHoveredItem(item.id);
+    if (setHoveredItem) {
+      setHoveredItem(item.id);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -31,24 +30,22 @@ const ListItme = ({
     }
   };
 
-  const onClickHandler = (item) => {
-    // console.log("clicked item", item);
-    // if (item.id && item.file_size < 1000000000) {
+  const onClickHandler = (item: IDataset) => {
     navigate(`/dataset/${item.id}`);
-    // } else {
-    //   notification.info({
-    //     message: "Coming Soon",
-    //     description: "This dataset is not yet available",
-    //   });
-    // }
   };
 
-  const onClickFilterHandler = (e, filter, filterTag) => {
-    setFilter(filter);
-    setFilterTag(filterTag);
+  const onClickFilterHandler = (
+    e: React.MouseEvent,
+    filter: string,
+    filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3",
+  ) => {
+    onFilterClick(filter, filterType);
     e.stopPropagation();
-    console.log(filter);
   };
+
+  const adminLevel3 = item.admin_level_3 || item.admin_level_2 || "";
+  const adminLevel1 = item.admin_level_1 || "";
+  const firstAuthor = item.authors?.[0] || "";
 
   return (
     <div
@@ -70,44 +67,31 @@ const ListItme = ({
       <div className="flex flex-1 flex-col justify-between pl-3">
         <div className="flex justify-between">
           <div className="flex items-baseline">
-            <Tooltip title={item.admin_level_3}>
+            <Tooltip title={adminLevel3}>
               <Button
                 type="text"
                 size="small"
                 className=" max-content m-0 ml-1 p-0 font-semibold"
-                onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
+                onClick={(e) => onClickFilterHandler(e, adminLevel3, "admin_level_3")}
               >
-                {item.admin_level_3 || item.admin_level_2
-                  ? (item.admin_level_3 || item.admin_level_2).slice(0, 15) +
-                    ((item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : "")
-                  : ""}
+                {adminLevel3.slice(0, 15) + (adminLevel3.length > 15 ? "..." : "")}
               </Button>
             </Tooltip>
-            {(item.admin_level_3 || item.admin_level_2) && ","}
+            {adminLevel3 && ","}
             <Button
               type="text"
               size="small"
               className="max-content m-0 ml-1 p-0 font-semibold"
-              onClick={(e) => onClickFilterHandler(e, item.admin_level_1, "admin_level_1")}
+              onClick={(e) => onClickFilterHandler(e, adminLevel1, "admin_level_1")}
             >
-              {countryList[item.admin_level_1 as keyof typeof countryList]}
+              {countryList[adminLevel1 as keyof typeof countryList]}
             </Button>
-            {/* <p className="m-0 flex-1 font-semibold">
-            {item.admin_level_3}, {item.admin_level_1}
-          </p> */}
-            {/* {(item.wms_source === null || item.file_size > 1000000000) && (
-            <div>
-              <Tooltip title="This dataset is not yet available">
-                <InfoCircleTwoTone />
-              </Tooltip>
-            </div>
-          )} */}
           </div>
           <div className="pt-0.5 text-xs">
             {new Date(
-              item.aquisition_year,
-              item.aquisition_month ? item.aquisition_month - 1 : 0,
-              item.aquisition_day ?? 1,
+              parseInt(item.aquisition_year),
+              item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
+              item.aquisition_day ? parseInt(item.aquisition_day) : 1,
             ).toLocaleDateString("en-US", {
               year: "numeric",
               ...(item.aquisition_month && { month: "numeric" }),
@@ -121,12 +105,12 @@ const ListItme = ({
               <Button
                 size="small"
                 className="truncate font-medium"
-                onClick={(e) => onClickFilterHandler(e, item.authors, "authors_image")}
+                onClick={(e) => onClickFilterHandler(e, firstAuthor, "authors_image")}
               >
-                {item.authors && item.authors.length > 0
-                  ? item.authors[0].slice(0, 18) +
-                    (item.authors[0].length > 18 ? "..." : "") +
-                    (item.authors.length > 1 ? ` +${item.authors.length - 1}` : "")
+                {firstAuthor
+                  ? firstAuthor.slice(0, 18) +
+                    (firstAuthor.length > 18 ? "..." : "") +
+                    (item.authors && item.authors.length > 1 ? ` +${item.authors.length - 1}` : "")
                   : ""}
               </Button>
             </Tooltip>
@@ -139,4 +123,4 @@ const ListItme = ({
   );
 };
 
-export default ListItme;
+export default ListItem;
