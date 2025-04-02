@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Col, Row, Tag, Input, Segmented } from "antd";
+import { Button, Col, Row, Tag, Input } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
@@ -8,7 +8,6 @@ import { CloseOutlined } from "@ant-design/icons";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { useDatasets } from "../hooks/useDatasets";
 
-type SearchField = "authors" | "location";
 type SortDirection = "asc" | "desc";
 
 export default function Dataset() {
@@ -17,7 +16,6 @@ export default function Dataset() {
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
-  const [searchField, setSearchField] = useState<SearchField>("authors");
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -42,28 +40,21 @@ export default function Dataset() {
       // If no search value, return true for the base condition
       if (!searchValue.trim()) return true;
 
-      let searchMatch = false;
-      switch (searchField) {
-        case "authors": {
-          if (!d.authors) return false;
-          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const authorWords = d.authors.map((author) => author.toLowerCase());
+      const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
 
-          searchMatch = searchTerms.every((searchTerm) => authorWords.some((author) => author.includes(searchTerm)));
-          break;
-        }
-        case "location": {
-          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
-            .toLowerCase()
-            .split(/[\s,]+/)
-            .filter(Boolean);
+      // Search in authors
+      const authorMatch =
+        d.authors?.some((author) => searchTerms.every((term) => author.toLowerCase().includes(term))) || false;
 
-          searchMatch = searchTerms.every((searchTerm) => locationWords.some((word) => word.includes(searchTerm)));
-          break;
-        }
-      }
-      return searchMatch;
+      // Search in location
+      const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter(Boolean);
+
+      const locationMatch = searchTerms.every((term) => locationWords.some((word) => word.includes(term)));
+
+      return authorMatch || locationMatch;
     });
 
     // Sort by date
@@ -81,7 +72,7 @@ export default function Dataset() {
 
       return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
-  }, [filteredData, searchField, searchValue, sortDirection]);
+  }, [filteredData, searchValue, sortDirection]);
 
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
@@ -130,20 +121,9 @@ export default function Dataset() {
         )}
 
         <div className="flex flex-col gap-2 pb-4">
-          <Segmented
-            value={searchField}
-            onChange={(value) => setSearchField(value as SearchField)}
-            options={[
-              { label: "Authors", value: "authors" },
-              { label: "Location (City, State)", value: "location" },
-            ]}
-            className="pb-2"
-            block
-          />
-
           <div className="flex">
             <Input.Search
-              placeholder={searchField === "location" ? "Search by City or State" : "Search by Authors"}
+              placeholder="Search by Authors or Location"
               onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
               className="flex-1"
