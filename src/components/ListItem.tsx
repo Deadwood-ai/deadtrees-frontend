@@ -77,13 +77,13 @@ const ListItme = ({
                 className=" max-content m-0 ml-1 p-0 font-semibold"
                 onClick={(e) => onClickFilterHandler(e, item.admin_level_3, "admin_level_3")}
               >
-                {/* {item.admin_level_3} */}
-                {item.admin_level_3
-                  ? item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")
-                  : item.admin_level_2.slice(0, 15) + (item.admin_level_2.length > 15 ? "..." : "")}
+                {item.admin_level_3 || item.admin_level_2
+                  ? (item.admin_level_3 || item.admin_level_2).slice(0, 15) +
+                    ((item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : "")
+                  : ""}
               </Button>
             </Tooltip>
-            ,
+            {(item.admin_level_3 || item.admin_level_2) && ","}
             <Button
               type="text"
               size="small"

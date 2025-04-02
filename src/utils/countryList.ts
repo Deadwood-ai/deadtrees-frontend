@@ -103,7 +103,7 @@ const countryList = {
   Iceland: "IS",
   India: "IN",
   Indonesia: "ID",
-  "Iran, Islamic Republic Of": "IR",
+  Iran: "IR",
   Iraq: "IQ",
   Ireland: "IE",
   "Isle Of Man": "IM",
