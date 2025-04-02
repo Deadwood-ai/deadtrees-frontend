@@ -68,9 +68,13 @@ export default function DatasetDetails() {
 
               <div className="flex justify-between">
                 <Typography.Text className="pr-2">Author: </Typography.Text>
-                <Tooltip title={dataset.authors}>
+                <Tooltip title={dataset.authors?.join(", ")}>
                   <Typography.Text strong>
-                    {dataset.authors && dataset.authors[0].slice(0, 30) + (dataset.authors[0].length > 30 ? "..." : "")}
+                    {dataset.authors && dataset.authors.length > 0
+                      ? dataset.authors[0].slice(0, 18) +
+                        (dataset.authors[0].length > 18 ? "..." : "") +
+                        (dataset.authors.length > 1 ? ` +${dataset.authors.length - 1}` : "")
+                      : ""}
                   </Typography.Text>
                 </Tooltip>
               </div>

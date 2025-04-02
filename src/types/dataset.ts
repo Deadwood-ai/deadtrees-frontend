@@ -32,7 +32,7 @@ export interface IDataset {
   license: string;
   platform: string;
   project_id: string | null;
-  authors: string | null;
+  authors: string[] | null;
   aquisition_year: string;
   aquisition_month: string;
   aquisition_day: string;

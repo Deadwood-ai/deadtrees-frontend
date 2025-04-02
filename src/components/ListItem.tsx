@@ -117,14 +117,17 @@ const ListItme = ({
         </div>
         <div className="flex space-x-1">
           <div className="flex-1">
-            <Tooltip title={item.authors}>
+            <Tooltip title={item.authors?.join(", ")}>
               <Button
-                // type="text"
                 size="small"
                 className="truncate font-medium"
                 onClick={(e) => onClickFilterHandler(e, item.authors, "authors_image")}
               >
-                {item.authors && item.authors[0].slice(0, 18) + (item.authors[0].length > 18 ? "..." : "")}
+                {item.authors && item.authors.length > 0
+                  ? item.authors[0].slice(0, 18) +
+                    (item.authors[0].length > 18 ? "..." : "") +
+                    (item.authors.length > 1 ? ` +${item.authors.length - 1}` : "")
+                  : ""}
               </Button>
             </Tooltip>
           </div>
