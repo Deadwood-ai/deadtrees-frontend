@@ -55,15 +55,24 @@ export default function DatasetDetails() {
             <div className="mt-4 space-y-3 rounded-md bg-white p-4">
               <div className="flex items-center pb-4">
                 <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
-                <Typography.Title style={{ margin: 0 }} level={5}>
-                  {dataset.admin_level_1
-                    ? `${
-                        dataset.admin_level_3 || dataset.admin_level_2
-                          ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
-                          : ""
-                      }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
-                    : "unknown"}
-                </Typography.Title>
+                <Tooltip
+                  title={
+                    <div>
+                      {dataset.admin_level_3 ? dataset.admin_level_3 : dataset.admin_level_2}
+                      {dataset.admin_level_1 && <div>{dataset.admin_level_1}</div>}
+                    </div>
+                  }
+                >
+                  <Typography.Title style={{ margin: 0 }} level={5}>
+                    {dataset.admin_level_1
+                      ? `${
+                          dataset.admin_level_3 || dataset.admin_level_2
+                            ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
+                            : ""
+                        }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
+                      : "unknown"}
+                  </Typography.Title>
+                </Tooltip>
               </div>
 
               <div className="flex justify-between">
