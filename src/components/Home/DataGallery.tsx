@@ -23,7 +23,7 @@ const Stats = () => {
     <div className="flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center"></div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
-        <Stat title="Orthophotos" value="1000+" unit="" />
+        <Stat title="Orthophotos" value="2500+" unit="" />
         <Stat title="Labeled Polygons" value="40k" unit="" />
         <Stat title="Countries" value="63" unit="" />
         <Stat title="Institutions" value="43" unit="" />
