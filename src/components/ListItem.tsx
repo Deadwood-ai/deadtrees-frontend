@@ -78,14 +78,16 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
               </Button>
             </Tooltip>
             {adminLevel3 && ","}
-            <Button
-              type="text"
-              size="small"
-              className="max-content m-0 ml-1 p-0 font-semibold"
-              onClick={(e) => onClickFilterHandler(e, adminLevel1, "admin_level_1")}
-            >
-              {countryList[adminLevel1 as keyof typeof countryList]}
-            </Button>
+            <Tooltip title={adminLevel1}>
+              <Button
+                type="text"
+                size="small"
+                className="max-content m-0 ml-1 p-0 font-semibold"
+                onClick={(e) => onClickFilterHandler(e, adminLevel1, "admin_level_1")}
+              >
+                {countryList[adminLevel1 as keyof typeof countryList]}
+              </Button>
+            </Tooltip>
           </div>
           <div className="pt-0.5 text-xs">
             {new Date(
