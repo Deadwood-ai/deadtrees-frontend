@@ -113,7 +113,7 @@ const DatasetMapOL = ({
       mapRef.current = map;
 
       const vectorSourceExtend = new VectorSource();
-      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend });
+      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend, minZoom: 9 });
       vectorLayerExtendRef.current = vectorLayerExtend;
       map.addLayer(vectorLayerExtend);
 
@@ -169,12 +169,6 @@ const DatasetMapOL = ({
           map.getTargetElement().style.cursor = "pointer";
           tooltip.setPosition(evt.coordinate);
 
-          // Create tooltip content with thumbnail
-          // <img
-          //   class="tooltip-thumbnail"
-          //   src="${thumbnailPath ? Settings.THUMBNAIL_URL + thumbnailPath : "/assets/tree-icon.png"}"
-          //   alt="${hoveredFeature.get("title")}"
-          // />
           const tooltipContent = `
             <div class="tooltip-content">
 
@@ -358,22 +352,6 @@ const DatasetMapOL = ({
       });
     }
   }, [hoveredItem]);
-
-  // useEffect(() => {
-  //   console.log("useEffect on moveend");
-  //   if (mapRef.current) {
-  //     const moveEndListener = () => {
-  //       debouncedUpdateVisibleFeatures();
-  //       setUserInteracted(true);
-  //     };
-  //     mapRef.current.on('moveend', moveEndListener);
-  //     return () => {
-  //       if (mapRef.current) {
-  //         mapRef.current.un('moveend', moveEndListener);
-  //       }
-  //     };
-  //   }
-  // }, [debouncedUpdateVisibleFeatures]);
 
   return <div ref={mapContainer} style={{ width: "100%", height: "100%", borderRadius: 8 }}></div>;
 };
