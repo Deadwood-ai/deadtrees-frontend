@@ -13,11 +13,11 @@ const navigation = [
   },
   {
     key: "/deadtrees",
-    label: <Link to="/deadtrees">Map</Link>,
+    label: <Link to="/deadtrees">Satellite Products</Link>,
   },
   {
     key: "/dataset",
-    label: <Link to="/dataset">Dataset</Link>,
+    label: <Link to="/dataset">Drone Products</Link>,
   },
   {
     key: "/about",
