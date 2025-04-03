@@ -25,12 +25,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
-  const [selectedYear, setSelectedYear] = useState<string>("2018");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
-  const [satelliteOpacity, setSatelliteOpacity] = useState<number>(0);
+  const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
-  const [isLegendVisible, setIsLegendVisible] = useState(false);
-  const [loadedLayers, setLoadedLayers] = useState<Record<string, boolean>>({});
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
 
   // Fetch label data for the current dataset
@@ -48,11 +45,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     vectorLabels?: VectorLayer<any>;
     deadwoodVector?: VectorTileLayer;
     forestCoverVector?: VectorTileLayer;
-    geotifLayer2018?: TileLayerWebGL;
-    geotifLayer2019?: TileLayerWebGL;
-    geotifLayer2020?: TileLayerWebGL;
-    geotifLayer2021?: TileLayerWebGL;
-    geotifLayer2022?: TileLayerWebGL;
     selectionLayer?: VectorTileLayer;
   }>({});
 
@@ -89,9 +81,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       // Only create deadwood vector layer if labels exist
       const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
 
-      // Only create 2018 layer initially since it's the default
-      const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-
       // Create selection layer for hover effect
       const selectionLayer = new VectorTileLayer({
         source: deadwoodVectorLayer.getSource(),
@@ -117,7 +106,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer,
-        geotifLayer2018: geotifLayer2018,
         selectionLayer: selectionLayer,
       };
 
@@ -143,7 +131,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             if (mapContainer.current) {
               const newMap = new Map({
                 target: mapContainer.current,
-                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer, geotifLayer2018],
+                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer],
                 view: MapView,
                 overlays: [],
                 controls: [],
@@ -273,22 +261,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // update satellite layer opacity
   useEffect(() => {
-    if (mapRef.current) {
-      // Update orthoCog layer opacity
-      // if (layerRefs.current.orthoCog) {
-      // layerRefs.current.orthoCog.setOpacity(satelliteOpacity);
-      // }
-
-      // Update all geotiff layers opacity
-      const years = ["2018", "2019", "2020", "2021", "2022"];
-      years.forEach((year) => {
-        const layerKey = `geotifLayer${year}` as keyof typeof layerRefs.current;
-        if (layerRefs.current[layerKey]) {
-          layerRefs.current[layerKey]!.setOpacity(satelliteOpacity);
-        }
-      });
+    if (mapRef.current && layerRefs.current.orthoCog) {
+      layerRefs.current.orthoCog.setOpacity(droneImageOpacity);
     }
-  }, [satelliteOpacity]);
+  }, [droneImageOpacity]);
 
   // update on mapStyle change
   useEffect(() => {
@@ -302,35 +278,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       );
     }
   }, [mapStyle]);
-
-  // Update layer loading and visibility logic
-  useEffect(() => {
-    if (mapRef.current) {
-      const years = ["2018", "2019", "2020", "2021", "2022"];
-
-      // Load the selected year's layer if not already loaded
-      if (!loadedLayers[selectedYear]) {
-        const layerKey = `geotifLayer${selectedYear}` as keyof typeof layerRefs.current;
-
-        if (!layerRefs.current[layerKey]) {
-          const newLayer = createDeadwoodGeotiffLayer(selectedYear);
-          // Set the opacity to match current satelliteOpacity when creating new layer
-          newLayer.setOpacity(satelliteOpacity);
-          layerRefs.current[layerKey] = newLayer;
-          mapRef.current.addLayer(newLayer);
-          setLoadedLayers((prev) => ({ ...prev, [selectedYear]: true }));
-        }
-      }
-
-      // Update visibility for all layers
-      years.forEach((year) => {
-        const layerKey = `geotifLayer${year}` as keyof typeof layerRefs.current;
-        if (layerRefs.current[layerKey]) {
-          layerRefs.current[layerKey]!.setVisible(year === selectedYear);
-        }
-      });
-    }
-  }, [selectedYear, loadedLayers, satelliteOpacity]);
 
   // Add effect to update selection layer style when hover state changes
   useEffect(() => {
@@ -364,18 +311,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        <div className="absolute bottom-4 right-4 z-50 ">
+        <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
-            year={selectedYear}
-            setSelectedYear={setSelectedYear}
             deadwoodOpacity={deadwoodOpacity}
             setDeadwoodOpacity={setDeadwoodOpacity}
-            satelliteOpacity={satelliteOpacity}
-            setSatelliteOpacity={setSatelliteOpacity}
-            forestCoverOpacity={forestCoverOpacity}
-            setForestCoverOpacity={setForestCoverOpacity}
+            droneImageOpacity={droneImageOpacity}
+            setDroneImageOpacity={setDroneImageOpacity}
             adminLevel1={data.admin_level_1}
-            showLegend={setIsLegendVisible}
+            showLegend={labelData ? true : false}
           />
         </div>
       </div>
