@@ -101,6 +101,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           return undefined;
         },
         renderMode: "vector",
+        renderBuffer: 16,
       });
 
       // Store references
