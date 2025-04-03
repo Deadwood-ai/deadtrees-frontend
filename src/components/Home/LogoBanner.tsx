@@ -20,18 +20,25 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
               href={logo.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="logo-item flex flex-col items-center gap-2 transition-transform duration-200 hover:scale-105"
+              className="logo-item flex flex-col items-center gap-2 no-underline"
+              onClick={(e) => {
+                if (!logo.url) {
+                  e.preventDefault();
+                }
+              }}
             >
-              <img
-                src={logo.path}
-                alt={logo.text || "Partner logo"}
-                className="h-16 w-full object-contain transition-opacity duration-200 hover:opacity-80"
-              />
-              {logo.text && (
-                <p className="text-center text-sm text-gray-600 transition-colors duration-200 hover:text-blue-600">
-                  {logo.text}
-                </p>
-              )}
+              <div className="group transition-all duration-200 ease-in-out hover:scale-105">
+                <img
+                  src={logo.path}
+                  alt={logo.text || "Partner logo"}
+                  className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                />
+                {logo.text && (
+                  <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                    {logo.text}
+                  </p>
+                )}
+              </div>
             </a>
           ))}
           {/* Duplicate set for seamless loop */}
@@ -41,18 +48,25 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
               href={logo.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="logo-item flex flex-col items-center gap-2 transition-transform duration-200 hover:scale-105"
+              className="logo-item flex flex-col items-center gap-2 no-underline"
+              onClick={(e) => {
+                if (!logo.url) {
+                  e.preventDefault();
+                }
+              }}
             >
-              <img
-                src={logo.path}
-                alt={logo.text || "Partner logo"}
-                className="h-16 w-full object-contain transition-opacity duration-200 hover:opacity-80"
-              />
-              {logo.text && (
-                <p className="text-center text-sm text-gray-600 transition-colors duration-200 hover:text-blue-600">
-                  {logo.text}
-                </p>
-              )}
+              <div className="group transition-all duration-200 ease-in-out hover:scale-105">
+                <img
+                  src={logo.path}
+                  alt={logo.text || "Partner logo"}
+                  className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                />
+                {logo.text && (
+                  <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                    {logo.text}
+                  </p>
+                )}
+              </div>
             </a>
           ))}
         </div>

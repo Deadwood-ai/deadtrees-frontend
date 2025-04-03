@@ -16,7 +16,8 @@ const { TabPane } = Tabs;
 export default function About() {
   const logos = [
     {
-      path: "assets/logos/copenhagen.png",
+      // path: "assets/logos/copenhagen.png",
+      path: "assets/logos/logo-copenhagen.svg",
       text: "Department of Geosciences and Natural Resource Management, University of Copenhagen",
       url: "https://researchprofiles.ku.dk/en/organisations/institut-for-geovidenskab-og-naturforvaltning",
     },
