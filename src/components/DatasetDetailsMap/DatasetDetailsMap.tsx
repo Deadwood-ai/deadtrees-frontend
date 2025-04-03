@@ -19,6 +19,7 @@ import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "./creat
 import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import { useDatasetLabels } from "../../hooks/useDatasetLabels";
 import { ILabelData } from "../../types/labels";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -29,6 +30,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
+  const { viewport, setViewport } = useDatasetDetailsMap();
 
   // Fetch label data for the current dataset
   const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
@@ -116,12 +118,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           .getView()
           .then((viewOptions) => {
             if (!viewOptions?.extent) {
-              // console.error("No extent found in viewOptions");
               return;
             }
 
+            // Use viewport from context if available, otherwise use default view
             const MapView = new View({
-              center: viewOptions.center,
+              center: viewport.center[0] !== 0 ? viewport.center : viewOptions.center,
+              zoom: viewport.zoom !== 2 ? viewport.zoom : undefined,
               extent: viewOptions.extent,
               maxZoom: 22,
               projection: "EPSG:3857",
@@ -166,7 +169,20 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                 }
               });
 
-              MapView.fit(viewOptions.extent);
+              // Add view change handler
+              MapView.on("change", () => {
+                setViewport({
+                  center: MapView.getCenter() || [0, 0],
+                  zoom: MapView.getZoom() || 2,
+                  extent: MapView.calculateExtent(newMap.getSize() || [0, 0]),
+                });
+              });
+
+              // Only fit view if no previous viewport is saved
+              if (viewport.center[0] === 0) {
+                MapView.fit(viewOptions.extent);
+              }
+
               mapRef.current = newMap;
             }
           })
@@ -243,7 +259,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, mapStyle, isLoadingLabel, labelData]);
+  }, [data, isLoadingLabel, labelData, viewport]);
 
   // update deadwood layer opacity
   useEffect(() => {
@@ -266,9 +282,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [droneImageOpacity]);
 
-  // update on mapStyle change
+  // Update the map style effect to preserve the viewport
   useEffect(() => {
     if (mapRef.current && layerRefs.current.basemap) {
+      const currentView = mapRef.current.getView();
+      const currentCenter = currentView.getCenter();
+      const currentZoom = currentView.getZoom();
+
+      // Just update the source, don't recreate the map
       layerRefs.current.basemap.setSource(
         new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
@@ -276,6 +297,12 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           culture: "en-us",
         }),
       );
+
+      // Ensure the viewport stays the same
+      if (currentCenter && currentZoom) {
+        currentView.setCenter(currentCenter);
+        currentView.setZoom(currentZoom);
+      }
     }
   }, [mapStyle]);
 
@@ -317,7 +344,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             setDeadwoodOpacity={setDeadwoodOpacity}
             droneImageOpacity={droneImageOpacity}
             setDroneImageOpacity={setDroneImageOpacity}
-            adminLevel1={data.admin_level_1}
             showLegend={labelData ? true : false}
           />
         </div>
