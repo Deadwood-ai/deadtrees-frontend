@@ -28,15 +28,30 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
               }}
             >
               <div className="group transition-all duration-200 ease-in-out hover:scale-105">
-                <img
-                  src={logo.path}
-                  alt={logo.text || "Partner logo"}
-                  className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
-                />
-                {logo.text && (
-                  <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                    {logo.text}
-                  </p>
+                {logo.path !== "RSC4Earth" ? (
+                  <>
+                    <img
+                      src={logo.path}
+                      alt={logo.text || "Partner logo"}
+                      className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                    />
+                    {logo.text && (
+                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                        {logo.text}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex h-16 w-full items-center justify-center text-xl font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80">
+                      RSC4Earth
+                    </div>
+                    {logo.text && (
+                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                        {logo.text}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </a>
@@ -56,15 +71,30 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
               }}
             >
               <div className="group transition-all duration-200 ease-in-out hover:scale-105">
-                <img
-                  src={logo.path}
-                  alt={logo.text || "Partner logo"}
-                  className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
-                />
-                {logo.text && (
-                  <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                    {logo.text}
-                  </p>
+                {logo.path !== "RSC4Earth" ? (
+                  <>
+                    <img
+                      src={logo.path}
+                      alt={logo.text || "Partner logo"}
+                      className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                    />
+                    {logo.text && (
+                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                        {logo.text}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex h-16 w-full items-center justify-center text-xl font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80">
+                      RSC4Earth
+                    </div>
+                    {logo.text && (
+                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                        {logo.text}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </a>
