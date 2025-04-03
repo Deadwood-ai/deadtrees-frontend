@@ -2,7 +2,7 @@ import { useEffect, lazy, Suspense, useState } from "react";
 // const ListItem = lazy(() => import("./ListItem"));
 import ListItem from "./ListItem";
 import { Button } from "antd";
-import { useData } from "../state/DataProvider";
+import { useData } from "../hooks/useData";
 
 interface DataListProps {
   data: any[];
@@ -18,8 +18,9 @@ interface DataListProps {
 export default function DataList({ data, hoveredItem, setHoveredItem, visibleFeatures, onFilterClick }: DataListProps) {
   // console.log("mounting DataList with data:", data);
   const [nItems, setNItems] = useState(50);
+  const { searchValue } = useData();
 
-  const visibleData = data.filter((item) => visibleFeatures.includes(item.id));
+  const visibleData = searchValue ? data : data.filter((item) => visibleFeatures.includes(item.id));
   // console.log("visibleData", visibleData);
   // console.log("visibleFeatures", visibleFeatures);
 

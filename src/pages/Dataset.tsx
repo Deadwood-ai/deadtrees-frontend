@@ -49,7 +49,13 @@ export default function Dataset() {
     const filtered = filteredData.filter((d) => {
       // Base condition for valid datasets
       const baseCondition =
-        d.is_upload_done && d.is_cog_done && d.is_ortho_done && d.is_metadata_done && !d.has_error && d.admin_level_1;
+        d.is_upload_done &&
+        d.is_cog_done &&
+        d.is_ortho_done &&
+        d.is_metadata_done &&
+        d.is_thumbnail_done &&
+        !d.has_error &&
+        d.admin_level_1;
 
       if (!baseCondition) return false;
 
@@ -62,8 +68,8 @@ export default function Dataset() {
       const authorMatch =
         d.authors?.some((author) => searchTerms.every((term) => author.toLowerCase().includes(term))) || false;
 
-      // Search in location
-      const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
+      // Search in location - now including admin_level_2
+      const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_2 || ""}, ${d.admin_level_1 || ""}`
         .toLowerCase()
         .split(/[\s,]+/)
         .filter(Boolean);
@@ -142,7 +148,7 @@ export default function Dataset() {
         <div className="flex flex-col gap-2 pb-4">
           <div className="flex">
             <Input
-              placeholder="Search by Authors or Location"
+              placeholder="Search by Authors or Location (Region, Province, City)"
               onChange={(e) => handleSearch(e.target.value)}
               className="flex-1"
               allowClear
@@ -165,7 +171,7 @@ export default function Dataset() {
             data={processedData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
-            visibleFeatures={visibleFeatures}
+            visibleFeatures={searchValue ? processedData.map((item) => item.id) : visibleFeatures}
             onFilterClick={handleFilterClick}
           />
         ) : (
