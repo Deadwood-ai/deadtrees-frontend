@@ -157,13 +157,25 @@ export default function DatasetDetails() {
                   <Typography.Text style={{ margin: 0 }}>
                     <Typography.Text className="pr-2">Label Source: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="default">{labelsData.label_source}</Tag>
+                  <Tag color="default">
+                    {labelsData.label_source
+                      .replace("_", " ")
+                      .split(" ")
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(" ")}
+                  </Tag>
                 </div>
                 <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
                     <Typography.Text className="pr-2">Label Type: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="default">{labelsData.label_type}</Tag>
+                  <Tag color="default">
+                    {labelsData.label_type
+                      .replace("_", " ")
+                      .split(" ")
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(" ")}
+                  </Tag>
                 </div>
                 <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
