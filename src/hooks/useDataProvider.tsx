@@ -77,8 +77,17 @@ const DataProvider = ({ children }: DataProviderProps) => {
     queryKey: ["authors", rawData],
     enabled: !!rawData,
     queryFn: () => {
-      const authorsUnique = [...new Set(rawData?.map((item) => item.authors).filter(Boolean))];
-      return authorsUnique.map((author) => ({
+      // Flatten all author arrays and extract individual authors
+      const allAuthors = rawData
+        ?.filter((item) => Array.isArray(item.authors))
+        .flatMap((item) => item.authors)
+        .filter(Boolean);
+
+      // Create a Set to get unique authors
+      const uniqueAuthors = [...new Set(allAuthors)];
+
+      // Map to the required format
+      return uniqueAuthors.map((author) => ({
         label: author,
         value: author,
       }));
