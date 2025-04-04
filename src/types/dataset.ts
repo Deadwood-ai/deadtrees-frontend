@@ -24,6 +24,23 @@ export interface ILabelObject {
   file_type: string;
 }
 
+export enum IBiome {
+  TropicalMoistForests = "Tropical and Subtropical Moist Broadleaf Forests",
+  TropicalDryForests = "Tropical and Subtropical Dry Broadleaf Forests",
+  TropicalConiferousForests = "Tropical and Subtropical Coniferous Forests",
+  TemperateBroadleafForests = "Temperate Broadleaf and Mixed Forests",
+  TemperateConiferousForests = "Temperate Coniferous Forests",
+  BorealForests = "Boreal Forests/Taiga",
+  TropicalGrasslands = "Tropical and Subtropical Grasslands, Savannas, and Shrublands",
+  TemperateGrasslands = "Temperate Grasslands, Savannas, and Shrublands",
+  FloodedGrasslands = "Flooded Grasslands and Savannas",
+  MontaneGrasslands = "Montane Grasslands and Shrublands",
+  Tundra = "Tundra",
+  MediterraneanForests = "Mediterranean Forests, Woodlands, and Scrub",
+  Deserts = "Deserts and Xeric Shrublands",
+  Mangroves = "Mangroves",
+}
+
 export interface IDataset {
   id: number;
   user_id: string;
@@ -63,6 +80,9 @@ export interface IDataset {
   admin_level_2: string | null;
   admin_level_3: string | null;
   biome_name: string | null;
+  has_labels: boolean;
+  has_deadwood_prediction: boolean;
+  ortho_upload_runtime?: number | null;
 }
 
 export interface ILabels {
