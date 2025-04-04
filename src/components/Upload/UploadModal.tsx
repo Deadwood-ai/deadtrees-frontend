@@ -495,7 +495,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <div className="w-full">
                 <div>
                   <Form.Item
-                    label="Labels File (optional)"
+                    label={
+                      <div className="flex items-center justify-between ">
+                        <div>Labels</div>
+                        <div className="pl-2 text-sm font-bold">(Optional)</div>
+                      </div>
+                    }
                     name="labels_file"
                     rules={[
                       {
@@ -511,6 +516,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       accept=".geojson,.json,.zip,.gpkg"
                       maxCount={1}
                       className="w-full"
+                      style={{ backgroundColor: "white" }}
                     >
                       <div className="flex">
                         <p className="ant-upload-drag-icon px-8 text-center">
@@ -519,7 +525,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                         <div className="text-start">
                           <p className="ant-upload-text mb-0">Click or drag labels file to this area</p>
                           <p className="ant-upload-hint mb-0">
-                            Upload standing deadwood labels in GeoJSON, Shapefile (zip), or GeoPackage format
+                            Upload standing deadwood labels as GeoJSON, Shapefile (zip) or GeoPackage
                           </p>
                         </div>
                       </div>
@@ -542,6 +548,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}
                       placeholder="Example: Type - Forest Boundaries, Source - XYZ Survey 2023"
+                      variant="outlined"
                     />
                   </Form.Item>
                   <div className="mb-6"></div>
