@@ -307,7 +307,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       width={1200}
     >
       <div className="m-0 px-4 py-0">
-        <Alert
+        {/* <Alert
           banner
           message={
             <Marquee pauseOnHover gradient={false} speed={50} delay={0} gradientWidth={0} style={{ padding: "2px 0" }}>
@@ -320,7 +320,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             </Marquee>
           }
           className="mb-4"
-        />
+        /> */}
 
         <Typography.Title style={{ margin: 0, paddingBottom: 16 }} level={4}>
           Orthophoto Upload
