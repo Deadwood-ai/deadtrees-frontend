@@ -312,7 +312,7 @@ export default function About() {
         <Button
           className="mb-8 mt-4"
           type="primary"
-          href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
+          href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration"
         >
           Get in Contact
         </Button>

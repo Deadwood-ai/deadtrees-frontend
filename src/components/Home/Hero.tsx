@@ -34,7 +34,7 @@ const Hero = () => {
     } else {
       notification.success({
         message: "Thank you!",
-        description: "You will be notified as soon as the service is up and running.",
+        description: "Thank you for subscribing! You will receive updates on new features and developments.",
         placement: "topRight",
       });
       console.log("Subscriber added:", email);

@@ -68,10 +68,7 @@ export default function ProfilePage() {
                     Orthophoto and label uploads are now available! Once uploaded, your data will be seamlessly
                     integrated and visualized on the platform. Please note that this feature is currently in beta. If
                     you encounter any issues or have questions, feel free to{" "}
-                    <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
-                      contact us
-                    </a>
-                    .
+                    <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">contact us</a>.
                   </p>
                   {/* <p className="font-semibold p-0 m-0">Requirements for upload:</p> */}
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>

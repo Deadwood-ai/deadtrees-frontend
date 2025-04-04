@@ -101,11 +101,7 @@ const GetInContact = () => {
         <Button className="hidden md:block" type="primary" size="large" onClick={() => navigate("/profile")}>
           Upload imagery
         </Button>
-        <Button
-          className="mt-0"
-          size="large"
-          href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
-        >
+        <Button className="mt-0" size="large" href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration">
           Get in touch
         </Button>
       </div>
