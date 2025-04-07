@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Button,
   Form,
@@ -150,27 +150,39 @@ const PrivacyLink = () => (
 
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
+  const [form] = Form.useForm();
 
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
 
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
+  const [isUploading, setIsUploading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const { authors } = useData();
   console.log("authors in upload modal", authors);
-  const { showUploadingNotification, updateUploadProgress, showSuccessNotification, showErrorNotification } =
-    useUploadNotification(uploadKey, fileName);
+  const {
+    showUploadingNotification,
+    updateUploadProgress,
+    showSuccessNotification,
+    showErrorNotification,
+    closeNotification,
+  } = useUploadNotification(uploadKey, fileName);
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
   const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
+      // Create a new AbortController for this upload
+      abortControllerRef.current = new AbortController();
+
       uploadOrtho({
         uploadId: uploadKey,
         file,
         session,
         metadata,
+        signal: abortControllerRef.current.signal,
         onSuccess: (response) => {
           logger({
             user_id: session!.user.id,
@@ -193,7 +205,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         },
         onProgress: (event) => {
           const percent = Math.round(event.percent);
-          updateUploadProgress(percent);
+          updateUploadProgress(percent, cancelUpload);
         },
       });
     });
@@ -220,8 +232,25 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood"], token);
   };
 
+  const cancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      logger({
+        user_id: session!.user.id,
+        file_name: fileNameFull,
+        process: "upload",
+        level: "info",
+        message: "Upload cancelled by user",
+      });
+      closeNotification();
+      setIsUploading(false);
+    }
+  };
+
   const handleUpload = async (values: IFormValues) => {
-    showUploadingNotification();
+    setIsUploading(true);
+    showUploadingNotification(cancelUpload);
     logger({
       user_id: session!.user.id,
       file_name: fileNameFull,
@@ -275,19 +304,26 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       }
 
       // Process dataset
-      await processDataset(uploadResponse.id, validAccessToken);
+      await processDataset(Number(uploadResponse.id), validAccessToken);
 
       showSuccessNotification();
     } catch (error) {
-      console.error("Upload error:", error);
-      logger({
-        user_id: session!.user.id,
-        file_name: fileNameFull,
-        process: "upload",
-        level: "error",
-        message: `Upload error: ${error}`,
-      });
-      showErrorNotification();
+      // Check if the error was caused by user abortion
+      if (error instanceof DOMException && error.name === "AbortError") {
+        console.log("Upload was cancelled by the user");
+      } else {
+        console.error("Upload error:", error);
+        logger({
+          user_id: session!.user.id,
+          file_name: fileNameFull,
+          process: "upload",
+          level: "error",
+          message: `Upload error: ${error}`,
+        });
+        showErrorNotification();
+      }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -296,18 +332,25 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     handleUpload(values); // Start the upload process
   };
 
+  const handleModalClose = () => {
+    if (isUploading) {
+      cancelUpload();
+    }
+    onClose();
+  };
+
   return (
     <Modal
       open={isVisible}
       centered
-      onCancel={onClose}
+      onCancel={handleModalClose}
       footer={null}
       style={{ padding: 0, margin: 0 }}
       maskClosable={false}
       width={1200}
     >
       <div className="m-0 px-4 py-0">
-        <Alert
+        {/* <Alert
           banner
           message={
             <Marquee pauseOnHover gradient={false} speed={50} delay={0} gradientWidth={0} style={{ padding: "2px 0" }}>
@@ -320,7 +363,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
             </Marquee>
           }
           className="mb-4"
-        />
+        /> */}
 
         <Typography.Title style={{ margin: 0, paddingBottom: 16 }} level={4}>
           Orthophoto Upload
@@ -330,6 +373,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           onFinish={onFormFinish}
           initialValues={{ platform: "drone", agreement: false }}
           variant="filled"
+          form={form}
         >
           <div className="flex w-full justify-center space-x-12">
             <div className="w-full">
@@ -417,6 +461,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   pickerTypeOptions={pickerTypeOptions}
                   pickerType={pickerType}
                   setPickerType={setPickerType}
+                  onChange={(date) => form.setFieldsValue({ aquisition_date: date })}
                 />
               </Form.Item>
               {/* <Typography.Paragraph className="p-0" type="secondary">
@@ -495,7 +540,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <div className="w-full">
                 <div>
                   <Form.Item
-                    label="Labels File (optional)"
+                    label={
+                      <div className="flex items-center justify-between ">
+                        <div>Labels</div>
+                        <div className="pl-2 text-sm font-bold">(Optional)</div>
+                      </div>
+                    }
                     name="labels_file"
                     rules={[
                       {
@@ -511,6 +561,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       accept=".geojson,.json,.zip,.gpkg"
                       maxCount={1}
                       className="w-full"
+                      style={{ backgroundColor: "white" }}
                     >
                       <div className="flex">
                         <p className="ant-upload-drag-icon px-8 text-center">
@@ -519,7 +570,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                         <div className="text-start">
                           <p className="ant-upload-text mb-0">Click or drag labels file to this area</p>
                           <p className="ant-upload-hint mb-0">
-                            Upload standing deadwood labels in GeoJSON, Shapefile (zip), or GeoPackage format
+                            Upload standing deadwood labels as GeoJSON, Shapefile (zip) or GeoPackage
                           </p>
                         </div>
                       </div>
@@ -542,6 +593,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     <Input.TextArea
                       autoSize={{ minRows: 4, maxRows: 10 }}
                       placeholder="Example: Type - Forest Boundaries, Source - XYZ Survey 2023"
+                      variant="outlined"
                     />
                   </Form.Item>
                   <div className="mb-6"></div>

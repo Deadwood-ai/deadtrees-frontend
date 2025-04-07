@@ -13,7 +13,6 @@ import {
   SyncOutlined,
   EnvironmentOutlined,
 } from "@ant-design/icons";
-import { Settings } from "../config";
 import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 
 const DataTable = () => {

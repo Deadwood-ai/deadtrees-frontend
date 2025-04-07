@@ -13,19 +13,19 @@ const navigation = [
   },
   {
     key: "/deadtrees",
-    label: <Link to="/deadtrees">Map</Link>,
+    label: <Link to="/deadtrees">Satellite Products</Link>,
   },
   {
     key: "/dataset",
-    label: <Link to="/dataset">Dataset</Link>,
+    label: <Link to="/dataset">Drone Products</Link>,
   },
   {
     key: "/about",
-    label: <Link to="/about">About</Link>,
+    label: <Link to="/about">About deadtrees.earth</Link>,
   },
   {
     key: "/profile",
-    label: <Link to="/profile">Profile</Link>,
+    label: <Link to="/profile">Account</Link>,
   },
 ];
 
@@ -83,7 +83,11 @@ export default function Navigation() {
             }}
           />
         </div>
-        <Button className="ml-8" type="primary" onClick={session ? handleSignOut : () => nav("/sign-in")}>
+        <Button
+          className="ml-8"
+          type={session ? "default" : "primary"}
+          onClick={session ? handleSignOut : () => nav("/sign-in")}
+        >
           {session ? "Sign Out" : "Sign In"}
         </Button>
       </Header>

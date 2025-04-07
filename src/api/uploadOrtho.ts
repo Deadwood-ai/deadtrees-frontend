@@ -22,6 +22,7 @@ interface UploadOptions {
   onError: (error: Error) => void;
   uploadId: string;
   session: any;
+  signal?: AbortSignal;
 }
 
 interface ChunkInfo {
@@ -43,10 +44,17 @@ const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
 // };
 
 const uploadOrtho = async (options: UploadOptions) => {
-  const { file, onProgress, onSuccess, onError, uploadId, session } = options;
+  const { file, onProgress, onSuccess, onError, uploadId, session, signal } = options;
   const uploadStartTime = Date.now();
 
   try {
+    // Set up an event listener for the abort signal
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        throw new DOMException("Upload cancelled by user", "AbortError");
+      });
+    }
+
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const resUpload = await uploadChunks(file, totalChunks, uploadStartTime, options);
     onSuccess(resUpload);
@@ -154,7 +162,7 @@ function calculateCopyTime(startTime: number): number {
 }
 
 async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
-  const { session, onProgress } = options;
+  const { session, onProgress, signal } = options;
 
   // console.log("FormData contents:");
   // for (const pair of formData.entries()) {
@@ -174,9 +182,13 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
         }
       },
       timeout: 1000 * 60 * 10, // 10 minutes
+      signal: signal,
     });
     return resUpload;
   } catch (error) {
+    if (axios.isCancel(error)) {
+      throw new DOMException("Upload cancelled by user", "AbortError");
+    }
     throw new Error(`Failed to upload chunk ${chunkInfo.index}`);
   }
 }

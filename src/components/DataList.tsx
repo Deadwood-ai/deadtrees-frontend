@@ -1,16 +1,24 @@
-import { useEffect, lazy, Suspense, useState } from "react";
-// const ListItem = lazy(() => import("./ListItem"));
+import { useState } from "react";
 import ListItem from "./ListItem";
 import { Button } from "antd";
-import { useData } from "../state/DataProvider";
+import { IDataset } from "../types/dataset";
 
-export default function DataList({ data, hoveredItem, setHoveredItem, visibleFeatures }) {
-  // console.log("mounting DataList with data:", data);
+interface DataListProps {
+  data: IDataset[];
+  hoveredItem: number | null;
+  setHoveredItem: (id: number | null) => void;
+  visibleFeatures: string[];
+  onFilterClick: (
+    filterValue: string,
+    filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3",
+  ) => void;
+}
+
+export default function DataList({ data, hoveredItem, setHoveredItem, onFilterClick }: DataListProps) {
   const [nItems, setNItems] = useState(50);
 
-  const visibleData = data.filter(item => visibleFeatures.includes(item.id));
-  // console.log("visibleData", visibleData);
-  // console.log("visibleFeatures", visibleFeatures);
+  // Use data directly as it's already filtered by the parent component
+  const visibleData = data;
 
   const handleMoreItems = () => {
     setNItems(nItems + 50);
@@ -18,20 +26,36 @@ export default function DataList({ data, hoveredItem, setHoveredItem, visibleFea
 
   return (
     <div className="h-full space-y-2 overflow-auto">
-      {/* <div> */}
-      {visibleData ? (
-        visibleData
-          .slice(0, nItems)
-          // .sort((a, b) => (a.id ? -1 : 1))
-          .map((item, index) => item.id && <ListItem key={index} item={item} index={index} hoveredItem={hoveredItem} setHoveredItem={setHoveredItem} />)
-      ) : (
+      {!visibleData ? (
         <div>Loading...</div>
-      )}
-      {/* </div> */}
-      {visibleData.length > nItems && (
-        <div className="flex justify-center">
-          <Button onClick={handleMoreItems}>Load more</Button>
+      ) : visibleData.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center">
+          <div className="text-lg font-medium text-gray-500">No results found</div>
+          <div className="text-sm text-gray-400">Try adjusting your filters or search criteria</div>
         </div>
+      ) : (
+        <>
+          {visibleData
+            .slice(0, nItems)
+            .map(
+              (item, index) =>
+                item.id && (
+                  <ListItem
+                    key={index}
+                    item={item}
+                    index={index}
+                    hoveredItem={hoveredItem}
+                    setHoveredItem={setHoveredItem}
+                    onFilterClick={onFilterClick}
+                  />
+                ),
+            )}
+          {visibleData.length > nItems && (
+            <div className="flex justify-center">
+              <Button onClick={handleMoreItems}>Load more</Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

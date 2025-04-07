@@ -1,94 +1,113 @@
-import { useMemo, useState } from "react";
-import { Button, Col, Row, Tag, Input, Segmented } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
+import { useMemo, useState, useEffect } from "react";
+import { Button, Col, Row, Tag, Input, Spin, Tooltip } from "antd";
+import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMap";
 import { CloseOutlined } from "@ant-design/icons";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { useDatasets } from "../hooks/useDatasets";
+import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 
-type SearchField = "authors" | "location";
 type SortDirection = "asc" | "desc";
+type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
 
 export default function Dataset() {
-  // const { data, filter, setFilter } = useData();
-  // add useFilteredDatasets
-  const { data: allData, isLoading: isLoadingData } = useDatasets();
-  const { filteredData, setFilter, setFilterTag, filter } = useFilteredDatasets(allData);
-  console.log("filteredData", filteredData);
+  const { data: allData } = useDatasets();
+  const { filteredData, setFilter, setFilterTag, filter, advancedFilters, setAdvancedFilters } =
+    useFilteredDatasets(allData);
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
-  const [searchField, setSearchField] = useState<SearchField>("authors");
+  const [searchInput, setSearchInput] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+
+  // Debounced search handler
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchValue(searchInput.toLowerCase());
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const handleSearch = (value: string) => {
-    setSearchValue(value.toLowerCase());
-    console.log("searchValue", searchValue);
+    setSearchInput(value);
   };
 
   const toggleSort = () => {
     setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
+  const handleFilterClick = (filterValue: string, filterType: FilterTag) => {
+    setFilter(filterValue);
+    setFilterTag(filterType);
+  };
+
+  const handleFilterButtonClick = () => {
+    setIsFilterModalVisible(true);
+  };
+
+  const handleApplyFilters = (newFilters: AdvancedFilters) => {
+    setAdvancedFilters(newFilters);
+  };
+
   const processedData = useMemo(() => {
     if (!filteredData) return null;
 
     const filtered = filteredData.filter((d) => {
+      // Base condition for valid datasets
       const baseCondition =
-        d.is_upload_done && d.is_cog_done && d.is_ortho_done && d.is_metadata_done && !d.has_error && d.admin_level_1;
+        d.is_upload_done &&
+        d.is_cog_done &&
+        d.is_ortho_done &&
+        d.is_metadata_done &&
+        d.is_thumbnail_done &&
+        !d.has_error &&
+        d.admin_level_1;
 
-      if (!searchValue) return baseCondition;
+      if (!baseCondition) return false;
 
-      let searchMatch = false;
-      switch (searchField) {
-        case "authors": {
-          if (!searchValue.trim()) {
-            searchMatch = true;
-            break;
-          }
-          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const authorWords = (d.authors?.toLowerCase() || "").split(/[\s,]+/).filter(Boolean);
+      // If no search value, return true for the base condition
+      if (!searchValue.trim()) return true;
 
-          searchMatch = searchTerms.every((searchTerm) => authorWords.some((word) => word.includes(searchTerm)));
-          break;
-        }
-        case "location": {
-          if (!searchValue.trim()) {
-            searchMatch = true;
-            break;
-          }
-          const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
-          const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_1 || ""}`
-            .toLowerCase()
-            .split(/[\s,]+/)
-            .filter(Boolean);
+      const searchTerms = searchValue.toLowerCase().split(/\s+/).filter(Boolean);
 
-          searchMatch = searchTerms.every((searchTerm) => locationWords.some((word) => word.includes(searchTerm)));
-          break;
-        }
-      }
-      return baseCondition && searchMatch;
+      // Search in authors
+      const authorMatch =
+        d.authors?.some((author) => searchTerms.every((term) => author.toLowerCase().includes(term))) || false;
+
+      // Search in location - now including admin_level_2
+      const locationWords = `${d.admin_level_3 || ""}, ${d.admin_level_2 || ""}, ${d.admin_level_1 || ""}`
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter(Boolean);
+
+      const locationMatch = searchTerms.every((term) => locationWords.some((word) => word.includes(term)));
+
+      return authorMatch || locationMatch;
     });
 
     // Sort by date
     return filtered.sort((a, b) => {
       const dateA = new Date(
-        a.aquisition_year,
+        parseInt(a.aquisition_year),
         a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
         a.aquisition_day ? parseInt(a.aquisition_day) : 1,
       );
       const dateB = new Date(
-        b.aquisition_year,
+        parseInt(b.aquisition_year),
         b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
         b.aquisition_day ? parseInt(b.aquisition_day) : 1,
       );
 
       return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
     });
-  }, [filteredData, searchField, searchValue, sortDirection]);
+  }, [filteredData, searchValue, sortDirection]);
+
+  const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
   return (
     <Row
@@ -98,19 +117,24 @@ export default function Dataset() {
         height: "100%",
       }}
     >
-      <Col className="flex h-full w-96 flex-col px-2 align-middle">
+      <Col className="flex h-full w-96 flex-col px-2 pt-2 align-middle">
         {filter ? (
           <div className="flex justify-between pb-2">
             <div className="flex items-center">
-              <h4 className="m-0">Filtered by: </h4>
+              <h4 className="p m-0">Filtered by: </h4>
               {
                 <Tag className="m-0 ml-1" color="blue">
-                  <span className="text-sm font-medium">{filter.slice(0, 10) + (filter.length > 10 ? "..." : "")}</span>
+                  <span className="text-sm font-medium">
+                    {filterDisplay.slice(0, 10) + (filterDisplay.length > 10 ? "..." : "")}
+                  </span>
                   <Button
                     className=" ml-2 border-none bg-transparent"
                     size="small"
                     shape="circle"
-                    onClick={() => setFilter("")}
+                    onClick={() => {
+                      setFilter("");
+                      setFilterTag("platform");
+                    }}
                     icon={<CloseOutlined />}
                   />
                 </Tag>
@@ -133,32 +157,24 @@ export default function Dataset() {
         )}
 
         <div className="flex flex-col gap-2 pb-4">
-          <Segmented
-            value={searchField}
-            onChange={(value) => setSearchField(value as SearchField)}
-            options={[
-              { label: "Authors", value: "authors" },
-              { label: "Location (City, State)", value: "location" },
-            ]}
-            className="pb-2"
-            block
-          />
-
           <div className="flex">
-            <Input.Search
-              placeholder={searchField === "location" ? "Search by City or State" : "Search by Authors"}
-              onSearch={handleSearch}
+            <Input
+              placeholder="Search by Authors or Location (Region, Province, City)"
               onChange={(e) => handleSearch(e.target.value)}
               className="flex-1"
               allowClear
+              value={searchInput}
             />
-            <div className="pl-4">
-              <Button
-                icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
-                onClick={toggleSort}
-                type="primary"
-                title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}
-              />
+            <div className="space-x-2 pl-4">
+              <Tooltip title="Open advanced filtering options">
+                <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
+              </Tooltip>
+              <Tooltip title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
+                <Button
+                  icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
+                  onClick={toggleSort}
+                />
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -169,25 +185,41 @@ export default function Dataset() {
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             visibleFeatures={visibleFeatures}
+            onFilterClick={handleFilterClick}
           />
         ) : (
-          <div>Loading...</div>
+          <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="Loading data..." />
+          </div>
         )}
       </Col>
       <Col className="flex-1 pt-2">
-        {processedData && processedData.length > 0 ? (
+        {!processedData ? (
+          <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="Loading map..." />
+          </div>
+        ) : processedData.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center rounded-lg bg-white">
+            <div className="text-lg font-medium text-gray-500">No results found</div>
+            <div className="text-sm text-gray-400">Try adjusting your filters or search criteria</div>
+          </div>
+        ) : (
           <DatasetMapOL
             data={processedData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             setVisibleFeatures={setVisibleFeatures}
           />
-        ) : (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
-            <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>
-          </div>
         )}
       </Col>
+
+      {/* Filter Modal */}
+      <FilterModal
+        isVisible={isFilterModalVisible}
+        onClose={() => setIsFilterModalVisible(false)}
+        onApplyFilters={handleApplyFilters}
+        currentFilters={advancedFilters}
+      />
     </Row>
   );
 }

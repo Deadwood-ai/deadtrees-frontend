@@ -113,7 +113,7 @@ const DatasetMapOL = ({
       mapRef.current = map;
 
       const vectorSourceExtend = new VectorSource();
-      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend });
+      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend, minZoom: 9 });
       vectorLayerExtendRef.current = vectorLayerExtend;
       map.addLayer(vectorLayerExtend);
 
@@ -169,12 +169,6 @@ const DatasetMapOL = ({
           map.getTargetElement().style.cursor = "pointer";
           tooltip.setPosition(evt.coordinate);
 
-          // Create tooltip content with thumbnail
-          // <img
-          //   class="tooltip-thumbnail"
-          //   src="${thumbnailPath ? Settings.THUMBNAIL_URL + thumbnailPath : "/assets/tree-icon.png"}"
-          //   alt="${hoveredFeature.get("title")}"
-          // />
           const tooltipContent = `
             <div class="tooltip-content">
 
@@ -290,38 +284,40 @@ const DatasetMapOL = ({
 
       data.forEach((dataset) => {
         if (dataset.bbox) {
-          const extentFeature = new Feature(fromExtent(parseBBox(dataset.bbox)).transform("EPSG:4326", "EPSG:3857"));
-          extentFeature.setProperties({
-            id: dataset.id,
-            title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
-            thumbnail_path: dataset.thumbnail_path,
-            date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-              .toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-              .toString(),
-          });
-          extentFeature.setStyle(defaultExtendStyle);
-          vectorSourceExtend.addFeature(extentFeature);
+          const parsedBBox = parseBBox(dataset.bbox);
+          if (parsedBBox) {
+            const extentFeature = new Feature(fromExtent(parsedBBox).transform("EPSG:4326", "EPSG:3857"));
+            extentFeature.setProperties({
+              id: dataset.id,
+              title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
+              thumbnail_path: dataset.thumbnail_path,
+              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
+                .toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+                .toString(),
+            });
+            extentFeature.setStyle(defaultExtendStyle);
+            vectorSourceExtend.addFeature(extentFeature);
 
-          const point = extentFeature.getGeometry().getInteriorPoint();
-          const pointFeature = new Feature(point);
-          pointFeature.setProperties({
-            id: dataset.id,
-            title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, "_"),
-            date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-              .toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-              .toString(),
-          });
-          pointFeature.setStyle(defaultMarkerStyle);
-
-          vectorSourceMarker.addFeature(pointFeature);
+            const point = extentFeature.getGeometry().getInteriorPoint();
+            const pointFeature = new Feature(point);
+            pointFeature.setProperties({
+              id: dataset.id,
+              title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, "_"),
+              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
+                .toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+                .toString(),
+            });
+            pointFeature.setStyle(defaultMarkerStyle);
+            vectorSourceMarker.addFeature(pointFeature);
+          }
         }
       });
       if (filter) {
@@ -356,22 +352,6 @@ const DatasetMapOL = ({
       });
     }
   }, [hoveredItem]);
-
-  // useEffect(() => {
-  //   console.log("useEffect on moveend");
-  //   if (mapRef.current) {
-  //     const moveEndListener = () => {
-  //       debouncedUpdateVisibleFeatures();
-  //       setUserInteracted(true);
-  //     };
-  //     mapRef.current.on('moveend', moveEndListener);
-  //     return () => {
-  //       if (mapRef.current) {
-  //         mapRef.current.un('moveend', moveEndListener);
-  //       }
-  //     };
-  //   }
-  // }, [debouncedUpdateVisibleFeatures]);
 
   return <div ref={mapContainer} style={{ width: "100%", height: "100%", borderRadius: 8 }}></div>;
 };
