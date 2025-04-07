@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
-import { Button, Col, Row, Tag, Input } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined, FilterFilled, FilterOutlined, FilterTwoTone } from "@ant-design/icons";
+import { Button, Col, Row, Tag, Input, Spin } from "antd";
+import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMap";
@@ -171,11 +171,13 @@ export default function Dataset() {
             data={processedData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
-            visibleFeatures={searchValue ? processedData.map((item) => item.id) : visibleFeatures}
+            visibleFeatures={searchValue ? processedData.map((item) => item.id.toString()) : visibleFeatures}
             onFilterClick={handleFilterClick}
           />
         ) : (
-          <div>Loading...</div>
+          <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="Loading data..." />
+          </div>
         )}
       </Col>
       <Col className="flex-1 pt-2">
@@ -187,8 +189,8 @@ export default function Dataset() {
             setVisibleFeatures={setVisibleFeatures}
           />
         ) : (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
-            <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900"></div>
+          <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="Loading map..." />
           </div>
         )}
       </Col>
