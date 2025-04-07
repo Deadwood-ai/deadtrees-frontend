@@ -67,8 +67,10 @@ export default function DataList({
                 ),
             )}
           {visibleData.length > nItems && (
-            <div className="flex justify-center">
-              <Button onClick={handleMoreItems}>Load more</Button>
+            <div className="flex justify-center pb-4 pt-2">
+              <Button onClick={handleMoreItems} type="default">
+                Load more
+              </Button>
             </div>
           )}
         </>
