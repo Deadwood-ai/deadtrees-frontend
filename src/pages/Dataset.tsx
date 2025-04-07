@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Button, Col, Row, Tag, Input, Spin } from "antd";
+import { Button, Col, Row, Tag, Input, Spin, Tooltip } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
@@ -166,12 +166,15 @@ export default function Dataset() {
               value={searchInput}
             />
             <div className="space-x-2 pl-4">
-              <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
-              <Button
-                icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
-                onClick={toggleSort}
-                title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}
-              />
+              <Tooltip title="Open advanced filtering options">
+                <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
+              </Tooltip>
+              <Tooltip title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
+                <Button
+                  icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
+                  onClick={toggleSort}
+                />
+              </Tooltip>
             </div>
           </div>
         </div>
