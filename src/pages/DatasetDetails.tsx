@@ -123,7 +123,7 @@ export default function DatasetDetails() {
               </div>
               <div className="flex justify-between">
                 <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Biom: </Typography.Text>
+                  <Typography.Text className="pr-2">Biome: </Typography.Text>
                 </Typography.Text>
                 <Tooltip title={dataset.biome_name}>
                   <Tag color="default" className="m-0">
