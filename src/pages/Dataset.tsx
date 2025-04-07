@@ -7,19 +7,22 @@ import DatasetMapOL from "../components/DatasetMap/DatasetMap";
 import { CloseOutlined } from "@ant-design/icons";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { useDatasets } from "../hooks/useDatasets";
+import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 
 type SortDirection = "asc" | "desc";
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
 
 export default function Dataset() {
   const { data: allData } = useDatasets();
-  const { filteredData, setFilter, setFilterTag, filter } = useFilteredDatasets(allData);
+  const { filteredData, setFilter, setFilterTag, filter, advancedFilters, setAdvancedFilters } =
+    useFilteredDatasets(allData);
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
   // Debounced search handler
   useEffect(() => {
@@ -41,6 +44,14 @@ export default function Dataset() {
   const handleFilterClick = (filterValue: string, filterType: FilterTag) => {
     setFilter(filterValue);
     setFilterTag(filterType);
+  };
+
+  const handleFilterButtonClick = () => {
+    setIsFilterModalVisible(true);
+  };
+
+  const handleApplyFilters = (newFilters: AdvancedFilters) => {
+    setAdvancedFilters(newFilters);
   };
 
   const processedData = useMemo(() => {
@@ -155,11 +166,10 @@ export default function Dataset() {
               value={searchInput}
             />
             <div className="space-x-2 pl-4">
-              <Button icon={<FilterOutlined />} />
+              <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
               <Button
                 icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
                 onClick={toggleSort}
-                // type="primary"
                 title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}
               />
             </div>
@@ -194,6 +204,14 @@ export default function Dataset() {
           </div>
         )}
       </Col>
+
+      {/* Filter Modal */}
+      <FilterModal
+        isVisible={isFilterModalVisible}
+        onClose={() => setIsFilterModalVisible(false)}
+        onApplyFilters={handleApplyFilters}
+        currentFilters={advancedFilters}
+      />
     </Row>
   );
 }
