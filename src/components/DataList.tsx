@@ -26,29 +26,36 @@ export default function DataList({ data, hoveredItem, setHoveredItem, onFilterCl
 
   return (
     <div className="h-full space-y-2 overflow-auto">
-      {visibleData ? (
-        visibleData
-          .slice(0, nItems)
-          .map(
-            (item, index) =>
-              item.id && (
-                <ListItem
-                  key={index}
-                  item={item}
-                  index={index}
-                  hoveredItem={hoveredItem}
-                  setHoveredItem={setHoveredItem}
-                  onFilterClick={onFilterClick}
-                />
-              ),
-          )
-      ) : (
+      {!visibleData ? (
         <div>Loading...</div>
-      )}
-      {visibleData.length > nItems && (
-        <div className="flex justify-center">
-          <Button onClick={handleMoreItems}>Load more</Button>
+      ) : visibleData.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center">
+          <div className="text-lg font-medium text-gray-500">No results found</div>
+          <div className="text-sm text-gray-400">Try adjusting your filters or search criteria</div>
         </div>
+      ) : (
+        <>
+          {visibleData
+            .slice(0, nItems)
+            .map(
+              (item, index) =>
+                item.id && (
+                  <ListItem
+                    key={index}
+                    item={item}
+                    index={index}
+                    hoveredItem={hoveredItem}
+                    setHoveredItem={setHoveredItem}
+                    onFilterClick={onFilterClick}
+                  />
+                ),
+            )}
+          {visibleData.length > nItems && (
+            <div className="flex justify-center">
+              <Button onClick={handleMoreItems}>Load more</Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

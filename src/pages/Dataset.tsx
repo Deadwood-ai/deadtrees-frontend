@@ -191,17 +191,22 @@ export default function Dataset() {
         )}
       </Col>
       <Col className="flex-1 pt-2">
-        {processedData && processedData.length > 0 ? (
+        {!processedData ? (
+          <div className="flex h-full items-center justify-center">
+            <Spin size="large" tip="Loading map..." />
+          </div>
+        ) : processedData.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center rounded-lg bg-white">
+            <div className="text-lg font-medium text-gray-500">No results found</div>
+            <div className="text-sm text-gray-400">Try adjusting your filters or search criteria</div>
+          </div>
+        ) : (
           <DatasetMapOL
             data={processedData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             setVisibleFeatures={setVisibleFeatures}
           />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Spin size="large" tip="Loading map..." />
-          </div>
         )}
       </Col>
 
