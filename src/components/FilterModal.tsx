@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
-import { Modal, Form, Checkbox, Select, Radio, Slider, Button, Divider, Typography, Space } from "antd";
+import { useEffect } from "react";
+import { Modal, Form, Checkbox, Select, Radio, Slider, Button, Divider } from "antd";
 import { IBiome } from "../types/dataset";
 import { useData } from "../hooks/useDataProvider";
-
-const { Title } = Typography;
 
 interface FilterModalProps {
   isVisible: boolean;
@@ -24,34 +22,28 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
   const { authors } = useData();
   const [form] = Form.useForm();
 
-  const [localFilters, setLocalFilters] = useState<AdvancedFilters>(currentFilters);
+  // Determine date range boundaries
+  const currentYear = new Date().getFullYear();
+  const defaultDateRange: [number, number] = [2010, currentYear];
 
   // Reset form when modal is opened
   useEffect(() => {
     if (isVisible) {
-      form.setFieldsValue({
-        hasDeadwoodPrediction: currentFilters.hasDeadwoodPrediction,
-        biome: currentFilters.biome,
-        authors: currentFilters.authors,
-        platform: currentFilters.platform,
-        dateRange: currentFilters.dateRange,
-      });
-      setLocalFilters(currentFilters);
+      const initialValues = {
+        hasDeadwoodPrediction: currentFilters.hasDeadwoodPrediction || false,
+        biome: currentFilters.biome || null,
+        authors: currentFilters.authors || [],
+        platform: currentFilters.platform || "",
+        dateRange: currentFilters.dateRange || defaultDateRange,
+      };
+
+      form.setFieldsValue(initialValues);
     }
-  }, [isVisible, form, currentFilters]);
+  }, [isVisible, form, currentFilters, defaultDateRange]);
 
-  const handleFormChange = (changedValues: any, allValues: any) => {
-    setLocalFilters({
-      ...localFilters,
-      ...changedValues,
-    });
-  };
-
-  const handleApply = () => {
-    form.validateFields().then((values) => {
-      onApplyFilters(values as AdvancedFilters);
-      onClose();
-    });
+  // Apply filters immediately on any change
+  const handleFormChange = (changedValues: Partial<AdvancedFilters>, allValues: AdvancedFilters) => {
+    onApplyFilters(allValues);
   };
 
   const clearFilters = () => {
@@ -59,22 +51,20 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
       hasDeadwoodPrediction: false,
       biome: null,
       authors: [],
-      platform: null,
-      dateRange: null,
+      platform: "",
+      dateRange: defaultDateRange,
     };
-    setLocalFilters(resetFilters);
+
     form.setFieldsValue(resetFilters);
+    onApplyFilters(resetFilters);
   };
 
   // Get all Biome options from the enum
-  const biomeOptions = Object.entries(IBiome).map(([key, value]) => ({
+  const biomeOptions: Array<{ label: string; value: string }> = Object.values(IBiome).map((value) => ({
     label: value,
     value: value,
   }));
   biomeOptions.unshift({ label: "All", value: "" });
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 2010 + 1 }, (_, i) => 2010 + i);
 
   return (
     <Modal
@@ -86,7 +76,18 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
       centered
       maskClosable={true}
     >
-      <Form form={form} layout="vertical" onValuesChange={handleFormChange} initialValues={currentFilters}>
+      <Form
+        form={form}
+        layout="vertical"
+        onValuesChange={handleFormChange}
+        initialValues={{
+          hasDeadwoodPrediction: false,
+          biome: null,
+          authors: [],
+          platform: "",
+          dateRange: defaultDateRange,
+        }}
+      >
         <Form.Item name="hasDeadwoodPrediction" valuePropName="checked">
           <Checkbox>Has Deadwood Prediction</Checkbox>
         </Form.Item>
@@ -122,6 +123,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
             range
             min={2010}
             max={currentYear}
+            defaultValue={defaultDateRange}
             marks={{
               2010: "2010",
               [currentYear]: currentYear.toString(),
@@ -131,14 +133,8 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
 
         <Divider />
 
-        <div className="flex justify-between">
-          <Button onClick={clearFilters}>Reset</Button>
-          <Space>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="primary" onClick={handleApply}>
-              Apply
-            </Button>
-          </Space>
+        <div className="flex justify-end">
+          <Button onClick={clearFilters}>Reset Filters</Button>
         </div>
       </Form>
     </Modal>

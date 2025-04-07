@@ -181,7 +181,7 @@ export default function Dataset() {
             data={processedData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
-            visibleFeatures={searchValue ? processedData.map((item) => item.id.toString()) : visibleFeatures}
+            visibleFeatures={visibleFeatures}
             onFilterClick={handleFilterClick}
           />
         ) : (

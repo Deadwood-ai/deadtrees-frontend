@@ -1,11 +1,10 @@
-import { useEffect, lazy, Suspense, useState } from "react";
-// const ListItem = lazy(() => import("./ListItem"));
+import { useState } from "react";
 import ListItem from "./ListItem";
 import { Button } from "antd";
-import { useData } from "../hooks/useData";
+import { IDataset } from "../types/dataset";
 
 interface DataListProps {
-  data: any[];
+  data: IDataset[];
   hoveredItem: number | null;
   setHoveredItem: (id: number | null) => void;
   visibleFeatures: string[];
@@ -15,14 +14,11 @@ interface DataListProps {
   ) => void;
 }
 
-export default function DataList({ data, hoveredItem, setHoveredItem, visibleFeatures, onFilterClick }: DataListProps) {
-  // console.log("mounting DataList with data:", data);
+export default function DataList({ data, hoveredItem, setHoveredItem, onFilterClick }: DataListProps) {
   const [nItems, setNItems] = useState(50);
-  const { searchValue } = useData();
 
-  const visibleData = searchValue ? data : data.filter((item) => visibleFeatures.includes(item.id));
-  // console.log("visibleData", visibleData);
-  // console.log("visibleFeatures", visibleFeatures);
+  // Use data directly as it's already filtered by the parent component
+  const visibleData = data;
 
   const handleMoreItems = () => {
     setNItems(nItems + 50);
@@ -30,11 +26,9 @@ export default function DataList({ data, hoveredItem, setHoveredItem, visibleFea
 
   return (
     <div className="h-full space-y-2 overflow-auto">
-      {/* <div> */}
       {visibleData ? (
         visibleData
           .slice(0, nItems)
-          // .sort((a, b) => (a.id ? -1 : 1))
           .map(
             (item, index) =>
               item.id && (
@@ -51,7 +45,6 @@ export default function DataList({ data, hoveredItem, setHoveredItem, visibleFea
       ) : (
         <div>Loading...</div>
       )}
-      {/* </div> */}
       {visibleData.length > nItems && (
         <div className="flex justify-center">
           <Button onClick={handleMoreItems}>Load more</Button>

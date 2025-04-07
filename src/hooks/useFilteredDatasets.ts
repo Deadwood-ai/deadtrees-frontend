@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { IDataset, IPlatform, ILicense } from "../types/dataset";
+import { IDataset } from "../types/dataset";
 import { AdvancedFilters } from "../components/FilterModal";
 
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
@@ -12,8 +12,8 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
     hasDeadwoodPrediction: false,
     biome: null,
     authors: [],
-    platform: null,
-    dateRange: null,
+    platform: "",
+    dateRange: [2010, new Date().getFullYear()],
   });
 
   const filteredData = useMemo(() => {
@@ -54,7 +54,7 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
       result = result.filter((item) => item.authors?.some((author) => advancedFilters.authors.includes(author)));
     }
 
-    if (advancedFilters.platform) {
+    if (advancedFilters.platform && advancedFilters.platform !== "") {
       result = result.filter((item) => item.platform === advancedFilters.platform);
     }
 
