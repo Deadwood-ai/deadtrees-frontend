@@ -10,6 +10,7 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
   const [filterTag, setFilterTag] = useState<FilterTag>("platform");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     hasDeadwoodPrediction: false,
+    hasLabels: false,
     biome: null,
     authors: [],
     platform: "",
@@ -44,6 +45,10 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
     // Then apply advanced filters
     if (advancedFilters.hasDeadwoodPrediction) {
       result = result.filter((item) => item.has_deadwood_prediction);
+    }
+
+    if (advancedFilters.hasLabels) {
+      result = result.filter((item) => item.has_labels);
     }
 
     if (advancedFilters.biome) {

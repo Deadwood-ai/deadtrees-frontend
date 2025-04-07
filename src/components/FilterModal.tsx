@@ -12,6 +12,7 @@ interface FilterModalProps {
 
 export interface AdvancedFilters {
   hasDeadwoodPrediction: boolean;
+  hasLabels: boolean;
   biome: string | null;
   authors: string[];
   platform: string | null;
@@ -31,6 +32,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
     if (isVisible) {
       const initialValues = {
         hasDeadwoodPrediction: currentFilters.hasDeadwoodPrediction || false,
+        hasLabels: currentFilters.hasLabels || false,
         biome: currentFilters.biome || null,
         authors: currentFilters.authors || [],
         platform: currentFilters.platform || "",
@@ -49,6 +51,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
   const clearFilters = () => {
     const resetFilters: AdvancedFilters = {
       hasDeadwoodPrediction: false,
+      hasLabels: false,
       biome: null,
       authors: [],
       platform: "",
@@ -82,14 +85,19 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
         onValuesChange={handleFormChange}
         initialValues={{
           hasDeadwoodPrediction: false,
+          hasLabels: false,
           biome: null,
           authors: [],
           platform: "",
           dateRange: defaultDateRange,
         }}
       >
-        <Form.Item name="hasDeadwoodPrediction" valuePropName="checked">
+        <Form.Item className="mb-2" name="hasDeadwoodPrediction" valuePropName="checked">
           <Checkbox>Has Deadwood Prediction</Checkbox>
+        </Form.Item>
+
+        <Form.Item className="mb-2" name="hasLabels" valuePropName="checked">
+          <Checkbox>Has Labels</Checkbox>
         </Form.Item>
 
         <Divider />
