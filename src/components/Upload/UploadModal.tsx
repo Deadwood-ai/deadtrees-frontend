@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Button,
   Form,
@@ -150,27 +150,39 @@ const PrivacyLink = () => (
 
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
+  const [form] = Form.useForm();
 
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
 
   const { session } = useAuth();
   const [pickerType, setPickerType] = useState(pickerTypeOptions[0]);
+  const [isUploading, setIsUploading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const { authors } = useData();
   console.log("authors in upload modal", authors);
-  const { showUploadingNotification, updateUploadProgress, showSuccessNotification, showErrorNotification } =
-    useUploadNotification(uploadKey, fileName);
+  const {
+    showUploadingNotification,
+    updateUploadProgress,
+    showSuccessNotification,
+    showErrorNotification,
+    closeNotification,
+  } = useUploadNotification(uploadKey, fileName);
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
   const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
+      // Create a new AbortController for this upload
+      abortControllerRef.current = new AbortController();
+
       uploadOrtho({
         uploadId: uploadKey,
         file,
         session,
         metadata,
+        signal: abortControllerRef.current.signal,
         onSuccess: (response) => {
           logger({
             user_id: session!.user.id,
@@ -193,7 +205,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         },
         onProgress: (event) => {
           const percent = Math.round(event.percent);
-          updateUploadProgress(percent);
+          updateUploadProgress(percent, cancelUpload);
         },
       });
     });
@@ -220,8 +232,25 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood"], token);
   };
 
+  const cancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      logger({
+        user_id: session!.user.id,
+        file_name: fileNameFull,
+        process: "upload",
+        level: "info",
+        message: "Upload cancelled by user",
+      });
+      closeNotification();
+      setIsUploading(false);
+    }
+  };
+
   const handleUpload = async (values: IFormValues) => {
-    showUploadingNotification();
+    setIsUploading(true);
+    showUploadingNotification(cancelUpload);
     logger({
       user_id: session!.user.id,
       file_name: fileNameFull,
@@ -275,19 +304,26 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       }
 
       // Process dataset
-      await processDataset(uploadResponse.id, validAccessToken);
+      await processDataset(Number(uploadResponse.id), validAccessToken);
 
       showSuccessNotification();
     } catch (error) {
-      console.error("Upload error:", error);
-      logger({
-        user_id: session!.user.id,
-        file_name: fileNameFull,
-        process: "upload",
-        level: "error",
-        message: `Upload error: ${error}`,
-      });
-      showErrorNotification();
+      // Check if the error was caused by user abortion
+      if (error instanceof DOMException && error.name === "AbortError") {
+        console.log("Upload was cancelled by the user");
+      } else {
+        console.error("Upload error:", error);
+        logger({
+          user_id: session!.user.id,
+          file_name: fileNameFull,
+          process: "upload",
+          level: "error",
+          message: `Upload error: ${error}`,
+        });
+        showErrorNotification();
+      }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -296,11 +332,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     handleUpload(values); // Start the upload process
   };
 
+  const handleModalClose = () => {
+    if (isUploading) {
+      cancelUpload();
+    }
+    onClose();
+  };
+
   return (
     <Modal
       open={isVisible}
       centered
-      onCancel={onClose}
+      onCancel={handleModalClose}
       footer={null}
       style={{ padding: 0, margin: 0 }}
       maskClosable={false}
@@ -330,6 +373,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
           onFinish={onFormFinish}
           initialValues={{ platform: "drone", agreement: false }}
           variant="filled"
+          form={form}
         >
           <div className="flex w-full justify-center space-x-12">
             <div className="w-full">
@@ -417,6 +461,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   pickerTypeOptions={pickerTypeOptions}
                   pickerType={pickerType}
                   setPickerType={setPickerType}
+                  onChange={(date) => form.setFieldsValue({ aquisition_date: date })}
                 />
               </Form.Item>
               {/* <Typography.Paragraph className="p-0" type="secondary">
