@@ -12,13 +12,29 @@ interface DataListProps {
     filterValue: string,
     filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3",
   ) => void;
+  searchValue: string;
+  filterByViewport: boolean;
 }
 
-export default function DataList({ data, hoveredItem, setHoveredItem, onFilterClick }: DataListProps) {
+export default function DataList({
+  data,
+  hoveredItem,
+  setHoveredItem,
+  visibleFeatures,
+  onFilterClick,
+  searchValue,
+  filterByViewport,
+}: DataListProps) {
   const [nItems, setNItems] = useState(50);
 
-  // Use data directly as it's already filtered by the parent component
-  const visibleData = data;
+  // Filter data by visible features in the map viewport only when:
+  // 1. Not searching
+  // 2. Viewport filtering is enabled
+  // 3. There are visible features
+  const visibleData =
+    !searchValue && filterByViewport && visibleFeatures.length > 0
+      ? data.filter((item) => visibleFeatures.includes(item.id.toString()))
+      : data;
 
   const handleMoreItems = () => {
     setNItems(nItems + 50);

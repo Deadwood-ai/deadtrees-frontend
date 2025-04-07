@@ -78,13 +78,26 @@ const DatasetMapOL = ({
   const [userInteracted, setUserInteracted] = useState(false);
 
   const updateVisibleFeatures = useCallback(() => {
-    // console.log("updateVisibleFeatures");
-    if (mapRef.current && vectorLayerExtendRef.current) {
-      const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
-      const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
-      const visibleIds = visibleFeatures.map((feature) => feature.get("id"));
-      setVisibleFeatures(visibleIds);
+    if (!mapRef.current || !vectorLayerExtendRef.current) return;
+
+    const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
+    const source = vectorLayerExtendRef.current.getSource();
+    if (!source) return;
+
+    const visibleFeatures = source.getFeaturesInExtent(extent);
+    const visibleIds = visibleFeatures.map((feature) => String(feature.get("id")));
+
+    console.log(`Found ${visibleIds.length} visible features`);
+
+    // If no features are visible in the current extent,
+    // return all feature IDs instead of an empty array
+    if (visibleIds.length === 0 && source.getFeatures().length > 0) {
+      const allIds = source.getFeatures().map((f) => String(f.get("id")));
+      setVisibleFeatures(allIds);
+      return;
     }
+
+    setVisibleFeatures(visibleIds);
   }, [setVisibleFeatures]);
 
   useEffect(() => {
@@ -352,6 +365,26 @@ const DatasetMapOL = ({
       });
     }
   }, [hoveredItem]);
+
+  // Update visible features after data changes and map is rendered
+  useEffect(() => {
+    if (mapRef.current && vectorLayerExtendRef.current) {
+      const source = vectorLayerExtendRef.current.getSource();
+      if (source && source.getFeatures().length > 0) {
+        console.log(`Data updated, found ${source.getFeatures().length} features total`);
+        // Update visible features immediately
+        updateVisibleFeatures();
+      } else {
+        // If no features found, try again after a short delay to ensure rendering complete
+        const timer = setTimeout(() => {
+          console.log("Trying to update visible features after delay");
+          updateVisibleFeatures();
+        }, 300);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [data, updateVisibleFeatures]);
 
   return <div ref={mapContainer} style={{ width: "100%", height: "100%", borderRadius: 8 }}></div>;
 };

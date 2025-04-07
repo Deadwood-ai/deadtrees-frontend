@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Button, Col, Row, Tag, Input, Spin, Tooltip } from "antd";
+import { Button, Col, Row, Tag, Input, Spin, Tooltip, Checkbox } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
@@ -23,6 +23,7 @@ export default function Dataset() {
   const [searchValue, setSearchValue] = useState("");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [filterByViewport, setFilterByViewport] = useState(true);
 
   // Debounced search handler
   useEffect(() => {
@@ -107,6 +108,14 @@ export default function Dataset() {
     });
   }, [filteredData, searchValue, sortDirection]);
 
+  // Reset visibleFeatures when data changes
+  useEffect(() => {
+    if (processedData?.length && processedData.length > 0) {
+      // When data changes, start with all features visible
+      setVisibleFeatures(processedData.map((item) => item.id.toString()));
+    }
+  }, [processedData]);
+
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
   return (
@@ -177,6 +186,11 @@ export default function Dataset() {
               </Tooltip>
             </div>
           </div>
+          <div className="ml-1 mt-0">
+            <Checkbox checked={filterByViewport} onChange={(e) => setFilterByViewport(e.target.checked)}>
+              Filter list by map view
+            </Checkbox>
+          </div>
         </div>
 
         {processedData ? (
@@ -186,6 +200,8 @@ export default function Dataset() {
             setHoveredItem={setHoveredItem}
             visibleFeatures={visibleFeatures}
             onFilterClick={handleFilterClick}
+            searchValue={searchValue}
+            filterByViewport={filterByViewport}
           />
         ) : (
           <div className="flex h-full items-center justify-center">
