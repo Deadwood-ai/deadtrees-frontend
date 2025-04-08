@@ -40,7 +40,7 @@ const DataGallery = () => {
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
 
-    const sorted = [...data].sort((a, b) => a.id - b.id);
+    const sorted = [...data].sort((a, b) => b.id - a.id);
 
     // Debug: Check initial data
     console.log("Initial data count:", sorted.length);
