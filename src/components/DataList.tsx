@@ -30,11 +30,8 @@ export default function DataList({
   // Filter data by visible features in the map viewport only when:
   // 1. Not searching
   // 2. Viewport filtering is enabled
-  // 3. There are visible features
   const visibleData =
-    !searchValue && filterByViewport && visibleFeatures.length > 0
-      ? data.filter((item) => visibleFeatures.includes(item.id.toString()))
-      : data;
+    !searchValue && filterByViewport ? data.filter((item) => visibleFeatures.includes(item.id.toString())) : data;
 
   const handleMoreItems = () => {
     setNItems(nItems + 50);

@@ -89,14 +89,8 @@ const DatasetMapOL = ({
 
     console.log(`Found ${visibleIds.length} visible features`);
 
-    // If no features are visible in the current extent,
-    // return all feature IDs instead of an empty array
-    if (visibleIds.length === 0 && source.getFeatures().length > 0) {
-      const allIds = source.getFeatures().map((f) => String(f.get("id")));
-      setVisibleFeatures(allIds);
-      return;
-    }
-
+    // Simply return the visible features even if empty array
+    // No need to handle the empty case specially anymore
     setVisibleFeatures(visibleIds);
   }, [setVisibleFeatures]);
 
