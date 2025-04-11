@@ -200,27 +200,87 @@ export default function DatasetDetails() {
                     icon={<DownloadOutlined />}
                     className="w-full"
                     onClick={() => {
-                      const url = labelsOnly
+                      const baseUrl = labelsOnly
                         ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
                         : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
 
-                      // Show loading message with longer duration (30 seconds)
+                      // Show persistent loading message until download is ready
                       const downloadMsg = message.loading({
                         content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
                         duration: 0,
                       });
 
-                      // For direct browser download
-                      window.location.href = url;
+                      // For dataset.zip, use the new status checking approach
+                      if (!labelsOnly) {
+                        // First initiate the download
+                        fetch(baseUrl)
+                          .then((response) => response.json())
+                          .then((data) => {
+                            const jobId = data.job_id;
 
-                      // Add a timer to update message after some time
-                      setTimeout(() => {
-                        downloadMsg();
-                        message.success({
-                          content: `Download started! The file will be saved to your downloads folder.`,
-                          duration: 5,
-                        });
-                      }, 3000);
+                            // Function to check status
+                            const checkStatus = () => {
+                              fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
+                                .then((response) => response.json())
+                                .then((statusData) => {
+                                  if (statusData.status === "completed") {
+                                    // Download is ready - close loading message
+                                    downloadMsg();
+
+                                    // Start actual download
+                                    window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
+
+                                    // Show success message
+                                    message.success({
+                                      content: "Download started! The file will be saved to your downloads folder.",
+                                      duration: 5,
+                                    });
+                                  } else if (statusData.status === "failed") {
+                                    // Handle failure
+                                    downloadMsg();
+                                    message.error({
+                                      content: "Download preparation failed. Please try again.",
+                                      duration: 5,
+                                    });
+                                  } else {
+                                    // Still processing, check again in 1 second
+                                    setTimeout(checkStatus, 1000);
+                                  }
+                                })
+                                .catch((error) => {
+                                  // Handle error
+                                  downloadMsg();
+                                  message.error({
+                                    content: `Error checking download status: ${error.message}`,
+                                    duration: 5,
+                                  });
+                                });
+                            };
+
+                            // Start checking status
+                            checkStatus();
+                          })
+                          .catch((error) => {
+                            // Handle error initiating download
+                            downloadMsg();
+                            message.error({
+                              content: `Error initiating download: ${error.message}`,
+                              duration: 5,
+                            });
+                          });
+                      } else {
+                        // For labels.gpkg, use direct download as before
+                        window.location.href = baseUrl;
+
+                        // Close loading message after a brief delay
+                        setTimeout(() => {
+                          downloadMsg();
+                          message.success({
+                            content: "Download started! The file will be saved to your downloads folder.",
+                            duration: 5,
+                          });
+                        }, 3000);
+                      }
                     }}
                   >
                     {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
