@@ -204,8 +204,23 @@ export default function DatasetDetails() {
                         ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
                         : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
 
+                      // Show loading message with longer duration (30 seconds)
+                      const downloadMsg = message.loading({
+                        content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
+                        duration: 0,
+                      });
+
+                      // For direct browser download
                       window.location.href = url;
-                      message.info(`Downloading ${labelsOnly ? "predictions" : "complete dataset"}, please wait...`);
+
+                      // Add a timer to update message after some time
+                      setTimeout(() => {
+                        downloadMsg();
+                        message.success({
+                          content: `Download started! The file will be saved to your downloads folder.`,
+                          duration: 5,
+                        });
+                      }, 3000);
                     }}
                   >
                     {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
