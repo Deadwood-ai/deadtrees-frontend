@@ -1,4 +1,4 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Badge } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
@@ -9,12 +9,18 @@ import { useDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
 import { useState } from "react";
+import { useDownload } from "../hooks/useDownloadProvider";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { data: datasets } = useDatasets();
   const [labelsOnly, setLabelsOnly] = useState(false);
+  // Remove local isDownloading state, use global state instead
+  // const [isDownloading, setIsDownloading] = useState(false);
+
+  // Use the global download state
+  const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
 
   const dataset = datasets?.find((d) => d.id.toString() === id);
 
@@ -188,18 +194,42 @@ export default function DatasetDetails() {
 
             <div className="mt-6 space-y-3 rounded-md bg-white p-4">
               <Space direction="vertical" className="w-full">
+                {isDownloading && currentDownloadId !== dataset.id.toString() && (
+                  <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
+                )}
                 <Tooltip
                   title={
-                    labelsOnly
-                      ? "Download vector data of tree mortality predictions (GPKG format)"
-                      : "Download both orthophoto and tree mortality predictions"
+                    isDownloading
+                      ? currentDownloadId === dataset.id.toString()
+                        ? "This dataset is currently being prepared for download..."
+                        : "Another download is in progress. Only one download can be active at a time."
+                      : labelsOnly
+                        ? "Download vector data of tree mortality predictions (GPKG format)"
+                        : "Download both orthophoto and tree mortality predictions"
                   }
                 >
                   <Button
                     type="primary"
                     icon={<DownloadOutlined />}
                     className="w-full"
+                    disabled={isDownloading}
+                    loading={isDownloading && currentDownloadId === dataset.id.toString()}
                     onClick={() => {
+                      // Prevent multiple downloads using global state
+                      if (isDownloading) {
+                        // If this dataset is already being downloaded, don't show an info message
+                        if (currentDownloadId !== dataset.id.toString()) {
+                          message.info("A download is already in progress. Please wait.");
+                        }
+                        return;
+                      }
+
+                      // Try to start the download in the global state
+                      const downloadStarted = startDownload(dataset.id.toString());
+                      if (!downloadStarted) {
+                        return;
+                      }
+
                       const baseUrl = labelsOnly
                         ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
                         : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
@@ -226,6 +256,7 @@ export default function DatasetDetails() {
                                   if (statusData.status === "completed") {
                                     // Download is ready - close loading message
                                     downloadMsg();
+                                    finishDownload(); // Update global state
 
                                     // Start actual download
                                     window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
@@ -238,6 +269,7 @@ export default function DatasetDetails() {
                                   } else if (statusData.status === "failed") {
                                     // Handle failure
                                     downloadMsg();
+                                    finishDownload(); // Update global state
                                     message.error({
                                       content: "Download preparation failed. Please try again.",
                                       duration: 5,
@@ -250,6 +282,7 @@ export default function DatasetDetails() {
                                 .catch((error) => {
                                   // Handle error
                                   downloadMsg();
+                                  finishDownload(); // Update global state
                                   message.error({
                                     content: `Error checking download status: ${error.message}`,
                                     duration: 5,
@@ -263,6 +296,7 @@ export default function DatasetDetails() {
                           .catch((error) => {
                             // Handle error initiating download
                             downloadMsg();
+                            finishDownload(); // Update global state
                             message.error({
                               content: `Error initiating download: ${error.message}`,
                               duration: 5,
@@ -275,6 +309,7 @@ export default function DatasetDetails() {
                         // Close loading message after a brief delay
                         setTimeout(() => {
                           downloadMsg();
+                          finishDownload(); // Update global state
                           message.success({
                             content: "Download started! The file will be saved to your downloads folder.",
                             duration: 5,
