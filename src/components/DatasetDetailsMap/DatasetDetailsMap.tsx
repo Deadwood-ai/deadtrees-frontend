@@ -90,18 +90,18 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           if (feature === hoveredFeature) {
             return new Style({
               fill: new Fill({
-                color: "rgba(129, 176, 247, 0.9)",
+                color: "rgba(255, 100, 100, 0.9)",
               }),
               stroke: new Stroke({
-                color: "rgba(129, 176, 247, 1)",
-                width: 2,
+                color: "rgba(255, 255, 255, 1)",
+                width: 2.5,
               }),
             });
           }
           return undefined;
         },
         renderMode: "vector",
-        renderBuffer: 16,
+        renderBuffer: 512,
       });
 
       // Store references
@@ -314,11 +314,11 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         if (feature === hoveredFeature) {
           return new Style({
             fill: new Fill({
-              color: "rgba(129, 176, 247, 0.9)",
+              color: "rgba(255, 100, 100, 0.9)",
             }),
             stroke: new Stroke({
-              color: "rgba(129, 176, 247, 1)",
-              width: 2,
+              color: "rgba(255, 255, 255, 1)",
+              width: 2.5,
             }),
           });
         }
