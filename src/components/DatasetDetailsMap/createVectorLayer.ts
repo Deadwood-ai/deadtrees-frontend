@@ -103,7 +103,8 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     }),
     maxZoom: 22,
     className: config.className,
-    renderMode: "hybrid",
+    renderMode: "vector",
+    renderBuffer: 512,
     declutter: false,
     updateWhileAnimating: true,
     updateWhileInteracting: true,
@@ -119,7 +120,7 @@ export const createDeadwoodVectorLayer = (labelId?: number | null) =>
     className: "deadwood-vector",
     style: {
       fillColor: "rgba(255, 50, 50, 0.8)",
-      strokeColor: "rgba(200, 0, 0, 1)",
+      strokeColor: "rgba(200, 50, 0, 1)",
       strokeWidth: 1.5,
     },
     labelId: labelId || undefined,

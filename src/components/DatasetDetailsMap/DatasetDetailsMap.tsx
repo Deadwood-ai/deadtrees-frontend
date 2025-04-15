@@ -30,6 +30,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
+  const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const { viewport, setViewport } = useDatasetDetailsMap();
 
   // Fetch label data for the current dataset
@@ -154,19 +155,25 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                 }
 
                 if (hit) {
-                  // console.log("[Map] pointermove", targetElement.style.cursor);
                   event.preventDefault();
                   event.stopPropagation();
 
                   deadwoodVectorLayer.getFeatures(pixel).then((features) => {
                     if (features.length > 0) {
-                      setHoveredFeature(features[0]);
+                      const feature = features[0];
+                      setHoveredFeature(feature);
+                      // console.log("[Map] hoveredFeature", feature);
+                      // Store the label_id of the hovered feature
+                      const polygonId = feature.get("id");
+                      setHoveredLabelId(polygonId);
                     } else {
                       setHoveredFeature(null);
+                      setHoveredLabelId(null);
                     }
                   });
                 } else {
                   setHoveredFeature(null);
+                  setHoveredLabelId(null);
                 }
               });
 
@@ -311,13 +318,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   useEffect(() => {
     if (mapRef.current && layerRefs.current.selectionLayer) {
       layerRefs.current.selectionLayer.setStyle((feature: FeatureLike) => {
-        if (feature === hoveredFeature) {
+        // Check if the feature has the same label_id as the currently hovered feature
+        if (hoveredLabelId !== null && feature.get("id") === hoveredLabelId) {
           return new Style({
             fill: new Fill({
               color: "rgba(255, 100, 100, 0.9)",
             }),
             stroke: new Stroke({
-              color: "rgba(255, 255, 255, 1)",
+              color: "rgba(255, 100, 100, 1)",
               width: 2.5,
             }),
           });
@@ -325,7 +333,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         return undefined;
       });
     }
-  }, [hoveredFeature]);
+  }, [hoveredLabelId]);
 
   return (
     <div className="h-full w-full">
