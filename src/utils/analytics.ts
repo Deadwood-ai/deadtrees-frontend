@@ -3,19 +3,28 @@ import { User } from "@supabase/supabase-js";
 // Access the global posthog instance
 declare const posthog: any;
 
+// Update this version whenever you want users to reaccept cookies
+export const COOKIE_CONSENT_VERSION = "2.0";
+
 // Check if PostHog is available
 const isPostHogAvailable = (): boolean => {
   return typeof posthog !== "undefined";
 };
 
-// Check if cookies are accepted
+// Check if cookies are accepted with valid version
 export const hasAcceptedCookies = (): boolean => {
-  return localStorage.getItem("cookieConsent") === "accepted";
+  const consent = localStorage.getItem("cookieConsent");
+  const version = localStorage.getItem("cookieConsentVersion");
+  return consent === "accepted" && version === COOKIE_CONSENT_VERSION;
 };
 
 // Check if analytics capture is allowed - either user explicitly accepted or we're in essential mode
 export const canCaptureEvents = (): boolean => {
   if (!isPostHogAvailable()) return false;
+
+  // Check for valid version
+  const version = localStorage.getItem("cookieConsentVersion");
+  if (version !== COOKIE_CONSENT_VERSION) return false;
 
   // If user has explicitly opted in
   if (posthog.has_opted_in_capturing) return true;
@@ -31,17 +40,25 @@ export const canCaptureEvents = (): boolean => {
 export const initializePostHog = (consent: string | null = null): void => {
   if (!isPostHogAvailable()) return;
 
+  // Get consent from localStorage if not provided
+  const storedConsent = localStorage.getItem("cookieConsent");
+  const storedVersion = localStorage.getItem("cookieConsentVersion");
+
+  if (consent === null) {
+    // If stored consent exists but version is outdated, don't use it
+    if (storedConsent && storedVersion === COOKIE_CONSENT_VERSION) {
+      consent = storedConsent;
+    } else {
+      consent = "pending";
+    }
+  }
+
   // If already initialized with correct settings, don't reinitialize
   if (
     (consent === "accepted" && posthog.has_opted_in_capturing) ||
     (consent === "rejected" && posthog.has_opted_out_capturing)
   ) {
     return;
-  }
-
-  // Get consent from localStorage if not provided
-  if (consent === null) {
-    consent = localStorage.getItem("cookieConsent");
   }
 
   // Initialize PostHog
