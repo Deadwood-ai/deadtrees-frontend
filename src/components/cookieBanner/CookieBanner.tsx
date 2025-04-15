@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Alert, Button, Space, Typography } from "antd";
+import { initializePostHog } from "../../utils/analytics";
 
 const { Text, Link } = Typography;
 
@@ -16,22 +17,10 @@ export function CookieBanner() {
       initializePostHog(consent);
     } else {
       setIsVisible(true);
+      // Initialize with limited functionality for users who haven't decided yet
+      initializePostHog("pending");
     }
   }, []);
-
-  const initializePostHog = (consent: string) => {
-    if (!posthog.has_opted_in_capturing && !posthog.has_opted_out_capturing) {
-      // Only initialize if not already initialized
-      posthog.init("phc_RnLiX7SIkVuBtAdcb628PjiuOYennHWZRlUXHIcVbKA", {
-        api_host: "https://eu.posthog.com",
-        persistence: consent === "accepted" ? "cookie" : "memory",
-      });
-    } else if (consent === "accepted" && posthog.has_opted_out_capturing) {
-      posthog.opt_in_capturing();
-    } else if (consent === "rejected" && !posthog.has_opted_out_capturing) {
-      posthog.opt_out_capturing();
-    }
-  };
 
   const handleAccept = () => {
     localStorage.setItem("cookieConsent", "accepted");

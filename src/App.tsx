@@ -1,5 +1,7 @@
 import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "antd";
+import { useEffect } from "react";
+import { trackPageView, initializePostHog } from "./utils/analytics";
 
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/Home";
@@ -44,26 +46,49 @@ function LayoutWrapper() {
   );
 }
 
+// Create a separate component for tracking that uses hooks
+function AppWithTracking() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Initialize PostHog on app load
+    initializePostHog();
+
+    // Track initial page view
+    trackPageView(window.location.href);
+  }, []);
+
+  useEffect(() => {
+    // Track page view on route change
+    trackPageView(location.pathname + location.search);
+  }, [location]);
+
+  return (
+    <Routes>
+      <Route path="/" element={<LayoutWrapper />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="dataset" element={<Dataset />} />
+        <Route path="dataset/:id" element={<DatasetDetails />} />
+        <Route path="deadtrees" element={<Deadtrees />} />
+        <Route path="about" element={<About />} />
+        <Route path="impressum" element={<Impressum />} />
+        <Route path="datenschutzerklaerung" element={<Datenschutzerklaerung />} />
+        <Route path="terms-of-service" element={<TermsOfService />} />
+        <Route path="sign-up" element={<SignUp />} />
+        <Route path="sign-in" element={<SignIn />} />
+        <Route path="forgot-password" element={<Forgotpassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
+      </Route>
+    </Routes>
+  );
+}
+
+// Main App component that doesn't use hooks directly
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LayoutWrapper />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="dataset" element={<Dataset />} />
-          <Route path="dataset/:id" element={<DatasetDetails />} />
-          <Route path="deadtrees" element={<Deadtrees />} />
-          <Route path="about" element={<About />} />
-          <Route path="impressum" element={<Impressum />} />
-          <Route path="datenschutzerklaerung" element={<Datenschutzerklaerung />} />
-          <Route path="terms-of-service" element={<TermsOfService />} />
-          <Route path="sign-up" element={<SignUp />} />
-          <Route path="sign-in" element={<SignIn />} />
-          <Route path="forgot-password" element={<Forgotpassword />} />
-          <Route path="reset-password" element={<ResetPassword />} />
-        </Route>
-      </Routes>
+      <AppWithTracking />
     </BrowserRouter>
   );
 }
