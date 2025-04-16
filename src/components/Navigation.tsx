@@ -67,7 +67,7 @@ export default function Navigation() {
             onClick={() => nav("/")}
             className="mr-3 h-12 cursor-pointer"
           />
-          <Tag color="warning">BETA</Tag>
+          {/* <Tag color="warning">BETA</Tag> */}
         </div>
         <div style={{ flex: 1, backgroundColor: "#f8fafc" }}>
           <Menu

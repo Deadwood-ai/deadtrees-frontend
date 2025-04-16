@@ -116,8 +116,8 @@ const Hero = () => {
           />
         </div>
         <div className="flex justify-center pt-12 md:pt-24">
-          <Tag className="mb-4 text-xl" color="warning">
-            BETA
+          <Tag className="mb-6 text-xl" color="success">
+            🚀 LAUNCHED
           </Tag>
         </div>
         <h1 className="m-0 bg-gradient-to-br from-blue-800 via-blue-600 via-purple-500 to-purple-700 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent drop-shadow-sm md:text-7xl">
