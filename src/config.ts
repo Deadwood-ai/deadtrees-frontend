@@ -1,7 +1,7 @@
 // const USE_LOCAL_SERVER = false;
 // const LOCAL_SERVER_URL = "http://0.0.0.0:8762";
 const DEV = import.meta.env.VITE_MODE === "development";
-console.log("DEV", DEV);
+//console.log("DEV", DEV);
 
 const STORAGE_SERVER_DEV = "http://localhost:8080";
 const STORAGE_SERVER_URL = "https://data2.deadtrees.earth";
@@ -36,8 +36,9 @@ export const Settings = {
   THUMBNAILS_TABLE: "v2_thumbnails",
   COLLABORATORS_TABLE: "collaborators",
   LABELS_TABLE: "v2_labels",
+  NEWSLETTER_TABLE: "newsletter",
 };
 
 for (const key in Settings) {
-  console.log(key, Settings[key as keyof typeof Settings]);
+  // console.log(key, Settings[key as keyof typeof Settings]);
 }

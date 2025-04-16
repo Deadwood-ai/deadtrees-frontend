@@ -4,6 +4,7 @@ import { PlayCircleFilled } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { supabase } from "../../hooks/useSupabase";
 import { notification } from "antd";
+import { Settings } from "../../config";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");
@@ -23,7 +24,36 @@ const Hero = () => {
       });
       return;
     }
-    const { data, error } = await supabase.from("newsletter").insert([{ email }]);
+
+    // Check if the email already exists in the newsletter table
+    const { data: existingEmails, error: checkError } = await supabase
+      .from(Settings.NEWSLETTER_TABLE)
+      .select("id")
+      .eq("email", email.trim().toLowerCase());
+
+    if (checkError) {
+      console.error("Error checking email:", checkError);
+      notification.error({
+        message: "Error",
+        description: "There was a problem checking your email. Please try again.",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    // If email already exists, notify user and exit
+    if (existingEmails && existingEmails.length > 0) {
+      notification.info({
+        message: "Already subscribed",
+        description: "This email is already subscribed to our newsletter.",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    // If email doesn't exist, add it to the database
+    const { error } = await supabase.from(Settings.NEWSLETTER_TABLE).insert([{ email: email.trim().toLowerCase() }]);
+
     if (error) {
       notification.error({
         message: "Error",
@@ -37,7 +67,7 @@ const Hero = () => {
         description: "Thank you for subscribing! You will receive updates on new features and developments.",
         placement: "topRight",
       });
-      console.log("Subscriber added:", email);
+      setEmail(""); // Clear the input field after successful subscription
     }
   };
 
@@ -75,6 +105,7 @@ const Hero = () => {
               size="large"
               className="w-full md:w-80"
               placeholder="Enter email..."
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <Button onClick={addSubscriber} className="w-full md:w-auto" type="primary" size="large">
