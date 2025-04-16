@@ -161,7 +161,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const { authors } = useData();
-  console.log("authors in upload modal", authors);
+  // console.log("authors in upload modal", authors);
   const {
     showUploadingNotification,
     updateUploadProgress,
@@ -264,7 +264,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
-      console.log("values.author", values.author);
+      // console.log("values.author", values.author);
       // Create metadata object
       const metadata = {
         license: values.license,

@@ -35,7 +35,7 @@ export default function DatasetDetails() {
     return <div>Loading...</div>;
   }
 
-  console.log(dataset);
+  // console.log(dataset);
 
   return (
     <Row

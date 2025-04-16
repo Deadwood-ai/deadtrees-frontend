@@ -25,7 +25,7 @@ const addProcess = async (dataset_id: number, task_types: string[], token: strin
     }
 
     const data = await res.json();
-    console.log("Add process response data:", data);
+    // console.log("Add process response data:", data);
     return data;
   } catch (error) {
     console.error("Add process error:", error);
