@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Alert, Button, Space, Typography } from "antd";
-import { initializePostHog, COOKIE_CONSENT_VERSION } from "../../utils/analytics";
+import { initializePostHog, isConsentNeeded, saveConsent } from "../../utils/analytics";
 
 const { Text, Link } = Typography;
 
@@ -11,41 +11,28 @@ export function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if consent has already been given with the current version
-    const consent = localStorage.getItem("cookieConsent");
-    const version = localStorage.getItem("cookieConsentVersion");
-
-    // Show banner if no consent or outdated version
-    if (consent && version === COOKIE_CONSENT_VERSION) {
-      initializePostHog(consent);
-    } else {
-      // Clear previous consent if version is outdated
-      if (consent && version !== COOKIE_CONSENT_VERSION) {
-        // If they previously opted out, keep that preference
-        if (posthog && posthog.has_opted_out_capturing) {
-          localStorage.setItem("cookieConsent", "rejected");
-          localStorage.setItem("cookieConsentVersion", COOKIE_CONSENT_VERSION);
-          initializePostHog("rejected");
-          return;
-        }
-      }
-
+    // Check if consent is needed (missing or outdated)
+    if (isConsentNeeded()) {
       setIsVisible(true);
-      // Initialize with limited functionality for users who haven't decided yet
+      // Initialize with limited functionality until user decides
       initializePostHog("pending");
+    } else {
+      // Use existing consent
+      const consent = localStorage.getItem("cookieConsent");
+      if (consent) {
+        initializePostHog(consent);
+      }
     }
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem("cookieConsent", "accepted");
-    localStorage.setItem("cookieConsentVersion", COOKIE_CONSENT_VERSION);
+    saveConsent("accepted");
     initializePostHog("accepted");
     setIsVisible(false);
   };
 
   const handleReject = () => {
-    localStorage.setItem("cookieConsent", "rejected");
-    localStorage.setItem("cookieConsentVersion", COOKIE_CONSENT_VERSION);
+    saveConsent("rejected");
     initializePostHog("rejected");
     setIsVisible(false);
   };
@@ -62,8 +49,8 @@ export function CookieBanner() {
         <div className="flex w-full flex-col items-start justify-between md:flex-row md:items-center">
           <div className="mb-2 flex-1 md:mb-0 md:mr-4">
             <Text>
-              This website uses cookies for analytics to help us improve our services. Your data helps us understand how
-              the site is used and how we can improve it.{" "}
+              We've updated our cookie policy. This website uses cookies for analytics to help us improve our services.
+              Your data helps us understand how the site is used and how we can improve it.{" "}
               <Link href="/datenschutzerklaerung" target="_blank">
                 Privacy Policy
               </Link>

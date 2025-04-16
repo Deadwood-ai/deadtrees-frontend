@@ -3,28 +3,36 @@ import { User } from "@supabase/supabase-js";
 // Access the global posthog instance
 declare const posthog: any;
 
-// Update this version whenever you want users to reaccept cookies
-export const COOKIE_CONSENT_VERSION = "2.0";
+// The current cookie consent version
+// Increment this whenever you want users to re-consent
+export const COOKIE_CONSENT_VERSION = "1.1";
+
+// Cookie storage keys
+export const COOKIE_CONSENT_KEY = "cookieConsent";
+export const COOKIE_CONSENT_VERSION_KEY = "cookieConsentVersion";
 
 // Check if PostHog is available
 const isPostHogAvailable = (): boolean => {
   return typeof posthog !== "undefined";
 };
 
-// Check if cookies are accepted with valid version
+// Check if cookies are accepted and version is current
 export const hasAcceptedCookies = (): boolean => {
-  const consent = localStorage.getItem("cookieConsent");
-  const version = localStorage.getItem("cookieConsentVersion");
-  return consent === "accepted" && version === COOKIE_CONSENT_VERSION;
+  return (
+    localStorage.getItem(COOKIE_CONSENT_KEY) === "accepted" &&
+    localStorage.getItem(COOKIE_CONSENT_VERSION_KEY) === COOKIE_CONSENT_VERSION
+  );
+};
+
+// Check if consent is needed (missing or outdated)
+export const isConsentNeeded = (): boolean => {
+  const storedVersion = localStorage.getItem(COOKIE_CONSENT_VERSION_KEY);
+  return !localStorage.getItem(COOKIE_CONSENT_KEY) || storedVersion !== COOKIE_CONSENT_VERSION;
 };
 
 // Check if analytics capture is allowed - either user explicitly accepted or we're in essential mode
 export const canCaptureEvents = (): boolean => {
   if (!isPostHogAvailable()) return false;
-
-  // Check for valid version
-  const version = localStorage.getItem("cookieConsentVersion");
-  if (version !== COOKIE_CONSENT_VERSION) return false;
 
   // If user has explicitly opted in
   if (posthog.has_opted_in_capturing) return true;
@@ -36,22 +44,25 @@ export const canCaptureEvents = (): boolean => {
   return false;
 };
 
+// Reset user consent (force them to choose again)
+export const resetConsent = (): void => {
+  localStorage.removeItem(COOKIE_CONSENT_KEY);
+  localStorage.removeItem(COOKIE_CONSENT_VERSION_KEY);
+
+  if (isPostHogAvailable()) {
+    posthog.opt_out_capturing();
+  }
+};
+
+// Save user consent with current version
+export const saveConsent = (consent: "accepted" | "rejected"): void => {
+  localStorage.setItem(COOKIE_CONSENT_KEY, consent);
+  localStorage.setItem(COOKIE_CONSENT_VERSION_KEY, COOKIE_CONSENT_VERSION);
+};
+
 // Initialize PostHog with appropriate settings
 export const initializePostHog = (consent: string | null = null): void => {
   if (!isPostHogAvailable()) return;
-
-  // Get consent from localStorage if not provided
-  const storedConsent = localStorage.getItem("cookieConsent");
-  const storedVersion = localStorage.getItem("cookieConsentVersion");
-
-  if (consent === null) {
-    // If stored consent exists but version is outdated, don't use it
-    if (storedConsent && storedVersion === COOKIE_CONSENT_VERSION) {
-      consent = storedConsent;
-    } else {
-      consent = "pending";
-    }
-  }
 
   // If already initialized with correct settings, don't reinitialize
   if (
@@ -59,6 +70,17 @@ export const initializePostHog = (consent: string | null = null): void => {
     (consent === "rejected" && posthog.has_opted_out_capturing)
   ) {
     return;
+  }
+
+  // Get consent from localStorage if not provided
+  if (consent === null) {
+    consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+
+    // If consent exists but version is outdated, consider it as pending
+    const storedVersion = localStorage.getItem(COOKIE_CONSENT_VERSION_KEY);
+    if (consent && storedVersion !== COOKIE_CONSENT_VERSION) {
+      consent = "pending";
+    }
   }
 
   // Initialize PostHog
