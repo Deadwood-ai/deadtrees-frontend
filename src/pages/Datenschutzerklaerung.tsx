@@ -91,6 +91,13 @@ export default function Datenschutzerklaerung() {
             Gestaltung). Sie werden darauf hingewiesen, dass die Nutzung dieser Webseite Cookies setzt. Sie können
             Cookies im Browser löschen oder blockieren; dies kann jedoch zu Funktionseinschränkungen führen.
           </Paragraph>
+          <Paragraph>
+            Bei Aktualisierungen unserer Cookie-Richtlinien oder Änderungen an den Tracking-Technologien werden Sie
+            aufgefordert, Ihre Cookie-Einstellungen zu erneuern. In der Zeit zwischen der Aktualisierung und Ihrer
+            erneuten Einwilligung werden nur für die Funktionalität der Website notwendige Daten verarbeitet. Die
+            Versionierung der Cookie-Einstellungen stellt sicher, dass Ihre Einwilligung stets den aktuellen Praktiken
+            entspricht.
+          </Paragraph>
         </section>
 
         <section>
@@ -365,6 +372,12 @@ export default function Datenschutzerklaerung() {
             (legitimate interest in a user-friendly design). You will be informed that this website uses cookies. You
             can delete or block cookies in your browser, but this may result in functional limitations.
           </Paragraph>
+          <Paragraph>
+            When we update our cookie policies or make changes to tracking technologies, you will be prompted to renew
+            your cookie preferences. During the period between the update and your renewed consent, only data necessary
+            for website functionality will be processed. The versioning of cookie settings ensures that your consent
+            always corresponds to current practices.
+          </Paragraph>
         </section>
 
         <section>
@@ -505,7 +518,7 @@ export default function Datenschutzerklaerung() {
             <br />
             - Usage patterns of map features
             <br />
-            Data Location: Data may be processed on servers in the USA.
+            Data Location: Mögliche Verarbeitung auf Servern in den USA.
             <br />
             Data Handling: Data is used only for rendering maps and is processed in accordance with Microsoft's privacy
             standards.
