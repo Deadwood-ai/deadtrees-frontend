@@ -53,7 +53,8 @@ const DataGallery = () => {
         !item.thumbnail_path ||
         !item.admin_level_1 ||
         !item.is_thumbnail_done ||
-        !item.is_cog_done
+        !item.is_cog_done ||
+        item.has_error
       ) {
         return false;
       }
