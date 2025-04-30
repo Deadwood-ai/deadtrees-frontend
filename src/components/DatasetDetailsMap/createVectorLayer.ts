@@ -116,7 +116,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
 
 export const createDeadwoodVectorLayer = (labelId?: number | null) =>
   createVectorLayer({
-    rpcFunctionName: "get_deadwood_vector_tiles",
+    rpcFunctionName: "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
       fillColor: "rgba(255, 50, 50, 0.8)",

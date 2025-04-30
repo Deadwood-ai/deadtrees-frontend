@@ -179,9 +179,12 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
               // Add view change handler
               MapView.on("change", () => {
+                const currentZoom = MapView.getZoom();
+                console.log("[Map] Current zoom level:", currentZoom);
+
                 setViewport({
                   center: MapView.getCenter() || [0, 0],
-                  zoom: MapView.getZoom() || 2,
+                  zoom: currentZoom || 2,
                   extent: MapView.calculateExtent(newMap.getSize() || [0, 0]),
                 });
               });
