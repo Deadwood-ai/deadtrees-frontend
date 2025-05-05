@@ -85,9 +85,9 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     url: `${config.className}/{z}/{x}/{y}`,
     maxZoom: 22,
     tileSize: 512,
-    cacheSize: 512,
-    preload: 1,
-    maxParallelImageRequests: 8,
+    cacheSize: 1024,
+    transition: 250,
+    // transition: 1,
   });
 
   const vectorLayer = new VectorTileLayer({
@@ -101,14 +101,15 @@ const createVectorLayer = (config: VectorLayerConfig) => {
         width: config.style.strokeWidth,
       }),
     }),
-    maxZoom: 22,
+    maxZoom: 23,
     className: config.className,
     renderMode: "vector",
-    renderBuffer: 512,
+    renderBuffer: 256,
     declutter: false,
-    updateWhileAnimating: true,
-    updateWhileInteracting: true,
+    updateWhileAnimating: false,
+    updateWhileInteracting: false,
     useInterimTilesOnError: true,
+    preload: 0,
   });
 
   return vectorLayer;

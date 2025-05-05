@@ -138,12 +138,33 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                 target: mapContainer.current,
                 layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer],
                 view: MapView,
+                // maxTilesLoading: 4,
                 overlays: [],
                 controls: [],
               });
 
               // Add pointer move event handler
               newMap.on("pointermove", (event) => {
+                // Get current zoom level
+                const currentZoom = MapView.getZoom();
+                // Minimum zoom level for enabling hover selection (adjust as needed)
+                const MIN_HOVER_ZOOM = 16;
+
+                // Skip hover selection if zoom level is too low
+                if (!currentZoom || currentZoom < MIN_HOVER_ZOOM) {
+                  // Reset hover state if we're zoomed out too far
+                  if (hoveredFeature || hoveredLabelId) {
+                    setHoveredFeature(null);
+                    setHoveredLabelId(null);
+
+                    const targetElement = newMap.getTargetElement();
+                    if (targetElement) {
+                      targetElement.style.cursor = "";
+                    }
+                  }
+                  return;
+                }
+
                 const pixel = newMap.getEventPixel(event.originalEvent);
                 const hit = newMap.hasFeatureAtPixel(pixel, {
                   layerFilter: (layer) => layer === deadwoodVectorLayer,
@@ -162,7 +183,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                     if (features.length > 0) {
                       const feature = features[0];
                       setHoveredFeature(feature);
-                      // console.log("[Map] hoveredFeature", feature);
                       // Store the label_id of the hovered feature
                       const polygonId = feature.get("id");
                       setHoveredLabelId(polygonId);
