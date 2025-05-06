@@ -45,7 +45,7 @@ const DataGallery = () => {
     const sorted = [...data].sort((a, b) => b.id - a.id);
 
     // Debug: Check initial data
-    console.log("Initial data count:", sorted.length);
+    // console.log("Initial data count:", sorted.length);
 
     // First filter for required fields
     const filtered = sorted.filter((item) => {
@@ -63,11 +63,11 @@ const DataGallery = () => {
     });
 
     // Debug: Check after required fields filter
-    console.log("After required fields filter:", filtered.length);
-    console.log(
-      "Sample authors:",
-      filtered.slice(0, 5).map((item) => item.authors),
-    );
+    // console.log("After required fields filter:", filtered.length);
+    // console.log(
+    //   "Sample authors:",
+    //   filtered.slice(0, 5).map((item) => item.authors),
+    // );
 
     // Create a map to store one entry per author
     const authorMap = new Map();
@@ -86,11 +86,11 @@ const DataGallery = () => {
     const oneImagePerAuthor = Array.from(new Set(authorMap.values()));
 
     // Debug: Final result
-    console.log("Final unique entries:", oneImagePerAuthor.length);
-    console.log(
-      "Final unique authors:",
-      oneImagePerAuthor.map((item) => item.authors),
-    );
+    // console.log("Final unique entries:", oneImagePerAuthor.length);
+    // console.log(
+    //   "Final unique authors:",
+    //   oneImagePerAuthor.map((item) => item.authors),
+    // );
 
     return oneImagePerAuthor;
   }, [data]);

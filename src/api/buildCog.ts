@@ -20,7 +20,7 @@ const buildCog = async (dataset_id: number, token: string) => {
     }
 
     const data = await res.json(); // Parse the response body as JSON
-    console.log("Build-cog response data:", data);
+    // console.log("Build-cog response data:", data);
     return data;
   } catch (error) {
     console.error("Build-cog error:", error);

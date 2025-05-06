@@ -278,7 +278,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         data_access: "public",
         citation_doi: values.doi,
       };
-      console.log("metadata", metadata);
+      // console.log("metadata", metadata);
 
       // Upload orthophoto with metadata
       const uploadResponse = await uploadOrthophoto(uploadFile.originFileObj, metadata);
@@ -310,7 +310,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     } catch (error) {
       // Check if the error was caused by user abortion
       if (error instanceof DOMException && error.name === "AbortError") {
-        console.log("Upload was cancelled by the user");
+        // console.log("Upload was cancelled by the user");
       } else {
         console.error("Upload error:", error);
         logger({

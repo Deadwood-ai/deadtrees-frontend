@@ -1,7 +1,7 @@
 import { Settings } from "../config";
 
 const uploadFile = async (file: any, token: string) => {
-  console.log("file in uploadFile", file);
+  // console.log("file in uploadFile", file);
   const formData = new FormData();
   formData.append("file", file.originFileObj);
 
@@ -19,14 +19,14 @@ const uploadFile = async (file: any, token: string) => {
         body: formData,
       },
     );
-    console.log("Upload dataset response:", res);
+    // console.log("Upload dataset response:", res);
 
     if (!res.ok) {
       throw new Error(`HTTP error! Status: ${res.status}`);
     }
 
     const data = await res.json(); // Parse the response body as JSON
-    console.log("Upload dataset response data:", data);
+    // console.log("Upload dataset response data:", data);
     return data;
   } catch (error) {
     console.error("Upload dataset error:", error);

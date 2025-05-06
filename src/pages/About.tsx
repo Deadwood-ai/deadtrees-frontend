@@ -52,7 +52,7 @@ export default function About() {
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
   const { collaborators } = useData();
-  console.log("collaborators:", collaborators);
+  // console.log("collaborators:", collaborators);
 
   const [isPlaying, setIsPlaying] = useState(false);
 

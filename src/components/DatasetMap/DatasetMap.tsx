@@ -89,7 +89,7 @@ const DatasetMapOL = ({
     const visibleFeatures = source.getFeaturesInExtent(extent);
     const visibleIds = visibleFeatures.map((feature) => String(feature.get("id")));
 
-    console.log(`Found ${visibleIds.length} visible features`);
+    // console.log(`Found ${visibleIds.length} visible features`);
 
     // Simply return the visible features even if empty array
     // No need to handle the empty case specially anymore
@@ -291,7 +291,7 @@ const DatasetMapOL = ({
   }, [updateVisibleFeatures, setHoveredItem, setNavigationSource, navigate]);
 
   useEffect(() => {
-    console.log("updating data", data.length);
+    // console.log("updating data", data.length);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current && mapRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
@@ -375,13 +375,13 @@ const DatasetMapOL = ({
     if (mapRef.current && vectorLayerExtendRef.current) {
       const source = vectorLayerExtendRef.current.getSource();
       if (source && source.getFeatures().length > 0) {
-        console.log(`Data updated, found ${source.getFeatures().length} features total`);
+        // console.log(`Data updated, found ${source.getFeatures().length} features total`);
         // Update visible features immediately
         updateVisibleFeatures();
       } else {
         // If no features found, try again after a short delay to ensure rendering complete
         const timer = setTimeout(() => {
-          console.log("Trying to update visible features after delay");
+          // console.log("Trying to update visible features after delay");
           updateVisibleFeatures();
         }, 300);
 

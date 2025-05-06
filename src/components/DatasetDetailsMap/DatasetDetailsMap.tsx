@@ -201,7 +201,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               // Add view change handler
               MapView.on("change", () => {
                 const currentZoom = MapView.getZoom();
-                console.log("[Map] Current zoom level:", currentZoom);
+                // console.log("[Map] Current zoom level:", currentZoom);
 
                 setViewport({
                   center: MapView.getCenter() || [0, 0],
