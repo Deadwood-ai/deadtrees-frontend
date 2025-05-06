@@ -2,6 +2,7 @@ import { ArrowLeftOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { Button, Space, Tooltip, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 import { IDataset } from "../../types/dataset";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 interface DatasetNavigationProps {
   currentDatasetId: number;
@@ -15,6 +16,7 @@ export default function DatasetNavigation({
   isLoading,
 }: DatasetNavigationProps) {
   const navigate = useNavigate();
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   if (isLoading) {
     return (
@@ -60,7 +62,13 @@ export default function DatasetNavigation({
           <Button
             icon={<ArrowLeftOutlined />}
             disabled={!prevDataset}
-            onClick={() => prevDataset && navigate(`/dataset/${prevDataset.id}`)}
+            onClick={() => {
+              if (prevDataset) {
+                // Set navigation source to 'navigation' to preserve viewport
+                setNavigationSource("navigation");
+                navigate(`/dataset/${prevDataset.id}`);
+              }
+            }}
           >
             Previous
           </Button>
@@ -69,7 +77,13 @@ export default function DatasetNavigation({
           <Button
             icon={<ArrowRightOutlined />}
             disabled={!nextDataset}
-            onClick={() => nextDataset && navigate(`/dataset/${nextDataset.id}`)}
+            onClick={() => {
+              if (nextDataset) {
+                // Set navigation source to 'navigation' to preserve viewport
+                setNavigationSource("navigation");
+                navigate(`/dataset/${nextDataset.id}`);
+              }
+            }}
           >
             Next
           </Button>

@@ -5,6 +5,7 @@ import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useData } from "../../hooks/useDataProvider";
 import { Settings } from "../../config";
 import countryList from "../../utils/countryList";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
@@ -36,6 +37,7 @@ const DataGallery = () => {
   const { data } = useData();
   const carouselRef = useRef<any>(null);
   const navigate = useNavigate();
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
@@ -94,6 +96,7 @@ const DataGallery = () => {
   }, [data]);
 
   const onClickHandler = (id: number) => {
+    setNavigationSource("dataset");
     navigate(`/dataset/${id}`);
   };
 

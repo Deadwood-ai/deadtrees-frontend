@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
+import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 
 interface ListItemProps {
   item: IDataset;
@@ -17,6 +18,7 @@ interface ListItemProps {
 
 const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: ListItemProps) => {
   const navigate = useNavigate();
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const handleMouseEnter = () => {
     if (setHoveredItem) {
@@ -31,6 +33,7 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
   };
 
   const onClickHandler = (item: IDataset) => {
+    setNavigationSource("dataset");
     navigate(`/dataset/${item.id}`);
   };
 

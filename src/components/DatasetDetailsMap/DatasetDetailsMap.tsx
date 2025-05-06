@@ -31,7 +31,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
-  const { viewport, setViewport } = useDatasetDetailsMap();
+  const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
 
   // Fetch label data for the current dataset
   const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
@@ -358,6 +358,19 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
     }
   }, [hoveredLabelId]);
+
+  // Additional effect to handle navigation source
+  useEffect(() => {
+    // If navigated from dataset list, reset viewport
+    if (navigatedFrom === "dataset") {
+      setViewport({
+        center: [0, 0],
+        zoom: 2,
+      });
+    }
+    // We don't need to do anything special for 'navigation' source
+    // as the viewport is already preserved
+  }, [navigatedFrom, setViewport]);
 
   return (
     <div className="h-full w-full">

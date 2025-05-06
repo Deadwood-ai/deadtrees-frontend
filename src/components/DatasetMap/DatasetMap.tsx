@@ -22,6 +22,7 @@ import "./tooltip.css";
 import { useData } from "../../hooks/useDataProvider";
 import { debounce } from "lodash";
 import { Settings } from "../../config";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const defaultExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.4] }),
@@ -76,6 +77,7 @@ const DatasetMapOL = ({
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
   const { filter, setFilter } = useData();
   const [userInteracted, setUserInteracted] = useState(false);
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const updateVisibleFeatures = useCallback(() => {
     if (!mapRef.current || !vectorLayerExtendRef.current) return;
@@ -224,6 +226,7 @@ const DatasetMapOL = ({
         if (selectedFeatures.length > 0) {
           const feature = selectedFeatures[0];
           const id = feature.get("id");
+          setNavigationSource("dataset");
           navigate(`/dataset/${id}`);
         }
       });
@@ -285,7 +288,7 @@ const DatasetMapOL = ({
         }
       };
     }
-  }, [updateVisibleFeatures, setHoveredItem]); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
+  }, [updateVisibleFeatures, setHoveredItem, setNavigationSource, navigate]);
 
   useEffect(() => {
     console.log("updating data", data.length);
