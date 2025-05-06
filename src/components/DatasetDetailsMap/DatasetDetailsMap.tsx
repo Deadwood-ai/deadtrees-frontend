@@ -69,6 +69,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }),
         maxZoom: 23,
         cacheSize: 4096,
+        preload: 0,
         // preload: 4,
       });
 
