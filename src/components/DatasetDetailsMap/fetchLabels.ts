@@ -7,10 +7,10 @@ const fetchLabels = async ({ dataset_id }: { dataset_id: number }): Promise<ILab
   const { data, error } = await supabase.from(Settings.LABELS_TABLE).select("*").eq("dataset_id", dataset_id);
 
   if (error) {
-    console.error("Error fetching data:", error);
+    // console.error("Error fetching data:", error);
     return null;
   } else {
-    console.log("Data fetched:", data);
+    // console.log("Data fetched:", data);
 
     if (!data || data.length === 0) {
       return null;

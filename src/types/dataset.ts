@@ -24,40 +24,65 @@ export interface ILabelObject {
   file_type: string;
 }
 
+export enum IBiome {
+  TropicalMoistForests = "Tropical and Subtropical Moist Broadleaf Forests",
+  TropicalDryForests = "Tropical and Subtropical Dry Broadleaf Forests",
+  TropicalConiferousForests = "Tropical and Subtropical Coniferous Forests",
+  TemperateBroadleafForests = "Temperate Broadleaf and Mixed Forests",
+  TemperateConiferousForests = "Temperate Coniferous Forests",
+  BorealForests = "Boreal Forests/Taiga",
+  TropicalGrasslands = "Tropical and Subtropical Grasslands, Savannas, and Shrublands",
+  TemperateGrasslands = "Temperate Grasslands, Savannas, and Shrublands",
+  FloodedGrasslands = "Flooded Grasslands and Savannas",
+  MontaneGrasslands = "Montane Grasslands and Shrublands",
+  Tundra = "Tundra",
+  MediterraneanForests = "Mediterranean Forests, Woodlands, and Scrub",
+  Deserts = "Deserts and Xeric Shrublands",
+  Mangroves = "Mangroves",
+}
+
 export interface IDataset {
   id: number;
-  file_name: string | null;
-  file_size: number;
-  bbox: string | null;
-  status: string | null;
-  created_at: string;
-  copy_time: number;
-  sha256: string;
-  file_alias: string | null;
-  dataset_id: number;
   user_id: string;
-  name: string;
+  created_at: string;
+  file_name: string;
   license: string;
   platform: string;
   project_id: string | null;
-  authors: string | null;
-  spectral_properties: string | null;
-  citation_doi: string | null;
+  authors: string[] | null;
+  aquisition_year: string;
+  aquisition_month: string;
+  aquisition_day: string;
   additional_information: string | null;
   data_access: IDataAccess;
+  citation_doi: string | null;
+  ortho_file_name: string | null;
+  ortho_file_size: number;
+  bbox: string | null;
+  sha256: string;
+  current_status: string;
+  is_upload_done: boolean;
+  is_ortho_done: boolean;
+  is_cog_done: boolean;
+  is_thumbnail_done: boolean;
+  is_deadwood_done: boolean;
+  is_forest_cover_done: boolean;
+  is_metadata_done: boolean;
+  is_audited: boolean;
+  has_error: boolean;
+  error_message: string | null;
+  cog_file_name: string | null;
+  cog_path: string | null;
+  cog_file_size: number | null;
+  thumbnail_file_name: string | null;
+  thumbnail_path: string | null;
   admin_level_1: string | null;
   admin_level_2: string | null;
   admin_level_3: string | null;
-  aquisition_day: string;
-  aquisition_month: string;
-  aquisition_year: string;
-  cog_folder: string | null;
-  cog_name: string | null;
-  cog_url: string | null;
-  label_source: string | null;
-  label_quality: string | null;
-  label_type: string | null;
-  thumbnail_path: string | null;
+  biome_name: string | null;
+  has_labels: boolean;
+  has_deadwood_prediction: boolean;
+  ortho_upload_runtime?: number | null;
 }
 
 export interface ILabels {

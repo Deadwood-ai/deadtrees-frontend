@@ -20,7 +20,7 @@ const addMetadata = async (dataset_id: number, metadata: any, token: string) => 
     }
 
     const data = await res.json();
-    console.log("Add-metadata response data:", data);
+    // console.log("Add-metadata response data:", data);
     return data;
   } catch (error) {
     console.error("Add-metadata error:", error);

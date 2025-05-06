@@ -4,10 +4,12 @@ import { PlayCircleFilled } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { supabase } from "../../hooks/useSupabase";
 import { notification } from "antd";
+import { Settings } from "../../config";
 
 const Hero = () => {
   const [email, setEmail] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const emailCheck = (email: string) => {
     const re = /\S+@\S+\.\S+/;
@@ -23,22 +25,81 @@ const Hero = () => {
       });
       return;
     }
-    const { data, error } = await supabase.from("newsletter").insert([{ email }]);
-    if (error) {
+
+    setIsSubmitting(true);
+
+    // First check if the email exists
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data: existingEmails, error: checkError } = await supabase
+      .from(Settings.NEWSLETTER_TABLE)
+      .select("email")
+      .eq("email", normalizedEmail);
+
+    if (checkError) {
+      console.error("Error checking email:", checkError);
+      notification.error({
+        message: "Error",
+        description: "There was a problem checking your email. Please try again.",
+        placement: "topRight",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // If email already exists, notify user and exit
+    if (existingEmails && existingEmails.length > 0) {
+      notification.info({
+        message: "Already subscribed",
+        description: "This email is already subscribed to our newsletter.",
+        placement: "topRight",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Get highest ID to manually increment
+    const { data: maxIdData, error: maxIdError } = await supabase
+      .from(Settings.NEWSLETTER_TABLE)
+      .select("id")
+      .order("id", { ascending: false })
+      .limit(1);
+
+    if (maxIdError) {
+      console.error("Error getting max ID:", maxIdError);
+      notification.error({
+        message: "Error",
+        description: "An error occurred while processing your subscription.",
+        placement: "topRight",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Calculate next ID (or use 1 if no records exist)
+    const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
+
+    // Insert with explicit ID
+    const { error: insertError } = await supabase
+      .from(Settings.NEWSLETTER_TABLE)
+      .insert([{ id: nextId, email: normalizedEmail }]);
+
+    if (insertError) {
       notification.error({
         message: "Error",
         description: "An error occurred while adding the subscriber.",
         placement: "topRight",
       });
-      console.error("Error adding subscriber:", error);
+      console.error("Error adding subscriber:", insertError);
     } else {
       notification.success({
         message: "Thank you!",
-        description: "You will be notified as soon as the service is up and running.",
+        description: "Thank you for subscribing! You will receive updates on new features and developments.",
         placement: "topRight",
       });
-      console.log("Subscriber added:", email);
+      setEmail(""); // Clear the input field after successful subscription
     }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -55,8 +116,8 @@ const Hero = () => {
           />
         </div>
         <div className="flex justify-center pt-12 md:pt-24">
-          <Tag className="mb-4 text-xl" color="warning">
-            BETA
+          <Tag className="mb-6 text-xl" color="success">
+            🚀 LAUNCHED
           </Tag>
         </div>
         <h1 className="m-0 bg-gradient-to-br from-blue-800 via-blue-600 via-purple-500 to-purple-700 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent drop-shadow-sm md:text-7xl">
@@ -75,9 +136,18 @@ const Hero = () => {
               size="large"
               className="w-full md:w-80"
               placeholder="Enter email..."
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isSubmitting}
             />
-            <Button onClick={addSubscriber} className="w-full md:w-auto" type="primary" size="large">
+            <Button
+              onClick={addSubscriber}
+              className="w-full md:w-auto"
+              type="primary"
+              size="large"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            >
               Get notified
             </Button>
           </div>

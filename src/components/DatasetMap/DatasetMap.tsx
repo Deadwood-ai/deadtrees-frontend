@@ -22,6 +22,7 @@ import "./tooltip.css";
 import { useData } from "../../hooks/useDataProvider";
 import { debounce } from "lodash";
 import { Settings } from "../../config";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const defaultExtendStyle = new Style({
   fill: new Fill({ color: [0, 0, 255, 0.4] }),
@@ -76,15 +77,23 @@ const DatasetMapOL = ({
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
   const { filter, setFilter } = useData();
   const [userInteracted, setUserInteracted] = useState(false);
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const updateVisibleFeatures = useCallback(() => {
-    // console.log("updateVisibleFeatures");
-    if (mapRef.current && vectorLayerExtendRef.current) {
-      const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
-      const visibleFeatures = vectorLayerExtendRef.current.getSource().getFeaturesInExtent(extent);
-      const visibleIds = visibleFeatures.map((feature) => feature.get("id"));
-      setVisibleFeatures(visibleIds);
-    }
+    if (!mapRef.current || !vectorLayerExtendRef.current) return;
+
+    const extent = mapRef.current.getView().calculateExtent(mapRef.current.getSize());
+    const source = vectorLayerExtendRef.current.getSource();
+    if (!source) return;
+
+    const visibleFeatures = source.getFeaturesInExtent(extent);
+    const visibleIds = visibleFeatures.map((feature) => String(feature.get("id")));
+
+    // console.log(`Found ${visibleIds.length} visible features`);
+
+    // Simply return the visible features even if empty array
+    // No need to handle the empty case specially anymore
+    setVisibleFeatures(visibleIds);
   }, [setVisibleFeatures]);
 
   useEffect(() => {
@@ -113,7 +122,12 @@ const DatasetMapOL = ({
       mapRef.current = map;
 
       const vectorSourceExtend = new VectorSource();
-      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend });
+      const vectorLayerExtend = new VectorLayer({
+        source: vectorSourceExtend,
+        minZoom: 9,
+        updateWhileAnimating: false,
+        updateWhileInteracting: false,
+      });
       vectorLayerExtendRef.current = vectorLayerExtend;
       map.addLayer(vectorLayerExtend);
 
@@ -121,6 +135,8 @@ const DatasetMapOL = ({
       const vectorLayerMarker = new VectorLayer({
         source: vectorSourceMarker,
         maxZoom: 11,
+        updateWhileAnimating: false,
+        updateWhileInteracting: false,
       });
       vectorLayerMarkerRef.current = vectorLayerMarker;
       map.addLayer(vectorLayerMarker);
@@ -169,12 +185,6 @@ const DatasetMapOL = ({
           map.getTargetElement().style.cursor = "pointer";
           tooltip.setPosition(evt.coordinate);
 
-          // Create tooltip content with thumbnail
-          // <img
-          //   class="tooltip-thumbnail"
-          //   src="${thumbnailPath ? Settings.THUMBNAIL_URL + thumbnailPath : "/assets/tree-icon.png"}"
-          //   alt="${hoveredFeature.get("title")}"
-          // />
           const tooltipContent = `
             <div class="tooltip-content">
 
@@ -216,6 +226,7 @@ const DatasetMapOL = ({
         if (selectedFeatures.length > 0) {
           const feature = selectedFeatures[0];
           const id = feature.get("id");
+          setNavigationSource("dataset");
           navigate(`/dataset/${id}`);
         }
       });
@@ -277,10 +288,10 @@ const DatasetMapOL = ({
         }
       };
     }
-  }, [updateVisibleFeatures, setHoveredItem]); // Add updateVisibleFeaturesCallback and setHoveredItem to the dependency array
+  }, [updateVisibleFeatures, setHoveredItem, setNavigationSource, navigate]);
 
   useEffect(() => {
-    console.log("updating data", data.length);
+    // console.log("updating data", data.length);
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current && mapRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
@@ -290,38 +301,40 @@ const DatasetMapOL = ({
 
       data.forEach((dataset) => {
         if (dataset.bbox) {
-          const extentFeature = new Feature(fromExtent(parseBBox(dataset.bbox)).transform("EPSG:4326", "EPSG:3857"));
-          extentFeature.setProperties({
-            id: dataset.id,
-            title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
-            thumbnail_path: dataset.thumbnail_path,
-            date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-              .toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-              .toString(),
-          });
-          extentFeature.setStyle(defaultExtendStyle);
-          vectorSourceExtend.addFeature(extentFeature);
+          const parsedBBox = parseBBox(dataset.bbox);
+          if (parsedBBox) {
+            const extentFeature = new Feature(fromExtent(parsedBBox).transform("EPSG:4326", "EPSG:3857"));
+            extentFeature.setProperties({
+              id: dataset.id,
+              title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
+              thumbnail_path: dataset.thumbnail_path,
+              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
+                .toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+                .toString(),
+            });
+            extentFeature.setStyle(defaultExtendStyle);
+            vectorSourceExtend.addFeature(extentFeature);
 
-          const point = extentFeature.getGeometry().getInteriorPoint();
-          const pointFeature = new Feature(point);
-          pointFeature.setProperties({
-            id: dataset.id,
-            title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, "_"),
-            date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-              .toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-              .toString(),
-          });
-          pointFeature.setStyle(defaultMarkerStyle);
-
-          vectorSourceMarker.addFeature(pointFeature);
+            const point = extentFeature.getGeometry().getInteriorPoint();
+            const pointFeature = new Feature(point);
+            pointFeature.setProperties({
+              id: dataset.id,
+              title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, "_"),
+              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
+                .toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+                .toString(),
+            });
+            pointFeature.setStyle(defaultMarkerStyle);
+            vectorSourceMarker.addFeature(pointFeature);
+          }
         }
       });
       if (filter) {
@@ -357,21 +370,25 @@ const DatasetMapOL = ({
     }
   }, [hoveredItem]);
 
-  // useEffect(() => {
-  //   console.log("useEffect on moveend");
-  //   if (mapRef.current) {
-  //     const moveEndListener = () => {
-  //       debouncedUpdateVisibleFeatures();
-  //       setUserInteracted(true);
-  //     };
-  //     mapRef.current.on('moveend', moveEndListener);
-  //     return () => {
-  //       if (mapRef.current) {
-  //         mapRef.current.un('moveend', moveEndListener);
-  //       }
-  //     };
-  //   }
-  // }, [debouncedUpdateVisibleFeatures]);
+  // Update visible features after data changes and map is rendered
+  useEffect(() => {
+    if (mapRef.current && vectorLayerExtendRef.current) {
+      const source = vectorLayerExtendRef.current.getSource();
+      if (source && source.getFeatures().length > 0) {
+        // console.log(`Data updated, found ${source.getFeatures().length} features total`);
+        // Update visible features immediately
+        updateVisibleFeatures();
+      } else {
+        // If no features found, try again after a short delay to ensure rendering complete
+        const timer = setTimeout(() => {
+          // console.log("Trying to update visible features after delay");
+          updateVisibleFeatures();
+        }, 300);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [data, updateVisibleFeatures]);
 
   return <div ref={mapContainer} style={{ width: "100%", height: "100%", borderRadius: 8 }}></div>;
 };

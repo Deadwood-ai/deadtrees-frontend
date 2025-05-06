@@ -18,6 +18,7 @@ const createDeadwoodGeotiffLayer = (year: string) => {
   const layer = new TileLayerWebGL({
     source,
     className: "geotiff-layer" + year,
+    opacity: 0,
     style: {
       color: [
         "interpolate",

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useEffect } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../hooks/useSupabase";
 import { IDataset, IThumbnail, ICollaborators } from "../types/dataset";
@@ -29,8 +29,8 @@ type DataContextType = {
 const DataContext = createContext<DataContextType>({
   data: undefined,
   filter: "",
-  setFilter: () => { },
-  setFilterTag: () => { },
+  setFilter: () => {},
+  setFilterTag: () => {},
   authors: undefined,
   thumbnails: undefined,
   collaborators: undefined,
@@ -39,8 +39,10 @@ const DataContext = createContext<DataContextType>({
 });
 
 const fetchData = async () => {
-  const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
-  // console.log("fetchData", data);
+  const { data, error } = await supabase
+    .from(Settings.DATA_TABLE_FULL)
+    .select("*")
+    .filter("data_access", "eq", "public");
   if (error) throw error;
   return data;
 };
@@ -56,35 +58,42 @@ const DataProvider = ({ children }: DataProviderProps) => {
   const queryClient = useQueryClient();
 
   const { data: rawData, isLoading: isLoadingRawData } = useQuery({
-    queryKey: ['datasets'],
+    queryKey: ["datasets"],
     queryFn: fetchData,
-    // staleTime: 0,
   });
 
   const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery({
-    queryKey: ['collaborators'],
+    queryKey: ["collaborators"],
     queryFn: fetchCollaborators,
   });
 
   const { data: userData } = useQuery({
-    queryKey: ['userData', session?.user.id, rawData],
+    queryKey: ["userData", session?.user.id, rawData],
     enabled: !!session && !!rawData,
     queryFn: () => rawData?.filter((item) => item.user_id === session?.user.id) || [],
   });
 
   const { data: authors } = useQuery({
-    queryKey: ['authors', rawData],
+    queryKey: ["authors", rawData],
     enabled: !!rawData,
     queryFn: () => {
-      const authorsUnique = [...new Set(rawData?.map((item) => item.authors).filter(Boolean))];
-      return authorsUnique.map((author) => ({
+      // Flatten all author arrays and extract individual authors
+      const allAuthors = rawData
+        ?.filter((item) => Array.isArray(item.authors))
+        .flatMap((item) => item.authors)
+        .filter(Boolean);
+
+      // Create a Set to get unique authors
+      const uniqueAuthors = [...new Set(allAuthors)];
+
+      // Map to the required format
+      return uniqueAuthors.map((author) => ({
         label: author,
         value: author,
       }));
     },
   });
 
-  // ... other state management (filter, filterTag, etc.) remains the same
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
 
@@ -108,30 +117,6 @@ const DataProvider = ({ children }: DataProviderProps) => {
     });
   }, [filter, rawData, filterTag]);
 
-  // Set up real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel("datasets_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-        },
-        (payload) => {
-          if (payload.new.user_id === session?.user.id) {
-            console.log("Invalidating datasets query, running refetch");
-            queryClient.invalidateQueries({ queryKey: ['datasets'] });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, session]);
-
   const value = useMemo(
     () => ({
       data: filteredData,
@@ -143,7 +128,7 @@ const DataProvider = ({ children }: DataProviderProps) => {
       collaborators,
       isLoading: isLoadingRawData || isLoadingCollaborators,
     }),
-    [filteredData, userData, authors, filter, collaborators, isLoadingRawData, isLoadingCollaborators]
+    [filteredData, userData, authors, filter, collaborators, isLoadingRawData, isLoadingCollaborators],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

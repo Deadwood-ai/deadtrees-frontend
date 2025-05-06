@@ -15,19 +15,44 @@ const { TabPane } = Tabs;
 
 export default function About() {
   const logos = [
-    { path: "assets/logos/copenhagen.png" },
-    { path: "assets/logos/ecosystem-health-observatory.jpg" },
-    { path: "assets/logos/julius-kuenen-institut.svg" },
-    { path: "assets/logos/tree-mortality-network.png" },
-    { path: "assets/logos/NFDI4Earth_logo.jpg" },
-    { path: "assets/logos/esa.jpg" },
+    {
+      // path: "assets/logos/copenhagen.png",
+      path: "assets/logos/logo-copenhagen.svg",
+      text: "Department of Geosciences and Natural Resource Management, University of Copenhagen",
+      url: "https://researchprofiles.ku.dk/en/organisations/institut-for-geovidenskab-og-naturforvaltning",
+    },
+    {
+      path: "assets/logos/ecosystem-health-observatory.jpg",
+      text: "Global Ecosystem Health Observatory (GEHO), University of Easter Finland",
+      url: "https://uefconnect.uef.fi/en/global-ecosystem-health-observatory-geho/",
+    },
+    {
+      path: "assets/logos/julius-kuenen-institut.svg",
+      text: "Institute for Forest Protection, Julius Kühn-Institut (JKI)",
+      url: "https://www.julius-kuehn.de/en/ws",
+    },
+    {
+      path: "assets/logos/tree-mortality-network.png",
+      text: "Tree Mortality Network, International Union of Forest Research Organizations (IUFRO)",
+      url: "https://www.tree-mortality.net/",
+    },
+    {
+      path: "assets/logos/NFDI4Earth_logo.jpg",
+      text: "National Research Infrastructure for the Earth System Sciences, NFDI4Earth",
+      url: "https://nfdi4earth.de/",
+    },
+    {
+      path: "assets/logos/esa.jpg",
+      text: "European Space Agency",
+      url: "https://www.esa.int/",
+    },
   ];
 
   const navigate = useNavigate();
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
   const { collaborators } = useData();
-  console.log("collaborators:", collaborators);
+  // console.log("collaborators:", collaborators);
 
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -287,7 +312,7 @@ export default function About() {
         <Button
           className="mb-8 mt-4"
           type="primary"
-          href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration"
+          href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration"
         >
           Get in Contact
         </Button>

@@ -1,69 +1,47 @@
 import { Slider } from "antd";
-import YearSelectionButtons from "../DeadwoodMap/YearSelectionButtons";
-import { ILabels } from "../../types/dataset";
-import { useEffect } from "react";
 
 interface DeadwoodCardDetailsProps {
-  year: string;
-  sliderValueYear: number;
-  sliderValueLabels: number;
-  setSliderValueLabels: React.Dispatch<React.SetStateAction<number>>;
-  setSliderValueYear: React.Dispatch<React.SetStateAction<number>>;
-  setSelectedYear: React.Dispatch<React.SetStateAction<string>>;
-  labels: ILabels | null;
-  adminLevel1: string | null | undefined;
-  showLegend: (show: boolean) => void;
+  deadwoodOpacity: number;
+  setDeadwoodOpacity: React.Dispatch<React.SetStateAction<number>>;
+  droneImageOpacity: number; // renamed from satelliteOpacity
+  setDroneImageOpacity: React.Dispatch<React.SetStateAction<number>>; // renamed from setSatelliteOpacity
+  showLegend: boolean;
 }
 
 export function DeadwoodCardDetails({
-  year,
-  sliderValueYear,
-  setSliderValueYear,
-  setSelectedYear,
-  setSliderValueLabels,
-  sliderValueLabels,
-  labels,
-  adminLevel1,
+  deadwoodOpacity,
+  setDeadwoodOpacity,
+  droneImageOpacity,
+  setDroneImageOpacity,
   showLegend,
 }: DeadwoodCardDetailsProps) {
-  const isGermany = adminLevel1 === "Germany";
-
-  if (!adminLevel1) return null;
-  if (!labels && !isGermany) return null;
-
-  useEffect(() => {
-    showLegend(isGermany);
-  }, [isGermany, showLegend]);
-
   return (
     <div>
       <div className="flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
-        <p className="m-0 py-2 text-lg text-gray-800">Deadwood for {year}</p>
+        <p className="m-0 py-2 text-lg text-gray-800">Deadwood Detection</p>
 
-        {labels && (
-          <div className="mb-2 flex w-full items-end">
-            <p className="m-0 w-full text-xs text-gray-600">
-              {labels.label_source === "model_prediction" ? "Model-based Prediction" : "Drone-based label"}
-            </p>
-            <div className="w-2/3">
-              <p className="m-0 w-full text-xs text-gray-600">opacity</p>
-              <Slider
-                defaultValue={0.6}
-                className="m-0 w-full"
-                step={0.01}
-                max={1}
-                value={sliderValueLabels}
-                onChange={(value) => setSliderValueLabels(value as number)}
-                min={0}
-              />
-            </div>
+        {/* Drone Imagery Controls */}
+        <div className="mb-1 flex w-full items-end border-b pb-1">
+          <p className="m-0 w-full text-xs text-gray-600">Drone Imagery</p>
+          <div className="w-2/3">
+            <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+            <Slider
+              className="m-0 w-full"
+              defaultValue={1}
+              step={0.01}
+              max={1}
+              value={droneImageOpacity}
+              onChange={(value) => setDroneImageOpacity(value as number)}
+              min={0}
+            />
           </div>
-        )}
+        </div>
 
-        {isGermany && (
-          <>
+        {showLegend && (
+          <div>
+            {/* Deadwood Layer Controls */}
             <div className="mb-2 flex w-full items-end">
-              <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
+              <p className="m-0 w-full text-xs text-gray-600">Deadwood Segmentation</p>
               <div className="w-2/3">
                 <p className="m-0 w-full text-xs text-gray-600">opacity</p>
                 <Slider
@@ -71,23 +49,23 @@ export function DeadwoodCardDetails({
                   defaultValue={1}
                   step={0.01}
                   max={1}
-                  value={sliderValueYear}
-                  onChange={(value) => setSliderValueYear(value as number)}
+                  value={deadwoodOpacity}
+                  onChange={(value) => setDeadwoodOpacity(value as number)}
                   min={0}
                 />
               </div>
             </div>
-            <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
-            <div className="mb-4 flex items-center space-x-2">
-              <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
+
+            <div className="mb-4 flex items-center space-x-2 pt-2">
+              <p className="m-0  text-xs text-gray-800">Method by:</p>
               <a
                 className="m-0 italic underline"
-                href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
+                href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
               >
-                Schiefer et al., 2023
+                Möhring et al. (under review)
               </a>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

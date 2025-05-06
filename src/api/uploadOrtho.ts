@@ -5,11 +5,24 @@ import { isTokenExpiringSoon } from "../utils/isTokenExpiringSoon";
 
 interface UploadOptions {
   file: File;
+  metadata: {
+    license: string;
+    platform: string;
+    authors: string[];
+    project_id?: string;
+    aquisition_year?: number;
+    aquisition_month?: number;
+    aquisition_day?: number;
+    additional_information?: string;
+    data_access?: string;
+    citation_doi?: string;
+  };
   onProgress: (progress: { percent: number }) => void;
   onSuccess: (response: any) => void;
   onError: (error: Error) => void;
   uploadId: string;
   session: any;
+  signal?: AbortSignal;
 }
 
 interface ChunkInfo {
@@ -19,7 +32,7 @@ interface ChunkInfo {
   data: Blob;
 }
 
-const CHUNK_SIZE = 300 * 1024 * 1024; // 100 MB
+const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
 
 // const refreshToken = async () => {
 //   const { data, error } = await supabase.auth.refreshSession();
@@ -31,10 +44,17 @@ const CHUNK_SIZE = 300 * 1024 * 1024; // 100 MB
 // };
 
 const uploadOrtho = async (options: UploadOptions) => {
-  const { file, onProgress, onSuccess, onError, uploadId, session } = options;
+  const { file, onProgress, onSuccess, onError, uploadId, session, signal } = options;
   const uploadStartTime = Date.now();
 
   try {
+    // Set up an event listener for the abort signal
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        throw new DOMException("Upload cancelled by user", "AbortError");
+      });
+    }
+
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const resUpload = await uploadChunks(file, totalChunks, uploadStartTime, options);
     onSuccess(resUpload);
@@ -56,12 +76,19 @@ async function uploadChunks(file: File, totalChunks: number, uploadStartTime: nu
         throw error;
       }
       currentSession = data.session;
-      console.log("Token refreshed");
-      console.log("currentSession", currentSession);
+      // console.log("Token refreshed");
+      // console.log("currentSession", currentSession);
     }
 
     const chunkInfo = getChunkInfo(file, chunkIndex);
-    const formData = createFormData(chunkInfo, totalChunks, file.name, options.uploadId, uploadStartTime);
+    const formData = createFormData(
+      chunkInfo,
+      totalChunks,
+      file.name,
+      options.uploadId,
+      uploadStartTime,
+      options.metadata,
+    );
 
     resUpload = await uploadSingleChunk(formData, chunkInfo, file.size, {
       ...options,
@@ -89,14 +116,44 @@ function createFormData(
   fileName: string,
   uploadId: string,
   startTime: number,
+  metadata: {
+    license: string;
+    platform: string;
+    authors: string[];
+    project_id?: string;
+    aquisition_year?: number;
+    aquisition_month?: number;
+    aquisition_day?: number;
+    additional_information?: string;
+    data_access?: string;
+    citation_doi?: string;
+  },
 ): FormData {
   const formData = new FormData();
   formData.append("file", chunkInfo.data, fileName);
   formData.append("chunk_index", chunkInfo.index.toString());
   formData.append("chunks_total", totalChunks.toString());
-  formData.append("filename", fileName);
   formData.append("upload_id", uploadId);
   formData.append("copy_time", calculateCopyTime(startTime).toString());
+
+  // Add metadata fields
+  formData.append("license", "CC BY");
+  formData.append("platform", metadata.platform);
+
+  // Handle authors array
+  metadata.authors.forEach((author) => {
+    formData.append("authors", author);
+  });
+
+  // Optional fields
+  if (metadata.project_id) formData.append("project_id", metadata.project_id);
+  if (metadata.aquisition_year) formData.append("aquisition_year", metadata.aquisition_year.toString());
+  if (metadata.aquisition_month) formData.append("aquisition_month", metadata.aquisition_month.toString());
+  if (metadata.aquisition_day) formData.append("aquisition_day", metadata.aquisition_day.toString());
+  if (metadata.additional_information) formData.append("additional_information", metadata.additional_information);
+  if (metadata.data_access) formData.append("data_access", metadata.data_access);
+  if (metadata.citation_doi) formData.append("citation_doi", metadata.citation_doi);
+
   return formData;
 }
 
@@ -105,10 +162,15 @@ function calculateCopyTime(startTime: number): number {
 }
 
 async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
-  const { session, onProgress } = options;
+  const { session, onProgress, signal } = options;
+
+  // console.log("FormData contents:");
+  // for (const pair of formData.entries()) {
+  //   console.log(pair[0], pair[1]);
+  // }
 
   try {
-    const resUpload = await axios.post(`${Settings.API_URL}/datasets/chunk`, formData, {
+    const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         "Content-Type": "multipart/form-data",
@@ -120,9 +182,13 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
         }
       },
       timeout: 1000 * 60 * 10, // 10 minutes
+      signal: signal,
     });
     return resUpload;
   } catch (error) {
+    if (axios.isCancel(error)) {
+      throw new DOMException("Upload cancelled by user", "AbortError");
+    }
     throw new Error(`Failed to upload chunk ${chunkInfo.index}`);
   }
 }

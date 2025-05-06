@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { Alert, Avatar, Typography, theme } from "antd";
+import { Alert, Avatar, Badge, Typography, theme } from "antd";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import { Content } from "antd/es/layout/layout";
 import UploadButton from "../components/Upload/UploadButton";
 import { Link, useNavigate } from "react-router-dom";
+import { useUserDatasets } from "../hooks/useDatasets";
+import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 
 interface ProfileAvatarProps {
   email: string;
@@ -31,7 +33,10 @@ export default function ProfilePage() {
 
   const { session, user } = useAuth();
   const navigate = useNavigate();
-  console.log(window.origin);
+  useDatasetSubscription();
+
+  const { data: userData, isLoading: isLoadingData } = useUserDatasets();
+
   useEffect(() => {
     if (!session) {
       navigate("/sign-in");
@@ -45,7 +50,9 @@ export default function ProfilePage() {
       <div className=" m-auto min-h-screen w-full max-w-7xl">
         <div className="flex items-center pb-8 pt-12">
           <div className="w-1/2">
-            <ProfileAvatar email={user?.email ?? ""} />
+            <Badge count={userData?.length} color="red">
+              <ProfileAvatar email={user?.email ?? ""} />
+            </Badge>
             <Typography.Title style={{ marginBottom: "4px" }}>Profile</Typography.Title>
             <Typography.Text className="m-0 p-0 text-lg" type="secondary">
               {user?.email}
@@ -61,10 +68,7 @@ export default function ProfilePage() {
                     Orthophoto and label uploads are now available! Once uploaded, your data will be seamlessly
                     integrated and visualized on the platform. Please note that this feature is currently in beta. If
                     you encounter any issues or have questions, feel free to{" "}
-                    <a href="mailto:teja.kattenborn@geosense.uni-freiburg.de;janusch.jehle@felis.uni-freiburg.de;clemens.mosig@uni-leipzig.de?subject=deadtrees.earth collaboration">
-                      contact us
-                    </a>
-                    .
+                    <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">contact us</a>.
                   </p>
                   {/* <p className="font-semibold p-0 m-0">Requirements for upload:</p> */}
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>

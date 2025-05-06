@@ -1,5 +1,4 @@
 import DeadtreesMap from "../components/DeadwoodMap/DeadtreesMap";
-import Footer from "../components/Footer";
 
 const Deadtrees = () => {
   return (

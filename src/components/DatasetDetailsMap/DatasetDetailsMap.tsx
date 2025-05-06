@@ -5,59 +5,72 @@ import { View, Map } from "ol";
 import VectorLayer from "ol/layer/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
-import GeoJSON from "ol/format/GeoJSON";
+import VectorTileLayer from "ol/layer/VectorTile";
+import { Style, Fill, Stroke } from "ol/style";
+import Feature from "ol/Feature";
+import RenderFeature from "ol/render/Feature";
+import { FeatureLike } from "ol/Feature";
 
-import { IDataset, ILabels } from "../../types/dataset";
-import fetchLabels from "./fetchLabels";
+import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "./DeadwoodCardDetails";
-import Legend from "../DeadwoodMap/Legend";
-import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
-import VectorSource from "ol/source/Vector";
+import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "./createVectorLayer";
+import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
+import { useDatasetLabels } from "../../hooks/useDatasetLabels";
+import { ILabelData } from "../../types/labels";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
-  if (!data) return null;
-
+  // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const [mapStyle, setMapStyle] = useState("RoadOnDemand");
+  const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
+  const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
+  const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
+  const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
+  const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
+  const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
 
-  const [selectedYear, setSelectedYear] = useState<string>("2018");
-  const [sliderValueLabels, setSliderValueLabels] = useState<number>(0.6);
-  const [sliderValueSatellite, setSliderValueSatellite] = useState<number>(1);
-  const [labelsFetched, setLabelsFetched] = useState<boolean>(false);
-  const [labels, setLabels] = useState<ILabels | null>(null);
-  const [isLegendVisible, setIsLegendVisible] = useState(false);
+  // Fetch label data for the current dataset
+  const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
+    datasetId: data?.id,
+    labelData: ILabelData.DEADWOOD,
+    enabled: !!data?.id,
+  });
+
   // Store layer references for cleanup
   const layerRefs = useRef<{
-    basemap?: TileLayer;
+    basemap?: TileLayer<BingMaps>;
     orthoCog?: TileLayerWebGL;
-    geotiff2018?: TileLayerWebGL;
-    geotiff2019?: TileLayerWebGL;
-    geotiff2020?: TileLayerWebGL;
-    geotiff2021?: TileLayerWebGL;
-    vectorAOI?: VectorLayer;
-    vectorLabels?: VectorLayer;
+    vectorAOI?: VectorLayer<any>;
+    vectorLabels?: VectorLayer<any>;
+    deadwoodVector?: VectorTileLayer;
+    forestCoverVector?: VectorTileLayer;
+    selectionLayer?: VectorTileLayer;
   }>({});
 
+  if (!data) return null;
+
   useEffect(() => {
-    if (!mapRef.current && data?.file_name) {
+    if (!mapRef.current && data?.file_name && !isLoadingLabel) {
       // Create ortho layer first
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
           sources: [
             {
-              url: Settings.COG_BASE_URL + data.cog_url,
+              url: Settings.COG_BASE_URL + data.cog_path,
               nodata: 0,
               bands: [1, 2, 3],
             },
           ],
           convertToRGB: true,
         }),
-        maxZoom: 22,
+        maxZoom: 23,
         cacheSize: 4096,
-        preload: 4,
+        preload: 0,
+        // preload: 4,
       });
 
       // Create all other layers before map initialization
@@ -69,117 +82,193 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }),
       });
 
-      // Create geotiff layers
-      const geotiff2018 = createDeadwoodGeotiffLayer("2018");
-      const geotiff2019 = createDeadwoodGeotiffLayer("2019");
-      const geotiff2020 = createDeadwoodGeotiffLayer("2020");
-      const geotiff2021 = createDeadwoodGeotiffLayer("2021");
-      const geotiff2022 = createDeadwoodGeotiffLayer("2022");
+      // Only create deadwood vector layer if labels exist
+      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
+
+      // Create selection layer for hover effect
+      const selectionLayer = new VectorTileLayer({
+        source: deadwoodVectorLayer.getSource(),
+        style: (feature: FeatureLike) => {
+          if (feature === hoveredFeature) {
+            return new Style({
+              fill: new Fill({
+                color: "rgba(255, 100, 100, 0.9)",
+              }),
+              stroke: new Stroke({
+                color: "rgba(255, 255, 255, 1)",
+                width: 2.5,
+              }),
+            });
+          }
+          return undefined;
+        },
+        renderMode: "vector",
+        renderBuffer: 512,
+      });
 
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
-        geotiff2018,
-        geotiff2019,
-        geotiff2020,
-        geotiff2021,
-        geotiff2022,
+        deadwoodVector: deadwoodVectorLayer,
+        selectionLayer: selectionLayer,
       };
 
       // Wait for the source to be ready and create map
-      orthoCogLayer
-        .getSource()
-        .getView()
-        .then((viewOptions) => {
-          if (!viewOptions?.extent) {
-            console.error("No extent found in viewOptions");
-            return;
-          }
+      if (orthoCogLayer.getSource()) {
+        orthoCogLayer
+          .getSource()
+          .getView()
+          .then((viewOptions) => {
+            if (!viewOptions?.extent) {
+              return;
+            }
 
-          const MapView = new View({
-            center: viewOptions.center,
-            extent: viewOptions.extent,
-            maxZoom: 22,
-            projection: "EPSG:3857",
-            constrainOnlyCenter: true,
-          });
-
-          const newMap = new Map({
-            target: mapContainer.current,
-            layers: [basemapLayer, orthoCogLayer, geotiff2018, geotiff2019, geotiff2020, geotiff2021, geotiff2022],
-            view: MapView,
-            overlays: [],
-            controls: [],
-          });
-
-          MapView.fit(viewOptions.extent);
-
-          fetchLabels({ dataset_id: data.dataset_id })
-            .then((labelsData) => {
-              if (labelsData && mapRef.current) {
-                console.log("labelsData", labelsData);
-                setLabels(labelsData);
-                const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
-
-                // Only create and add AOI layer if labelsData.aoi exists
-                if (labelsData.aoi) {
-                  const vectorLayerAOI = new VectorLayer({
-                    source: new VectorSource({
-                      features: new GeoJSON().readFeatures(labelsData.aoi, {
-                        dataProjection: "EPSG:4326",
-                        featureProjection: "EPSG:3857",
-                      }),
-                    }),
-                    style: {
-                      "stroke-color": "blue",
-                      "stroke-width": 1,
-                      "fill-color": "rgba(0, 0, 255, 0)",
-                    },
-                  });
-                  layerRefs.current.vectorAOI = vectorLayerAOI;
-                  newMap.addLayer(vectorLayerAOI);
-                }
-
-                const vectorLayerLabels = new VectorLayer({
-                  source: new VectorSource({
-                    features: new GeoJSON().readFeatures(labelsData.label, {
-                      dataProjection: "EPSG:4326",
-                      featureProjection: "EPSG:3857",
-                    }),
-                  }),
-                  className: "labels",
-                  style: {
-                    "stroke-color": "red",
-                    "stroke-width": 1,
-                    "fill-color": "rgba(255, 0, 0, 0.8)",
-                  },
-                });
-                layerRefs.current.vectorLabels = vectorLayerLabels;
-                newMap.addLayer(vectorLayerLabels);
-                setLabelsFetched(true);
-              }
-            })
-            .catch((error) => {
-              console.error("Error fetching labels:", error);
+            // Use viewport from context if available, otherwise use default view
+            const MapView = new View({
+              center: viewport.center[0] !== 0 ? viewport.center : viewOptions.center,
+              zoom: viewport.zoom !== 2 ? viewport.zoom : undefined,
+              extent: viewOptions.extent,
+              maxZoom: 22,
+              projection: "EPSG:3857",
+              constrainOnlyCenter: true,
             });
 
-          mapRef.current = newMap;
-        })
-        .catch((error) => {
-          console.error("Error initializing map:", error);
-        });
+            if (mapContainer.current) {
+              const newMap = new Map({
+                target: mapContainer.current,
+                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer],
+                view: MapView,
+                // maxTilesLoading: 4,
+                overlays: [],
+                controls: [],
+              });
+
+              // Add pointer move event handler
+              newMap.on("pointermove", (event) => {
+                // Get current zoom level
+                const currentZoom = MapView.getZoom();
+                // Minimum zoom level for enabling hover selection (adjust as needed)
+                const MIN_HOVER_ZOOM = 16;
+
+                // Skip hover selection if zoom level is too low
+                if (!currentZoom || currentZoom < MIN_HOVER_ZOOM) {
+                  // Reset hover state if we're zoomed out too far
+                  if (hoveredFeature || hoveredLabelId) {
+                    setHoveredFeature(null);
+                    setHoveredLabelId(null);
+
+                    const targetElement = newMap.getTargetElement();
+                    if (targetElement) {
+                      targetElement.style.cursor = "";
+                    }
+                  }
+                  return;
+                }
+
+                const pixel = newMap.getEventPixel(event.originalEvent);
+                const hit = newMap.hasFeatureAtPixel(pixel, {
+                  layerFilter: (layer) => layer === deadwoodVectorLayer,
+                });
+
+                const targetElement = newMap.getTargetElement();
+                if (targetElement) {
+                  targetElement.style.cursor = hit ? "pointer" : "";
+                }
+
+                if (hit) {
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  deadwoodVectorLayer.getFeatures(pixel).then((features) => {
+                    if (features.length > 0) {
+                      const feature = features[0];
+                      setHoveredFeature(feature);
+                      // Store the label_id of the hovered feature
+                      const polygonId = feature.get("id");
+                      setHoveredLabelId(polygonId);
+                    } else {
+                      setHoveredFeature(null);
+                      setHoveredLabelId(null);
+                    }
+                  });
+                } else {
+                  setHoveredFeature(null);
+                  setHoveredLabelId(null);
+                }
+              });
+
+              // Add view change handler
+              MapView.on("change", () => {
+                const currentZoom = MapView.getZoom();
+                // console.log("[Map] Current zoom level:", currentZoom);
+
+                setViewport({
+                  center: MapView.getCenter() || [0, 0],
+                  zoom: currentZoom || 2,
+                  extent: MapView.calculateExtent(newMap.getSize() || [0, 0]),
+                });
+              });
+
+              // Only fit view if no previous viewport is saved
+              if (viewport.center[0] === 0) {
+                MapView.fit(viewOptions.extent);
+              }
+
+              mapRef.current = newMap;
+            }
+          })
+          .catch((error) => {
+            // console.error("Error initializing map:", error);
+          });
+      }
     }
 
     return () => {
       if (mapRef.current) {
+        // Force WebGL context cleanup
+        // const target = mapRef.current.getTargetElement();
+        // if (target) {
+        //   const canvases = target.querySelectorAll("canvas");
+        //   canvases.forEach((canvas) => {
+        //     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        //     if (gl) {
+        //       gl.getExtension("WEBGL_lose_context")?.loseContext();
+        //     }
+        //   });
+        // }
+        if (layerRefs.current.deadwoodVector) {
+          // Remove from map
+          mapRef.current.removeLayer(layerRefs.current.deadwoodVector);
+
+          // Get and clean the source
+          const source = layerRefs.current.deadwoodVector.getSource();
+          if (source) {
+            // Clear tile cache
+            // if (source.tileCache) {
+            // source.tileCache.clear();
+            // }
+
+            // Clear source
+            if (typeof source.clear === "function") {
+              source.clear();
+            }
+
+            // Dispose source
+            if (typeof source.dispose === "function") {
+              source.dispose();
+            }
+          }
+
+          // Dispose layer
+          layerRefs.current.deadwoodVector.dispose();
+          layerRefs.current.deadwoodVector = undefined;
+        }
+
         // Clean up layers
         Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {
-            // Remove from map
             mapRef.current?.removeLayer(layer);
-
-            // Clean up source
             const source = layer.getSource();
             if (source) {
               if ("clear" in source) {
@@ -189,13 +278,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                 source.dispose();
               }
             }
-
-            // Clean up layer
-            if ("cleanup" in layer) {
-              layer.cleanup();
-            } else {
-              layer.dispose();
-            }
+            layer.dispose();
           }
         });
 
@@ -206,69 +289,89 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current.setTarget(undefined);
         mapRef.current.dispose();
         mapRef.current = null;
-        console.log("map disposed");
       }
-      setLabelsFetched(false);
     };
-  }, [data, mapStyle]);
+  }, [data, isLoadingLabel, labelData]);
 
-  // update label opacity on slider change
+  // update deadwood layer opacity
   useEffect(() => {
-    if (mapRef.current && labelsFetched) {
-      // const deadwoodLayer = map.getLayers().getArray()[7];
-      // get layers with className_ === "labels"
-      const labelsLayer = mapRef.current
-        .getLayers()
-        .getArray()
-        .filter((layer) => layer.className_ === "labels")[0];
-      labelsLayer.setOpacity(sliderValueLabels);
+    if (mapRef.current && layerRefs.current.deadwoodVector) {
+      layerRefs.current.deadwoodVector.setOpacity(deadwoodOpacity);
     }
-  }, [sliderValueLabels]);
+  }, [deadwoodOpacity]);
 
-  // update satellite layer opacity on slider change
+  // update forest cover layer opacity
   useEffect(() => {
-    if (mapRef.current) {
-      const layers = mapRef.current.getLayers().getArray();
-      layers.forEach((layer, index) => {
-        // if has geotif in name
-        // console.log("layer", layer.className_);
-        if (layer.className_?.includes("geotiff")) {
-          // if (layer instanceof TileLayerWebGL) {
-          layer.setOpacity(sliderValueSatellite);
-        }
-      });
+    if (mapRef.current && layerRefs.current.forestCoverVector) {
+      layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
     }
-  }, [sliderValueSatellite]);
+  }, [forestCoverOpacity]);
 
-  // update visibility of geotiff layers based on selectedYear
+  // update satellite layer opacity
   useEffect(() => {
-    if (mapRef.current) {
-      const layers = mapRef.current.getLayers().getArray();
-      layers.forEach((layer, index) => {
-        // if (layer instanceof TileLayerWebGL) {
-        if (layer.className_?.includes("geotiff")) {
-          layer.setVisible(layer.className_?.includes(selectedYear.toString()));
-        }
-      });
+    if (mapRef.current && layerRefs.current.orthoCog) {
+      layerRefs.current.orthoCog.setOpacity(droneImageOpacity);
     }
-  }, [selectedYear]);
+  }, [droneImageOpacity]);
 
-  // update on mapStyle change
+  // Update the map style effect to preserve the viewport
   useEffect(() => {
-    if (mapRef.current) {
-      const layer = mapRef.current.getLayers().getArray()[0]; // basemap layer
-      // console.log(layer);
-      layer.setSource(
+    if (mapRef.current && layerRefs.current.basemap) {
+      const currentView = mapRef.current.getView();
+      const currentCenter = currentView.getCenter();
+      const currentZoom = currentView.getZoom();
+
+      // Just update the source, don't recreate the map
+      layerRefs.current.basemap.setSource(
         new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,
           imagerySet: mapStyle,
           culture: "en-us",
         }),
       );
+
+      // Ensure the viewport stays the same
+      if (currentCenter && currentZoom) {
+        currentView.setCenter(currentCenter);
+        currentView.setZoom(currentZoom);
+      }
     }
   }, [mapStyle]);
 
-  const legendPosition = labels !== null ? "bottom-60" : "bottom-52";
+  // Add effect to update selection layer style when hover state changes
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.selectionLayer) {
+      layerRefs.current.selectionLayer.setStyle((feature: FeatureLike) => {
+        // Check if the feature has the same label_id as the currently hovered feature
+        if (hoveredLabelId !== null && feature.get("id") === hoveredLabelId) {
+          return new Style({
+            fill: new Fill({
+              color: "rgba(255, 100, 100, 0.9)",
+            }),
+            stroke: new Stroke({
+              color: "rgba(255, 100, 100, 1)",
+              width: 2.5,
+            }),
+          });
+        }
+        return undefined;
+      });
+    }
+  }, [hoveredLabelId]);
+
+  // Additional effect to handle navigation source
+  useEffect(() => {
+    // If navigated from dataset list, reset viewport
+    if (navigatedFrom === "dataset") {
+      setViewport({
+        center: [0, 0],
+        zoom: 2,
+      });
+    }
+    // We don't need to do anything special for 'navigation' source
+    // as the viewport is already preserved
+  }, [navigatedFrom, setViewport]);
+
   return (
     <div className="h-full w-full">
       <div
@@ -278,26 +381,16 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }}
         ref={mapContainer}
       >
-        {" "}
-        <div className="absolute left-2 top-6 z-20">
+        <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
         </div>
-        {isLegendVisible && data.admin_level_1 === "Germany" && (
-          <div className={`absolute ${legendPosition} right-2 z-50`}>
-            <Legend />
-          </div>
-        )}
-        <div className="absolute bottom-6 right-2 z-50 ">
+        <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
-            labels={labels}
-            year={selectedYear}
-            setSelectedYear={setSelectedYear}
-            sliderValueLabels={sliderValueLabels}
-            setSliderValueLabels={setSliderValueLabels}
-            sliderValueYear={sliderValueSatellite}
-            setSliderValueYear={setSliderValueSatellite}
-            adminLevel1={data.admin_level_1}
-            showLegend={setIsLegendVisible}
+            deadwoodOpacity={deadwoodOpacity}
+            setDeadwoodOpacity={setDeadwoodOpacity}
+            droneImageOpacity={droneImageOpacity}
+            setDroneImageOpacity={setDroneImageOpacity}
+            showLegend={labelData ? true : false}
           />
         </div>
       </div>

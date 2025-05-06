@@ -6,7 +6,7 @@ export const useFileUpload = () => {
   const [fileName, setFileName] = useState<string>("");
   const [fileNameFull, setFileNameFull] = useState<string>("");
   const onFileChange = ({ fileList: newFileList }) => {
-    console.log("newFileList", newFileList);
+    // console.log("newFileList", newFileList);
     setFileList(newFileList.slice(-1));
     if (newFileList.length > 0) {
       const name = newFileList[0].name;

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
+import { identifyUser } from "../utils/analytics";
 
 import { supabase } from "./useSupabase";
 
@@ -29,6 +30,9 @@ const AuthProvider = (props: AuthProviderProps) => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user || null);
+
+      // Identify user in PostHog when auth state changes
+      identifyUser(session?.user || null);
     });
 
     const setData = async () => {
@@ -42,6 +46,9 @@ const AuthProvider = (props: AuthProviderProps) => {
 
       setSession(session);
       setUser(session?.user || null);
+
+      // Identify user in PostHog when component mounts
+      identifyUser(session?.user || null);
     };
 
     setData();

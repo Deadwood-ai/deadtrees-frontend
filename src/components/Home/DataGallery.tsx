@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useData } from "../../hooks/useDataProvider";
 import { Settings } from "../../config";
+import countryList from "../../utils/countryList";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
@@ -22,7 +24,7 @@ const Stats = () => {
     <div className="flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center"></div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
-        <Stat title="Orthophotos" value="1000+" unit="" />
+        <Stat title="Orthophotos" value="2500+" unit="" />
         <Stat title="Labeled Polygons" value="40k" unit="" />
         <Stat title="Countries" value="63" unit="" />
         <Stat title="Institutions" value="43" unit="" />
@@ -35,25 +37,67 @@ const DataGallery = () => {
   const { data } = useData();
   const carouselRef = useRef<any>(null);
   const navigate = useNavigate();
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
 
-    const sorted = [...data].sort((a, b) => a.id - b.id);
+    const sorted = [...data].sort((a, b) => b.id - a.id);
 
-    const authorMap = new Map();
-    return sorted.filter((item) => {
-      if (!item.authors || !item.thumbnail_path || !item.admin_level_1 || item.status !== "processed") return false;
+    // Debug: Check initial data
+    // console.log("Initial data count:", sorted.length);
 
-      if (!authorMap.has(item.authors)) {
-        authorMap.set(item.authors, true);
-        return true;
+    // First filter for required fields
+    const filtered = sorted.filter((item) => {
+      if (
+        !item.authors ||
+        !Array.isArray(item.authors) ||
+        !item.thumbnail_path ||
+        !item.admin_level_1 ||
+        !item.is_thumbnail_done ||
+        !item.is_cog_done ||
+        item.has_error
+      ) {
+        return false;
       }
-      return false;
+      return true;
     });
+
+    // Debug: Check after required fields filter
+    // console.log("After required fields filter:", filtered.length);
+    // console.log(
+    //   "Sample authors:",
+    //   filtered.slice(0, 5).map((item) => item.authors),
+    // );
+
+    // Create a map to store one entry per author
+    const authorMap = new Map();
+
+    // Take only the first entry for each author in the authors array
+    filtered.forEach((item) => {
+      item.authors.forEach((author: string) => {
+        const authorKey = author.trim().toLowerCase();
+        if (!authorMap.has(authorKey)) {
+          authorMap.set(authorKey, item);
+        }
+      });
+    });
+
+    // Convert map values back to array and remove duplicates
+    const oneImagePerAuthor = Array.from(new Set(authorMap.values()));
+
+    // Debug: Final result
+    // console.log("Final unique entries:", oneImagePerAuthor.length);
+    // console.log(
+    //   "Final unique authors:",
+    //   oneImagePerAuthor.map((item) => item.authors),
+    // );
+
+    return oneImagePerAuthor;
   }, [data]);
 
   const onClickHandler = (id: number) => {
+    setNavigationSource("dataset");
     navigate(`/dataset/${id}`);
   };
 
@@ -129,10 +173,21 @@ const DataGallery = () => {
                     </div>
                     <div className="p-4">
                       <div className="mb-2 flex items-baseline justify-between">
-                        <Tooltip title={item.admin_level_3}>
+                        <Tooltip
+                          title={
+                            item.admin_level_1
+                              ? `${item.admin_level_3 || item.admin_level_2 || ""}${item.admin_level_1 ? `, ${item.admin_level_1}` : ""}`
+                              : ""
+                          }
+                        >
                           <span className="max-w-[70%] truncate font-semibold">
-                            {item.admin_level_3 &&
-                              item.admin_level_3.slice(0, 15) + (item.admin_level_3.length > 15 ? "..." : "")}
+                            {item.admin_level_3 || item.admin_level_2
+                              ? // If we have level 2 or 3, show it with country
+                                `${(item.admin_level_3 || item.admin_level_2).slice(0, 10)}${(item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : ""}${item.admin_level_1 ? `, ${countryList[item.admin_level_1 as keyof typeof countryList]}` : ""}`
+                              : // If we only have level 1, just show the country
+                                item.admin_level_1
+                                ? countryList[item.admin_level_1 as keyof typeof countryList]
+                                : ""}
                           </span>
                         </Tooltip>
                         <span className="text-xs text-gray-500">
