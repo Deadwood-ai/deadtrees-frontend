@@ -120,7 +120,12 @@ const DatasetMapOL = ({
       mapRef.current = map;
 
       const vectorSourceExtend = new VectorSource();
-      const vectorLayerExtend = new VectorLayer({ source: vectorSourceExtend, minZoom: 9 });
+      const vectorLayerExtend = new VectorLayer({
+        source: vectorSourceExtend,
+        minZoom: 9,
+        updateWhileAnimating: false,
+        updateWhileInteracting: false,
+      });
       vectorLayerExtendRef.current = vectorLayerExtend;
       map.addLayer(vectorLayerExtend);
 
@@ -128,6 +133,8 @@ const DatasetMapOL = ({
       const vectorLayerMarker = new VectorLayer({
         source: vectorSourceMarker,
         maxZoom: 11,
+        updateWhileAnimating: false,
+        updateWhileInteracting: false,
       });
       vectorLayerMarkerRef.current = vectorLayerMarker;
       map.addLayer(vectorLayerMarker);

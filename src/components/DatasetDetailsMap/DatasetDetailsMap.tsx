@@ -67,7 +67,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           ],
           convertToRGB: true,
         }),
-        maxZoom: 22,
+        maxZoom: 23,
         cacheSize: 4096,
         // preload: 4,
       });
@@ -290,7 +290,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, isLoadingLabel, labelData, viewport]);
+  }, [data, isLoadingLabel, labelData]);
 
   // update deadwood layer opacity
   useEffect(() => {

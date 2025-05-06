@@ -10,6 +10,8 @@ import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
 import { useState } from "react";
 import { useDownload } from "../hooks/useDownloadProvider";
+import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
+import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -23,6 +25,9 @@ export default function DatasetDetails() {
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
 
   const dataset = datasets?.find((d) => d.id.toString() === id);
+
+  // Fetch overlapping datasets
+  const { data: overlappingDatasets, isLoading: isLoadingOverlapping } = useOverlappingDatasets(dataset?.id);
 
   // Fetch labels data
   const { data: labelsData } = useDatasetLabels({
@@ -192,6 +197,15 @@ export default function DatasetDetails() {
               </div>
             )}
 
+            {/* Add the dataset navigation component near the bottom */}
+            {dataset.id && (
+              <DatasetNavigation
+                currentDatasetId={dataset.id}
+                overlappingDatasets={overlappingDatasets || []}
+                isLoading={isLoadingOverlapping}
+              />
+            )}
+
             <div className="mt-6 space-y-3 rounded-md bg-white p-4">
               <Space direction="vertical" className="w-full">
                 {isDownloading && currentDownloadId !== dataset.id.toString() && (
@@ -336,7 +350,8 @@ export default function DatasetDetails() {
         )}
       </Col>
       <Col className="flex-1 pt-2">
-        <DatasetDetailsMap data={dataset} />
+        {/* Add key prop to force remount when dataset changes */}
+        <DatasetDetailsMap key={`map-${dataset.id}`} data={dataset} />
       </Col>
     </Row>
   );
