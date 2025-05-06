@@ -10,19 +10,24 @@ import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
 import { useState } from "react";
 import { useDownload } from "../hooks/useDownloadProvider";
+import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
+import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
+import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { data: datasets } = useDatasets();
   const [labelsOnly, setLabelsOnly] = useState(false);
-  // Remove local isDownloading state, use global state instead
-  // const [isDownloading, setIsDownloading] = useState(false);
+  const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
 
   // Use the global download state
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
 
   const dataset = datasets?.find((d) => d.id.toString() === id);
+
+  // Fetch overlapping datasets
+  const { data: overlappingDatasets, isLoading: isLoadingOverlapping } = useOverlappingDatasets(dataset?.id);
 
   // Fetch labels data
   const { data: labelsData } = useDatasetLabels({
@@ -53,8 +58,25 @@ export default function DatasetDetails() {
               <Button
                 size="large"
                 shape="circle"
-                onClick={() => navigate(-1)}
-                // type="primary"
+                onClick={() => {
+                  // Reset the viewport context before navigating back
+                  setViewport({
+                    center: [0, 0],
+                    zoom: 2,
+                  });
+
+                  // Clear navigation source
+                  setNavigationSource(null);
+
+                  // If we navigated here from another dataset detail page,
+                  // go directly back to the main dataset list instead of the previous detail page
+                  if (navigatedFrom === "navigation") {
+                    navigate("/dataset");
+                  } else {
+                    // Regular back behavior
+                    navigate(-1);
+                  }
+                }}
                 icon={<ArrowLeftOutlined />}
               ></Button>
             </div>
@@ -190,6 +212,15 @@ export default function DatasetDetails() {
                   <Tag color="default">{labelsData.label_quality}</Tag>
                 </div>
               </div>
+            )}
+
+            {/* Add the dataset navigation component near the bottom */}
+            {dataset.id && (
+              <DatasetNavigation
+                currentDatasetId={dataset.id}
+                overlappingDatasets={overlappingDatasets || []}
+                isLoading={isLoadingOverlapping}
+              />
             )}
 
             <div className="mt-6 space-y-3 rounded-md bg-white p-4">
@@ -336,7 +367,8 @@ export default function DatasetDetails() {
         )}
       </Col>
       <Col className="flex-1 pt-2">
-        <DatasetDetailsMap data={dataset} />
+        {/* Add key prop to force remount when dataset changes */}
+        <DatasetDetailsMap key={`map-${dataset.id}`} data={dataset} />
       </Col>
     </Row>
   );

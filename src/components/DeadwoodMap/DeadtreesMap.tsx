@@ -64,12 +64,12 @@ const DeadtreesMap = () => {
       const overlay = mapRef.current.getOverlays().getArray()[0];
       overlay.setPosition(event.coordinate);
     } else {
-      console.log("map not initialized");
+      // console.log("map not initialized");
     }
   };
 
   useEffect(() => {
-    console.log(DeadwoodMapViewport);
+    // console.log(DeadwoodMapViewport);
     if (!map) {
       const initialView = new View({
         // transform to EPSG:3857
@@ -157,7 +157,7 @@ const DeadtreesMap = () => {
   useEffect(() => {
     if (map) {
       const layer = map.getLayers().getArray()[0]; // basemap layer
-      console.log(layer);
+      // console.log(layer);
       layer.setSource(
         new BingMaps({
           key: import.meta.env.VITE_BING_MAPS_KEY,

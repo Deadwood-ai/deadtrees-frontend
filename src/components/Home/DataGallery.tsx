@@ -5,6 +5,7 @@ import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useData } from "../../hooks/useDataProvider";
 import { Settings } from "../../config";
 import countryList from "../../utils/countryList";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
@@ -36,6 +37,7 @@ const DataGallery = () => {
   const { data } = useData();
   const carouselRef = useRef<any>(null);
   const navigate = useNavigate();
+  const { setNavigationSource } = useDatasetDetailsMap();
 
   const sortedUniqueData = useMemo(() => {
     if (!data) return [];
@@ -43,7 +45,7 @@ const DataGallery = () => {
     const sorted = [...data].sort((a, b) => b.id - a.id);
 
     // Debug: Check initial data
-    console.log("Initial data count:", sorted.length);
+    // console.log("Initial data count:", sorted.length);
 
     // First filter for required fields
     const filtered = sorted.filter((item) => {
@@ -62,11 +64,11 @@ const DataGallery = () => {
     });
 
     // Debug: Check after required fields filter
-    console.log("After required fields filter:", filtered.length);
-    console.log(
-      "Sample authors:",
-      filtered.slice(0, 5).map((item) => item.authors),
-    );
+    // console.log("After required fields filter:", filtered.length);
+    // console.log(
+    //   "Sample authors:",
+    //   filtered.slice(0, 5).map((item) => item.authors),
+    // );
 
     // Create a map to store one entry per author
     const authorMap = new Map();
@@ -85,16 +87,17 @@ const DataGallery = () => {
     const oneImagePerAuthor = Array.from(new Set(authorMap.values()));
 
     // Debug: Final result
-    console.log("Final unique entries:", oneImagePerAuthor.length);
-    console.log(
-      "Final unique authors:",
-      oneImagePerAuthor.map((item) => item.authors),
-    );
+    // console.log("Final unique entries:", oneImagePerAuthor.length);
+    // console.log(
+    //   "Final unique authors:",
+    //   oneImagePerAuthor.map((item) => item.authors),
+    // );
 
     return oneImagePerAuthor;
   }, [data]);
 
   const onClickHandler = (id: number) => {
+    setNavigationSource("dataset");
     navigate(`/dataset/${id}`);
   };
 

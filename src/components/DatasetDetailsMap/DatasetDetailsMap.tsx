@@ -31,7 +31,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
-  const { viewport, setViewport } = useDatasetDetailsMap();
+  const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
 
   // Fetch label data for the current dataset
   const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
@@ -67,8 +67,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           ],
           convertToRGB: true,
         }),
-        maxZoom: 22,
+        maxZoom: 23,
         cacheSize: 4096,
+        preload: 0,
         // preload: 4,
       });
 
@@ -138,12 +139,33 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                 target: mapContainer.current,
                 layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer],
                 view: MapView,
+                // maxTilesLoading: 4,
                 overlays: [],
                 controls: [],
               });
 
               // Add pointer move event handler
               newMap.on("pointermove", (event) => {
+                // Get current zoom level
+                const currentZoom = MapView.getZoom();
+                // Minimum zoom level for enabling hover selection (adjust as needed)
+                const MIN_HOVER_ZOOM = 16;
+
+                // Skip hover selection if zoom level is too low
+                if (!currentZoom || currentZoom < MIN_HOVER_ZOOM) {
+                  // Reset hover state if we're zoomed out too far
+                  if (hoveredFeature || hoveredLabelId) {
+                    setHoveredFeature(null);
+                    setHoveredLabelId(null);
+
+                    const targetElement = newMap.getTargetElement();
+                    if (targetElement) {
+                      targetElement.style.cursor = "";
+                    }
+                  }
+                  return;
+                }
+
                 const pixel = newMap.getEventPixel(event.originalEvent);
                 const hit = newMap.hasFeatureAtPixel(pixel, {
                   layerFilter: (layer) => layer === deadwoodVectorLayer,
@@ -162,7 +184,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                     if (features.length > 0) {
                       const feature = features[0];
                       setHoveredFeature(feature);
-                      // console.log("[Map] hoveredFeature", feature);
                       // Store the label_id of the hovered feature
                       const polygonId = feature.get("id");
                       setHoveredLabelId(polygonId);
@@ -179,9 +200,12 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
               // Add view change handler
               MapView.on("change", () => {
+                const currentZoom = MapView.getZoom();
+                // console.log("[Map] Current zoom level:", currentZoom);
+
                 setViewport({
                   center: MapView.getCenter() || [0, 0],
-                  zoom: MapView.getZoom() || 2,
+                  zoom: currentZoom || 2,
                   extent: MapView.calculateExtent(newMap.getSize() || [0, 0]),
                 });
               });
@@ -267,7 +291,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, isLoadingLabel, labelData, viewport]);
+  }, [data, isLoadingLabel, labelData]);
 
   // update deadwood layer opacity
   useEffect(() => {
@@ -334,6 +358,19 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
     }
   }, [hoveredLabelId]);
+
+  // Additional effect to handle navigation source
+  useEffect(() => {
+    // If navigated from dataset list, reset viewport
+    if (navigatedFrom === "dataset") {
+      setViewport({
+        center: [0, 0],
+        zoom: 2,
+      });
+    }
+    // We don't need to do anything special for 'navigation' source
+    // as the viewport is already preserved
+  }, [navigatedFrom, setViewport]);
 
   return (
     <div className="h-full w-full">
