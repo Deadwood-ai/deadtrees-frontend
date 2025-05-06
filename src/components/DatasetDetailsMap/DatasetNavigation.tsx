@@ -70,7 +70,7 @@ export default function DatasetNavigation({
               }
             }}
           >
-            Previous
+            {prevDataset ? formatDate(prevDataset) : "Previous"}
           </Button>
         </Tooltip>
         <Tooltip title={nextDataset ? `View dataset from ${formatDate(nextDataset)}` : "No later dataset available"}>
@@ -85,7 +85,7 @@ export default function DatasetNavigation({
               }
             }}
           >
-            Next
+            {nextDataset ? formatDate(nextDataset) : "Next"}
           </Button>
         </Tooltip>
       </Space>

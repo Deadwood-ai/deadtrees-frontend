@@ -22,7 +22,7 @@ export function useOverlappingDatasets(datasetId: number | undefined) {
         // Call the database function to get overlapping dataset IDs
         const { data, error } = await supabase.rpc("find_overlapping_datasets", {
           input_dataset_id: datasetId,
-          overlap_threshold: 0.5,
+          overlap_threshold: 0.4,
         });
 
         if (error) {
