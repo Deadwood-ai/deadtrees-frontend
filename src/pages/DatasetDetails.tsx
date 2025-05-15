@@ -174,7 +174,7 @@ export default function DatasetDetails() {
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">File Size: </Typography.Text>
                 </Typography.Text>
-                {dataset.file_size > 1024 * 1024 * 1024
+                {dataset.ortho_file_size > 1024 * 1024 * 1024
                   ? `${dataset.ortho_file_size.toFixed(1)} MB`
                   : `${dataset.ortho_file_size.toFixed(0)} MB`}
               </div>
