@@ -6,13 +6,36 @@ import { useData } from "../../hooks/useDataProvider";
 import { Settings } from "../../config";
 import countryList from "../../utils/countryList";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
+import parseBBox from "../../utils/parseBBox";
+
+// Convert a geographic bounding box to area in hectares
+const calculateAreaFromBBox = (bboxArray: number[]): number => {
+  if (!bboxArray || bboxArray.length !== 4) return 0;
+
+  const [minLon, minLat, maxLon, maxLat] = bboxArray;
+
+  // Approximate conversion (this is a simplification that works reasonably well for small areas)
+  // 1 degree of latitude is approximately 111.32 km
+  // 1 degree of longitude varies with latitude: 111.32 * cos(latitude in radians)
+  const latDistance = (maxLat - minLat) * 111.32; // in km
+
+  // Average latitude for longitude calculation
+  const avgLat = (minLat + maxLat) / 2;
+  const lonDistance = (maxLon - minLon) * 111.32 * Math.cos(avgLat * (Math.PI / 180)); // in km
+
+  // Area in square kilometers
+  const areaKm2 = latDistance * lonDistance;
+
+  // Convert to hectares (1 km² = 100 hectares)
+  return areaKm2 * 100;
+};
 
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
     <div className="m-auto mx-8 w-full rounded-xl px-6">
       <div className="flex items-baseline justify-center">
         <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
-        <p className="m-0 pl-1 text-lg font-medium  text-blue-500">{unit}</p>
+        <p className="m-0 pl-1 text-lg font-medium text-blue-500">{unit}</p>
       </div>
       <p className="m-0 p-3 text-center text-sm font-medium uppercase">{title}</p>
     </div>
@@ -20,14 +43,61 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
 };
 
 const Stats = () => {
+  const { data } = useData();
+
+  const stats = useMemo(() => {
+    if (!data) return { orthophotos: 0, area: 0, countries: new Set(), fileSize: 0 };
+
+    // Filter data with required fields
+    const validData = data.filter((item) => item.is_thumbnail_done && item.is_cog_done && !item.has_error);
+
+    // Calculate orthophoto count
+    const orthophotos = validData.length;
+
+    // Calculate total area from bounding boxes
+    let totalArea = 0;
+    validData.forEach((item) => {
+      if (item.bbox) {
+        const parsedBBox = parseBBox(item.bbox);
+        if (parsedBBox) {
+          totalArea += calculateAreaFromBBox(parsedBBox);
+        }
+      }
+    });
+
+    // Unique countries
+    const countries = new Set<string>();
+    validData.forEach((item) => {
+      if (item.admin_level_1) {
+        countries.add(item.admin_level_1);
+      }
+    });
+
+    // Total file size in TB
+    const totalFileSizeBytes = validData.reduce((sum, item) => {
+      // Convert from MB to TB (1 TB = 1,048,576 MB)
+      return sum + (item.ortho_file_size || 0);
+    }, 0);
+
+    // Convert MB to TB
+    const totalFileSizeTB = totalFileSizeBytes / 1_048_576;
+
+    return {
+      orthophotos,
+      area: totalArea,
+      countries: countries.size,
+      fileSize: totalFileSizeTB,
+    };
+  }, [data]);
+
   return (
     <div className="flex flex-col justify-center py-4 align-middle md:mt-0">
       <div className="text-center"></div>
       <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
-        <Stat title="Orthophotos" value="2500+" unit="" />
-        <Stat title="Labeled Polygons" value="40k" unit="" />
-        <Stat title="Countries" value="63" unit="" />
-        <Stat title="Institutions" value="43" unit="" />
+        <Stat title="Orthophotos" value={stats.orthophotos.toLocaleString()} unit="" />
+        <Stat title="Area Covered" value={Math.round(stats.area).toLocaleString()} unit="ha" />
+        <Stat title="Countries" value={stats.countries.toString()} unit="" />
+        <Stat title="Data Size" value={stats.fileSize.toFixed(2)} unit="TB" />
       </div>
     </div>
   );
@@ -192,10 +262,10 @@ const DataGallery = () => {
                         </Tooltip>
                         <span className="text-xs text-gray-500">
                           {new Date(
-                            item.aquisition_year,
-                            item.aquisition_month,
-                            item.aquisition_day,
-                          ).toLocaleDateString("en-US", {
+                            parseInt(item.aquisition_year),
+                            item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
+                            item.aquisition_day ? parseInt(item.aquisition_day) : 1,
+                          ).toLocaleDateString("en-GB", {
                             year: "numeric",
                             ...(item.aquisition_month && { month: "numeric" }),
                             ...(item.aquisition_day && { day: "numeric" }),
