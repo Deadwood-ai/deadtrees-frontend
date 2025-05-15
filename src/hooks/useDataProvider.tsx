@@ -1,8 +1,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../hooks/useSupabase";
+import { useDatasets, useUserDatasets, useAuthors, useCollaborators } from "./useDatasets";
 import { IDataset, IThumbnail, ICollaborators } from "../types/dataset";
-import { Settings } from "../config";
 import { useAuth } from "./useAuthProvider";
 
 interface DataProviderProps {
@@ -38,61 +37,14 @@ const DataContext = createContext<DataContextType>({
   isLoading: false,
 });
 
-const fetchData = async () => {
-  const { data, error } = await supabase
-    .from(Settings.DATA_TABLE_FULL)
-    .select("*")
-    .filter("data_access", "eq", "public");
-  if (error) throw error;
-  return data;
-};
-
-const fetchCollaborators = async () => {
-  const { data, error } = await supabase.from("collaborators").select("*");
-  if (error) throw error;
-  return data;
-};
-
 const DataProvider = ({ children }: DataProviderProps) => {
   const { session } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: rawData, isLoading: isLoadingRawData } = useQuery({
-    queryKey: ["datasets"],
-    queryFn: fetchData,
-  });
-
-  const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery({
-    queryKey: ["collaborators"],
-    queryFn: fetchCollaborators,
-  });
-
-  const { data: userData } = useQuery({
-    queryKey: ["userData", session?.user.id, rawData],
-    enabled: !!session && !!rawData,
-    queryFn: () => rawData?.filter((item) => item.user_id === session?.user.id) || [],
-  });
-
-  const { data: authors } = useQuery({
-    queryKey: ["authors", rawData],
-    enabled: !!rawData,
-    queryFn: () => {
-      // Flatten all author arrays and extract individual authors
-      const allAuthors = rawData
-        ?.filter((item) => Array.isArray(item.authors))
-        .flatMap((item) => item.authors)
-        .filter(Boolean);
-
-      // Create a Set to get unique authors
-      const uniqueAuthors = [...new Set(allAuthors)];
-
-      // Map to the required format
-      return uniqueAuthors.map((author) => ({
-        label: author,
-        value: author,
-      }));
-    },
-  });
+  const { data: rawData, isLoading: isLoadingRawData } = useDatasets();
+  const { data: collaborators, isLoading: isLoadingCollaborators } = useCollaborators();
+  const { data: authors } = useAuthors();
+  const { data: userData } = useUserDatasets();
 
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");

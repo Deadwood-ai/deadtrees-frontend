@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Button,
   Form,
@@ -15,7 +15,7 @@ import {
   Typography,
   Collapse,
 } from "antd";
-import { InfoCircleOutlined, UploadOutlined, InboxOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, UploadOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
 import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/dataset";
@@ -27,6 +27,7 @@ import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
+import { checkPrivilegedUser, PrivilegedUser } from "../../api/checkPrivilegedUser";
 
 import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
@@ -43,6 +44,7 @@ interface IFormValues {
   doi: string;
   additional_information: string;
   labels_description: string;
+  is_private: boolean;
 }
 
 interface UploadModalProps {
@@ -172,6 +174,19 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
+  const [isPrivilegedUser, setIsPrivilegedUser] = useState<PrivilegedUser | null>(null);
+
+  useEffect(() => {
+    const checkPrivilegeStatus = async () => {
+      if (session?.user) {
+        const userData = await checkPrivilegedUser();
+        setIsPrivilegedUser(userData);
+      }
+    };
+
+    checkPrivilegeStatus();
+  }, [session]);
+
   const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
       // Create a new AbortController for this upload
@@ -275,7 +290,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         aquisition_month: values.aquisition_date?.month() + 1,
         aquisition_day: values.aquisition_date?.date(),
         additional_information: values.additional_information,
-        data_access: "public",
+        data_access: values.is_private ? "private" : "public",
         citation_doi: values.doi,
       };
       // console.log("metadata", metadata);
@@ -371,7 +386,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         <Form
           layout="vertical"
           onFinish={onFormFinish}
-          initialValues={{ platform: "drone", agreement: false }}
+          initialValues={{ platform: "drone", agreement: false, is_private: false }}
           variant="filled"
           form={form}
         >
@@ -503,6 +518,17 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   autoSize={{ minRows: 3, maxRows: 6 }}
                 />
               </Form.Item>
+              {isPrivilegedUser?.can_upload_private && (
+                <Form.Item name="is_private" valuePropName="checked">
+                  <div className="mt-4 flex items-start">
+                    <Checkbox />
+                    <div className="ml-4 flex items-center text-sm">
+                      <LockOutlined className="mr-2" />
+                      Upload as private data (only available to you)
+                    </div>
+                  </div>
+                </Form.Item>
+              )}
               <Form.Item>
                 <div className="space-y-4">
                   <Form.Item

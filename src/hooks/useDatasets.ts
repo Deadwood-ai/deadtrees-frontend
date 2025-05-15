@@ -9,7 +9,7 @@ export function useDatasets() {
   return useQuery({
     queryKey: ["datasets"],
     queryFn: async () => {
-      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").neq("data_access", "private");
+      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
       if (error) throw error;
       return data;
     },
