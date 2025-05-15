@@ -97,7 +97,7 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
               parseInt(item.aquisition_year),
               item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
               item.aquisition_day ? parseInt(item.aquisition_day) : 1,
-            ).toLocaleDateString("en-US", {
+            ).toLocaleDateString("en-GB", {
               year: "numeric",
               ...(item.aquisition_month && { month: "numeric" }),
               ...(item.aquisition_day && { day: "numeric" }),
