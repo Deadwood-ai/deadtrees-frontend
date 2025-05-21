@@ -12,15 +12,15 @@ const UploadButton = () => {
   };
 
   const handleClose = (key: string) => {
-    setModals(modals.filter(modal => modal.key !== key));
+    setModals(modals.filter((modal) => modal.key !== key));
   };
 
   return (
     <>
       <Button size="large" icon={<UploadOutlined />} type="primary" onClick={showModal}>
-        Upload
+        Upload Data
       </Button>
-      {modals.map(modal => (
+      {modals.map((modal) => (
         <UploadModal
           key={modal.key}
           isVisible={modal.isVisible}

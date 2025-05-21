@@ -1,19 +1,33 @@
-import { useState, useEffect } from "react";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { Alert, Avatar, Badge, Typography, theme } from "antd";
-import { supabase } from "../hooks/useSupabase";
+import { useEffect, useState } from "react";
+import { Alert, Avatar, Badge, Button, Segmented, Typography } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
-import { Content } from "antd/es/layout/layout";
 import UploadButton from "../components/Upload/UploadButton";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
 import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
+import { FileOutlined } from "@ant-design/icons";
+import PublicationModal from "../components/PublicationModal";
+import PublicationsTable from "../components/PublicationsTable";
 
 interface ProfileAvatarProps {
   email: string;
   size?: number;
+}
+
+interface DatasetType {
+  id: number;
+  file_name: string;
+  platform?: string;
+  aquisition_year?: number;
+  citation_doi?: string;
+  freidata_doi?: string;
+  current_status?: string;
+  is_upload_done?: boolean;
+  is_ortho_done?: boolean;
+  is_cog_done?: boolean;
+  is_thumbnail_done?: boolean;
+  is_metadata_done?: boolean;
 }
 
 export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
@@ -27,15 +41,15 @@ export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
 }
 
 export default function ProfilePage() {
-  const {
-    token: { colorBgContainer },
-  } = theme.useToken();
-
   const { session, user } = useAuth();
   const navigate = useNavigate();
   useDatasetSubscription();
 
-  const { data: userData, isLoading: isLoadingData } = useUserDatasets();
+  const { data: userData } = useUserDatasets();
+
+  const [activeTab, setActiveTab] = useState<string>("My Data");
+  const [selectedDatasets, setSelectedDatasets] = useState<DatasetType[]>([]);
+  const [isPublicationModalVisible, setIsPublicationModalVisible] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -43,11 +57,23 @@ export default function ProfilePage() {
     }
   }, [session, navigate]);
 
+  const handleSelectedRowsChange = (rows: DatasetType[]) => {
+    setSelectedDatasets(rows);
+  };
+
+  const showPublicationModal = () => {
+    setIsPublicationModalVisible(true);
+  };
+
+  const handlePublicationModalCancel = () => {
+    setIsPublicationModalVisible(false);
+  };
+
   if (!session) {
     return null;
   } else {
     return (
-      <div className=" m-auto min-h-screen w-full max-w-7xl">
+      <div className="m-auto min-h-screen w-full max-w-7xl">
         <div className="flex items-center pb-8 pt-12">
           <div className="w-1/2">
             <Badge count={userData?.length} color="red">
@@ -70,7 +96,6 @@ export default function ProfilePage() {
                     you encounter any issues or have questions, feel free to{" "}
                     <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">contact us</a>.
                   </p>
-                  {/* <p className="font-semibold p-0 m-0">Requirements for upload:</p> */}
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                     <li>
                       📏 <strong>Resolution:</strong> Higher than 20 cm
@@ -92,11 +117,42 @@ export default function ProfilePage() {
             />
           </div>
         </div>
-        <div className=" w-full">
-          <div className="mb-4 flex justify-end">
-            <UploadButton />
+        <div className="w-full">
+          <div className="mb-4 flex justify-between">
+            <Segmented
+              options={["My Data", "Publications"]}
+              size="large"
+              value={activeTab}
+              onChange={(value) => {
+                setActiveTab(value.toString());
+              }}
+            />
+            <div className="flex gap-2">
+              {activeTab === "My Data" ? (
+                <>
+                  {selectedDatasets.length > 0 ? (
+                    <Button size="large" type="primary" icon={<FileOutlined />} onClick={showPublicationModal}>
+                      Publish Data ({selectedDatasets.length})
+                    </Button>
+                  ) : (
+                    <UploadButton />
+                  )}
+                </>
+              ) : null}
+            </div>
           </div>
-          <DataTable supabase={supabase} /> {/* Use the new DataTable component */}
+
+          {activeTab === "My Data" ? (
+            <DataTable onSelectedRowsChange={handleSelectedRowsChange} />
+          ) : (
+            <PublicationsTable />
+          )}
+
+          <PublicationModal
+            visible={isPublicationModalVisible}
+            onCancel={handlePublicationModalCancel}
+            datasets={selectedDatasets}
+          />
         </div>
       </div>
     );

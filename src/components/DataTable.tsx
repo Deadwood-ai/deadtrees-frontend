@@ -1,36 +1,86 @@
-import React from "react";
+import React, { useState } from "react";
 
 import { Button, Table, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
-import { useUserDatasets, useDatasets, useAuthors } from "../hooks/useDatasets";
-import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
+import { useUserDatasets } from "../hooks/useDatasets";
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  MapOutlined,
-  LinkOutlined,
   SyncOutlined,
   EnvironmentOutlined,
+  PlusOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 
-const DataTable = () => {
-  useDatasetSubscription();
+interface Dataset {
+  id: number;
+  file_name: string;
+  aquisition_day?: number;
+  aquisition_month?: number;
+  aquisition_year?: number;
+  platform?: string;
+  citation_doi?: string;
+  freidata_doi?: string;
+  admin_level_1?: string;
+  admin_level_2?: string;
+  admin_level_3?: string;
+  current_status?: string;
+  has_error?: boolean;
+  error_message?: string;
+  is_upload_done?: boolean;
+  is_ortho_done?: boolean;
+  is_cog_done?: boolean;
+  is_thumbnail_done?: boolean;
+  is_metadata_done?: boolean;
+}
 
+interface DataTableProps {
+  onSelectedRowsChange?: (selectedRows: Dataset[]) => void;
+}
+
+const DataTable: React.FC<DataTableProps> = ({ onSelectedRowsChange }) => {
+  useDatasetSubscription();
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { data: userData, isLoading: isLoadingData } = useUserDatasets();
 
   const nav = useNavigate();
   console.log("userData in DataTable", userData);
 
+  const isDatasetComplete = (record: Dataset): boolean => {
+    return !!(
+      !record.has_error &&
+      record.is_upload_done &&
+      record.is_ortho_done &&
+      record.is_cog_done &&
+      record.is_thumbnail_done &&
+      record.is_metadata_done
+    );
+  };
+
+  const handleAddToSelection = (record: Dataset) => {
+    const newKeys = [...selectedRowKeys, record.id];
+    setSelectedRowKeys(newKeys);
+
+    if (onSelectedRowsChange && userData) {
+      const selectedRows = userData.filter((item) => newKeys.includes(item.id));
+      onSelectedRowsChange(selectedRows as Dataset[]);
+    }
+  };
+
   const columns = [
-    { title: "ID", dataIndex: "id", key: "id", defaultSortOrder: "descend", sorter: (a, b) => a.id - b.id },
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      defaultSortOrder: "descend" as const,
+      sorter: (a: Dataset, b: Dataset) => a.id - b.id,
+    },
     {
       title: "Date",
       dataIndex: "aquisition_day",
       key: "aquisition_day",
-      render: (tag, record) => (
-        // create date from aquisition_day, aquisition_month and aquisition_year
+      render: (_: unknown, record: Dataset) => (
         <span>
           {record.aquisition_day && record.aquisition_day + "/"}
           {record.aquisition_month && record.aquisition_month + "/"}
@@ -38,21 +88,68 @@ const DataTable = () => {
         </span>
       ),
     },
-    { title: "File", dataIndex: "ortho_file_name", key: "file_alias" },
-    // { title: "License", dataIndex: "license", key: "license" },
+    {
+      title: "Publication Status",
+      dataIndex: "freidata_doi",
+      key: "publication_status",
+      render: (freidataDoiValue: string | undefined, record: Dataset) => {
+        // Dataset has a FreiDATA DOI
+        if (freidataDoiValue) {
+          return (
+            <Tooltip title="View publication">
+              <a href={`https://doi.org/${freidataDoiValue}`} target="_blank" rel="noopener noreferrer">
+                <img src={`https://freidata.uni-freiburg.de/badge/DOI/${freidataDoiValue}.svg`} alt="FreiDATA badge" />
+              </a>
+            </Tooltip>
+          );
+        }
 
+        // Dataset has a regular DOI (already published elsewhere)
+        if (record.citation_doi) {
+          return (
+            <Tooltip title="View publication">
+              <Button
+                type="link"
+                size="small"
+                className="m-0 p-0"
+                href={`https://doi.org/${record.citation_doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src={`https://zenodo.org/badge/DOI/${record.citation_doi}.svg`} alt="Zenodo badge" />
+              </Button>
+            </Tooltip>
+          );
+        }
+
+        // Dataset has no DOI, show add button
+        return (
+          <Button
+            type="primary"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddToSelection(record);
+            }}
+            disabled={selectedRowKeys.includes(record.id) || !isDatasetComplete(record)}
+          >
+            {selectedRowKeys.includes(record.id) ? "Added" : "publish"}
+          </Button>
+        );
+      },
+    },
     {
       title: "Platform",
       dataIndex: "platform",
       key: "platform",
-      render: (tag) => <Tag color="blue">{tag}</Tag>,
+      render: (tag: string | undefined) => (tag ? <Tag color="blue">{tag}</Tag> : null),
     },
-
     {
       title: "Location",
       dataIndex: "id",
       key: "id",
-      render: (tag) => {
+      render: (tag: number) => {
         if (userData?.find((d) => d.id === tag)?.admin_level_1) {
           return (
             <Tooltip title="View data on the map">
@@ -72,7 +169,7 @@ const DataTable = () => {
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
-      render: (tag, record) => {
+      render: (tag: string | undefined, record: Dataset) => {
         // Check for error state first
         if (record.has_error) {
           return (
@@ -84,9 +181,16 @@ const DataTable = () => {
           );
         }
 
+        // Check if processing is complete
+        const isComplete = isDatasetComplete(record);
+
         switch (tag) {
           case "idle":
-            return (
+            return isComplete ? (
+              <Tooltip title="Processing complete">
+                <Tag color="success" icon={<CheckCircleOutlined />} />
+              </Tooltip>
+            ) : (
               <Tooltip title="Waiting to start processing">
                 <Tag icon={<ClockCircleOutlined />} color="default">
                   idle
@@ -170,14 +274,8 @@ const DataTable = () => {
       title: "Actions",
       dataIndex: "id",
       key: "id",
-      render: (tag, record) => {
-        const isComplete =
-          !record.has_error &&
-          record.is_upload_done &&
-          record.is_ortho_done &&
-          record.is_cog_done &&
-          record.is_thumbnail_done &&
-          record.is_metadata_done;
+      render: (tag: number, record: Dataset) => {
+        const isComplete = isDatasetComplete(record);
 
         return (
           <Button
@@ -194,8 +292,32 @@ const DataTable = () => {
     },
   ];
 
+  const handleSelectionChange = (keys: React.Key[], rows: Dataset[]) => {
+    setSelectedRowKeys(keys);
+    if (onSelectedRowsChange) {
+      onSelectedRowsChange(rows);
+    }
+  };
+
   return (
-    <Table rowKey={"id"} dataSource={userData} columns={columns} pagination={{ pageSize: 6 }} loading={isLoadingData} />
+    <Table
+      rowKey={"id"}
+      rowSelection={{
+        selectedRowKeys,
+        onChange: (selectedRowKeys, selectedRows) => {
+          console.log(`selectedRowKeys: ${selectedRowKeys}`, "selectedRows: ", selectedRows);
+          handleSelectionChange(selectedRowKeys, selectedRows as Dataset[]);
+        },
+        getCheckboxProps: (record: Dataset) => ({
+          // Disable selection for datasets that already have a DOI or are incomplete
+          disabled: !!record.freidata_doi || !!record.citation_doi || !isDatasetComplete(record),
+        }),
+      }}
+      dataSource={userData as Dataset[]}
+      columns={columns}
+      pagination={{ pageSize: 10 }}
+      loading={isLoadingData}
+    />
   );
 };
 

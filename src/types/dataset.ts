@@ -83,6 +83,7 @@ export interface IDataset {
   has_labels: boolean;
   has_deadwood_prediction: boolean;
   ortho_upload_runtime?: number | null;
+  freidata_doi?: string | null;
 }
 
 export interface ILabels {
