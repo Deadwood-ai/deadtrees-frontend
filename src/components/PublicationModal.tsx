@@ -29,9 +29,10 @@ interface PublicationModalProps {
   visible: boolean;
   onCancel: () => void;
   datasets: DatasetType[];
+  onSuccess?: () => void;
 }
 
-const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, datasets }) => {
+const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, datasets, onSuccess }) => {
   const [form] = Form.useForm();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -324,7 +325,13 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
       }
 
       message.success("Publication submitted successfully");
-      onCancel();
+
+      // Call the onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onCancel(); // Fallback to just closing the modal
+      }
     } catch (error) {
       console.error("Error submitting publication:", error);
       message.error("Failed to submit publication");

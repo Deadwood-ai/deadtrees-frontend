@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Typography, Button, Tooltip, Spin } from "antd";
+import { Table, Tag, Typography, Button, Tooltip, Spin, Empty } from "antd";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
-import { ClockCircleFilled, ClockCircleOutlined, LinkOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined } from "@ant-design/icons";
 
 interface Publication {
   id: number;
@@ -110,6 +110,25 @@ const PublicationsTable: React.FC = () => {
 
   if (loading) {
     return <Spin size="large" />;
+  }
+
+  if (publications.length === 0) {
+    return (
+      <Empty
+        className="mt-8"
+        description={
+          <div className="flex flex-col items-center justify-center ">
+            <Typography.Title color="gray" level={4}>
+              No publications yet
+            </Typography.Title>
+            <Typography.Paragraph>
+              Go to the "My Datasets" tab to select and publish your datasets via FreiDATA.
+            </Typography.Paragraph>
+          </div>
+        }
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+      />
+    );
   }
 
   return <Table dataSource={publications} columns={columns} rowKey="id" pagination={{ pageSize: 10 }} />;

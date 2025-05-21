@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import { Button, Table, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,8 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
+import { supabase } from "../hooks/useSupabase";
+import { useAuth } from "../hooks/useAuthProvider";
 
 interface Dataset {
   id: number;
@@ -33,18 +35,76 @@ interface Dataset {
   is_cog_done?: boolean;
   is_thumbnail_done?: boolean;
   is_metadata_done?: boolean;
+  isInPublication?: boolean; // Track if dataset is in publication process
 }
 
 interface DataTableProps {
   onSelectedRowsChange?: (selectedRows: Dataset[]) => void;
+  resetSelection?: boolean; // Flag to reset selection
+  onResetSelectionComplete?: () => void; // Callback when reset is complete
 }
 
-const DataTable: React.FC<DataTableProps> = ({ onSelectedRowsChange }) => {
+const DataTable: React.FC<DataTableProps> = ({
+  onSelectedRowsChange,
+  resetSelection = false,
+  onResetSelectionComplete,
+}) => {
   useDatasetSubscription();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { data: userData, isLoading: isLoadingData } = useUserDatasets();
+  const { user } = useAuth();
+  const [datasetsInPublication, setDatasetsInPublication] = useState<number[]>([]);
 
   const nav = useNavigate();
+
+  // Effect to reset selection when requested
+  useEffect(() => {
+    if (resetSelection) {
+      setSelectedRowKeys([]);
+      if (onSelectedRowsChange) {
+        onSelectedRowsChange([]);
+      }
+      if (onResetSelectionComplete) {
+        onResetSelectionComplete();
+      }
+    }
+  }, [resetSelection, onSelectedRowsChange, onResetSelectionComplete]);
+
+  // Fetch datasets that are in publication process
+  useEffect(() => {
+    const fetchDatasetsInPublication = async () => {
+      if (!user) return;
+
+      try {
+        // Get all publications by this user that don't have a DOI yet
+        const { data: publications } = await supabase.from("data_publication").select("id, doi").eq("user_id", user.id);
+
+        if (!publications || publications.length === 0) return;
+
+        // Filter publications that don't have a DOI yet
+        const pendingPublicationIds = publications.filter((pub) => !pub.doi).map((pub) => pub.id);
+
+        if (pendingPublicationIds.length === 0) return;
+
+        // Get all datasets linked to these pending publications
+        const { data: linkedDatasets } = await supabase
+          .from("jt_data_publication_datasets")
+          .select("dataset_id")
+          .in("publication_id", pendingPublicationIds);
+
+        if (!linkedDatasets) return;
+
+        // Extract the dataset IDs
+        const pendingDatasetIds = linkedDatasets.map((item) => item.dataset_id);
+        setDatasetsInPublication(pendingDatasetIds);
+      } catch (error) {
+        console.error("Error fetching datasets in publication:", error);
+      }
+    };
+
+    fetchDatasetsInPublication();
+  }, [user]);
+
   console.log("userData in DataTable", userData);
 
   const isDatasetComplete = (record: Dataset): boolean => {
@@ -118,6 +178,17 @@ const DataTable: React.FC<DataTableProps> = ({ onSelectedRowsChange }) => {
               >
                 <img src={`https://zenodo.org/badge/DOI/${record.citation_doi}.svg`} alt="Zenodo badge" />
               </Button>
+            </Tooltip>
+          );
+        }
+
+        // Dataset is in publication process but doesn't have a DOI yet
+        if (datasetsInPublication.includes(record.id)) {
+          return (
+            <Tooltip title="Publication in review">
+              <Tag color="orange" icon={<SyncOutlined spin />}>
+                In Review
+              </Tag>
             </Tooltip>
           );
         }
@@ -312,6 +383,18 @@ const DataTable: React.FC<DataTableProps> = ({ onSelectedRowsChange }) => {
           // Disable selection for datasets that already have a DOI or are incomplete
           disabled: !!record.freidata_doi || !!record.citation_doi || !isDatasetComplete(record),
         }),
+        renderCell: (checked, record, index, originNode) => {
+          const dataset = record as Dataset;
+          let tooltipText = "Click to add to publication";
+
+          if (dataset.freidata_doi || dataset.citation_doi) {
+            tooltipText = "Already published";
+          } else if (!isDatasetComplete(dataset)) {
+            tooltipText = "Processing not complete";
+          }
+
+          return <Tooltip title={tooltipText}>{originNode}</Tooltip>;
+        },
       }}
       dataSource={userData as Dataset[]}
       columns={columns}
