@@ -3,10 +3,10 @@ import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image, Tag 
 import { Link, useLocation } from "react-router-dom";
 const { Header } = Layout;
 
-import { useAuth } from "../hooks/useAuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-const navigation = [
+const defaultNavigation = [
   {
     key: "/home",
     label: <Link to="/">Home</Link>,
@@ -29,13 +29,26 @@ const navigation = [
   },
 ];
 
+// Additional navigation item for processor users
+const processorNavigation = {
+  key: "/dataset-audit",
+  label: <Link to="/dataset-audit">Audit Datasets</Link>,
+};
+
 export default function Navigation() {
-  const { session, signOut } = useAuth();
+  const { user, session, signOut, isLoading } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
 
   // Get the base path for matching navigation
   const currentPath = "/" + location.pathname.split("/")[1];
+
+  // Add processor-specific navigation items if user has processor role
+  const navigation = [...defaultNavigation];
+  if (user?.role === "processor") {
+    // Insert the audit link before the Account link
+    navigation.splice(navigation.length - 1, 0, processorNavigation);
+  }
 
   const {
     token: { colorBgContainer },
