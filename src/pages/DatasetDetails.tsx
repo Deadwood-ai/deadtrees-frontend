@@ -1,4 +1,4 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Badge } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
@@ -115,19 +115,50 @@ export default function DatasetDetails() {
                   </Typography.Text>
                 </Tooltip>
               </div>
-              {dataset.citation_doi && (
-                <div className="flex justify-between">
-                  <Typography.Text className="pr-2">DOI: </Typography.Text>
-                  <Tooltip title={dataset.citation_doi}>
-                    <a href={dataset.citation_doi}>
-                      {dataset.citation_doi &&
-                        dataset.citation_doi.slice(0, 30) + (dataset.citation_doi.length > 30 ? "..." : "")}
-                    </a>
-                  </Tooltip>
 
-                  {/* </Typography.Text> */}
+              <div className="flex justify-between">
+                <Typography.Text className="pr-2">DOI: </Typography.Text>
+                <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
+                  {dataset.freidata_doi ? (
+                    <Tooltip title={`View publication: ${dataset.freidata_doi}`}>
+                      <Button
+                        type="link"
+                        size="small"
+                        className="m-0 p-0"
+                        href={`https://doi.org/${dataset.freidata_doi}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <img
+                          src={`https://freidata.uni-freiburg.de/badge/DOI/${dataset.freidata_doi}.svg`}
+                          alt="FreiDATA DOI"
+                          style={{ maxWidth: "100%", height: "auto" }}
+                        />
+                      </Button>
+                    </Tooltip>
+                  ) : dataset.citation_doi ? (
+                    <Tooltip title={`View publication: ${dataset.citation_doi}`}>
+                      <Button
+                        type="link"
+                        size="small"
+                        className="m-0 p-0"
+                        href={`https://doi.org/${dataset.citation_doi}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <img
+                          src={`https://zenodo.org/badge/DOI/${dataset.citation_doi}.svg`}
+                          alt="Zenodo DOI"
+                          style={{ maxWidth: "100%", height: "auto" }}
+                        />
+                      </Button>
+                    </Tooltip>
+                  ) : (
+                    <Tag color="default">Not published</Tag>
+                  )}
                 </div>
-              )}
+              </div>
+
               <div className="flex justify-between">
                 <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
                 <Typography.Text strong>
