@@ -43,7 +43,16 @@ export function useAuthors() {
     queryKey: ["authors"],
     enabled: !!datasets,
     queryFn: () => {
-      const authorsUnique = [...new Set(datasets?.map((item) => item.authors).filter(Boolean))];
+      // Flatten all authors arrays and get unique individual authors
+      const allAuthors =
+        datasets?.reduce((acc: string[], item) => {
+          if (item.authors && Array.isArray(item.authors)) {
+            acc.push(...item.authors);
+          }
+          return acc;
+        }, []) || [];
+
+      const authorsUnique = [...new Set(allAuthors)];
       return authorsUnique.map((author) => ({
         label: author,
         value: author,
