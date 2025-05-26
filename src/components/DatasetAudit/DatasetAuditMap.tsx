@@ -22,6 +22,7 @@ import { Settings } from "../../config";
 import { createDeadwoodVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
 import { useDatasetLabels } from "../../hooks/useDatasetLabels";
 import { ILabelData } from "../../types/labels";
+import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 
 interface DatasetAuditMapProps {
   dataset: IDataset;
@@ -45,6 +46,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     labelData: ILabelData.DEADWOOD,
     enabled: !!dataset?.id,
   });
+
+  // Get existing AOI data
+  const { data: aoiData, isLoading: isAOILoading } = useDatasetAOI(dataset.id);
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
@@ -197,6 +201,44 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     };
   }, [dataset, mapStyle]);
 
+  // Load existing AOI when data is available
+  useEffect(() => {
+    if (isAOILoading || !aoiLayerRef.current) return;
+
+    if (aoiData) {
+      const source = aoiLayerRef.current.getSource();
+      if (!source) return;
+
+      try {
+        const format = new GeoJSON();
+        const feature = format.readFeature(aoiData.geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        });
+
+        source.clear();
+        source.addFeature(feature);
+        setHasAOI(true);
+
+        // Notify parent component
+        if (onAOIChange) {
+          onAOIChange(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon);
+        }
+
+        console.log("Existing AOI loaded and displayed");
+      } catch (error) {
+        console.error("Error loading existing AOI:", error);
+        message.error("Failed to load existing AOI");
+      }
+    } else {
+      // No existing AOI
+      setHasAOI(false);
+      if (onAOIChange) {
+        onAOIChange(null);
+      }
+    }
+  }, [aoiData, isAOILoading, onAOIChange]);
+
   // Update opacity effects
   useEffect(() => {
     if (mapInstanceRef.current && layerRefs.current.deadwoodVector) {
@@ -285,9 +327,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
 
-      {/* AOI Controls */}
+      {/* AOI Controls - Updated */}
       <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
-        {!hasAOI && !isDrawing && (
+        {!hasAOI && !isDrawing && !isAOILoading && (
           <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
             Draw AOI
           </Button>
@@ -299,7 +341,13 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           </Button>
         )}
 
-        {hasAOI && <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">✓ AOI Defined</div>}
+        {hasAOI && (
+          <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
+            ✓ AOI {aoiData ? "Loaded" : "Defined"}
+          </div>
+        )}
+
+        {isAOILoading && <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">Loading AOI...</div>}
       </div>
 
       <div className="absolute left-2 top-4 z-20">
