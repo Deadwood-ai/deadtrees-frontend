@@ -1,19 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Form, Switch, Input, Select, message, Space } from "antd";
-import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
+import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card, Space, Image } from "antd";
+import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
-import {
-  useDatasetAudit,
-  useSaveDatasetAudit,
-  useSaveDatasetAOI,
-  useDatasetAOI,
-  AuditFormValues,
-  AOIData,
-} from "../../hooks/useDatasetAudit";
-import { useAuth } from "../../hooks/useAuth";
-import { useAOI } from "../../contexts/AOIContext";
+import { useDatasetAudit, useSaveDatasetAudit, AuditFormValues } from "../../hooks/useDatasetAudit";
+import { useAuth } from "../../hooks/useAuthProvider";
+import { Settings } from "../../config";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -23,92 +16,59 @@ interface DatasetAuditDetailProps {
   dataset: IDataset;
 }
 
+// Helper info content for each audit step
+const AUDIT_INFO = {
+  georeferencing:
+    "Georeferencing accuracy: Good (<15m) means properly aligned with map features. Poor (>15m) should be excluded from analysis.",
+  acquisitionDate:
+    "Validate if acquisition date matches visual indicators like leaf color, snow cover, or seasonal characteristics. Invalid dates should be excluded.",
+  phenology:
+    "Assess seasonal appropriateness: In Season means appropriate for the region and time. Out of Season (especially in non-tropical regions) should be excluded from Sentinel training.",
+  deadwoodQuality:
+    "Rate deadwood segmentation prediction quality: Great = highly accurate, OK = acceptable for Sentinel training, Bad = poor quality predictions.",
+  forestCoverQuality:
+    "Evaluate forest cover segmentation quality: Great = precise boundaries and classification, OK = acceptable accuracy, Bad = poor segmentation results.",
+  cogIssues:
+    "Assess Cloud-Optimized GeoTIFF quality: Check transparency, black/white areas, color band consistency, and artifacts. Good = no issues, Issues = problems detected.",
+  thumbnailIssues:
+    "Evaluate thumbnail quality: Check color accuracy, appropriate zoom level, white background (correct no-data values), and absence of artifacts. Good = meets standards, Issues = problems found.",
+};
+
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
   const navigate = useNavigate();
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
 
-  // Use AOI context instead of local state
-  const { currentAOI, setCurrentAOI, setDatasetId, hasUnsavedChanges, setHasUnsavedChanges } = useAOI();
-
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
 
-  // Get existing AOI data if available
-  const { data: savedAOI, isLoading: isAOILoading } = useDatasetAOI(dataset.id);
-
-  // Mutations to save audit data and AOI
+  // Mutation to save audit data
   const { mutateAsync: saveAudit, isPending: isSavingAudit } = useSaveDatasetAudit();
 
-  const { mutateAsync: saveAOI, isPending: isSavingAOI } = useSaveDatasetAOI();
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Set dataset ID in context when component mounts
-  useEffect(() => {
-    if (dataset.id) {
-      setDatasetId(dataset.id);
-    }
-
-    // Clean up when component unmounts
-    return () => {
-      setDatasetId(null);
-    };
-  }, [dataset.id, setDatasetId]);
 
   // Set form values when audit data is loaded
   useEffect(() => {
     if (auditData) {
+      // No need to transform to arrays anymore since we're using Radio
       form.setFieldsValue(auditData);
     }
   }, [auditData, form]);
-
-  // Load saved AOI data when available
-  useEffect(() => {
-    if (savedAOI && savedAOI.geometry) {
-      setCurrentAOI(savedAOI.geometry as GeoJSON.MultiPolygon);
-      form.setFieldsValue({ aoi_done: true });
-      setHasUnsavedChanges(false);
-    }
-  }, [savedAOI, form, setCurrentAOI, setHasUnsavedChanges]);
 
   const handleSubmit = async (values: AuditFormValues) => {
     try {
       setIsSubmitting(true);
 
-      // First, save the audit data
+      // No need to transform arrays anymore since Radio returns direct boolean values
       const auditPayload: AuditFormValues = {
         ...values,
         dataset_id: dataset.id,
       };
 
       await saveAudit(auditPayload);
+      message.success(auditData ? "Audit data updated successfully" : "Audit data saved successfully");
 
-      // Then, if there's AOI data, save it
-      if (currentAOI && currentAOI.coordinates && currentAOI.coordinates.length > 0) {
-        // Create a stable copy of the AOI to prevent any modifications during the save process
-        const aoiPayload: AOIData = {
-          dataset_id: dataset.id,
-          geometry: JSON.parse(JSON.stringify(currentAOI)), // Create a deep copy to prevent mutation issues
-          is_whole_image: false, // Could be updated based on UI if needed
-          image_quality: 1, // Default value, could be changed if there's UI for it
-          notes: values.notes || "",
-        };
-
-        try {
-          await saveAOI(aoiPayload);
-          setHasUnsavedChanges(false);
-          message.success("Audit data and Area of Interest saved successfully");
-        } catch (aoiError) {
-          console.error("Error saving AOI data:", aoiError);
-          message.warning("Audit data saved, but there was an issue saving the Area of Interest");
-          // Continue execution - don't block overall save if AOI fails
-        }
-      } else {
-        message.success("Audit data saved successfully");
-      }
-
-      // Use setTimeout to ensure state updates complete before navigation
+      // Navigate back to audit list
       setTimeout(() => {
         navigate("/dataset-audit");
       }, 100);
@@ -120,227 +80,309 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   };
 
-  const handleAOIChange = (multiPolygon: GeoJSON.MultiPolygon) => {
-    try {
-      // Validate the multiPolygon before updating state
-      if (!multiPolygon || typeof multiPolygon !== "object") {
-        console.warn("Invalid multiPolygon received:", multiPolygon);
-        return;
-      }
-
-      // Create a clean copy of the multiPolygon to prevent reference issues
-      const validatedAOI = {
-        type: "MultiPolygon" as const,
-        coordinates: multiPolygon.coordinates || [],
-      };
-
-      // Update the context with the validated polygon
-      console.log("validatedAOI", validatedAOI);
-      setCurrentAOI(validatedAOI);
-      setHasUnsavedChanges(true);
-
-      // Update aoi_done in form when a valid AOI is drawn
-      if (validatedAOI.coordinates.length > 0) {
-        form.setFieldsValue({ aoi_done: true });
-      } else {
-        form.setFieldsValue({ aoi_done: false });
-      }
-    } catch (error) {
-      console.error("Error handling AOI change:", error);
-    }
-  };
-
   const handleCancel = () => {
-    if (hasUnsavedChanges) {
-      // If there's an unsaved AOI, show a confirmation dialog
-      if (window.confirm("You have an unsaved Area of Interest. Are you sure you want to leave?")) {
-        navigate("/dataset-audit");
-      }
-    } else {
-      // Otherwise just navigate
-      navigate("/dataset-audit");
-    }
+    navigate("/dataset-audit");
   };
 
-  const isLoading = isAuditLoading || isAOILoading || !user;
-  const isSaving = isSavingAudit || isSavingAOI || isSubmitting;
+  const isLoading = isAuditLoading || !user;
+  const isSaving = isSavingAudit || isSubmitting;
+
+  const InfoIcon = ({ content }: { content: string }) => (
+    <Tooltip title={content} placement="right" overlayStyle={{ maxWidth: 300 }}>
+      <InfoCircleOutlined className="ml-1 cursor-help text-blue-500" />
+    </Tooltip>
+  );
+
+  // Generate thumbnail URL
+  const thumbnailUrl = dataset.thumbnail_path ? `${Settings.THUMBNAIL_URL}${dataset.thumbnail_path}` : null;
+
+  // Format acquisition date
+  const formatAcquisitionDate = () => {
+    const day = dataset.aquisition_day;
+    const month = dataset.aquisition_month;
+    const year = dataset.aquisition_year;
+
+    if (!year) return "Date not available";
+
+    let dateStr = year;
+    if (month) {
+      dateStr = `${month}/${year}`;
+      if (day) {
+        dateStr = `${day}/${month}/${year}`;
+      }
+    }
+    return dateStr;
+  };
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="flex w-80 flex-shrink-0 flex-col overflow-hidden border-r border-slate-200">
+      <div className="flex w-96 flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-gray-50">
         {/* Header - Fixed position */}
         <div className="flex-shrink-0 border-b border-slate-200 bg-white p-3 shadow-sm">
-          <Button size="middle" shape="circle" onClick={handleCancel} icon={<ArrowLeftOutlined />} className="mb-2" />
-          <Title level={5} className="m-0">
-            Audit Dataset: {dataset.admin_level_3 || dataset.admin_level_2}, {dataset.admin_level_1}
+          <Button shape="circle" onClick={handleCancel} icon={<ArrowLeftOutlined />} className="mb-2" />
+          <Title level={5} className="m-0 text-sm">
+            Audit: {dataset.admin_level_3 || dataset.admin_level_2}
           </Title>
+          <Text type="secondary" className="text-xs">
+            ID: {dataset.id} | {dataset.file_name}
+          </Text>
         </div>
 
         {/* Scrollable Form Container */}
-        <div className="flex-1 overflow-y-auto p-1">
+        <div className="flex-1 overflow-y-auto p-2">
           <Form
             form={form}
-            layout="horizontal"
+            layout="vertical"
             onFinish={handleSubmit}
             disabled={isLoading}
-            className="space-y-2"
-            labelCol={{ span: 16 }}
-            wrapperCol={{ span: 8 }}
-            labelAlign="left"
-            colon={false}
             size="small"
+            validateTrigger={["onChange", "onBlur"]}
           >
-            <div className="rounded-md bg-white p-2 shadow-sm">
-              <Title level={5} className="my-2  text-sm">
-                Georeference & Date
-              </Title>
-
-              <Form.Item name="is_georeferenced" label="Is Georeferenced" valuePropName="checked">
-                <Switch size="small" />
-              </Form.Item>
-
-              <Form.Item name="has_valid_acquisition_date" label="Has Valid Acquisition Date" valuePropName="checked">
-                <Switch size="small" />
-              </Form.Item>
+            {/* Step 1: Georeferencing */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  1. Georeferencing
+                </Text>
+                <InfoIcon content={AUDIT_INFO.georeferencing} />
+              </div>
 
               <Form.Item
-                name="acquisition_date_notes"
-                label="Date Notes"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
+                name="is_georeferenced"
+                className="mb-2"
+                rules={[{ required: true, message: "Please select georeferencing status" }]}
               >
-                <TextArea rows={2} placeholder="Optional notes about acquisition date" />
+                <Radio.Group>
+                  <Space size="large">
+                    <Radio value={true}>🟢 Good (&lt;15m)</Radio>
+                    <Radio value={false}>🔴 Poor (&gt;15m)</Radio>
+                  </Space>
+                </Radio.Group>
               </Form.Item>
+            </Card>
+
+            {/* Step 2: Acquisition Date */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  2. Acquisition Date
+                </Text>
+                <InfoIcon content={AUDIT_INFO.acquisitionDate} />
+              </div>
+
+              {/* Display the acquisition date */}
+              <div className="mb-2 rounded bg-blue-50 p-2">
+                <Text className="text-xs font-medium text-blue-800">
+                  📅 Acquisition Date: {formatAcquisitionDate()}
+                </Text>
+              </div>
+
+              <Form.Item
+                name="has_valid_acquisition_date"
+                className="mb-2"
+                rules={[{ required: true, message: "Please validate acquisition date" }]}
+              >
+                <Radio.Group>
+                  <Space size="large">
+                    <Radio value={true}>🟢 Valid</Radio>
+                    <Radio value={false}>🔴 Invalid</Radio>
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item name="acquisition_date_notes" className="mb-0">
+                <TextArea rows={2} placeholder="Notes about date inconsistencies..." className="text-xs" />
+              </Form.Item>
+            </Card>
+
+            {/* Step 3: Phenology */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  3. Phenology
+                </Text>
+                <InfoIcon content={AUDIT_INFO.phenology} />
+              </div>
+
+              <Form.Item
+                name="has_valid_phenology"
+                className="mb-2"
+                rules={[{ required: true, message: "Please assess phenology" }]}
+              >
+                <Radio.Group>
+                  <Space size="large">
+                    <Radio value={true}>🟢 In Season</Radio>
+                    <Radio value={false}>🔴 Out of Season</Radio>
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item name="phenology_notes" className="mb-0">
+                <TextArea rows={2} placeholder="Seasonal observations..." className="text-xs" />
+              </Form.Item>
+            </Card>
+
+            {/* Step 4: Prediction Quality */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  4. Prediction Quality
+                </Text>
+              </div>
+
+              <div className="mb-3">
+                <div className="mb-1 flex items-center">
+                  <Text className="text-xs font-medium">Deadwood Segmentation</Text>
+                  <InfoIcon content={AUDIT_INFO.deadwoodQuality} />
+                </div>
+                <Form.Item
+                  name="deadwood_quality"
+                  className="mb-1"
+                  rules={[{ required: true, message: "Please rate deadwood quality" }]}
+                >
+                  <Radio.Group>
+                    <Space size="large">
+                      <Radio value="great">🟢 Great</Radio>
+                      <Radio value="sentinel_ok">🟡 OK</Radio>
+                      <Radio value="bad">🔴 Bad</Radio>
+                    </Space>
+                  </Radio.Group>
+                </Form.Item>
+                <Form.Item name="deadwood_notes" className="mb-0">
+                  <TextArea rows={1} placeholder="Deadwood notes..." className="text-xs" />
+                </Form.Item>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center">
+                  <Text className="text-xs font-medium">Forest Cover Segmentation</Text>
+                  <InfoIcon content={AUDIT_INFO.forestCoverQuality} />
+                </div>
+                <Form.Item
+                  name="forest_cover_quality"
+                  className="mb-1"
+                  rules={[{ required: true, message: "Please rate forest cover quality" }]}
+                >
+                  <Radio.Group>
+                    <Space size="large">
+                      <Radio value="great">🟢 Great</Radio>
+                      <Radio value="sentinel_ok">🟡 OK</Radio>
+                      <Radio value="bad">🔴 Bad</Radio>
+                    </Space>
+                  </Radio.Group>
+                </Form.Item>
+                <Form.Item name="forest_cover_notes" className="mb-0">
+                  <TextArea rows={1} placeholder="Forest cover notes..." className="text-xs" />
+                </Form.Item>
+              </div>
+            </Card>
+
+            {/* Step 5: Cloud-Optimized GeoTIFF */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  5. Cloud-Optimized GeoTIFF
+                </Text>
+                <InfoIcon content={AUDIT_INFO.cogIssues} />
+              </div>
+
+              <Form.Item
+                name="has_cog_issue"
+                className="mb-2"
+                rules={[{ required: true, message: "Please assess COG quality" }]}
+              >
+                <Radio.Group>
+                  <Space size="large">
+                    <Radio value={false}>🟢 Good</Radio>
+                    <Radio value={true}>🔴 Issues</Radio>
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item name="cog_issue_notes" className="mb-0">
+                <TextArea
+                  rows={2}
+                  placeholder="COG issue details (transparency, black/white areas, color bands, artifacts)..."
+                  className="text-xs"
+                />
+              </Form.Item>
+            </Card>
+
+            {/* Step 6: Thumbnail */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  6. Thumbnail
+                </Text>
+                <InfoIcon content={AUDIT_INFO.thumbnailIssues} />
+              </div>
+
+              {/* Thumbnail Display */}
+              {thumbnailUrl && (
+                <div className="mb-3 flex justify-center">
+                  <Image
+                    src={thumbnailUrl}
+                    alt="Dataset thumbnail"
+                    width={120}
+                    height={120}
+                    style={{ objectFit: "cover" }}
+                    className="rounded border"
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
+                  />
+                </div>
+              )}
+
+              <Form.Item
+                name="has_thumbnail_issue"
+                className="mb-2"
+                rules={[{ required: true, message: "Please assess thumbnail quality" }]}
+              >
+                <Radio.Group>
+                  <Space size="large">
+                    <Radio value={false}>🟢 Good</Radio>
+                    <Radio value={true}>🔴 Issues</Radio>
+                  </Space>
+                </Radio.Group>
+              </Form.Item>
+
+              <Form.Item name="thumbnail_issue_notes" className="mb-0">
+                <TextArea
+                  rows={2}
+                  placeholder="Thumbnail issue details (colors, zoom level, white background, artifacts)..."
+                  className="text-xs"
+                />
+              </Form.Item>
+            </Card>
+
+            {/* Step 7: Additional Notes */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  7. Additional Notes
+                </Text>
+              </div>
+
+              <Form.Item name="notes" className="mb-0">
+                <TextArea rows={3} placeholder="Any additional observations..." className="text-xs" />
+              </Form.Item>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
+              <Space className="w-full justify-end">
+                <Button onClick={handleCancel}>Cancel</Button>
+                <Button type="primary" htmlType="submit" loading={isSaving} icon={<SaveOutlined />}>
+                  Save Audit
+                </Button>
+              </Space>
             </div>
-
-            <div className="rounded-md bg-white p-2 shadow-sm">
-              <Title level={5} className="my-2 text-sm">
-                Phenology
-              </Title>
-
-              <Form.Item name="has_valid_phenology" label="Has Valid Phenology" valuePropName="checked">
-                <Switch size="small" />
-              </Form.Item>
-
-              <Form.Item
-                name="phenology_notes"
-                label="Phenology Notes"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <TextArea rows={2} placeholder="Optional notes about phenology" />
-              </Form.Item>
-            </div>
-
-            <div className="rounded-md bg-white p-3 shadow-sm">
-              <Title level={5} className="my-2 text-sm">
-                Prediction Quality
-              </Title>
-
-              <Form.Item
-                name="deadwood_quality"
-                label="Deadwood Quality"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <Select placeholder="Select quality" size="small">
-                  <Option value="great">Great</Option>
-                  <Option value="sentinel_ok">Sentinel OK</Option>
-                  <Option value="bad">Bad</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item name="deadwood_notes" label="Deadwood Notes" labelCol={{ span: 24 }} wrapperCol={{ span: 24 }}>
-                <TextArea rows={2} placeholder="Optional notes about deadwood detection" />
-              </Form.Item>
-
-              <Form.Item
-                name="forest_cover_quality"
-                label="Forest Cover Quality"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <Select placeholder="Select quality" size="small">
-                  <Option value="great">Great</Option>
-                  <Option value="sentinel_ok">Sentinel OK</Option>
-                  <Option value="bad">Bad</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="forest_cover_notes"
-                label="Forest Cover Notes"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <TextArea rows={2} placeholder="Optional notes about forest cover" />
-              </Form.Item>
-            </div>
-
-            <div className="rounded-md bg-white p-3 shadow-sm">
-              <Title level={5} className="my-2 text-sm">
-                AOI & Issues
-              </Title>
-
-              <Form.Item name="aoi_done" label="AOI Completed" valuePropName="checked">
-                <Switch size="small" disabled={true} />
-              </Form.Item>
-
-              <Text type="secondary" className="mb-2 block text-xs">
-                Use the drawing tools on the map to define the Area of Interest
-              </Text>
-
-              <Form.Item name="has_cog_issue" label="Has COG Issue" valuePropName="checked">
-                <Switch size="small" />
-              </Form.Item>
-
-              <Form.Item
-                name="cog_issue_notes"
-                label="COG Issue Notes"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <TextArea rows={2} placeholder="Optional notes about COG issues" />
-              </Form.Item>
-
-              <Form.Item name="has_thumbnail_issue" label="Has Thumbnail Issue" valuePropName="checked">
-                <Switch size="small" />
-              </Form.Item>
-
-              <Form.Item
-                name="thumbnail_issue_notes"
-                label="Thumbnail Issue Notes"
-                labelCol={{ span: 24 }}
-                wrapperCol={{ span: 24 }}
-              >
-                <TextArea rows={2} placeholder="Optional notes about thumbnail issues" />
-              </Form.Item>
-            </div>
-
-            <div className="rounded-md bg-white p-3 shadow-sm">
-              <Title level={5} className="my-2 text-sm">
-                Additional Notes
-              </Title>
-
-              <Form.Item name="notes" label="General Notes" labelCol={{ span: 24 }} wrapperCol={{ span: 24 }}>
-                <TextArea rows={3} placeholder="Any additional observations or notes" />
-              </Form.Item>
-            </div>
-
-            <Space className="mb-4 mt-4 w-full justify-end">
-              <Button onClick={handleCancel} size="small">
-                Cancel
-              </Button>
-              <Button type="primary" htmlType="submit" loading={isSaving} icon={<SaveOutlined />} size="small">
-                Save Audit
-              </Button>
-            </Space>
           </Form>
         </div>
       </div>
 
+      {/* Map Section */}
       <div className="h-full flex-1">
-        <DatasetAuditMap dataset={dataset} onAOIChange={handleAOIChange} initialAOI={currentAOI} />
+        <DatasetAuditMap dataset={dataset} />
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
-import { checkPrivilegedUser, PrivilegedUser } from "../../api/checkPrivilegedUser";
+import { useCanUploadPrivate } from "../../hooks/useUserPrivileges";
 
 import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
@@ -174,18 +174,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
-  const [isPrivilegedUser, setIsPrivilegedUser] = useState<PrivilegedUser | null>(null);
-
-  useEffect(() => {
-    const checkPrivilegeStatus = async () => {
-      if (session?.user) {
-        const userData = await checkPrivilegedUser();
-        setIsPrivilegedUser(userData);
-      }
-    };
-
-    checkPrivilegeStatus();
-  }, [session]);
+  const { canUpload: canUploadPrivate } = useCanUploadPrivate();
 
   const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
@@ -518,7 +507,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   autoSize={{ minRows: 3, maxRows: 6 }}
                 />
               </Form.Item>
-              {isPrivilegedUser?.can_upload_private && (
+              {canUploadPrivate && (
                 <Form.Item name="is_private" valuePropName="checked">
                   <div className="mt-4 flex items-start">
                     <Checkbox />

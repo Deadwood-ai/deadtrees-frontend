@@ -1,54 +1,96 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Table, Button, Typography, message, Tag } from "antd";
+import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { useAuth } from "../hooks/useAuth";
+import { SearchOutlined } from "@ant-design/icons";
+import { useAuth } from "../hooks/useAuthProvider";
+import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useDatasets } from "../hooks/useDatasets";
-import { useDatasetAudits, AuditFormValues } from "../hooks/useDatasetAudit";
 import DatasetAuditDetail from "../components/DatasetAudit/DatasetAuditDetail";
-import { SortOrder } from "antd/es/table/interface";
+import { IDataset } from "../types/dataset";
 
 const { Title } = Typography;
+
+type AuditFilter = "needs-audit" | "audited";
 
 export default function DatasetAudit() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
-  const { data: auditData, isLoading: isAuditLoading } = useDatasetAudits();
-  const [isStartingNewAudit, setIsStartingNewAudit] = useState(false);
 
-  // Check if user has processor role
+  // ALL HOOKS MUST BE CALLED FIRST - NO EARLY RETURNS BEFORE THIS POINT
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
+  const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
+
+  // Filter states
+  const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
+  const [idFilter, setIdFilter] = useState<string>("");
+
+  // Helper function to check if dataset processing is complete
+  const isProcessingComplete = (dataset: IDataset) => {
+    return (
+      dataset.is_upload_done &&
+      dataset.is_ortho_done &&
+      dataset.is_cog_done &&
+      dataset.is_thumbnail_done &&
+      dataset.is_deadwood_done &&
+      dataset.is_metadata_done
+    );
+  };
+
+  // Filter datasets based on audit status and ID
+  const filteredDatasets = useMemo(() => {
+    if (!datasets) return [];
+
+    let filtered = datasets;
+
+    // Filter by audit status
+    if (auditFilter === "needs-audit") {
+      filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
+    } else {
+      filtered = filtered.filter((dataset) => dataset.is_audited);
+    }
+
+    // Filter by ID if provided
+    if (idFilter.trim()) {
+      const idNumber = parseInt(idFilter.trim());
+      if (!isNaN(idNumber)) {
+        filtered = filtered.filter((dataset) => dataset.id === idNumber);
+      } else {
+        // If not a valid number, show no results
+        filtered = [];
+      }
+    }
+
+    return filtered;
+  }, [datasets, auditFilter, idFilter]);
+
+  // Count datasets for each category
+  const needsAuditCount = useMemo(() => {
+    return datasets?.filter((d) => !d.is_audited && isProcessingComplete(d)).length || 0;
+  }, [datasets]);
+
+  const auditedCount = useMemo(() => {
+    return datasets?.filter((d) => d.is_audited).length || 0;
+  }, [datasets]);
+
+  // Check if user has audit privileges
   useEffect(() => {
-    if (!isAuthLoading && user && user.role !== "processor") {
+    if (!isAuthLoading && !isAuditPrivilegeLoading && user && !canAudit) {
       message.error("You do not have permission to access this page");
       navigate("/");
     }
-  }, [user, isAuthLoading, navigate]);
+  }, [user, isAuthLoading, isAuditPrivilegeLoading, canAudit, navigate]);
 
-  // Handle "new" audit navigation in useEffect to avoid React Router warning
-  useEffect(() => {
-    // Only run this if we're on the "new" route and we haven't started a new audit yet
-    if (id === "new" && !isStartingNewAudit && datasets && auditData) {
-      setIsStartingNewAudit(true);
+  // NOW WE CAN HAVE CONDITIONAL RENDERING AFTER ALL HOOKS ARE CALLED
 
-      const datasetIdsWithAudits = auditData.map((audit) => audit.dataset_id) || [];
-      const datasetsWithoutAudits = datasets.filter((dataset) => !datasetIdsWithAudits.includes(dataset.id)) || [];
+  // Show loading while checking authentication and privileges
+  if (isAuthLoading || isAuditPrivilegeLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
-      if (datasetsWithoutAudits.length === 0) {
-        message.info("All datasets have been audited");
-        navigate("/dataset-audit");
-      } else {
-        // Select the first dataset without an audit
-        const nextDatasetId = datasetsWithoutAudits[0].id;
-        navigate(`/dataset-audit/${nextDatasetId}`);
-      }
-    }
-  }, [id, isStartingNewAudit, datasets, auditData, navigate]);
-
-  // If we're on the detail view (but not the "new" view), show the audit form
-  if (id && id !== "new") {
+  // If we're on the detail view, show the audit form
+  if (id) {
     const dataset = datasets?.find((d) => d.id.toString() === id);
 
     if (isDatasetLoading) return <div>Loading dataset...</div>;
@@ -57,107 +99,153 @@ export default function DatasetAudit() {
     return <DatasetAuditDetail dataset={dataset} />;
   }
 
-  // If we're waiting for the "new" audit to process, show a loading state
-  if (id === "new") {
-    return <div className="p-6">Finding unaudited dataset...</div>;
-  }
-
-  // Define table columns
-  const columns: ColumnsType<AuditFormValues> = [
+  // Define table columns for v2_full_dataset_view
+  const columns: ColumnsType<IDataset> = [
     {
       title: "ID",
-      dataIndex: "dataset_id",
-      key: "dataset_id",
+      dataIndex: "id",
+      key: "id",
+      sorter: (a: IDataset, b: IDataset) => a.id - b.id,
+      defaultSortOrder: "descend" as const,
+      width: 80,
     },
     {
-      title: "Location",
-      dataIndex: "dataset_id",
-      key: "location",
-      render: (datasetId: number) => {
-        const dataset = datasets?.find((d) => d.id === datasetId);
-        return dataset
-          ? `${dataset.admin_level_2 || dataset.admin_level_3 || ""}, ${dataset.admin_level_1 || "Unknown"}`
-          : "Unknown";
-      },
+      title: "User ID",
+      dataIndex: "user_id",
+      key: "user_id",
+      render: (userId: string) => <span className="font-mono text-xs">{userId}</span>,
     },
     {
-      title: "Audit Date",
-      dataIndex: "audit_date",
-      key: "audit_date",
-      render: (date: string) => new Date(date).toLocaleDateString(),
-      sorter: (a: AuditFormValues, b: AuditFormValues) => {
-        return new Date(a.audit_date || 0).getTime() - new Date(b.audit_date || 0).getTime();
-      },
-      defaultSortOrder: "descend" as SortOrder,
-    },
-    {
-      title: "Deadwood Quality",
-      dataIndex: "deadwood_quality",
-      key: "deadwood_quality",
-      render: (quality: string) => {
-        if (!quality) return <Tag color="default">Not Audited</Tag>;
+      title: "Authors",
+      dataIndex: "authors",
+      key: "authors",
+      render: (authors: string[] | null) => {
+        if (!authors || authors.length === 0) return <Tag color="default">No authors</Tag>;
 
-        const colors = {
-          great: "green",
-          sentinel_ok: "blue",
-          bad: "red",
-        };
+        if (authors.length === 1) {
+          return <Tag color="blue">{authors[0]}</Tag>;
+        }
 
-        return <Tag color={colors[quality as keyof typeof colors] || "default"}>{quality}</Tag>;
-      },
-      filters: [
-        { text: "Great", value: "great" },
-        { text: "Sentinel OK", value: "sentinel_ok" },
-        { text: "Bad", value: "bad" },
-        { text: "Not Audited", value: "" }, // Empty string instead of null
-      ],
-      onFilter: (value, record) => {
-        if (value === "") return !record.deadwood_quality;
-        return record.deadwood_quality === value;
+        return (
+          <Tooltip title={authors.join(", ")}>
+            <Tag color="blue">
+              {authors[0]} +{authors.length - 1}
+            </Tag>
+          </Tooltip>
+        );
       },
     },
     {
-      title: "AOI Done",
-      dataIndex: "aoi_done",
-      key: "aoi_done",
-      render: (done: boolean) => (done ? <Tag color="green">Yes</Tag> : <Tag color="red">No</Tag>),
-      filters: [
-        { text: "Yes", value: true },
-        { text: "No", value: false },
-      ],
-      onFilter: (value, record) => record.aoi_done === value,
+      title: "Audited",
+      dataIndex: "is_audited",
+      key: "is_audited",
+      render: (isAudited: boolean) => (isAudited ? <Tag color="green">Yes</Tag> : <Tag color="red">No</Tag>),
+      width: 100,
+    },
+    {
+      title: "Status",
+      dataIndex: "current_status",
+      key: "current_status",
+      render: (status: string, record: IDataset) => {
+        const isComplete = isProcessingComplete(record);
+
+        if (record.has_error) {
+          return (
+            <Tooltip title={record.error_message || "An error occurred during processing"}>
+              <Tag color="error">Error</Tag>
+            </Tooltip>
+          );
+        }
+
+        if (isComplete) {
+          return <Tag color="success">Complete</Tag>;
+        }
+
+        return <Tag color="processing">{status || "Processing"}</Tag>;
+      },
+      width: 120,
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: unknown, record: AuditFormValues) => (
-        <Button type="primary" onClick={() => navigate(`/dataset-audit/${record.dataset_id}`)}>
-          Audit
-        </Button>
-      ),
+      render: (_: unknown, record: IDataset) => {
+        const isComplete = isProcessingComplete(record);
+
+        return (
+          <Tooltip
+            title={!isComplete ? "Dataset processing must be complete before auditing" : "Start audit for this dataset"}
+          >
+            <Button
+              type="primary"
+              onClick={() => navigate(`/dataset-audit/${record.id}`)}
+              disabled={!isComplete}
+              size="small"
+            >
+              {record.is_audited ? "Re-audit" : "Start Audit"}
+            </Button>
+          </Tooltip>
+        );
+      },
+      width: 120,
     },
   ];
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center">
-          <Button shape="circle" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} className="mr-4" />
-          <Title level={3} style={{ margin: 0 }}>
-            Dataset Audits
-          </Title>
-        </div>
-        <Button type="primary" onClick={() => navigate("/dataset-audit/new")}>
-          Start New Audit
-        </Button>
+      <div className="mb-6">
+        <Title level={3} style={{ margin: 0 }}>
+          Dataset Audits
+        </Title>
+        <p className="mt-2 text-gray-600">
+          Audit datasets that have completed processing. Only datasets with complete processing pipeline can be audited.
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex items-center justify-between">
+        <Space size="large">
+          <div>
+            <Segmented
+              value={auditFilter}
+              onChange={(value) => setAuditFilter(value as AuditFilter)}
+              options={[
+                {
+                  label: `Needs Audit (${needsAuditCount})`,
+                  value: "needs-audit",
+                },
+                {
+                  label: `Audited (${auditedCount})`,
+                  value: "audited",
+                },
+              ]}
+            />
+          </div>
+
+          <div>
+            <Input
+              placeholder="Filter by ID"
+              prefix={<SearchOutlined />}
+              value={idFilter}
+              onChange={(e) => setIdFilter(e.target.value)}
+              style={{ width: 150 }}
+              allowClear
+            />
+          </div>
+        </Space>
       </div>
 
       <Table
-        dataSource={auditData || []}
+        dataSource={filteredDatasets}
         columns={columns}
-        rowKey="dataset_id"
-        loading={isAuditLoading}
-        pagination={{ pageSize: 10 }}
+        rowKey="id"
+        loading={isDatasetLoading}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
+        }}
+        scroll={{ x: 800 }}
       />
     </div>
   );

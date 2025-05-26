@@ -1,25 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
-import { useAuth } from "./useAuth";
+import { useAuth } from "./useAuthProvider";
+
+// Update the enum type to match your backend
+export type PredictionQuality = "great" | "sentinel_ok" | "bad";
 
 export interface AuditFormValues {
-  dataset_id: number;
+  dataset_id?: number;
+  audit_date?: string;
   is_georeferenced?: boolean;
   has_valid_acquisition_date?: boolean;
   acquisition_date_notes?: string;
   has_valid_phenology?: boolean;
   phenology_notes?: string;
-  deadwood_quality?: "great" | "sentinel_ok" | "bad" | null;
+  deadwood_quality?: PredictionQuality;
   deadwood_notes?: string;
-  forest_cover_quality?: "great" | "sentinel_ok" | "bad" | null;
+  forest_cover_quality?: PredictionQuality;
   forest_cover_notes?: string;
-  aoi_done?: boolean;
   has_cog_issue?: boolean;
   cog_issue_notes?: string;
   has_thumbnail_issue?: boolean;
   thumbnail_issue_notes?: string;
+  audited_by?: string;
   notes?: string;
-  audit_date?: string;
 }
 
 export interface AOIData {
@@ -63,52 +66,29 @@ export function useDatasetAudit(datasetId: number | undefined) {
   });
 }
 
-// Hook to get AOI data for a dataset
-export function useDatasetAOI(datasetId: number | undefined) {
-  return useQuery({
-    queryKey: ["dataset-aoi", datasetId],
-    queryFn: async () => {
-      if (!datasetId) return null;
-
-      const { data, error } = await supabase
-        .from("v2_aois")
-        .select("*")
-        .eq("dataset_id", datasetId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
-    },
-    enabled: !!datasetId,
-  });
-}
-
-// Hook to save dataset audit data
+// Hook to save audit data
 export function useSaveDatasetAudit() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (auditData: AuditFormValues) => {
-      // Add audited_by field with current user ID
       const dataToSave = {
         ...auditData,
         audited_by: user?.id,
         audit_date: new Date().toISOString(),
       };
 
-      // Check if a record already exists
-      const { data: existingData } = await supabase
+      // Check if audit already exists
+      const { data: existingAudit } = await supabase
         .from("dataset_audit")
         .select("dataset_id")
         .eq("dataset_id", auditData.dataset_id)
-        .maybeSingle();
+        .single();
 
-      let result;
-
-      if (existingData) {
-        // Update existing record
+      let auditResult;
+      if (existingAudit) {
+        // Update existing audit
         const { data, error } = await supabase
           .from("dataset_audit")
           .update(dataToSave)
@@ -117,46 +97,37 @@ export function useSaveDatasetAudit() {
           .single();
 
         if (error) throw error;
-        result = data;
+        auditResult = data;
       } else {
-        // Insert new record
+        // Insert new audit
         const { data, error } = await supabase.from("dataset_audit").insert(dataToSave).select().single();
 
         if (error) throw error;
-        result = data;
+        auditResult = data;
       }
 
-      return result;
+      // Update the v2_statuses table to mark as audited
+      const { error: statusError } = await supabase
+        .from("v2_statuses")
+        .update({
+          is_audited: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("dataset_id", auditData.dataset_id);
+
+      if (statusError) {
+        console.error("Failed to update status:", statusError);
+        throw new Error("Failed to update audit status");
+      }
+
+      return auditResult;
     },
     onSuccess: (_, variables) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["dataset-audit", variables.dataset_id] });
       queryClient.invalidateQueries({ queryKey: ["dataset-audits"] });
-    },
-  });
-}
-
-// Hook to save AOI data
-export function useSaveDatasetAOI() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (aoiData: AOIData) => {
-      const dataToSave = {
-        ...aoiData,
-        user_id: user?.id,
-      };
-
-      // Insert new AOI record
-      const { data, error } = await supabase.from("v2_aois").insert(dataToSave).select().single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["dataset-aoi", variables.dataset_id] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-audit", variables.dataset_id] });
+      queryClient.invalidateQueries({ queryKey: ["datasets"] }); // Refresh datasets to update is_audited status
+      queryClient.invalidateQueries({ queryKey: ["v2-datasets"] }); // Also refresh v2_datasets if used
     },
   });
 }

@@ -3,7 +3,8 @@ import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image, Tag 
 import { Link, useLocation } from "react-router-dom";
 const { Header } = Layout;
 
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/useAuthProvider";
+import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useNavigate } from "react-router-dom";
 
 const defaultNavigation = [
@@ -29,25 +30,26 @@ const defaultNavigation = [
   },
 ];
 
-// Additional navigation item for processor users
-const processorNavigation = {
+// Additional navigation item for users who can audit
+const auditNavigation = {
   key: "/dataset-audit",
   label: <Link to="/dataset-audit">Audit Datasets</Link>,
 };
 
 export default function Navigation() {
   const { user, session, signOut, isLoading } = useAuth();
+  const { canAudit } = useCanAudit();
   const nav = useNavigate();
   const location = useLocation();
 
   // Get the base path for matching navigation
   const currentPath = "/" + location.pathname.split("/")[1];
 
-  // Add processor-specific navigation items if user has processor role
+  // Add audit navigation if user has audit privileges
   const navigation = [...defaultNavigation];
-  if (user?.role === "processor") {
+  if (canAudit) {
     // Insert the audit link before the Account link
-    navigation.splice(navigation.length - 1, 0, processorNavigation);
+    navigation.splice(navigation.length - 1, 0, auditNavigation);
   }
 
   const {
