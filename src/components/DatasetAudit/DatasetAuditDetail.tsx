@@ -40,9 +40,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
 
-  // SIMPLE: Just track the current AOI geometry
+  // Track current AOI geometry and whether it's loaded
   const currentAOIGeometry = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
   const [hasAOI, setHasAOI] = useState(false);
+  const [isAOILoaded, setIsAOILoaded] = useState(false); // Track if initial load is done
 
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
@@ -59,15 +60,20 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   }, [auditData, form]);
 
-  // SIMPLE: Just update the ref when map notifies us
   const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
-    console.log("AOI changed:", geometry ? "AOI present" : "AOI cleared");
+    console.log("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
     currentAOIGeometry.current = geometry;
     setHasAOI(!!geometry);
+    setIsAOILoaded(true); // Mark that AOI has been processed (loaded or confirmed absent)
   };
 
   const handleSubmit = async (values: AuditFormValues) => {
-    // Check AOI requirement before submitting
+    // Wait for AOI to be loaded/processed before validating
+    if (!isAOILoaded) {
+      message.warn("AOI is still loading, please wait...");
+      return;
+    }
+
     if (!currentAOIGeometry.current) {
       message.error("Please draw an AOI on the map before submitting");
       return;
