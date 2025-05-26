@@ -6,14 +6,15 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import { Layer } from "ol/layer";
 import { Button, message } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { fromLonLat } from "ol/proj";
-import { Draw } from "ol/interaction";
+import { Draw, Modify, Select } from "ol/interaction";
 import { Polygon } from "ol/geom";
 import { Style, Stroke, Fill } from "ol/style";
 import GeoJSON from "ol/format/GeoJSON";
+import { click } from "ol/events/condition";
 
 import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "../DatasetDetailsMap/DeadwoodCardDetails";
@@ -34,10 +35,19 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const mapInstanceRef = useRef<Map | null>(null);
   const aoiLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
+  const modifyInteractionRef = useRef<Modify | null>(null);
+  const selectInteractionRef = useRef<Select | null>(null);
+
+  // Use ref instead of state to avoid re-renders
+  const currentAOIRef = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
+
   const [mapStyle, setMapStyle] = useState("AerialWithLabelsOnDemand");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
+
+  // Only use state for UI controls that need to trigger re-renders
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [hasAOI, setHasAOI] = useState(false);
 
   // Fetch label data for the current dataset
@@ -201,43 +211,74 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     };
   }, [dataset, mapStyle]);
 
-  // Load existing AOI when data is available
-  useEffect(() => {
-    if (isAOILoading || !aoiLayerRef.current) return;
+  // SIMPLIFIED: Get current geometry from the map layer directly
+  const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
+    if (!aoiLayerRef.current) return null;
 
-    if (aoiData) {
-      const source = aoiLayerRef.current.getSource();
-      if (!source) return;
+    const source = aoiLayerRef.current.getSource();
+    if (!source) return null;
 
-      try {
-        const format = new GeoJSON();
-        const feature = format.readFeature(aoiData.geometry, {
-          dataProjection: "EPSG:4326",
-          featureProjection: "EPSG:3857",
-        });
+    const features = source.getFeatures();
+    if (features.length === 0) return null;
 
-        source.clear();
-        source.addFeature(feature);
-        setHasAOI(true);
+    const feature = features[0];
+    const geometry = feature.getGeometry();
 
-        // Notify parent component
-        if (onAOIChange) {
-          onAOIChange(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon);
-        }
+    if (geometry instanceof Polygon) {
+      const format = new GeoJSON();
+      const geoJsonGeometry = format.writeGeometryObject(geometry, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      }) as GeoJSON.Polygon;
 
-        console.log("Existing AOI loaded and displayed");
-      } catch (error) {
-        console.error("Error loading existing AOI:", error);
-        message.error("Failed to load existing AOI");
-      }
-    } else {
-      // No existing AOI
-      setHasAOI(false);
-      if (onAOIChange) {
-        onAOIChange(null);
-      }
+      return {
+        type: "MultiPolygon",
+        coordinates: [geoJsonGeometry.coordinates],
+      };
     }
-  }, [aoiData, isAOILoading, onAOIChange]);
+
+    return null;
+  };
+
+  // SIMPLIFIED: Update ref and notify parent
+  const updateAOI = () => {
+    const geometry = getCurrentGeometry();
+    currentAOIRef.current = geometry;
+    setHasAOI(!!geometry);
+
+    if (onAOIChange) {
+      onAOIChange(geometry);
+    }
+
+    console.log("AOI updated:", geometry ? "geometry present" : "no geometry");
+  };
+
+  // Load existing AOI when data is available - ONLY ONCE
+  useEffect(() => {
+    if (isAOILoading || !aoiLayerRef.current || !aoiData) return;
+
+    const source = aoiLayerRef.current.getSource();
+    if (!source) return;
+
+    try {
+      const format = new GeoJSON();
+      const feature = format.readFeature(aoiData.geometry, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      });
+
+      source.clear();
+      source.addFeature(feature);
+
+      // Update ref and notify parent
+      updateAOI();
+
+      console.log("Existing AOI loaded successfully");
+    } catch (error) {
+      console.error("Error loading existing AOI:", error);
+      message.error("Failed to load existing AOI");
+    }
+  }, [aoiData, isAOILoading]); // Remove onAOIChange from dependencies
 
   // Update opacity effects
   useEffect(() => {
@@ -258,7 +299,6 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     const source = aoiLayerRef.current.getSource();
     if (!source) return;
 
-    // Create draw interaction
     const draw = new Draw({
       source: source,
       type: "Polygon",
@@ -274,40 +314,20 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       }),
     });
 
-    draw.on("drawend", (event) => {
-      const feature = event.feature;
-      const geometry = feature.getGeometry();
+    draw.on("drawend", () => {
+      setIsDrawing(false);
 
-      if (geometry instanceof Polygon) {
-        // Convert to GeoJSON
-        const format = new GeoJSON();
-        const geoJsonGeometry = format.writeGeometryObject(geometry, {
-          dataProjection: "EPSG:4326",
-          featureProjection: "EPSG:3857",
-        }) as GeoJSON.Polygon;
-
-        // Convert Polygon to MultiPolygon for consistency
-        const multiPolygonGeometry: GeoJSON.MultiPolygon = {
-          type: "MultiPolygon",
-          coordinates: [geoJsonGeometry.coordinates],
-        };
-
-        setHasAOI(true);
-        setIsDrawing(false);
-
-        // Remove draw interaction
-        if (drawInteractionRef.current) {
-          mapInstanceRef.current?.removeInteraction(drawInteractionRef.current);
-          drawInteractionRef.current = null;
-        }
-
-        // Notify parent component
-        if (onAOIChange) {
-          onAOIChange(multiPolygonGeometry);
-        }
-
-        message.success("AOI drawn successfully");
+      // Remove draw interaction
+      if (drawInteractionRef.current) {
+        mapInstanceRef.current?.removeInteraction(drawInteractionRef.current);
+        drawInteractionRef.current = null;
       }
+
+      // Update AOI after drawing
+      setTimeout(() => {
+        updateAOI();
+        message.success("AOI drawn successfully");
+      }, 100); // Small delay to ensure feature is added
     });
 
     mapInstanceRef.current.addInteraction(draw);
@@ -320,14 +340,105 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       mapInstanceRef.current.removeInteraction(drawInteractionRef.current);
       drawInteractionRef.current = null;
       setIsDrawing(false);
+      message.info("Drawing cancelled");
     }
   };
+
+  const setupEditingInteractions = () => {
+    if (!mapInstanceRef.current || !aoiLayerRef.current) return;
+
+    const source = aoiLayerRef.current.getSource();
+    if (!source) return;
+
+    const select = new Select({
+      condition: click,
+      layers: [aoiLayerRef.current],
+    });
+
+    const modify = new Modify({
+      features: select.getFeatures(),
+    });
+
+    // Update AOI when modification ends
+    modify.on("modifyend", () => {
+      setTimeout(() => {
+        updateAOI();
+      }, 100);
+    });
+
+    mapInstanceRef.current.addInteraction(select);
+    mapInstanceRef.current.addInteraction(modify);
+
+    selectInteractionRef.current = select;
+    modifyInteractionRef.current = modify;
+  };
+
+  const removeEditingInteractions = () => {
+    if (mapInstanceRef.current) {
+      if (selectInteractionRef.current) {
+        mapInstanceRef.current.removeInteraction(selectInteractionRef.current);
+        selectInteractionRef.current = null;
+      }
+      if (modifyInteractionRef.current) {
+        mapInstanceRef.current.removeInteraction(modifyInteractionRef.current);
+        modifyInteractionRef.current = null;
+      }
+    }
+  };
+
+  const startEditing = () => {
+    if (!hasAOI) return;
+    setupEditingInteractions();
+    setIsEditing(true);
+    message.info("Click on the AOI to select and modify it");
+  };
+
+  const saveEditing = () => {
+    removeEditingInteractions();
+    setIsEditing(false);
+    updateAOI(); // Ensure parent has latest geometry
+    message.success("AOI changes saved");
+  };
+
+  const cancelEditing = () => {
+    // Reload the original geometry if needed
+    removeEditingInteractions();
+    setIsEditing(false);
+    message.info("Editing cancelled");
+  };
+
+  const deleteAOI = () => {
+    if (!aoiLayerRef.current) return;
+
+    const source = aoiLayerRef.current.getSource();
+    if (source) {
+      source.clear();
+      currentAOIRef.current = null;
+      setHasAOI(false);
+
+      if (onAOIChange) {
+        onAOIChange(null);
+      }
+
+      message.success("AOI deleted");
+    }
+  };
+
+  // Clean up interactions on unmount
+  useEffect(() => {
+    return () => {
+      removeEditingInteractions();
+      if (drawInteractionRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeInteraction(drawInteractionRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
 
-      {/* AOI Controls - Updated */}
+      {/* AOI Controls - Updated with editing functionality */}
       <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
         {!hasAOI && !isDrawing && !isAOILoading && (
           <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
@@ -341,9 +452,33 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           </Button>
         )}
 
-        {hasAOI && (
-          <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
-            ✓ AOI {aoiData ? "Loaded" : "Defined"}
+        {hasAOI && !isEditing && !isDrawing && (
+          <div className="flex flex-col gap-1">
+            <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
+              ✓ AOI {aoiData ? "Loaded" : "Defined"}
+            </div>
+            <div className="flex gap-1">
+              <Button icon={<EditOutlined />} onClick={startEditing} size="small" title="Edit AOI">
+                Edit
+              </Button>
+              <Button icon={<DeleteOutlined />} onClick={deleteAOI} size="small" danger title="Delete AOI">
+                Delete
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isEditing && (
+          <div className="flex flex-col gap-1">
+            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">Editing AOI...</div>
+            <div className="flex gap-1">
+              <Button icon={<SaveOutlined />} onClick={saveEditing} size="small" type="primary" title="Save changes">
+                Save
+              </Button>
+              <Button icon={<CloseOutlined />} onClick={cancelEditing} size="small" title="Cancel editing">
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
 

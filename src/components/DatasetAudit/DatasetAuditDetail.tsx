@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card, Space, Image } from "antd";
 import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined } from "@ant-design/icons";
@@ -40,15 +40,12 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
 
-  // AOI state - track both existing and newly drawn geometry
-  const [aoiGeometry, setAOIGeometry] = useState<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
-  const [hasExistingAOI, setHasExistingAOI] = useState(false);
+  // SIMPLE: Just track the current AOI geometry
+  const currentAOIGeometry = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
+  const [hasAOI, setHasAOI] = useState(false);
 
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
-
-  // Get existing AOI data
-  const { data: aoiData, isLoading: isAOILoading } = useDatasetAOI(dataset.id);
 
   // Mutation to save audit data
   const { mutateAsync: saveAudit, isPending: isSavingAudit } = useSaveDatasetAudit();
@@ -62,24 +59,16 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   }, [auditData, form]);
 
-  // Load existing AOI if it exists
-  useEffect(() => {
-    if (aoiData && !isAOILoading) {
-      setAOIGeometry(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon);
-      setHasExistingAOI(true);
-      console.log("Existing AOI loaded");
-    }
-  }, [aoiData, isAOILoading]);
-
+  // SIMPLE: Just update the ref when map notifies us
   const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
-    console.log("AOI changed:", geometry ? "AOI drawn/loaded" : "AOI cleared");
-    setAOIGeometry(geometry);
-    // Don't change hasExistingAOI here - it should only be set when loading from database
+    console.log("AOI changed:", geometry ? "AOI present" : "AOI cleared");
+    currentAOIGeometry.current = geometry;
+    setHasAOI(!!geometry);
   };
 
   const handleSubmit = async (values: AuditFormValues) => {
     // Check AOI requirement before submitting
-    if (!aoiGeometry) {
+    if (!currentAOIGeometry.current) {
       message.error("Please draw an AOI on the map before submitting");
       return;
     }
@@ -87,18 +76,17 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     try {
       setIsSubmitting(true);
 
-      // Prepare audit payload
+      // SIMPLE: Always save whatever is current
       const auditPayload = {
         ...values,
         dataset_id: dataset.id,
-        aoi_done: true, // Always true if we have geometry
-        aoiGeometry: hasExistingAOI ? undefined : aoiGeometry, // Only save new AOI if no existing one
+        aoi_done: true,
+        aoiGeometry: currentAOIGeometry.current,
       };
 
       await saveAudit(auditPayload);
       message.success(auditData ? "Audit data updated successfully" : "Audit data saved successfully");
 
-      // Navigate back to audit list
       setTimeout(() => {
         navigate("/dataset-audit");
       }, 100);
@@ -394,12 +382,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </div>
 
               <div className="text-xs">
-                {isAOILoading ? (
-                  <div className="text-gray-500">Loading AOI data...</div>
-                ) : aoiGeometry ? (
+                {hasAOI ? (
                   <div className="flex items-center text-green-600">
                     <span className="mr-1">✓</span>
-                    AOI defined {hasExistingAOI ? "(existing)" : "(new)"}
+                    AOI defined
                   </div>
                 ) : (
                   <div className="text-orange-600">AOI required - use the "Draw AOI" button on the map</div>
@@ -429,7 +415,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                   onClick={() => form.submit()}
                   loading={isSaving}
                   icon={<SaveOutlined />}
-                  disabled={!aoiGeometry} // Disable if no AOI drawn
+                  disabled={!hasAOI} // Disable if no AOI drawn
                 >
                   Save Audit
                 </Button>
@@ -439,8 +425,8 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
         </div>
       </div>
 
-      {/* Map Section */}
-      <div className="h-full flex-1">
+      {/* Map - let it handle ALL AOI logic */}
+      <div className="flex-1">
         <DatasetAuditMap dataset={dataset} onAOIChange={handleAOIChange} />
       </div>
     </div>
