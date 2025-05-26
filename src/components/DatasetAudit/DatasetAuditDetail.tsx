@@ -32,12 +32,16 @@ const AUDIT_INFO = {
     "Assess Cloud-Optimized GeoTIFF quality: Check transparency, black/white areas, color band consistency, and artifacts. Good = no issues, Issues = problems detected.",
   thumbnailIssues:
     "Evaluate thumbnail quality: Check color accuracy, appropriate zoom level, white background (correct no-data values), and absence of artifacts. Good = meets standards, Issues = problems found.",
+  aoi: "Define the area of interest for analysis. Draw a polygon on the map to specify the region that should be analyzed. This is required for the audit to be complete.",
 };
 
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
   const navigate = useNavigate();
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
+
+  // Simplified AOI state - just track if we have drawn geometry
+  const [aoiGeometry, setAOIGeometry] = useState<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
 
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
@@ -50,19 +54,31 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   // Set form values when audit data is loaded
   useEffect(() => {
     if (auditData) {
-      // No need to transform to arrays anymore since we're using Radio
       form.setFieldsValue(auditData);
     }
   }, [auditData, form]);
 
+  const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
+    console.log("AOI changed:", geometry ? "AOI drawn" : "AOI cleared");
+    setAOIGeometry(geometry);
+  };
+
   const handleSubmit = async (values: AuditFormValues) => {
+    // Check AOI requirement before submitting
+    if (!aoiGeometry) {
+      message.error("Please draw an AOI on the map before submitting");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      // No need to transform arrays anymore since Radio returns direct boolean values
-      const auditPayload: AuditFormValues = {
+      // Prepare audit payload
+      const auditPayload = {
         ...values,
         dataset_id: dataset.id,
+        aoi_done: true, // Always true if we have geometry
+        aoiGeometry: aoiGeometry, // Always save the new AOI
       };
 
       await saveAudit(auditPayload);
@@ -354,11 +370,32 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </Form.Item>
             </Card>
 
-            {/* Step 7: Additional Notes */}
+            {/* Step 7: Area of Interest (AOI) - Simplified */}
             <Card size="small" className="mb-3 shadow-sm">
               <div className="mb-2 flex items-center">
                 <Text strong className="text-xs">
-                  7. Additional Notes
+                  7. Area of Interest (AOI)
+                </Text>
+                <InfoIcon content={AUDIT_INFO.aoi} />
+              </div>
+
+              <div className="text-xs">
+                {aoiGeometry ? (
+                  <div className="flex items-center text-green-600">
+                    <span className="mr-1">✓</span>
+                    AOI defined
+                  </div>
+                ) : (
+                  <div className="text-orange-600">AOI required - use the "Draw AOI" button on the map</div>
+                )}
+              </div>
+            </Card>
+
+            {/* Step 8: Additional Notes */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center">
+                <Text strong className="text-xs">
+                  8. Additional Notes
                 </Text>
               </div>
 
@@ -371,7 +408,13 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
             <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
               <Space className="w-full justify-end">
                 <Button onClick={handleCancel}>Cancel</Button>
-                <Button type="primary" htmlType="submit" loading={isSaving} icon={<SaveOutlined />}>
+                <Button
+                  type="primary"
+                  onClick={() => form.submit()}
+                  loading={isSaving}
+                  icon={<SaveOutlined />}
+                  disabled={!aoiGeometry} // Disable if no AOI drawn
+                >
                   Save Audit
                 </Button>
               </Space>
@@ -382,7 +425,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
       {/* Map Section */}
       <div className="h-full flex-1">
-        <DatasetAuditMap dataset={dataset} />
+        <DatasetAuditMap dataset={dataset} onAOIChange={handleAOIChange} />
       </div>
     </div>
   );

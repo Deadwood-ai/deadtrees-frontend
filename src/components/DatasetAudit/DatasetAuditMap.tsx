@@ -5,6 +5,15 @@ import { View, Map } from "ol";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import { Layer } from "ol/layer";
+import { Button, message } from "antd";
+import { EditOutlined } from "@ant-design/icons";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
+import { fromLonLat } from "ol/proj";
+import { Draw } from "ol/interaction";
+import { Polygon } from "ol/geom";
+import { Style, Stroke, Fill } from "ol/style";
+import GeoJSON from "ol/format/GeoJSON";
 
 import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "../DatasetDetailsMap/DeadwoodCardDetails";
@@ -16,17 +25,22 @@ import { ILabelData } from "../../types/labels";
 
 interface DatasetAuditMapProps {
   dataset: IDataset;
+  onAOIChange?: (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => void;
 }
 
-const DatasetAuditMap = ({ dataset }: DatasetAuditMapProps) => {
-  const mapRef = useRef<Map | null>(null);
-  const mapContainer = useRef<HTMLDivElement | null>(null);
+const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
+  const aoiLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const drawInteractionRef = useRef<Draw | null>(null);
   const [mapStyle, setMapStyle] = useState("AerialWithLabelsOnDemand");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasAOI, setHasAOI] = useState(false);
 
   // Fetch label data for the current dataset
-  const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
+  const { data: labelData } = useDatasetLabels({
     datasetId: dataset?.id,
     labelData: ILabelData.DEADWOOD,
     enabled: !!dataset?.id,
@@ -37,27 +51,31 @@ const DatasetAuditMap = ({ dataset }: DatasetAuditMapProps) => {
     basemap?: TileLayer<BingMaps>;
     orthoCog?: TileLayerWebGL;
     deadwoodVector?: Layer;
+    aoiVector?: VectorLayer<VectorSource>;
   }>({});
 
   // Initialize the map and layers
   useEffect(() => {
-    if (!mapRef.current && dataset?.file_name && !isLoadingLabel) {
-      // Create ortho layer first
-      const orthoCogLayer = new TileLayerWebGL({
-        source: new GeoTIFF({
-          sources: [
-            {
-              url: Settings.COG_BASE_URL + dataset.cog_path,
-              nodata: 0,
-              bands: [1, 2, 3],
-            },
-          ],
-          convertToRGB: true,
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    console.log("Initializing map for dataset:", dataset?.file_name);
+
+    try {
+      // Create AOI vector layer
+      const aoiSource = new VectorSource();
+      const aoiLayer = new VectorLayer({
+        source: aoiSource,
+        style: new Style({
+          stroke: new Stroke({
+            color: "#ff6b35",
+            width: 3,
+          }),
+          fill: new Fill({
+            color: "rgba(255, 107, 53, 0.1)",
+          }),
         }),
-        maxZoom: 23,
-        cacheSize: 4096,
-        preload: 0,
       });
+      aoiLayerRef.current = aoiLayer;
 
       // Create basemap layer
       const basemapLayer = new TileLayer({
@@ -68,75 +86,99 @@ const DatasetAuditMap = ({ dataset }: DatasetAuditMapProps) => {
         }),
       });
 
-      // Only create deadwood vector layer if labels exist
-      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
+      // Create ortho layer if COG path exists
+      let orthoCogLayer: TileLayerWebGL | null = null;
+      if (dataset?.cog_path) {
+        orthoCogLayer = new TileLayerWebGL({
+          source: new GeoTIFF({
+            sources: [
+              {
+                url: Settings.COG_BASE_URL + dataset.cog_path,
+                nodata: 0,
+                bands: [1, 2, 3],
+              },
+            ],
+            convertToRGB: true,
+          }),
+          maxZoom: 23,
+          cacheSize: 4096,
+          preload: 0,
+        });
+      }
+
+      // Create deadwood vector layer if labels exist
+      const deadwoodVectorLayer = labelData ? createDeadwoodVectorLayer(labelData?.id) : null;
 
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
-        orthoCog: orthoCogLayer,
-        deadwoodVector: deadwoodVectorLayer,
+        orthoCog: orthoCogLayer || undefined,
+        deadwoodVector: deadwoodVectorLayer || undefined,
+        aoiVector: aoiLayer,
       };
 
-      // Wait for the source to be ready and create map
-      const source = orthoCogLayer.getSource();
-      if (source) {
-        source
-          .getView()
-          .then((viewOptions) => {
-            if (!viewOptions?.extent) {
-              return;
-            }
+      // Create layers array
+      const layers = [basemapLayer, aoiLayer];
+      if (orthoCogLayer) layers.splice(1, 0, orthoCogLayer);
+      if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
 
-            // Initialize map view
-            const MapView = new View({
-              center: viewOptions.center,
-              zoom: undefined,
-              extent: viewOptions.extent,
-              maxZoom: 22,
-              projection: "EPSG:3857",
-              constrainOnlyCenter: true,
+      // Initialize map view
+      const initialCenter =
+        dataset?.longitude && dataset?.latitude
+          ? fromLonLat([dataset.longitude, dataset.latitude])
+          : fromLonLat([0, 0]);
+
+      const MapView = new View({
+        center: initialCenter,
+        zoom: 15,
+        maxZoom: 22,
+        projection: "EPSG:3857",
+      });
+
+      // Create map
+      const newMap = new Map({
+        target: mapRef.current,
+        layers: layers,
+        view: MapView,
+        controls: [],
+      });
+
+      mapInstanceRef.current = newMap;
+
+      // If we have an ortho layer, fit to its extent when ready
+      if (orthoCogLayer) {
+        const source = orthoCogLayer.getSource();
+        if (source) {
+          source
+            .getView()
+            .then((viewOptions) => {
+              if (viewOptions?.extent && mapInstanceRef.current) {
+                mapInstanceRef.current.getView().fit(viewOptions.extent);
+              }
+            })
+            .catch((error) => {
+              console.error("Error getting ortho extent:", error);
             });
-
-            if (mapContainer.current) {
-              const newMap = new Map({
-                target: mapContainer.current,
-                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer],
-                view: MapView,
-                controls: [],
-              });
-
-              // Fit view to extent
-              MapView.fit(viewOptions.extent);
-
-              mapRef.current = newMap;
-            }
-          })
-          .catch((error) => {
-            console.error("Error initializing map:", error);
-          });
+        }
       }
+
+      console.log("Map initialized successfully");
+    } catch (error) {
+      console.error("Error initializing map:", error);
     }
 
     return () => {
-      if (mapRef.current) {
+      if (mapInstanceRef.current) {
+        console.log("Cleaning up map");
+
         // Clean up layers
         Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {
-            mapRef.current?.removeLayer(layer);
-            // Safely access source and dispose methods
             try {
+              mapInstanceRef.current?.removeLayer(layer);
               const source = layer.getSource();
-              if (source) {
-                if ("clear" in source && typeof source.clear === "function") {
-                  source.clear();
-                }
-                if ("dispose" in source && typeof source.dispose === "function") {
-                  source.dispose();
-                }
-              }
-              if (typeof layer.dispose === "function") {
-                layer.dispose();
+              if (source && typeof source.clear === "function") {
+                source.clear();
               }
             } catch (error) {
               console.error("Error during layer cleanup:", error);
@@ -146,75 +188,132 @@ const DatasetAuditMap = ({ dataset }: DatasetAuditMapProps) => {
 
         // Clear layer references
         layerRefs.current = {};
+        aoiLayerRef.current = null;
 
         // Clean up map
-        mapRef.current.setTarget(undefined);
-        mapRef.current.dispose();
-        mapRef.current = null;
+        mapInstanceRef.current.setTarget(undefined);
+        mapInstanceRef.current = null;
       }
     };
-  }, [dataset, isLoadingLabel, labelData, mapStyle]);
+  }, [dataset, mapStyle]);
 
   // Update opacity effects
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.deadwoodVector) {
+    if (mapInstanceRef.current && layerRefs.current.deadwoodVector) {
       layerRefs.current.deadwoodVector.setOpacity(deadwoodOpacity);
     }
   }, [deadwoodOpacity]);
 
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.orthoCog) {
+    if (mapInstanceRef.current && layerRefs.current.orthoCog) {
       layerRefs.current.orthoCog.setOpacity(droneImageOpacity);
     }
   }, [droneImageOpacity]);
 
-  // Update the map style effect
-  useEffect(() => {
-    if (mapRef.current && layerRefs.current.basemap) {
-      const currentView = mapRef.current.getView();
-      const currentCenter = currentView.getCenter();
-      const currentZoom = currentView.getZoom();
+  const startDrawing = () => {
+    if (!mapInstanceRef.current || !aoiLayerRef.current || hasAOI) return;
 
-      // Just update the source, don't recreate the map
-      layerRefs.current.basemap.setSource(
-        new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
-          culture: "en-us",
+    const source = aoiLayerRef.current.getSource();
+    if (!source) return;
+
+    // Create draw interaction
+    const draw = new Draw({
+      source: source,
+      type: "Polygon",
+      style: new Style({
+        stroke: new Stroke({
+          color: "#ff6b35",
+          width: 2,
+          lineDash: [5, 5],
         }),
-      );
+        fill: new Fill({
+          color: "rgba(255, 107, 53, 0.1)",
+        }),
+      }),
+    });
 
-      // Ensure the viewport stays the same
-      if (currentCenter && currentZoom) {
-        currentView.setCenter(currentCenter);
-        currentView.setZoom(currentZoom);
+    draw.on("drawend", (event) => {
+      const feature = event.feature;
+      const geometry = feature.getGeometry();
+
+      if (geometry instanceof Polygon) {
+        // Convert to GeoJSON
+        const format = new GeoJSON();
+        const geoJsonGeometry = format.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJSON.Polygon;
+
+        // Convert Polygon to MultiPolygon for consistency
+        const multiPolygonGeometry: GeoJSON.MultiPolygon = {
+          type: "MultiPolygon",
+          coordinates: [geoJsonGeometry.coordinates],
+        };
+
+        setHasAOI(true);
+        setIsDrawing(false);
+
+        // Remove draw interaction
+        if (drawInteractionRef.current) {
+          mapInstanceRef.current?.removeInteraction(drawInteractionRef.current);
+          drawInteractionRef.current = null;
+        }
+
+        // Notify parent component
+        if (onAOIChange) {
+          onAOIChange(multiPolygonGeometry);
+        }
+
+        message.success("AOI drawn successfully");
       }
+    });
+
+    mapInstanceRef.current.addInteraction(draw);
+    drawInteractionRef.current = draw;
+    setIsDrawing(true);
+  };
+
+  const cancelDrawing = () => {
+    if (drawInteractionRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeInteraction(drawInteractionRef.current);
+      drawInteractionRef.current = null;
+      setIsDrawing(false);
     }
-  }, [mapStyle]);
+  };
 
   return (
-    <div className="h-full w-full">
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          position: "relative",
-        }}
-        ref={mapContainer}
-      >
-        <div className="absolute left-2 top-4 z-20">
-          <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
-        </div>
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
 
-        <div className="absolute bottom-4 right-6 z-50">
-          <DeadwoodCardDetails
-            deadwoodOpacity={deadwoodOpacity}
-            setDeadwoodOpacity={setDeadwoodOpacity}
-            droneImageOpacity={droneImageOpacity}
-            setDroneImageOpacity={setDroneImageOpacity}
-            showLegend={labelData ? true : false}
-          />
-        </div>
+      {/* AOI Controls */}
+      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
+        {!hasAOI && !isDrawing && (
+          <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
+            Draw AOI
+          </Button>
+        )}
+
+        {isDrawing && (
+          <Button onClick={cancelDrawing} size="small">
+            Cancel Drawing
+          </Button>
+        )}
+
+        {hasAOI && <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">✓ AOI Defined</div>}
+      </div>
+
+      <div className="absolute left-2 top-4 z-20">
+        <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+      </div>
+
+      <div className="absolute bottom-4 right-6 z-50">
+        <DeadwoodCardDetails
+          deadwoodOpacity={deadwoodOpacity}
+          setDeadwoodOpacity={setDeadwoodOpacity}
+          droneImageOpacity={droneImageOpacity}
+          setDroneImageOpacity={setDroneImageOpacity}
+          showLegend={labelData ? true : false}
+        />
       </div>
     </div>
   );

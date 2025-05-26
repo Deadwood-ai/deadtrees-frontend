@@ -17,6 +17,7 @@ export interface AuditFormValues {
   deadwood_notes?: string;
   forest_cover_quality?: PredictionQuality;
   forest_cover_notes?: string;
+  aoi_done?: boolean;
   has_cog_issue?: boolean;
   cog_issue_notes?: string;
   has_thumbnail_issue?: boolean;
@@ -26,11 +27,15 @@ export interface AuditFormValues {
 }
 
 export interface AOIData {
+  id?: number;
   dataset_id: number;
-  geometry: GeoJSON.MultiPolygon;
+  user_id?: string;
+  geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon;
   is_whole_image: boolean;
   image_quality?: number;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Hook to get all dataset audits
@@ -53,38 +58,110 @@ export function useDatasetAudit(datasetId: number | undefined) {
     queryFn: async () => {
       if (!datasetId) return null;
 
-      const { data, error } = await supabase.from("dataset_audit").select("*").eq("dataset_id", datasetId).single();
+      const { data, error } = await supabase.from("dataset_audit").select("*").eq("dataset_id", datasetId).limit(1);
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 is "No rows returned"
-        throw error;
-      }
+      if (error) throw error;
 
-      return data;
+      // Return the first item if it exists, otherwise null
+      return data && data.length > 0 ? data[0] : null;
     },
     enabled: !!datasetId,
   });
 }
 
-// Hook to save audit data
+// Hook to get AOI data for a dataset
+export function useDatasetAOI(datasetId: number | undefined) {
+  return useQuery({
+    queryKey: ["dataset-aoi", datasetId],
+    queryFn: async () => {
+      if (!datasetId) return null;
+
+      const { data, error } = await supabase
+        .from("v2_aois")
+        .select("*")
+        .eq("dataset_id", datasetId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      // Return the first item if it exists, otherwise null
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!datasetId,
+  });
+}
+
+// Hook to save AOI data
+export function useSaveDatasetAOI() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (aoiData: AOIData) => {
+      const dataToSave = {
+        ...aoiData,
+        user_id: user?.id,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Insert new AOI record (we don't allow updates for now)
+      const { data, error } = await supabase.from("v2_aois").insert(dataToSave).select().single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["dataset-aoi", variables.dataset_id] });
+    },
+  });
+}
+
+// Hook to save audit data (updated to handle AOI)
 export function useSaveDatasetAudit() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (auditData: AuditFormValues) => {
+    mutationFn: async (auditData: AuditFormValues & { aoiGeometry?: GeoJSON.MultiPolygon | GeoJSON.Polygon }) => {
+      const { aoiGeometry, ...auditFormData } = auditData;
+
       const dataToSave = {
-        ...auditData,
+        ...auditFormData,
         audited_by: user?.id,
         audit_date: new Date().toISOString(),
       };
 
-      // Check if audit already exists
-      const { data: existingAudit } = await supabase
+      // If AOI geometry is provided, save it first
+      if (aoiGeometry) {
+        const aoiData: AOIData = {
+          dataset_id: auditData.dataset_id!,
+          user_id: user?.id,
+          geometry: aoiGeometry,
+          is_whole_image: false, // For now, assume it's not whole image
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error: aoiError } = await supabase.from("v2_aois").insert(aoiData);
+        if (aoiError) {
+          console.error("Failed to save AOI:", aoiError);
+          throw new Error("Failed to save AOI data");
+        }
+
+        // Mark AOI as done
+        dataToSave.aoi_done = true;
+      }
+
+      // Check if audit already exists (fixed to not use .single())
+      const { data: existingAudits } = await supabase
         .from("dataset_audit")
         .select("dataset_id")
         .eq("dataset_id", auditData.dataset_id)
-        .single();
+        .limit(1);
+
+      const existingAudit = existingAudits && existingAudits.length > 0 ? existingAudits[0] : null;
 
       let auditResult;
       if (existingAudit) {
@@ -126,6 +203,7 @@ export function useSaveDatasetAudit() {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ["dataset-audits"] });
       queryClient.invalidateQueries({ queryKey: ["dataset-audit", variables.dataset_id] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-aoi", variables.dataset_id] });
       queryClient.invalidateQueries({ queryKey: ["datasets"] }); // Refresh datasets to update is_audited status
       queryClient.invalidateQueries({ queryKey: ["v2-datasets"] }); // Also refresh v2_datasets if used
     },
