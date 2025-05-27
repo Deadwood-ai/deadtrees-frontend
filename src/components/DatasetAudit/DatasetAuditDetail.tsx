@@ -128,14 +128,27 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
     if (!year) return "Date not available";
 
-    let dateStr = year;
+    // Create a date object and format it
     if (month) {
-      dateStr = `${month}/${year}`;
+      const date = new Date(year, month - 1, day || 1); // month is 0-indexed in Date constructor
+
       if (day) {
-        dateStr = `${day}/${month}/${year}`;
+        // Full date: "15 March 2023"
+        return date.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+      } else {
+        // Month and year: "March 2023"
+        return date.toLocaleDateString("en-GB", {
+          month: "long",
+          year: "numeric",
+        });
       }
     }
-    return dateStr;
+
+    return year.toString();
   };
 
   return (
@@ -145,10 +158,15 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
         <div className="flex-shrink-0 border-b border-slate-200 bg-white p-3 shadow-sm">
           <Button shape="circle" onClick={handleCancel} icon={<ArrowLeftOutlined />} className="mb-2" />
           <Title level={5} className="m-0 text-sm">
-            Audit: {dataset.admin_level_3 || dataset.admin_level_2}
+            Audit: {dataset.id}
           </Title>
+          {auditData?.audited_by && (
+            <Text type="secondary" className="mt-1 block text-xs">
+              Last audited by: {auditData.audited_by_email || auditData.audited_by}
+            </Text>
+          )}
           <Text type="secondary" className="text-xs">
-            ID: {dataset.id} | {dataset.file_name}
+            {dataset.admin_level_3 || dataset.admin_level_2}
           </Text>
         </div>
 
@@ -227,6 +245,13 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 </Text>
                 <InfoIcon content={AUDIT_INFO.phenology} />
               </div>
+
+              {/* Display the biome information */}
+              {dataset.biome_name && (
+                <div className="mb-2 rounded bg-green-50 p-2">
+                  <Text className="text-xs font-medium text-green-800">🌿 Biome: {dataset.biome_name}</Text>
+                </div>
+              )}
 
               <Form.Item
                 name="has_valid_phenology"

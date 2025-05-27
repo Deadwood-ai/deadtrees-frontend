@@ -23,6 +23,7 @@ export interface AuditFormValues {
   has_thumbnail_issue?: boolean;
   thumbnail_issue_notes?: string;
   audited_by?: string;
+  audited_by_email?: string;
   notes?: string;
 }
 
@@ -58,7 +59,11 @@ export function useDatasetAudit(datasetId: number | undefined) {
     queryFn: async () => {
       if (!datasetId) return null;
 
-      const { data, error } = await supabase.from("dataset_audit").select("*").eq("dataset_id", datasetId).limit(1);
+      const { data, error } = await supabase
+        .from("dataset_audit_user_info")
+        .select("*")
+        .eq("dataset_id", datasetId)
+        .limit(1);
 
       if (error) throw error;
 
@@ -92,7 +97,7 @@ export function useDatasetAOI(datasetId: number | undefined) {
   });
 }
 
-// Hook to save AOI data
+// Hook to save AOI data (supports both insert and update)
 export function useSaveDatasetAOI() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -105,11 +110,34 @@ export function useSaveDatasetAOI() {
         updated_at: new Date().toISOString(),
       };
 
-      // Insert new AOI record (we don't allow updates for now)
-      const { data, error } = await supabase.from("v2_aois").insert(dataToSave).select().single();
+      // Check if AOI already exists for this dataset
+      const { data: existingAOI } = await supabase
+        .from("v2_aois")
+        .select("id")
+        .eq("dataset_id", aoiData.dataset_id)
+        .limit(1);
 
-      if (error) throw error;
-      return data;
+      let result;
+      if (existingAOI && existingAOI.length > 0) {
+        // Update existing AOI
+        const { data, error } = await supabase
+          .from("v2_aois")
+          .update(dataToSave)
+          .eq("dataset_id", aoiData.dataset_id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      } else {
+        // Insert new AOI record
+        const { data, error } = await supabase.from("v2_aois").insert(dataToSave).select().single();
+
+        if (error) throw error;
+        result = data;
+      }
+
+      return result;
     },
     onSuccess: (_, variables) => {
       // Invalidate relevant queries
