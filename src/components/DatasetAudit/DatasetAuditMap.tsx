@@ -50,6 +50,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [hasAOI, setHasAOI] = useState(false);
 
+  // Add state to track if a polygon is selected during editing
+  const [selectedFeatureForEdit, setSelectedFeatureForEdit] = useState<any>(null);
+
   // Fetch label data for the current dataset
   const { data: labelData } = useDatasetLabels({
     datasetId: dataset?.id,
@@ -72,7 +75,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    console.log("Initializing map for dataset:", dataset?.file_name);
+    // console.log("Initializing map for dataset:", dataset?.file_name);
 
     try {
       // Create AOI vector layer
@@ -495,6 +498,18 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       }),
     });
 
+    // Track selected features
+    select.on("select", (event) => {
+      const selectedFeatures = event.target.getFeatures();
+      if (selectedFeatures.getLength() > 0) {
+        setSelectedFeatureForEdit(selectedFeatures.item(0));
+        console.log("Feature selected for editing");
+      } else {
+        setSelectedFeatureForEdit(null);
+        console.log("No feature selected");
+      }
+    });
+
     const modify = new Modify({
       features: select.getFeatures(),
       style: new Style({
@@ -528,15 +543,44 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     return true;
   };
 
+  // Add function to delete selected polygon
+  const deleteSelectedPolygon = () => {
+    if (!selectedFeatureForEdit || !aoiLayerRef.current) {
+      message.error("No polygon selected for deletion.");
+      return;
+    }
+
+    const source = aoiLayerRef.current.getSource();
+    if (!source) return;
+
+    // Remove the selected feature from the source
+    source.removeFeature(selectedFeatureForEdit);
+    setSelectedFeatureForEdit(null);
+
+    // Update the geometry with remaining features
+    const currentGeometry = getCurrentGeometry();
+    updateAOIWithGeometry(currentGeometry, "deleteSelectedPolygon");
+
+    if (currentGeometry) {
+      message.success("Selected polygon deleted.");
+    } else {
+      // If no polygons left, exit editing mode
+      setIsEditing(false);
+      clearInteractions();
+      message.success("Last polygon deleted. Exiting edit mode.");
+    }
+  };
+
   const startEditing = () => {
     if (!hasAOI) {
       message.error("No AOI to edit.");
       return;
     }
     setIsDrawing(false); // Ensure not in drawing mode
+    setSelectedFeatureForEdit(null); // Reset selected feature
     if (setupEditingInteractions()) {
       setIsEditing(true);
-      message.info("AOI selected. Modify it and click Save/Cancel.");
+      message.info("Click on a polygon to select and edit it.");
     } else {
       message.error("Could not start editing. AOI feature might be missing.");
     }
@@ -546,6 +590,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     // Geometry should already be updated in currentAOIRef.current by modifyend
     clearInteractions();
     setIsEditing(false);
+    setSelectedFeatureForEdit(null); // Reset selected feature
     message.success("AOI edits applied. Save audit to persist.");
     console.log("saveEditing called. Current AOI in ref:", currentAOIRef.current);
   };
@@ -553,6 +598,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const cancelEditing = () => {
     clearInteractions();
     setIsEditing(false);
+    setSelectedFeatureForEdit(null); // Reset selected feature
 
     // Reload original AOI from aoiData if user cancels edit
     if (aoiData && aoiData.geometry) {
@@ -580,7 +626,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
               source.addFeature(feature);
             }
           });
-          console.log(`Restored MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+          // console.log(`Restored MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
         } else if (loadedGeometry.type === "Polygon") {
           // Handle single Polygon
           const feature = format.readFeature(loadedGeometry, {
@@ -591,15 +637,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           if (feature && feature.getGeometry()) {
             source.addFeature(feature);
           }
-          console.log("Restored single Polygon");
+          // console.log("Restored single Polygon");
         }
 
         updateAOIWithGeometry(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon, "cancelEditingRestore");
       } catch (error) {
-        console.error("Error restoring AOI after cancel:", error);
+        // console.error("Error restoring AOI after cancel:", error);
       }
     } else {
-      console.log("cancelEditing: No original aoiData to restore or geometry was null.");
+      // console.log("cancelEditing: No original aoiData to restore or geometry was null.");
     }
 
     message.info("Editing cancelled.");
@@ -618,14 +664,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // useEffect for unmount cleanup
   useEffect(() => {
     return () => {
-      console.log("DatasetAuditMap unmounting. Cleaning up interactions.");
+      // console.log("DatasetAuditMap unmounting. Cleaning up interactions.");
       clearInteractions(); // Use the clearInteractions helper
 
       // Also, ensure the map target is undefined to help with OpenLayers cleanup
       if (mapInstanceRef.current) {
         mapInstanceRef.current.setTarget(undefined);
         mapInstanceRef.current = null; // Help GC
-        console.log("Map instance cleaned up.");
+        // console.log("Map instance cleaned up.");
       }
       // You might also want to explicitly clear layer sources if not handled by OL's map disposal
       // if (aoiLayerRef.current) {
@@ -684,7 +730,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
         {isEditing && (
           <div className="flex flex-col gap-1">
-            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">Click polygon to edit...</div>
+            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">
+              {selectedFeatureForEdit ? "Polygon selected - edit or delete it" : "Click polygon to select..."}
+            </div>
             <div className="flex gap-1">
               <Button icon={<SaveOutlined />} onClick={saveEditing} size="small" type="primary" title="Save changes">
                 Save
@@ -693,6 +741,21 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
                 Cancel
               </Button>
             </div>
+            {/* Show delete selected button only when a polygon is selected */}
+            {selectedFeatureForEdit && (
+              <div className="mt-1 flex gap-1">
+                <Button
+                  icon={<DeleteOutlined />}
+                  onClick={deleteSelectedPolygon}
+                  size="small"
+                  danger
+                  title="Delete selected polygon"
+                  className="w-full"
+                >
+                  Delete Selected
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
