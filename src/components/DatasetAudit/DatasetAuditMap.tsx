@@ -11,7 +11,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { fromLonLat } from "ol/proj";
 import { Draw, Modify, Select } from "ol/interaction";
-import { Polygon } from "ol/geom";
+import { Polygon, MultiPolygon } from "ol/geom";
 import { Style, Stroke, Fill, Circle } from "ol/style";
 import GeoJSON from "ol/format/GeoJSON";
 import { click } from "ol/events/condition";
@@ -211,43 +211,109 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     };
   }, [dataset, mapStyle]);
 
-  // SIMPLIFIED: Get current geometry from the map layer directly
+  // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
-    if (!aoiLayerRef.current) return null;
+    console.log("getCurrentGeometry called");
 
-    const source = aoiLayerRef.current.getSource();
-    if (!source) return null;
-
-    const features = source.getFeatures();
-    if (features.length === 0) return null;
-
-    const feature = features[0];
-    const geometry = feature.getGeometry();
-
-    if (geometry instanceof Polygon) {
-      const format = new GeoJSON();
-      const geoJsonGeometry = format.writeGeometryObject(geometry, {
-        dataProjection: "EPSG:4326",
-        featureProjection: "EPSG:3857",
-      }) as GeoJSON.Polygon;
-
-      return {
-        type: "MultiPolygon",
-        coordinates: [geoJsonGeometry.coordinates],
-      };
+    if (!aoiLayerRef.current) {
+      console.log("getCurrentGeometry: No AOI layer ref");
+      return null;
     }
 
+    const source = aoiLayerRef.current.getSource();
+    if (!source) {
+      console.log("getCurrentGeometry: No source");
+      return null;
+    }
+
+    const features = source.getFeatures();
+    console.log(`getCurrentGeometry: Found ${features.length} features`);
+
+    if (features.length === 0) {
+      console.log("getCurrentGeometry: No features");
+      return null;
+    }
+
+    const format = new GeoJSON();
+
+    if (features.length === 1) {
+      console.log("getCurrentGeometry: Processing single feature");
+      const feature = features[0];
+      const geometry = feature.getGeometry();
+
+      if (geometry instanceof Polygon) {
+        console.log("getCurrentGeometry: Single Polygon found");
+        const geoJsonGeometry = format.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJSON.Polygon;
+
+        const result = {
+          type: "MultiPolygon",
+          coordinates: [geoJsonGeometry.coordinates],
+        };
+        console.log("getCurrentGeometry: Returning MultiPolygon with 1 polygon", result);
+        return result;
+      } else if (geometry instanceof MultiPolygon) {
+        console.log("getCurrentGeometry: Single MultiPolygon found");
+        const result = format.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJSON.MultiPolygon;
+        console.log("getCurrentGeometry: Returning MultiPolygon", result);
+        return result;
+      } else {
+        console.log("getCurrentGeometry: Unknown geometry type:", geometry?.getType());
+      }
+    } else if (features.length > 1) {
+      console.log("getCurrentGeometry: Processing multiple features");
+      // Multiple features - combine into MultiPolygon
+      const polygonCoordinates: number[][][] = [];
+
+      features.forEach((feature) => {
+        const geometry = feature.getGeometry();
+        if (geometry instanceof Polygon) {
+          const geoJsonGeometry = format.writeGeometryObject(geometry, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          }) as GeoJSON.Polygon;
+          polygonCoordinates.push(geoJsonGeometry.coordinates);
+        }
+      });
+
+      if (polygonCoordinates.length > 0) {
+        return {
+          type: "MultiPolygon",
+          coordinates: polygonCoordinates,
+        };
+      }
+    }
+
+    console.log("getCurrentGeometry: Returning null");
     return null;
   };
 
   const updateAOIWithGeometry = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null, sourceAction: string) => {
+    console.log(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
+    console.log(`Current hasAOI before update:`, hasAOI);
+    console.log(`Will set hasAOI to:`, !!geometry);
+
     currentAOIRef.current = geometry;
     setHasAOI(!!geometry);
+
     if (onAOIChange) {
       onAOIChange(geometry);
     }
-    console.log(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
+
+    console.log(`hasAOI state should now be:`, !!geometry);
   };
+
+  // Add this useEffect to debug hasAOI changes
+  useEffect(() => {
+    console.log(`hasAOI state changed to:`, hasAOI);
+    console.log(`Current features in source:`, aoiLayerRef.current?.getSource()?.getFeatures().length || 0);
+    console.log(`Current geometry in ref:`, currentAOIRef.current ? "present" : "null");
+  }, [hasAOI]);
 
   const clearInteractions = () => {
     if (mapInstanceRef.current) {
@@ -291,27 +357,50 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     let loadedGeometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null = null;
 
     if (aoiData && aoiData.geometry) {
-      // Ensure aoiData and its geometry exist
       try {
         const format = new GeoJSON();
-        const feature = format.readFeature(aoiData.geometry, {
-          dataProjection: "EPSG:4326",
-          featureProjection: "EPSG:3857",
-        });
-        if (feature && feature.getGeometry()) {
-          // Ensure feature and its geometry are valid
-          source.addFeature(feature);
-          loadedGeometry = aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
-          console.log("Existing AOI feature added to map source:", loadedGeometry);
-        } else {
-          console.warn("Failed to read feature or feature geometry from aoiData.");
+        loadedGeometry = aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+
+        // Handle MultiPolygon by creating separate features for each polygon
+        if (loadedGeometry.type === "MultiPolygon") {
+          loadedGeometry.coordinates.forEach((polygonCoords) => {
+            const polygonGeometry: GeoJSON.Polygon = {
+              type: "Polygon",
+              coordinates: polygonCoords,
+            };
+
+            const feature = format.readFeature(polygonGeometry, {
+              dataProjection: "EPSG:4326",
+              featureProjection: "EPSG:3857",
+            });
+
+            if (feature && feature.getGeometry()) {
+              source.addFeature(feature);
+            }
+          });
+          console.log(`Loaded MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+        } else if (loadedGeometry.type === "Polygon") {
+          // Handle single Polygon
+          const feature = format.readFeature(loadedGeometry, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          if (feature && feature.getGeometry()) {
+            source.addFeature(feature);
+          }
+          console.log("Loaded single Polygon");
         }
+
+        console.log("Existing AOI feature(s) added to map source:", loadedGeometry);
       } catch (error) {
         console.error("Error processing existing AOI feature:", error);
+        loadedGeometry = null;
       }
     } else {
       console.log("No existing AOI data found after loading or aoiData.geometry is null/undefined.");
     }
+
     updateAOIWithGeometry(loadedGeometry, "initialLoad");
   }, [aoiData, isAOILoading]);
 
@@ -328,18 +417,12 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     }
   }, [droneImageOpacity]);
 
+  // Simplified startDrawing - always draws one polygon
   const startDrawing = () => {
-    clearInteractions(); // Remove any existing interactions (like edit)
+    clearInteractions();
     if (!mapInstanceRef.current || !aoiLayerRef.current) return;
     const source = aoiLayerRef.current.getSource();
     if (!source) return;
-    if (hasAOI && !isEditing) {
-      // If AOI exists and not editing, don't allow new draw
-      message.info("An AOI already exists. Edit or delete it first.");
-      return;
-    }
-    source.clear(); // Clear existing AOI before drawing a new one
-    updateAOIWithGeometry(null, "startDrawingClear");
 
     const draw = new Draw({
       source: source,
@@ -357,27 +440,20 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     });
 
     draw.on("drawend", (event) => {
-      clearInteractions(); // Remove draw interaction itself
-      setIsDrawing(false); // Add this line to update the drawing state
-
       const drawnFeature = event.feature;
       if (drawnFeature) {
         const geometry = drawnFeature.getGeometry();
         if (geometry instanceof Polygon) {
-          // The feature is already on the source from the Draw interaction
-          const format = new GeoJSON();
-          const geoJsonGeom = format.writeGeometryObject(geometry, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          }) as GeoJSON.Polygon;
-          const multiPolyGeom: GeoJSON.MultiPolygon = { type: "MultiPolygon", coordinates: [geoJsonGeom.coordinates] };
-          updateAOIWithGeometry(multiPolyGeom, "drawEnd");
-          message.success("AOI drawn successfully.");
-        } else {
-          updateAOIWithGeometry(null, "drawEndError");
+          // Use a small timeout to ensure OpenLayers has finished processing
+          setTimeout(() => {
+            clearInteractions();
+            setIsDrawing(false);
+
+            const currentGeometry = getCurrentGeometry();
+            updateAOIWithGeometry(currentGeometry, "drawEnd");
+            message.success("Polygon drawn successfully.");
+          }, 10); // Small delay to ensure feature is fully processed
         }
-      } else {
-        updateAOIWithGeometry(null, "drawEndNoFeature");
       }
     });
 
@@ -387,13 +463,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     setIsEditing(false);
   };
 
+  // Simplified addAnotherPolygon - just calls startDrawing
+  const addAnotherPolygon = () => {
+    startDrawing();
+  };
+
+  // Simplified cancelDrawing
   const cancelDrawing = () => {
     clearInteractions();
     setIsDrawing(false);
-    // Clear any partial drawing
-    const source = aoiLayerRef.current?.getSource();
-    source?.clear();
-    updateAOIWithGeometry(null, "cancelDrawing");
     message.info("Drawing cancelled");
   };
 
@@ -429,44 +507,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     });
 
     modify.on("modifyend", (event) => {
-      const modifiedFeature = event.features.getArray()[0];
-      let newGeometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null = null;
+      // Get the complete geometry from all features in the source
+      // This ensures we capture all polygons, not just the modified one
+      const currentGeometry = getCurrentGeometry();
 
-      if (modifiedFeature) {
-        const geometry = modifiedFeature.getGeometry(); // This is an OpenLayers Geometry
-        if (geometry) {
-          const format = new GeoJSON();
-          // Convert OL Geometry to GeoJSON object.
-          // writeGeometryObject can handle various OL geometry types.
-          const geoJsonGeomObject = format.writeGeometryObject(geometry, {
-            dataProjection: "EPSG:4326", // We want the output in WGS84
-            featureProjection: "EPSG:3857", // The map's projection
-          });
-
-          // Ensure it's a Polygon or MultiPolygon for our state
-          if (geoJsonGeomObject.type === "Polygon") {
-            newGeometry = { type: "MultiPolygon", coordinates: [(geoJsonGeomObject as GeoJSON.Polygon).coordinates] };
-          } else if (geoJsonGeomObject.type === "MultiPolygon") {
-            newGeometry = geoJsonGeomObject as GeoJSON.MultiPolygon;
-          } else {
-            console.warn(
-              "modify.on('modifyend'): Modified geometry is not Polygon or MultiPolygon, it's:",
-              geoJsonGeomObject.type,
-            );
-          }
-        } else {
-          console.warn("modify.on('modifyend'): Modified feature has no geometry.");
-        }
+      if (currentGeometry) {
+        updateAOIWithGeometry(currentGeometry, "modifyEndSuccess");
+        console.log("Modified polygon. Updated complete geometry:", currentGeometry);
       } else {
-        console.warn("modify.on('modifyend'): No modified feature in event.");
-      }
-
-      if (newGeometry) {
-        updateAOIWithGeometry(newGeometry, "modifyEndSuccess");
-      } else {
-        // Fallback: update with whatever was in the ref before, or null if ref was null.
-        // This prevents clearing a valid AOI if the event processing above fails unexpectedly.
-        console.warn("modify.on('modifyend'): Failed to get new geometry, falling back to current ref or null.");
+        console.warn("modify.on('modifyend'): Failed to get current geometry from source");
         updateAOIWithGeometry(currentAOIRef.current, "modifyEndFallback");
       }
     });
@@ -504,23 +553,55 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const cancelEditing = () => {
     clearInteractions();
     setIsEditing(false);
+
     // Reload original AOI from aoiData if user cancels edit
     if (aoiData && aoiData.geometry) {
       const source = aoiLayerRef.current?.getSource();
       source?.clear();
-      const format = new GeoJSON();
-      const feature = format.readFeature(aoiData.geometry, {
-        dataProjection: "EPSG:4326",
-        featureProjection: "EPSG:3857",
-      });
-      source?.addFeature(feature);
-      updateAOIWithGeometry(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon, "cancelEditingRestore");
+
+      try {
+        const format = new GeoJSON();
+        const loadedGeometry = aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+
+        // Use the same logic as initial loading to handle MultiPolygon correctly
+        if (loadedGeometry.type === "MultiPolygon") {
+          loadedGeometry.coordinates.forEach((polygonCoords) => {
+            const polygonGeometry: GeoJSON.Polygon = {
+              type: "Polygon",
+              coordinates: polygonCoords,
+            };
+
+            const feature = format.readFeature(polygonGeometry, {
+              dataProjection: "EPSG:4326",
+              featureProjection: "EPSG:3857",
+            });
+
+            if (feature && feature.getGeometry()) {
+              source.addFeature(feature);
+            }
+          });
+          console.log(`Restored MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+        } else if (loadedGeometry.type === "Polygon") {
+          // Handle single Polygon
+          const feature = format.readFeature(loadedGeometry, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          if (feature && feature.getGeometry()) {
+            source.addFeature(feature);
+          }
+          console.log("Restored single Polygon");
+        }
+
+        updateAOIWithGeometry(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon, "cancelEditingRestore");
+      } catch (error) {
+        console.error("Error restoring AOI after cancel:", error);
+      }
     } else {
-      // If there was no original aoiData (e.g. drawing a new one and cancelling edit on it)
-      // Or handle as appropriate - maybe clear it or leave as is.
-      // For now, just log. If it was a new drawing, it might have been cleared by startDrawing.
       console.log("cancelEditing: No original aoiData to restore or geometry was null.");
     }
+
     message.info("Editing cancelled.");
   };
 
@@ -558,30 +639,43 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
 
-      {/* AOI Controls - Updated button logic */}
+      {/* Simplified AOI Controls */}
       <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
         {!isDrawing && !isEditing && !hasAOI && !isAOILoading && (
           <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
-            Draw AOI
+            Draw Polygon
           </Button>
         )}
 
         {isDrawing && (
-          <Button onClick={cancelDrawing} size="small" danger>
-            Cancel Drawing
-          </Button>
+          <div className="flex flex-col gap-1">
+            <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">Drawing polygon...</div>
+            <Button onClick={cancelDrawing} size="small" danger>
+              Cancel Drawing
+            </Button>
+          </div>
         )}
 
         {hasAOI && !isEditing && !isDrawing && (
           <div className="flex flex-col gap-1">
             <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
               ✓ AOI {aoiData ? "Loaded" : "Defined"}
+              {/* Show polygon count */}
+              {currentAOIRef.current?.type === "MultiPolygon" && (
+                <div className="text-xs">
+                  ({currentAOIRef.current.coordinates.length} polygon
+                  {currentAOIRef.current.coordinates.length !== 1 ? "s" : ""})
+                </div>
+              )}
             </div>
             <div className="flex gap-1">
-              <Button icon={<EditOutlined />} onClick={startEditing} size="small" title="Edit AOI">
+              <Button icon={<EditOutlined />} onClick={startEditing} size="small" title="Edit polygons">
                 Edit
               </Button>
-              <Button icon={<DeleteOutlined />} onClick={deleteAOI} size="small" danger title="Delete AOI">
+              <Button icon={<EditOutlined />} onClick={addAnotherPolygon} size="small" title="Add another polygon">
+                Add Another
+              </Button>
+              <Button icon={<DeleteOutlined />} onClick={deleteAOI} size="small" danger title="Delete all polygons">
                 Delete
               </Button>
             </div>
@@ -590,7 +684,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
         {isEditing && (
           <div className="flex flex-col gap-1">
-            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">Editing AOI...</div>
+            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">Click polygon to edit...</div>
             <div className="flex gap-1">
               <Button icon={<SaveOutlined />} onClick={saveEditing} size="small" type="primary" title="Save changes">
                 Save
