@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
+import { useMemo } from "react";
+import { IDataset } from "../types/dataset";
 
 // Update the enum type to match your backend
 export type PredictionQuality = "great" | "sentinel_ok" | "bad";
@@ -146,7 +148,69 @@ export function useSaveDatasetAOI() {
   });
 }
 
-// Hook to save audit data (updated to handle AOI)
+// Hook to set audit lock
+export function useSetAuditLock() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (datasetId: number) => {
+      // First check if already in audit
+      const { data: statusCheck, error: checkError } = await supabase
+        .from("v2_statuses")
+        .select("is_in_audit")
+        .eq("dataset_id", datasetId)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (statusCheck.is_in_audit) {
+        throw new Error("Dataset is already being audited by another user");
+      }
+
+      // Set audit lock
+      const { error } = await supabase
+        .from("v2_statuses")
+        .update({
+          is_in_audit: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("dataset_id", datasetId);
+
+      if (error) throw error;
+      return datasetId;
+    },
+    onSuccess: (datasetId) => {
+      queryClient.invalidateQueries({ queryKey: ["audit-status", datasetId] });
+    },
+  });
+}
+
+// Hook to clear audit lock
+export function useClearAuditLock() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (datasetId: number) => {
+      const { error } = await supabase
+        .from("v2_statuses")
+        .update({
+          is_in_audit: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("dataset_id", datasetId);
+
+      if (error) throw error;
+      return datasetId;
+    },
+    onSuccess: (datasetId) => {
+      queryClient.invalidateQueries({ queryKey: ["audit-status", datasetId] });
+    },
+  });
+}
+
+// Update the existing useSaveDatasetAudit hook
 export function useSaveDatasetAudit() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -167,7 +231,7 @@ export function useSaveDatasetAudit() {
           dataset_id: auditData.dataset_id!,
           user_id: user?.id,
           geometry: aoiGeometry,
-          is_whole_image: false, // For now, assume it's not whole image
+          is_whole_image: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -178,11 +242,10 @@ export function useSaveDatasetAudit() {
           throw new Error("Failed to save AOI data");
         }
 
-        // Mark AOI as done
         dataToSave.aoi_done = true;
       }
 
-      // Check if audit already exists (fixed to not use .single())
+      // Check if audit already exists
       const { data: existingAudits } = await supabase
         .from("dataset_audit")
         .select("dataset_id")
@@ -211,11 +274,12 @@ export function useSaveDatasetAudit() {
         auditResult = data;
       }
 
-      // Update the v2_statuses table to mark as audited
+      // Update the v2_statuses table to mark as audited AND clear audit lock
       const { error: statusError } = await supabase
         .from("v2_statuses")
         .update({
           is_audited: true,
+          is_in_audit: false, // Clear the audit lock
           updated_at: new Date().toISOString(),
         })
         .eq("dataset_id", auditData.dataset_id);
@@ -232,8 +296,8 @@ export function useSaveDatasetAudit() {
       queryClient.invalidateQueries({ queryKey: ["dataset-audits"] });
       queryClient.invalidateQueries({ queryKey: ["dataset-audit", variables.dataset_id] });
       queryClient.invalidateQueries({ queryKey: ["dataset-aoi", variables.dataset_id] });
-      queryClient.invalidateQueries({ queryKey: ["datasets"] }); // Refresh datasets to update is_audited status
-      queryClient.invalidateQueries({ queryKey: ["v2-datasets"] }); // Also refresh v2_datasets if used
+      queryClient.invalidateQueries({ queryKey: ["audit-status", variables.dataset_id] });
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
     },
   });
 }

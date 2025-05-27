@@ -8,6 +8,8 @@ import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useDatasets } from "../hooks/useDatasets";
 import DatasetAuditDetail from "../components/DatasetAudit/DatasetAuditDetail";
 import { IDataset } from "../types/dataset";
+import { useCheckAuditStatus } from "../hooks/useDatasetAudit";
+import { supabase } from "../hooks/useSupabase";
 
 const { Title } = Typography;
 
@@ -99,6 +101,33 @@ export default function DatasetAudit() {
     return <DatasetAuditDetail dataset={dataset} />;
   }
 
+  const handleStartAudit = async (datasetId: number) => {
+    try {
+      // Quick check if dataset is in audit before navigating
+      const { data, error } = await supabase
+        .from("v2_statuses")
+        .select("is_in_audit")
+        .eq("dataset_id", datasetId)
+        .single();
+
+      if (error) {
+        console.error("Error checking audit status:", error);
+        navigate(`/dataset-audit/${datasetId}`); // Navigate anyway, let the detail page handle it
+        return;
+      }
+
+      if (data.is_in_audit) {
+        message.warning("Dataset is currently being audited by another user");
+        return;
+      }
+
+      navigate(`/dataset-audit/${datasetId}`);
+    } catch (error) {
+      console.error("Error checking audit status:", error);
+      navigate(`/dataset-audit/${datasetId}`); // Navigate anyway, let the detail page handle it
+    }
+  };
+
   // Define table columns for v2_full_dataset_view
   const columns: ColumnsType<IDataset> = [
     {
@@ -175,12 +204,7 @@ export default function DatasetAudit() {
           <Tooltip
             title={!isComplete ? "Dataset processing must be complete before auditing" : "Start audit for this dataset"}
           >
-            <Button
-              type="primary"
-              onClick={() => navigate(`/dataset-audit/${record.id}`)}
-              disabled={!isComplete}
-              size="small"
-            >
+            <Button type="primary" onClick={() => handleStartAudit(record.id)} disabled={!isComplete} size="small">
               {record.is_audited ? "Re-audit" : "Start Audit"}
             </Button>
           </Tooltip>

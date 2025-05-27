@@ -355,8 +355,11 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         }),
       }),
     });
+
     draw.on("drawend", (event) => {
       clearInteractions(); // Remove draw interaction itself
+      setIsDrawing(false); // Add this line to update the drawing state
+
       const drawnFeature = event.feature;
       if (drawnFeature) {
         const geometry = drawnFeature.getGeometry();
@@ -369,7 +372,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           }) as GeoJSON.Polygon;
           const multiPolyGeom: GeoJSON.MultiPolygon = { type: "MultiPolygon", coordinates: [geoJsonGeom.coordinates] };
           updateAOIWithGeometry(multiPolyGeom, "drawEnd");
-          message.success("AOI drawn.");
+          message.success("AOI drawn successfully.");
         } else {
           updateAOIWithGeometry(null, "drawEndError");
         }
@@ -377,6 +380,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         updateAOIWithGeometry(null, "drawEndNoFeature");
       }
     });
+
     mapInstanceRef.current.addInteraction(draw);
     drawInteractionRef.current = draw;
     setIsDrawing(true);
@@ -386,10 +390,10 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const cancelDrawing = () => {
     clearInteractions();
     setIsDrawing(false);
-    // Optionally, if a partial drawing was on source and needs removal without saving:
-    // const source = aoiLayerRef.current?.getSource();
-    // source?.clear();
-    // updateAOIWithGeometry(null, "cancelDrawing");
+    // Clear any partial drawing
+    const source = aoiLayerRef.current?.getSource();
+    source?.clear();
+    updateAOIWithGeometry(null, "cancelDrawing");
     message.info("Drawing cancelled");
   };
 
@@ -554,7 +558,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
 
-      {/* AOI Controls - Updated with editing functionality */}
+      {/* AOI Controls - Updated button logic */}
       <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
         {!isDrawing && !isEditing && !hasAOI && !isAOILoading && (
           <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
@@ -563,7 +567,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         )}
 
         {isDrawing && (
-          <Button onClick={cancelDrawing} size="small">
+          <Button onClick={cancelDrawing} size="small" danger>
             Cancel Drawing
           </Button>
         )}

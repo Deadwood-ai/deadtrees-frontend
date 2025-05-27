@@ -4,7 +4,14 @@ import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card,
 import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
-import { useDatasetAudit, useSaveDatasetAudit, useDatasetAOI, AuditFormValues } from "../../hooks/useDatasetAudit";
+import {
+  useDatasetAudit,
+  useSaveDatasetAudit,
+  useDatasetAOI,
+  AuditFormValues,
+  useSetAuditLock,
+  useClearAuditLock,
+} from "../../hooks/useDatasetAudit";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { Settings } from "../../config";
 
@@ -43,7 +50,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   // Track current AOI geometry and whether it's loaded
   const currentAOIGeometry = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
   const [hasAOI, setHasAOI] = useState(false);
-  const [isAOILoaded, setIsAOILoaded] = useState(false); // Track if initial load is done
+  const [isAOILoaded, setIsAOILoaded] = useState(false);
 
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
@@ -51,7 +58,47 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   // Mutation to save audit data
   const { mutateAsync: saveAudit, isPending: isSavingAudit } = useSaveDatasetAudit();
 
+  // Audit lock mutations
+  const { mutateAsync: setAuditLock } = useSetAuditLock();
+  const { mutateAsync: clearAuditLock } = useClearAuditLock();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [auditLockError, setAuditLockError] = useState<string | null>(null);
+  const [isLockingAudit, setIsLockingAudit] = useState(true);
+
+  // Set audit lock when component mounts
+  useEffect(() => {
+    const lockAudit = async () => {
+      try {
+        setIsLockingAudit(true);
+        await setAuditLock(dataset.id);
+        setAuditLockError(null);
+        setIsLockingAudit(false);
+      } catch (error) {
+        console.error("Failed to set audit lock:", error);
+        const errorMessage = error instanceof Error ? error.message : "Could not lock dataset for audit";
+        setAuditLockError(errorMessage);
+        setIsLockingAudit(false);
+        message.error(errorMessage);
+
+        // Navigate back to audit list if can't lock
+        setTimeout(() => {
+          navigate("/dataset-audit");
+        }, 2000);
+      }
+    };
+
+    lockAudit();
+
+    // Clear audit lock when component unmounts
+    return () => {
+      if (!auditLockError) {
+        clearAuditLock(dataset.id).catch((error) => {
+          console.error("Failed to clear audit lock:", error);
+        });
+      }
+    };
+  }, [dataset.id, setAuditLock, clearAuditLock, navigate]);
 
   // Set form values when audit data is loaded
   useEffect(() => {
@@ -64,7 +111,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     console.log("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
     currentAOIGeometry.current = geometry;
     setHasAOI(!!geometry);
-    setIsAOILoaded(true); // Mark that AOI has been processed (loaded or confirmed absent)
+    setIsAOILoaded(true);
   };
 
   const handleSubmit = async (values: AuditFormValues) => {
@@ -82,7 +129,6 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     try {
       setIsSubmitting(true);
 
-      // SIMPLE: Always save whatever is current
       const auditPayload = {
         ...values,
         dataset_id: dataset.id,
@@ -93,6 +139,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       await saveAudit(auditPayload);
       message.success(auditData ? "Audit data updated successfully" : "Audit data saved successfully");
 
+      // Always navigate back to audit list
       setTimeout(() => {
         navigate("/dataset-audit");
       }, 100);
@@ -104,12 +151,43 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    try {
+      if (!auditLockError) {
+        await clearAuditLock(dataset.id);
+      }
+    } catch (error) {
+      console.error("Failed to clear audit lock:", error);
+    }
     navigate("/dataset-audit");
   };
 
-  const isLoading = isAuditLoading || !user;
+  const isLoading = isAuditLoading || !user || isLockingAudit;
   const isSaving = isSavingAudit || isSubmitting;
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="text-center">
+          <div className="mb-2">Loading audit...</div>
+          {isLockingAudit && <div className="text-sm text-gray-500">Securing audit lock...</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (auditLockError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">{auditLockError}</p>
+          <p className="text-gray-500">Redirecting back to audit list...</p>
+        </div>
+      </div>
+    );
+  }
 
   const InfoIcon = ({ content }: { content: string }) => (
     <Tooltip title={content} placement="right" overlayStyle={{ maxWidth: 300 }}>
@@ -437,7 +515,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </Form.Item>
             </Card>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Simplified */}
             <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
               <Space className="w-full justify-end">
                 <Button onClick={handleCancel}>Cancel</Button>
@@ -446,7 +524,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                   onClick={() => form.submit()}
                   loading={isSaving}
                   icon={<SaveOutlined />}
-                  disabled={!hasAOI} // Disable if no AOI drawn
+                  disabled={!hasAOI}
                 >
                   Save Audit
                 </Button>
