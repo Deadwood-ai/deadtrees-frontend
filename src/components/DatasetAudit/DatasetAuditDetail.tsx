@@ -391,7 +391,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 <Form.Item
                   name="forest_cover_quality"
                   className="mb-1"
-                  rules={[{ required: true, message: "Please rate forest cover quality" }]}
+                  rules={[{ required: false, message: "Please rate forest cover quality" }]}
                 >
                   <Radio.Group>
                     <Space size="large">
