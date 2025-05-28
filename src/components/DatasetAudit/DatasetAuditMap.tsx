@@ -123,8 +123,8 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         });
       }
 
-      // Create deadwood vector layer if labels exist
-      const deadwoodVectorLayer = labelData ? createDeadwoodVectorLayer(labelData?.id) : null;
+      // Create deadwood vector layer - always create it, let the layer handle null labelId
+      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
 
       // Store references
       layerRefs.current = {
@@ -212,7 +212,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         mapInstanceRef.current = null;
       }
     };
-  }, [dataset, mapStyle]);
+  }, [dataset, mapStyle, labelData]);
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
