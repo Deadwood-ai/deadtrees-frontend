@@ -91,20 +91,9 @@ export default function Dataset() {
       return authorMatch || locationMatch;
     });
 
-    // Sort by date
+    // Sort by ID instead of date (ID represents order of addition to database)
     return filtered.sort((a, b) => {
-      const dateA = new Date(
-        parseInt(a.aquisition_year),
-        a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
-        a.aquisition_day ? parseInt(a.aquisition_day) : 1,
-      );
-      const dateB = new Date(
-        parseInt(b.aquisition_year),
-        b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
-        b.aquisition_day ? parseInt(b.aquisition_day) : 1,
-      );
-
-      return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+      return sortDirection === "asc" ? a.id - b.id : b.id - a.id;
     });
   }, [filteredData, searchValue, sortDirection]);
 
@@ -178,7 +167,7 @@ export default function Dataset() {
               <Tooltip title="Open advanced filtering options">
                 <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
               </Tooltip>
-              <Tooltip title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
+              <Tooltip title={`Sort by addition order ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
                 <Button
                   icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
                   onClick={toggleSort}

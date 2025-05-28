@@ -43,7 +43,11 @@ export function useAuthors() {
     queryKey: ["authors"],
     enabled: !!datasets,
     queryFn: () => {
-      const authorsUnique = [...new Set(datasets?.map((item) => item.authors).filter(Boolean))];
+      // Flatten all authors arrays and remove duplicates
+      const allAuthors = datasets?.flatMap((item) => item.authors || []).filter(Boolean);
+
+      const authorsUnique = [...new Set(allAuthors)];
+
       return authorsUnique.map((author) => ({
         label: author,
         value: author,
