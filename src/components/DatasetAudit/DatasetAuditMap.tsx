@@ -174,19 +174,19 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
               }
             })
             .catch((error) => {
-              console.error("Error getting ortho extent:", error);
+              // console.error("Error getting ortho extent:", error);
             });
         }
       }
 
-      console.log("Map initialized successfully");
+      // console.log("Map initialized successfully");
     } catch (error) {
-      console.error("Error initializing map:", error);
+      // console.error("Error initializing map:", error);
     }
 
     return () => {
       if (mapInstanceRef.current) {
-        console.log("Cleaning up map");
+        // console.log("Cleaning up map");
 
         // Clean up layers
         Object.values(layerRefs.current).forEach((layer) => {
@@ -216,36 +216,36 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
-    console.log("getCurrentGeometry called");
+    // console.log("getCurrentGeometry called");
 
     if (!aoiLayerRef.current) {
-      console.log("getCurrentGeometry: No AOI layer ref");
+      // console.log("getCurrentGeometry: No AOI layer ref");
       return null;
     }
 
     const source = aoiLayerRef.current.getSource();
     if (!source) {
-      console.log("getCurrentGeometry: No source");
+      // console.log("getCurrentGeometry: No source");
       return null;
     }
 
     const features = source.getFeatures();
-    console.log(`getCurrentGeometry: Found ${features.length} features`);
+    // console.log(`getCurrentGeometry: Found ${features.length} features`);
 
     if (features.length === 0) {
-      console.log("getCurrentGeometry: No features");
+      // console.log("getCurrentGeometry: No features");
       return null;
     }
 
     const format = new GeoJSON();
 
     if (features.length === 1) {
-      console.log("getCurrentGeometry: Processing single feature");
+      // console.log("getCurrentGeometry: Processing single feature");
       const feature = features[0];
       const geometry = feature.getGeometry();
 
       if (geometry instanceof Polygon) {
-        console.log("getCurrentGeometry: Single Polygon found");
+        // console.log("getCurrentGeometry: Single Polygon found");
         const geoJsonGeometry = format.writeGeometryObject(geometry, {
           dataProjection: "EPSG:4326",
           featureProjection: "EPSG:3857",
@@ -255,21 +255,21 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           type: "MultiPolygon",
           coordinates: [geoJsonGeometry.coordinates],
         };
-        console.log("getCurrentGeometry: Returning MultiPolygon with 1 polygon", result);
+        // console.log("getCurrentGeometry: Returning MultiPolygon with 1 polygon", result);
         return result;
       } else if (geometry instanceof MultiPolygon) {
-        console.log("getCurrentGeometry: Single MultiPolygon found");
+        // console.log("getCurrentGeometry: Single MultiPolygon found");
         const result = format.writeGeometryObject(geometry, {
           dataProjection: "EPSG:4326",
           featureProjection: "EPSG:3857",
         }) as GeoJSON.MultiPolygon;
-        console.log("getCurrentGeometry: Returning MultiPolygon", result);
+        // console.log("getCurrentGeometry: Returning MultiPolygon", result);
         return result;
       } else {
-        console.log("getCurrentGeometry: Unknown geometry type:", geometry?.getType());
+        // console.log("getCurrentGeometry: Unknown geometry type:", geometry?.getType());
       }
     } else if (features.length > 1) {
-      console.log("getCurrentGeometry: Processing multiple features");
+      // console.log("getCurrentGeometry: Processing multiple features");
       // Multiple features - combine into MultiPolygon
       const polygonCoordinates: number[][][] = [];
 
@@ -292,14 +292,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       }
     }
 
-    console.log("getCurrentGeometry: Returning null");
+    // console.log("getCurrentGeometry: Returning null");
     return null;
   };
 
   const updateAOIWithGeometry = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null, sourceAction: string) => {
-    console.log(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
-    console.log(`Current hasAOI before update:`, hasAOI);
-    console.log(`Will set hasAOI to:`, !!geometry);
+    // console.log(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
+    // console.log(`Current hasAOI before update:`, hasAOI);
+    // console.log(`Will set hasAOI to:`, !!geometry);
 
     currentAOIRef.current = geometry;
     setHasAOI(!!geometry);
@@ -308,14 +308,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       onAOIChange(geometry);
     }
 
-    console.log(`hasAOI state should now be:`, !!geometry);
+    // console.log(`hasAOI state should now be:`, !!geometry);
   };
 
   // Add this useEffect to debug hasAOI changes
   useEffect(() => {
-    console.log(`hasAOI state changed to:`, hasAOI);
-    console.log(`Current features in source:`, aoiLayerRef.current?.getSource()?.getFeatures().length || 0);
-    console.log(`Current geometry in ref:`, currentAOIRef.current ? "present" : "null");
+    // console.log(`hasAOI state changed to:`, hasAOI);
+    // console.log(`Current features in source:`, aoiLayerRef.current?.getSource()?.getFeatures().length || 0);
+    // console.log(`Current geometry in ref:`, currentAOIRef.current ? "present" : "null");
   }, [hasAOI]);
 
   const clearInteractions = () => {
@@ -341,21 +341,21 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // Load existing AOI when data is available
   useEffect(() => {
     if (!aoiLayerRef.current || !mapInstanceRef.current) {
-      console.log("Map or AOI layer not ready yet for AOI loading.");
+      // console.log("Map or AOI layer not ready yet for AOI loading.");
       return;
     }
     const source = aoiLayerRef.current.getSource();
     if (!source) {
-      console.log("AOI source not ready.");
+      // console.log("AOI source not ready.");
       return;
     }
 
     if (isAOILoading) {
-      console.log("AOI data is loading...");
+      // console.log("AOI data is loading...");
       return;
     }
 
-    console.log("useEffect for AOI load: isAOILoading is false. Current aoiData:", aoiData);
+    // console.log("useEffect for AOI load: isAOILoading is false. Current aoiData:", aoiData);
     source.clear();
     let loadedGeometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null = null;
 
@@ -381,7 +381,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
               source.addFeature(feature);
             }
           });
-          console.log(`Loaded MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+          // console.log(`Loaded MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
         } else if (loadedGeometry.type === "Polygon") {
           // Handle single Polygon
           const feature = format.readFeature(loadedGeometry, {
@@ -392,16 +392,16 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           if (feature && feature.getGeometry()) {
             source.addFeature(feature);
           }
-          console.log("Loaded single Polygon");
+          // console.log("Loaded single Polygon");
         }
 
-        console.log("Existing AOI feature(s) added to map source:", loadedGeometry);
+        // console.log("Existing AOI feature(s) added to map source:", loadedGeometry);
       } catch (error) {
-        console.error("Error processing existing AOI feature:", error);
+        // console.error("Error processing existing AOI feature:", error);
         loadedGeometry = null;
       }
     } else {
-      console.log("No existing AOI data found after loading or aoiData.geometry is null/undefined.");
+      // console.log("No existing AOI data found after loading or aoiData.geometry is null/undefined.");
     }
 
     updateAOIWithGeometry(loadedGeometry, "initialLoad");
@@ -503,10 +503,10 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       const selectedFeatures = event.target.getFeatures();
       if (selectedFeatures.getLength() > 0) {
         setSelectedFeatureForEdit(selectedFeatures.item(0));
-        console.log("Feature selected for editing");
+        // console.log("Feature selected for editing");
       } else {
         setSelectedFeatureForEdit(null);
-        console.log("No feature selected");
+        // console.log("No feature selected");
       }
     });
 
@@ -528,7 +528,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
       if (currentGeometry) {
         updateAOIWithGeometry(currentGeometry, "modifyEndSuccess");
-        console.log("Modified polygon. Updated complete geometry:", currentGeometry);
+        // console.log("Modified polygon. Updated complete geometry:", currentGeometry);
       } else {
         console.warn("modify.on('modifyend'): Failed to get current geometry from source");
         updateAOIWithGeometry(currentAOIRef.current, "modifyEndFallback");
@@ -539,7 +539,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     mapInstanceRef.current.addInteraction(modify);
     selectInteractionRef.current = select;
     modifyInteractionRef.current = modify;
-    console.log("Editing interactions (select, modify) added.");
+    // console.log("Editing interactions (select, modify) added.");
     return true;
   };
 
@@ -592,7 +592,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     setIsEditing(false);
     setSelectedFeatureForEdit(null); // Reset selected feature
     message.success("AOI edits applied. Save audit to persist.");
-    console.log("saveEditing called. Current AOI in ref:", currentAOIRef.current);
+    // console.log("saveEditing called. Current AOI in ref:", currentAOIRef.current);
   };
 
   const cancelEditing = () => {
@@ -714,7 +714,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
                 </div>
               )}
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 rounded-sm bg-slate-100 p-1">
               <Button icon={<EditOutlined />} onClick={startEditing} size="small" title="Edit polygons">
                 Edit
               </Button>
@@ -722,7 +722,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
                 Add Another
               </Button>
               <Button icon={<DeleteOutlined />} onClick={deleteAOI} size="small" danger title="Delete all polygons">
-                Delete
+                Delete all
               </Button>
             </div>
           </div>
@@ -733,29 +733,28 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
             <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">
               {selectedFeatureForEdit ? "Polygon selected - edit or delete it" : "Click polygon to select..."}
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 rounded-sm bg-slate-100 p-1">
               <Button icon={<SaveOutlined />} onClick={saveEditing} size="small" type="primary" title="Save changes">
                 Save
               </Button>
               <Button icon={<CloseOutlined />} onClick={cancelEditing} size="small" title="Cancel editing">
                 Cancel
               </Button>
-            </div>
-            {/* Show delete selected button only when a polygon is selected */}
-            {selectedFeatureForEdit && (
-              <div className="mt-1 flex gap-1">
+
+              {selectedFeatureForEdit && (
+                // <div className="mt-1 flex gap-1">
                 <Button
                   icon={<DeleteOutlined />}
                   onClick={deleteSelectedPolygon}
                   size="small"
                   danger
-                  title="Delete selected polygon"
+                  title="Delete selected"
                   className="w-full"
                 >
                   Delete Selected
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 

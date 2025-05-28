@@ -8,12 +8,12 @@ import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useDatasets } from "../hooks/useDatasets";
 import DatasetAuditDetail from "../components/DatasetAudit/DatasetAuditDetail";
 import { IDataset } from "../types/dataset";
-import { useCheckAuditStatus } from "../hooks/useDatasetAudit";
+import { useDatasetAudits } from "../hooks/useDatasetAudit";
 import { supabase } from "../hooks/useSupabase";
 
 const { Title } = Typography;
 
-type AuditFilter = "needs-audit" | "audited";
+type AuditFilter = "needs-audit" | "audited" | "major-issues";
 
 export default function DatasetAudit() {
   const { id } = useParams();
@@ -23,10 +23,14 @@ export default function DatasetAudit() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
   const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
+  const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
 
   // Filter states
   const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
   const [idFilter, setIdFilter] = useState<string>("");
+
+  // Add a constant for the minimum dataset ID
+  const MIN_AUDIT_DATASET_ID = 2559;
 
   // Helper function to check if dataset processing is complete
   const isProcessingComplete = (dataset: IDataset) => {
@@ -40,17 +44,34 @@ export default function DatasetAudit() {
     );
   };
 
+  // Create a map of dataset_id to audit data for quick lookup
+  const auditMap = useMemo(() => {
+    if (!audits) return new Map();
+    return new Map(audits.map((audit) => [audit.dataset_id, audit]));
+  }, [audits]);
+
   // Filter datasets based on audit status and ID
   const filteredDatasets = useMemo(() => {
     if (!datasets) return [];
 
     let filtered = datasets;
 
+    // First filter by minimum ID for auditing
+    filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
+
     // Filter by audit status
     if (auditFilter === "needs-audit") {
       filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
-    } else {
-      filtered = filtered.filter((dataset) => dataset.is_audited);
+    } else if (auditFilter === "audited") {
+      filtered = filtered.filter((dataset) => {
+        const audit = auditMap.get(dataset.id);
+        return dataset.is_audited && (!audit || !audit.has_major_issue);
+      });
+    } else if (auditFilter === "major-issues") {
+      filtered = filtered.filter((dataset) => {
+        const audit = auditMap.get(dataset.id);
+        return dataset.is_audited && audit && audit.has_major_issue;
+      });
     }
 
     // Filter by ID if provided
@@ -65,16 +86,28 @@ export default function DatasetAudit() {
     }
 
     return filtered;
-  }, [datasets, auditFilter, idFilter]);
+  }, [datasets, auditFilter, idFilter, auditMap]);
 
-  // Count datasets for each category
+  // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
-    return datasets?.filter((d) => !d.is_audited && isProcessingComplete(d)).length || 0;
+    return datasets?.filter((d) => d.id > MIN_AUDIT_DATASET_ID && !d.is_audited && isProcessingComplete(d)).length || 0;
   }, [datasets]);
 
   const auditedCount = useMemo(() => {
-    return datasets?.filter((d) => d.is_audited).length || 0;
-  }, [datasets]);
+    if (!datasets || !audits) return 0;
+    return datasets.filter((d) => {
+      const audit = auditMap.get(d.id);
+      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && (!audit || !audit.has_major_issue);
+    }).length;
+  }, [datasets, auditMap]);
+
+  const majorIssuesCount = useMemo(() => {
+    if (!datasets || !audits) return 0;
+    return datasets.filter((d) => {
+      const audit = auditMap.get(d.id);
+      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.has_major_issue;
+    }).length;
+  }, [datasets, auditMap]);
 
   // Check if user has audit privileges
   useEffect(() => {
@@ -128,8 +161,8 @@ export default function DatasetAudit() {
     }
   };
 
-  // Define table columns for v2_full_dataset_view
-  const columns: ColumnsType<IDataset> = [
+  // Add Major Issues column for the major-issues filter
+  const baseColumns: ColumnsType<IDataset> = [
     {
       title: "ID",
       dataIndex: "id",
@@ -168,7 +201,16 @@ export default function DatasetAudit() {
       title: "Audited",
       dataIndex: "is_audited",
       key: "is_audited",
-      render: (isAudited: boolean) => (isAudited ? <Tag color="green">Yes</Tag> : <Tag color="red">No</Tag>),
+      render: (isAudited: boolean, record: IDataset) => {
+        if (!isAudited) return <Tag color="red">No</Tag>;
+
+        const audit = auditMap.get(record.id);
+        if (audit?.has_major_issue) {
+          return <Tag color="orange">⚠️ Issues</Tag>;
+        }
+
+        return <Tag color="green">Yes</Tag>;
+      },
       width: 100,
     },
     {
@@ -214,6 +256,26 @@ export default function DatasetAudit() {
     },
   ];
 
+  // Add Major Issues column when viewing major issues
+  const columns =
+    auditFilter === "major-issues"
+      ? [
+          ...baseColumns.slice(0, -1), // All columns except Actions
+          {
+            title: "Major Issues",
+            key: "major_issues",
+            render: (_: unknown, record: IDataset) => {
+              const audit = auditMap.get(record.id);
+              if (!audit) return <Tag color="default">No audit data</Tag>;
+
+              return audit.has_major_issue ? <Tag color="red">🚨 Yes</Tag> : <Tag color="green">No</Tag>;
+            },
+            width: 120,
+          },
+          baseColumns[baseColumns.length - 1], // Actions column
+        ]
+      : baseColumns;
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -241,6 +303,10 @@ export default function DatasetAudit() {
                   label: `Audited (${auditedCount})`,
                   value: "audited",
                 },
+                {
+                  label: `Major Issues (${majorIssuesCount})`,
+                  value: "major-issues",
+                },
               ]}
             />
           </div>
@@ -262,7 +328,7 @@ export default function DatasetAudit() {
         dataSource={filteredDatasets}
         columns={columns}
         rowKey="id"
-        loading={isDatasetLoading}
+        loading={isDatasetLoading || isAuditsLoading}
         pagination={{
           pageSize: 20,
           showSizeChanger: true,

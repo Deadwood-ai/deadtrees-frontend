@@ -27,6 +27,7 @@ export interface AuditFormValues {
   audited_by?: string;
   audited_by_email?: string;
   notes?: string;
+  has_major_issue?: boolean;
 }
 
 export interface AOIData {

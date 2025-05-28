@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card, Space, Image } from "antd";
+import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card, Space, Image, Checkbox } from "antd";
 import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
@@ -235,17 +235,20 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
         {/* Header - Fixed position */}
         <div className="flex-shrink-0 border-b border-slate-200 bg-white p-3 shadow-sm">
           <Button shape="circle" onClick={handleCancel} icon={<ArrowLeftOutlined />} className="mb-2" />
-          <Title level={5} className="m-0 text-sm">
-            Audit: {dataset.id}
-          </Title>
+          <div>
+            <Title level={5} className="m-0 text-sm">
+              Audit: {dataset.id} - {dataset.admin_level_3 || dataset.admin_level_2}
+            </Title>
+            <Text type="secondary" className="text-xs font-medium">
+              Uploaded by: <span className=" text-blue-600">{auditData?.uploaded_by_email}</span>
+            </Text>
+          </div>
           {auditData?.audited_by && (
-            <Text type="secondary" className="mt-1 block text-xs">
-              Last audited by: {auditData.audited_by_email || auditData.audited_by}
+            <Text type="secondary" className="mt-1 block text-xs font-medium text-slate-500">
+              Last audited by:{" "}
+              <span className=" text-blue-600">{auditData.audited_by_email || auditData.audited_by}</span>
             </Text>
           )}
-          <Text type="secondary" className="text-xs">
-            {dataset.admin_level_3 || dataset.admin_level_2}
-          </Text>
         </div>
 
         {/* Scrollable Form Container */}
@@ -509,6 +512,16 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                   8. Additional Notes
                 </Text>
               </div>
+
+              {/* Major Issue Checkbox */}
+              <Form.Item name="has_major_issue" className="mb-2" valuePropName="checked">
+                <Checkbox className="text-xs">
+                  <span className="font-medium text-red-600">🚨 Has Major Issue</span>
+                  <Tooltip title="Check this if the dataset has significant issues that require attention or should exclude it from analysis">
+                    <InfoCircleOutlined className="ml-1 text-gray-400" />
+                  </Tooltip>
+                </Checkbox>
+              </Form.Item>
 
               <Form.Item name="notes" className="mb-0">
                 <TextArea rows={3} placeholder="Any additional observations..." className="text-xs" />
