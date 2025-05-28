@@ -2,12 +2,14 @@ import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-
 import { Layout } from "antd";
 import { useEffect } from "react";
 import { trackPageView, initializePostHog } from "./utils/analytics";
+import { AOIProvider } from "./contexts/AOIContext";
 
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/Home";
 import ProfilePage from "./pages/Profile";
 import Dataset from "./pages/Dataset";
 import DatasetDetails from "./pages/DatasetDetails";
+import DatasetAudit from "./pages/DatasetAudit";
 import Deadtrees from "./pages/Deadtrees";
 import SignUp from "./pages/auth/SignUp";
 import SignIn from "./pages/auth/SignIn";
@@ -22,7 +24,15 @@ const { Content } = Layout;
 
 function LayoutWrapper() {
   const location = useLocation();
-  const fullHeightPaths = ["/dataset", "/deadtrees", "/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
+  const fullHeightPaths = [
+    "/dataset",
+    "/deadtrees",
+    "/dataset-audit",
+    "/sign-in",
+    "/sign-up",
+    "/forgot-password",
+    "/reset-password",
+  ];
 
   const shouldUseFullHeight = fullHeightPaths.some((path) => location.pathname.startsWith(path));
 
@@ -37,10 +47,10 @@ function LayoutWrapper() {
         }}
       >
         <Navigation />
-        <Content>
+        <Content style={{ height: shouldUseFullHeight ? "calc(100vh - 80px)" : "auto" }}>
           <Outlet />
         </Content>
-        <Footer />
+        {!shouldUseFullHeight && <Footer />}
       </Layout>
     </div>
   );
@@ -70,6 +80,8 @@ function AppWithTracking() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="dataset" element={<Dataset />} />
         <Route path="dataset/:id" element={<DatasetDetails />} />
+        <Route path="dataset-audit" element={<DatasetAudit />} />
+        <Route path="dataset-audit/:id" element={<DatasetAudit />} />
         <Route path="deadtrees" element={<Deadtrees />} />
         <Route path="about" element={<About />} />
         <Route path="impressum" element={<Impressum />} />
@@ -88,7 +100,9 @@ function AppWithTracking() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppWithTracking />
+      <AOIProvider>
+        <AppWithTracking />
+      </AOIProvider>
     </BrowserRouter>
   );
 }

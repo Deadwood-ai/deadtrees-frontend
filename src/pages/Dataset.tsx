@@ -8,22 +8,35 @@ import { CloseOutlined } from "@ant-design/icons";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { useDatasets } from "../hooks/useDatasets";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
+import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 
 type SortDirection = "asc" | "desc";
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
 
 export default function Dataset() {
   const { data: allData } = useDatasets();
-  const { filteredData, setFilter, setFilterTag, filter, advancedFilters, setAdvancedFilters } =
-    useFilteredDatasets(allData);
+  const { filteredData } = useFilteredDatasets(allData);
+
+  // Get filter state from context
+  const {
+    filter,
+    setFilter,
+    filterTag,
+    setFilterTag,
+    advancedFilters,
+    setAdvancedFilters,
+    searchInput,
+    setSearchInput,
+    sortDirection,
+    setSortDirection,
+    filterByViewport,
+    setFilterByViewport,
+  } = useDatasetFilter();
 
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
-  const [searchInput, setSearchInput] = useState("");
   const [searchValue, setSearchValue] = useState("");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const [filterByViewport, setFilterByViewport] = useState(true);
 
   // Debounced search handler
   useEffect(() => {
@@ -39,7 +52,7 @@ export default function Dataset() {
   };
 
   const toggleSort = () => {
-    setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
   };
 
   const handleFilterClick = (filterValue: string, filterType: FilterTag) => {
@@ -91,20 +104,9 @@ export default function Dataset() {
       return authorMatch || locationMatch;
     });
 
-    // Sort by date
+    // Sort by ID instead of date (ID represents order of addition to database)
     return filtered.sort((a, b) => {
-      const dateA = new Date(
-        parseInt(a.aquisition_year),
-        a.aquisition_month ? parseInt(a.aquisition_month) - 1 : 0,
-        a.aquisition_day ? parseInt(a.aquisition_day) : 1,
-      );
-      const dateB = new Date(
-        parseInt(b.aquisition_year),
-        b.aquisition_month ? parseInt(b.aquisition_month) - 1 : 0,
-        b.aquisition_day ? parseInt(b.aquisition_day) : 1,
-      );
-
-      return sortDirection === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+      return sortDirection === "asc" ? a.id - b.id : b.id - a.id;
     });
   }, [filteredData, searchValue, sortDirection]);
 
@@ -178,7 +180,7 @@ export default function Dataset() {
               <Tooltip title="Open advanced filtering options">
                 <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
               </Tooltip>
-              <Tooltip title={`Sort by date ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
+              <Tooltip title={`Sort by addition order ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
                 <Button
                   icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
                   onClick={toggleSort}
