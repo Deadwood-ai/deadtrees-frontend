@@ -47,10 +47,10 @@ function LayoutWrapper() {
         }}
       >
         <Navigation />
-        <Content>
+        <Content style={{ height: shouldUseFullHeight ? "calc(100vh - 80px)" : "auto" }}>
           <Outlet />
         </Content>
-        <Footer />
+        {!shouldUseFullHeight && <Footer />}
       </Layout>
     </div>
   );
