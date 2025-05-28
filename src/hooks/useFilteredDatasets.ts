@@ -1,21 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { IDataset } from "../types/dataset";
-import { AdvancedFilters } from "../components/FilterModal";
-
-type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
-type FilterValue = string;
+import { useDatasetFilter } from "./useDatasetFilterProvider";
 
 export function useFilteredDatasets(datasets: IDataset[] | undefined) {
-  const [filter, setFilter] = useState<FilterValue>("");
-  const [filterTag, setFilterTag] = useState<FilterTag>("platform");
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
-    hasDeadwoodPrediction: false,
-    hasLabels: false,
-    biome: null,
-    authors: [],
-    platform: "",
-    dateRange: [2010, new Date().getFullYear()],
-  });
+  const { filter, filterTag, advancedFilters } = useDatasetFilter();
 
   const filteredData = useMemo(() => {
     if (!datasets) return datasets;
@@ -76,11 +64,5 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
 
   return {
     filteredData,
-    filter,
-    setFilter,
-    filterTag,
-    setFilterTag,
-    advancedFilters,
-    setAdvancedFilters,
   };
 }
