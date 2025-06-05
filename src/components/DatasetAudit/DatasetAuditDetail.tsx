@@ -257,11 +257,13 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
           <Button shape="circle" onClick={handleCancel} icon={<ArrowLeftOutlined />} className="mb-2" />
           <div>
             <Title level={5} className="m-0 text-sm">
-              Audit: {dataset.id} - {dataset.admin_level_3 || dataset.admin_level_2}
+              Audit: {dataset.id} - {dataset.admin_level_3 || dataset.admin_level_2}, {dataset.admin_level_1}
             </Title>
-            <Text type="secondary" className="text-xs font-medium">
-              Uploaded by: <span className=" text-blue-600">{auditData?.uploaded_by_email}</span>
-            </Text>
+            {auditData?.uploaded_by_email && (
+              <Text type="secondary" className="text-xs font-medium">
+                Uploaded by: <span className=" text-blue-600">{auditData?.uploaded_by_email}</span>
+              </Text>
+            )}
           </div>
           {auditData?.audited_by && (
             <Text type="secondary" className="mt-1 block text-xs font-medium text-slate-500">
