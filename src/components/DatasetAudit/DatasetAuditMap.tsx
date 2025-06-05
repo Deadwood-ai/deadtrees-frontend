@@ -176,7 +176,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
       mapInstanceRef.current = newMap;
 
-      // If we have an ortho layer, fit to its extent when ready
+      // If we have an ortho layer, fit to its extent and constrain the view
       if (orthoCogLayer) {
         const source = orthoCogLayer.getSource();
         if (source) {
@@ -184,7 +184,24 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
             .getView()
             .then((viewOptions) => {
               if (viewOptions?.extent && mapInstanceRef.current) {
+                // Fit the view to the extent
                 mapInstanceRef.current.getView().fit(viewOptions.extent);
+
+                // Create a new view with a more flexible extent constraint
+                const constrainedView = new View({
+                  center: mapInstanceRef.current.getView().getCenter(),
+                  zoom: mapInstanceRef.current.getView().getZoom(),
+                  maxZoom: 23,
+                  minZoom: 2, // Allow zooming out further
+                  extent: viewOptions.extent, // Use the exact ortho extent
+                  constrainOnlyCenter: true, // Only constrain the center, not the whole viewport
+                  showFullExtent: true, // Allow zooming out to show the full extent
+                  smoothExtentConstraint: true, // Allow slight exceedance (default, but explicit)
+                  projection: "EPSG:3857",
+                });
+
+                // Replace the current view with the constrained one
+                mapInstanceRef.current.setView(constrainedView);
               }
             })
             .catch((error) => {
