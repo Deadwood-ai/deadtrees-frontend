@@ -62,15 +62,17 @@ export function DeadwoodCardDetails({
               </div>
             </div>
 
-            <div className="mb-4 flex items-center space-x-2 pt-2">
-              <p className="m-0  text-xs text-gray-800">Method by:</p>
-              <a
-                className="m-0 italic underline"
-                href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
-              >
-                Möhring et al. (under review)
-              </a>
-            </div>
+            {!showForestCoverLegend && (
+              <div className="mb-4 flex items-center space-x-2 pt-2">
+                <p className="m-0 text-xs text-gray-800">Method by:</p>
+                <a
+                  className="m-0 italic underline"
+                  href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
+                >
+                  Möhring et al. (under review)
+                </a>
+              </div>
+            )}
           </div>
         )}
 
