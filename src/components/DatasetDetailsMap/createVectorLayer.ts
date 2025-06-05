@@ -129,7 +129,7 @@ export const createDeadwoodVectorLayer = (labelId?: number | null) =>
 
 export const createForestCoverVectorLayer = (labelId?: number) =>
   createVectorLayer({
-    rpcFunctionName: "get_forest_cover_vector_tiles",
+    rpcFunctionName: "get_forest_cover_vector_tiles_perf",
     className: "forest-cover-vector",
     style: {
       fillColor: "rgba(34, 197, 94, 0.5)", // Green with high opacity

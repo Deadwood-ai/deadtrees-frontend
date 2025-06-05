@@ -3,9 +3,12 @@ import { Slider } from "antd";
 interface DeadwoodCardDetailsProps {
   deadwoodOpacity: number;
   setDeadwoodOpacity: React.Dispatch<React.SetStateAction<number>>;
-  droneImageOpacity: number; // renamed from satelliteOpacity
-  setDroneImageOpacity: React.Dispatch<React.SetStateAction<number>>; // renamed from setSatelliteOpacity
+  droneImageOpacity: number;
+  setDroneImageOpacity: React.Dispatch<React.SetStateAction<number>>;
+  forestCoverOpacity?: number;
+  setForestCoverOpacity?: React.Dispatch<React.SetStateAction<number>>;
   showLegend: boolean;
+  showForestCoverLegend?: boolean;
 }
 
 export function DeadwoodCardDetails({
@@ -13,7 +16,10 @@ export function DeadwoodCardDetails({
   setDeadwoodOpacity,
   droneImageOpacity,
   setDroneImageOpacity,
+  forestCoverOpacity,
+  setForestCoverOpacity,
   showLegend,
+  showForestCoverLegend = false,
 }: DeadwoodCardDetailsProps) {
   return (
     <div>
@@ -64,6 +70,27 @@ export function DeadwoodCardDetails({
               >
                 Möhring et al. (under review)
               </a>
+            </div>
+          </div>
+        )}
+
+        {/* Forest Cover Layer Controls - Only show if forest cover data exists */}
+        {showForestCoverLegend && forestCoverOpacity !== undefined && setForestCoverOpacity && (
+          <div>
+            <div className="mb-2 flex w-full items-end border-t pt-2">
+              <p className="m-0 w-full text-xs text-gray-600">Forest Cover Segmentation</p>
+              <div className="w-2/3">
+                <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+                <Slider
+                  className="m-0 w-full"
+                  defaultValue={1}
+                  step={0.01}
+                  max={1}
+                  value={forestCoverOpacity}
+                  onChange={(value) => setForestCoverOpacity(value as number)}
+                  min={0}
+                />
+              </div>
             </div>
           </div>
         )}
