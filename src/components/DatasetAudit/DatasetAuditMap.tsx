@@ -20,7 +20,7 @@ import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "../DatasetDetailsMap/DeadwoodCardDetails";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
-import { createDeadwoodVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
+import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
 import { useDatasetLabels } from "../../hooks/useDatasetLabels";
 import { ILabelData } from "../../types/labels";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
@@ -44,6 +44,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const [mapStyle, setMapStyle] = useState("AerialWithLabelsOnDemand");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
+  const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
 
   // Only use state for UI controls that need to trigger re-renders
   const [isDrawing, setIsDrawing] = useState(false);
@@ -60,6 +61,13 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     enabled: !!dataset?.id,
   });
 
+  // Fetch forest cover label data for the current dataset
+  const { data: forestCoverLabelData } = useDatasetLabels({
+    datasetId: dataset?.id,
+    labelData: ILabelData.FOREST_COVER,
+    enabled: !!dataset?.id,
+  });
+
   // Get existing AOI data
   const { data: aoiData, isLoading: isAOILoading } = useDatasetAOI(dataset.id);
 
@@ -68,6 +76,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     basemap?: TileLayer<BingMaps>;
     orthoCog?: TileLayerWebGL;
     deadwoodVector?: Layer;
+    forestCoverVector?: Layer;
     aoiVector?: VectorLayer<VectorSource>;
   }>({});
 
@@ -126,11 +135,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       // Create deadwood vector layer - always create it, let the layer handle null labelId
       const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
 
+      // Create forest cover vector layer - always create it, let the layer handle null labelId
+      const forestCoverVectorLayer = createForestCoverVectorLayer(forestCoverLabelData?.id);
+
       // Store references
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer || undefined,
         deadwoodVector: deadwoodVectorLayer || undefined,
+        forestCoverVector: forestCoverVectorLayer || undefined,
         aoiVector: aoiLayer,
       };
 
@@ -138,6 +151,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       const layers = [basemapLayer, aoiLayer];
       if (orthoCogLayer) layers.splice(1, 0, orthoCogLayer);
       if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
+      if (forestCoverVectorLayer) layers.push(forestCoverVectorLayer);
 
       // Initialize map view
       const initialCenter =
@@ -212,7 +226,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         mapInstanceRef.current = null;
       }
     };
-  }, [dataset, mapStyle, labelData]);
+  }, [dataset, mapStyle, labelData, forestCoverLabelData]);
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
@@ -419,6 +433,13 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       layerRefs.current.orthoCog.setOpacity(droneImageOpacity);
     }
   }, [droneImageOpacity]);
+
+  // Update forest cover layer opacity
+  useEffect(() => {
+    if (mapInstanceRef.current && layerRefs.current.forestCoverVector) {
+      layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
+    }
+  }, [forestCoverOpacity]);
 
   // Simplified startDrawing - always draws one polygon
   const startDrawing = () => {
@@ -771,7 +792,10 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           setDeadwoodOpacity={setDeadwoodOpacity}
           droneImageOpacity={droneImageOpacity}
           setDroneImageOpacity={setDroneImageOpacity}
+          forestCoverOpacity={forestCoverOpacity}
+          setForestCoverOpacity={setForestCoverOpacity}
           showLegend={labelData ? true : false}
+          showForestCoverLegend={forestCoverLabelData ? true : false}
         />
       </div>
     </div>
