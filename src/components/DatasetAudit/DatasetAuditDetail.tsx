@@ -114,6 +114,25 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     setIsAOILoaded(true);
   };
 
+  // Helper function to create conditional validation rules
+  const createConditionalRule = (message: string) => [
+    ({ getFieldValue }: any) => ({
+      validator(_: any, value: any) {
+        const hasMajorIssue = getFieldValue("has_major_issue");
+        // If major issue is checked, field is optional
+        if (hasMajorIssue) {
+          return Promise.resolve();
+        }
+        // If major issue is not checked, field is required
+        // Check for null, undefined, or empty string specifically (not falsy values like false)
+        if (value === null || value === undefined || value === "") {
+          return Promise.reject(new Error(message));
+        }
+        return Promise.resolve();
+      },
+    }),
+  ];
+
   const handleSubmit = async (values: AuditFormValues) => {
     // Wait for AOI to be loaded/processed before validating
     if (!isAOILoaded) {
@@ -121,7 +140,8 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       return;
     }
 
-    if (!currentAOIGeometry.current) {
+    // Only require AOI if major issue is not checked
+    if (!values.has_major_issue && !currentAOIGeometry.current) {
       message.error("Please draw an AOI on the map before submitting");
       return;
     }
@@ -132,7 +152,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       const auditPayload = {
         ...values,
         dataset_id: dataset.id,
-        aoi_done: true,
+        aoi_done: !!currentAOIGeometry.current,
         aoiGeometry: currentAOIGeometry.current,
       };
 
@@ -273,7 +293,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item
                 name="is_georeferenced"
                 className="mb-2"
-                rules={[{ required: true, message: "Please select georeferencing status" }]}
+                rules={createConditionalRule("Please select georeferencing status")}
               >
                 <Radio.Group>
                   <Space size="large">
@@ -303,7 +323,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item
                 name="has_valid_acquisition_date"
                 className="mb-2"
-                rules={[{ required: true, message: "Please validate acquisition date" }]}
+                rules={createConditionalRule("Please validate acquisition date")}
               >
                 <Radio.Group>
                   <Space size="large">
@@ -337,7 +357,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item
                 name="has_valid_phenology"
                 className="mb-2"
-                rules={[{ required: true, message: "Please assess phenology" }]}
+                rules={createConditionalRule("Please assess phenology")}
               >
                 <Radio.Group>
                   <Space size="large">
@@ -368,7 +388,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 <Form.Item
                   name="deadwood_quality"
                   className="mb-1"
-                  rules={[{ required: true, message: "Please rate deadwood quality" }]}
+                  rules={createConditionalRule("Please rate deadwood quality")}
                 >
                   <Radio.Group>
                     <Space size="large">
@@ -419,7 +439,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item
                 name="has_cog_issue"
                 className="mb-2"
-                rules={[{ required: true, message: "Please assess COG quality" }]}
+                rules={createConditionalRule("Please assess COG quality")}
               >
                 <Radio.Group>
                   <Space size="large">
@@ -465,7 +485,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item
                 name="has_thumbnail_issue"
                 className="mb-2"
-                rules={[{ required: true, message: "Please assess thumbnail quality" }]}
+                rules={createConditionalRule("Please assess thumbnail quality")}
               >
                 <Radio.Group>
                   <Space size="large">
@@ -493,16 +513,29 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 <InfoIcon content={AUDIT_INFO.aoi} />
               </div>
 
-              <div className="text-xs">
-                {hasAOI ? (
-                  <div className="flex items-center text-green-600">
-                    <span className="mr-1">✓</span>
-                    AOI defined
-                  </div>
-                ) : (
-                  <div className="text-orange-600">AOI required - use the "Draw AOI" button on the map</div>
-                )}
-              </div>
+              <Form.Item
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.has_major_issue !== currentValues.has_major_issue
+                }
+              >
+                {({ getFieldValue }) => {
+                  const hasMajorIssue = getFieldValue("has_major_issue");
+                  return (
+                    <div className="text-xs">
+                      {hasAOI ? (
+                        <div className="flex items-center text-green-600">
+                          <span className="mr-1">✓</span>
+                          AOI defined
+                        </div>
+                      ) : hasMajorIssue ? (
+                        <div className="text-orange-400">AOI optional when major issue is reported</div>
+                      ) : (
+                        <div className="text-orange-600">AOI required - use the "Draw AOI" button on the map</div>
+                      )}
+                    </div>
+                  );
+                }}
+              </Form.Item>
             </Card>
 
             {/* Step 8: Additional Notes */}
@@ -517,7 +550,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               <Form.Item name="has_major_issue" className="mb-2" valuePropName="checked">
                 <Checkbox className="text-xs">
                   <span className="font-medium text-red-600">🚨 Has Major Issue</span>
-                  <Tooltip title="Check this if the dataset has significant issues that require attention or should exclude it from analysis">
+                  <Tooltip title="Check this if the dataset has significant issues that require attention or should exclude it from analysis. When checked, other audit fields become optional.">
                     <InfoCircleOutlined className="ml-1 text-gray-400" />
                   </Tooltip>
                 </Checkbox>
@@ -528,19 +561,31 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </Form.Item>
             </Card>
 
-            {/* Action Buttons - Simplified */}
+            {/* Action Buttons - Updated */}
             <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
               <Space className="w-full justify-end">
                 <Button onClick={handleCancel}>Cancel</Button>
-                <Button
-                  type="primary"
-                  onClick={() => form.submit()}
-                  loading={isSaving}
-                  icon={<SaveOutlined />}
-                  disabled={!hasAOI}
+                <Form.Item
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.has_major_issue !== currentValues.has_major_issue
+                  }
+                  className="mb-0"
                 >
-                  Save Audit
-                </Button>
+                  {({ getFieldValue }) => {
+                    const hasMajorIssue = getFieldValue("has_major_issue");
+                    return (
+                      <Button
+                        type="primary"
+                        onClick={() => form.submit()}
+                        loading={isSaving}
+                        icon={<SaveOutlined />}
+                        disabled={!hasMajorIssue && !hasAOI}
+                      >
+                        Save Audit
+                      </Button>
+                    );
+                  }}
+                </Form.Item>
               </Space>
             </div>
           </Form>
