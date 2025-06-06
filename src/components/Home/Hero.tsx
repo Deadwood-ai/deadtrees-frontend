@@ -164,13 +164,13 @@ const Hero = () => {
           />
         )}
         <ReactPlayer
-          url="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/deadtrees_V2_final.mp4"
+          url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
           width="100%"
           height="100%"
           controls={true}
           playsinline
           loop={true}
-          light="https://ijuphmnaebfdzsfrnsrn.supabase.co/storage/v1/object/public/video/image.png?t=2024-12-10T11%3A01%3A12.395Z" // Add this line with your thumbnail image path
+          light="https://data2.deadtrees.earth/assets/v1/image.png" // Add this line with your thumbnail image path
           config={{
             file: {
               attributes: {
