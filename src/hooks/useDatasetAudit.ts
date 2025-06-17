@@ -7,6 +7,9 @@ import { IDataset } from "../types/dataset";
 // Update the enum type to match your backend
 export type PredictionQuality = "great" | "sentinel_ok" | "bad";
 
+// Simplified disposition enum - 3 levels only
+export type DatasetDisposition = "no_issues" | "fixable_issues" | "exclude_completely";
+
 export interface AuditFormValues {
   dataset_id?: number;
   audit_date?: string;
@@ -27,7 +30,8 @@ export interface AuditFormValues {
   audited_by?: string;
   audited_by_email?: string;
   notes?: string;
-  has_major_issue?: boolean;
+  // Replace has_major_issue with simplified final assessment
+  final_assessment?: DatasetDisposition;
 }
 
 export interface AOIData {
@@ -38,6 +42,14 @@ export interface AOIData {
   is_whole_image: boolean;
   image_quality?: number;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// New interface for ortho metadata
+export interface OrthoMetadata {
+  dataset_id: number;
+  ortho_info: Record<string, any>;
   created_at?: string;
   updated_at?: string;
 }
@@ -300,5 +312,32 @@ export function useSaveDatasetAudit() {
       queryClient.invalidateQueries({ queryKey: ["audit-status", variables.dataset_id] });
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
     },
+  });
+}
+
+// New hook to fetch ortho metadata
+export function useOrthoMetadata(datasetId: number | undefined) {
+  return useQuery({
+    queryKey: ["ortho-metadata", datasetId],
+    queryFn: async () => {
+      if (!datasetId) return null;
+
+      const { data, error } = await supabase
+        .from("v2_orthos")
+        .select("dataset_id, ortho_info")
+        .eq("dataset_id", datasetId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          // No data found
+          return null;
+        }
+        throw error;
+      }
+
+      return data as OrthoMetadata;
+    },
+    enabled: !!datasetId,
   });
 }

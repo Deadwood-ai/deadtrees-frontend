@@ -13,7 +13,7 @@ import { supabase } from "../hooks/useSupabase";
 
 const { Title } = Typography;
 
-type AuditFilter = "needs-audit" | "audited" | "major-issues";
+type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded";
 
 export default function DatasetAudit() {
   const { id } = useParams();
@@ -59,18 +59,23 @@ export default function DatasetAudit() {
     // First filter by minimum ID for auditing
     filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
 
-    // Filter by audit status
+    // Filter by audit status and disposition
     if (auditFilter === "needs-audit") {
       filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
-    } else if (auditFilter === "audited") {
+    } else if (auditFilter === "ready") {
       filtered = filtered.filter((dataset) => {
         const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && (!audit || !audit.has_major_issue);
+        return dataset.is_audited && audit && audit.final_assessment === "no_issues";
       });
-    } else if (auditFilter === "major-issues") {
+    } else if (auditFilter === "fixable-issues") {
       filtered = filtered.filter((dataset) => {
         const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && audit && audit.has_major_issue;
+        return dataset.is_audited && audit && audit.final_assessment === "fixable_issues";
+      });
+    } else if (auditFilter === "excluded") {
+      filtered = filtered.filter((dataset) => {
+        const audit = auditMap.get(dataset.id);
+        return dataset.is_audited && audit && audit.final_assessment === "exclude_completely";
       });
     }
 
@@ -93,19 +98,27 @@ export default function DatasetAudit() {
     return datasets?.filter((d) => d.id > MIN_AUDIT_DATASET_ID && !d.is_audited && isProcessingComplete(d)).length || 0;
   }, [datasets]);
 
-  const auditedCount = useMemo(() => {
+  const readyCount = useMemo(() => {
     if (!datasets || !audits) return 0;
     return datasets.filter((d) => {
       const audit = auditMap.get(d.id);
-      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && (!audit || !audit.has_major_issue);
+      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "no_issues";
     }).length;
   }, [datasets, auditMap]);
 
-  const majorIssuesCount = useMemo(() => {
+  const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
     return datasets.filter((d) => {
       const audit = auditMap.get(d.id);
-      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.has_major_issue;
+      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "fixable_issues";
+    }).length;
+  }, [datasets, auditMap]);
+
+  const excludedCount = useMemo(() => {
+    if (!datasets || !audits) return 0;
+    return datasets.filter((d) => {
+      const audit = auditMap.get(d.id);
+      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "exclude_completely";
     }).length;
   }, [datasets, auditMap]);
 
@@ -198,41 +211,25 @@ export default function DatasetAudit() {
       },
     },
     {
-      title: "Audited",
+      title: "Status",
       dataIndex: "is_audited",
-      key: "is_audited",
+      key: "audit_status",
       render: (isAudited: boolean, record: IDataset) => {
-        if (!isAudited) return <Tag color="red">No</Tag>;
+        if (!isAudited) return <Tag color="red">Not Audited</Tag>;
 
         const audit = auditMap.get(record.id);
-        if (audit?.has_major_issue) {
-          return <Tag color="orange">⚠️ Issues</Tag>;
+        if (!audit) return <Tag color="red">No Audit Data</Tag>;
+
+        switch (audit.final_assessment) {
+          case "no_issues":
+            return <Tag color="green">✓ Ready</Tag>;
+          case "fixable_issues":
+            return <Tag color="yellow">🔧 Fixable</Tag>;
+          case "exclude_completely":
+            return <Tag color="red">🚫 Excluded</Tag>;
+          default:
+            return <Tag color="default">Unknown</Tag>;
         }
-
-        return <Tag color="green">Yes</Tag>;
-      },
-      width: 100,
-    },
-    {
-      title: "Status",
-      dataIndex: "current_status",
-      key: "current_status",
-      render: (status: string, record: IDataset) => {
-        const isComplete = isProcessingComplete(record);
-
-        if (record.has_error) {
-          return (
-            <Tooltip title={record.error_message || "An error occurred during processing"}>
-              <Tag color="error">Error</Tag>
-            </Tooltip>
-          );
-        }
-
-        if (isComplete) {
-          return <Tag color="success">Complete</Tag>;
-        }
-
-        return <Tag color="processing">{status || "Processing"}</Tag>;
       },
       width: 120,
     },
@@ -300,12 +297,16 @@ export default function DatasetAudit() {
                   value: "needs-audit",
                 },
                 {
-                  label: `Audited (${auditedCount})`,
-                  value: "audited",
+                  label: `Ready (${readyCount})`,
+                  value: "ready",
                 },
                 {
-                  label: `Major Issues (${majorIssuesCount})`,
-                  value: "major-issues",
+                  label: `Fixable (${fixableIssuesCount})`,
+                  value: "fixable-issues",
+                },
+                {
+                  label: `Excluded (${excludedCount})`,
+                  value: "excluded",
                 },
               ]}
             />

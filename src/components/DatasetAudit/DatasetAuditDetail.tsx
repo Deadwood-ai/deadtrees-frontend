@@ -1,23 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Form, Radio, Input, Select, message, Tooltip, Card, Space, Image, Checkbox } from "antd";
-import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Button, Typography, Form, Radio, Input, message, Tooltip, Card, Space, Image, Collapse } from "antd";
+import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, DownloadOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
 import {
   useDatasetAudit,
   useSaveDatasetAudit,
-  useDatasetAOI,
   AuditFormValues,
   useSetAuditLock,
   useClearAuditLock,
+  useOrthoMetadata,
 } from "../../hooks/useDatasetAudit";
 import { useAuth } from "../../hooks/useAuthProvider";
+import { useDownload } from "../../hooks/useDownloadProvider";
 import { Settings } from "../../config";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-const { Option } = Select;
+const { Panel } = Collapse;
 
 interface DatasetAuditDetailProps {
   dataset: IDataset;
@@ -39,13 +40,18 @@ const AUDIT_INFO = {
     "Assess Cloud-Optimized GeoTIFF quality: Check transparency, black/white areas, color band consistency, and artifacts. Good = no issues, Issues = problems detected.",
   thumbnailIssues:
     "Evaluate thumbnail quality: Check color accuracy, appropriate zoom level, white background (correct no-data values), and absence of artifacts. Good = meets standards, Issues = problems found.",
-  aoi: "Define the area of interest for analysis. Draw a polygon on the map to specify the region that should be analyzed. This is required for the audit to be complete.",
+  aoi: "Define the area of interest for analysis. Draw a polygon on the map to specify the region that should be analyzed. Only required for datasets with no issues.",
+  finalAssessment:
+    "Final assessment of dataset quality and usability. No Issues = ready for production use and analysis. Fixable Issues = has problems that can be corrected through processing or manual fixes. Exclude Completely = fundamental issues that make the dataset unusable, should be removed from the platform entirely. Review the technical metadata below to make an informed decision.",
 };
 
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
   const navigate = useNavigate();
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
+
+  // Use the global download state
+  const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
 
   // Track current AOI geometry and whether it's loaded
   const currentAOIGeometry = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
@@ -61,6 +67,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   // Audit lock mutations
   const { mutateAsync: setAuditLock } = useSetAuditLock();
   const { mutateAsync: clearAuditLock } = useClearAuditLock();
+
+  // Add ortho metadata hook
+  const { data: orthoMetadata, isLoading: isOrthoLoading } = useOrthoMetadata(dataset.id);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
@@ -114,17 +123,16 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     setIsAOILoaded(true);
   };
 
-  // Helper function to create conditional validation rules
+  // Helper function to create conditional validation rules - updated for final assessment
   const createConditionalRule = (message: string) => [
-    ({ getFieldValue }: any) => ({
-      validator(_: any, value: any) {
-        const hasMajorIssue = getFieldValue("has_major_issue");
-        // If major issue is checked, field is optional
-        if (hasMajorIssue) {
+    ({ getFieldValue }: { getFieldValue: (name: string) => unknown }) => ({
+      validator(_: unknown, value: unknown) {
+        const assessment = getFieldValue("final_assessment");
+        // If assessment is not "no_issues", field is optional
+        if (assessment !== "no_issues") {
           return Promise.resolve();
         }
-        // If major issue is not checked, field is required
-        // Check for null, undefined, or empty string specifically (not falsy values like false)
+        // For no_issues, field is required
         if (value === null || value === undefined || value === "") {
           return Promise.reject(new Error(message));
         }
@@ -136,12 +144,23 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const handleSubmit = async (values: AuditFormValues) => {
     // Wait for AOI to be loaded/processed before validating
     if (!isAOILoaded) {
-      message.warn("AOI is still loading, please wait...");
+      message.warning("AOI is still loading, please wait...");
       return;
     }
 
-    // Only require AOI if major issue is not checked
-    if (!values.has_major_issue && !currentAOIGeometry.current) {
+    // Validate notes for fixable issues and exclusion
+    if (values.final_assessment === "fixable_issues" && !values.notes?.trim()) {
+      message.error("Please provide detailed notes for the fixable issues");
+      return;
+    }
+
+    if (values.final_assessment === "exclude_completely" && !values.notes?.trim()) {
+      message.error("Please provide detailed notes for excluding this dataset");
+      return;
+    }
+
+    // Only require AOI if assessment is "no_issues"
+    if (values.final_assessment === "no_issues" && !currentAOIGeometry.current) {
       message.error("Please draw an AOI on the map before submitting");
       return;
     }
@@ -153,7 +172,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
         ...values,
         dataset_id: dataset.id,
         aoi_done: !!currentAOIGeometry.current,
-        aoiGeometry: currentAOIGeometry.current,
+        aoiGeometry: currentAOIGeometry.current || undefined,
       };
 
       await saveAudit(auditPayload);
@@ -228,7 +247,11 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
     // Create a date object and format it
     if (month) {
-      const date = new Date(year, month - 1, day || 1); // month is 0-indexed in Date constructor
+      const monthNum = typeof month === "string" ? parseInt(month) : month;
+      const yearNum = typeof year === "string" ? parseInt(year) : year;
+      const dayNum = day ? (typeof day === "string" ? parseInt(day) : day) : 1;
+
+      const date = new Date(yearNum, monthNum - 1, dayNum); // month is 0-indexed in Date constructor
 
       if (day) {
         // Full date: "15 March 2023"
@@ -506,7 +529,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </Form.Item>
             </Card>
 
-            {/* Step 7: Area of Interest (AOI) - Updated */}
+            {/* Step 7: Area of Interest (AOI) */}
             <Card size="small" className="mb-3 shadow-sm">
               <div className="mb-2 flex items-center">
                 <Text strong className="text-xs">
@@ -517,11 +540,13 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
               <Form.Item
                 shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.has_major_issue !== currentValues.has_major_issue
+                  prevValues.final_assessment !== currentValues.final_assessment
                 }
               >
                 {({ getFieldValue }) => {
-                  const hasMajorIssue = getFieldValue("has_major_issue");
+                  const assessment = getFieldValue("final_assessment");
+                  const aoiRequired = assessment === "no_issues";
+
                   return (
                     <div className="text-xs">
                       {hasAOI ? (
@@ -529,10 +554,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                           <span className="mr-1">✓</span>
                           AOI defined
                         </div>
-                      ) : hasMajorIssue ? (
-                        <div className="text-orange-400">AOI optional when major issue is reported</div>
-                      ) : (
+                      ) : aoiRequired ? (
                         <div className="text-orange-600">AOI required - use the "Draw AOI" button on the map</div>
+                      ) : (
+                        <div className="text-gray-500">AOI not required for this assessment</div>
                       )}
                     </div>
                   );
@@ -540,48 +565,207 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               </Form.Item>
             </Card>
 
-            {/* Step 8: Additional Notes */}
+            {/* Step 8: Final Assessment - Updated */}
             <Card size="small" className="mb-3 shadow-sm">
               <div className="mb-2 flex items-center">
                 <Text strong className="text-xs">
-                  8. Additional Notes
+                  8. Final Assessment
                 </Text>
+                <InfoIcon content={AUDIT_INFO.finalAssessment} />
               </div>
 
-              {/* Major Issue Checkbox */}
-              <Form.Item name="has_major_issue" className="mb-2" valuePropName="checked">
-                <Checkbox className="text-xs">
-                  <span className="font-medium text-red-600">🚨 Has Major Issue</span>
-                  <Tooltip title="Check this if the dataset has significant issues that require attention or should exclude it from analysis. When checked, other audit fields become optional.">
-                    <InfoCircleOutlined className="ml-1 text-gray-400" />
-                  </Tooltip>
-                </Checkbox>
+              <Form.Item
+                name="final_assessment"
+                className="mb-2"
+                rules={[{ required: true, message: "Please select final assessment" }]}
+              >
+                <Radio.Group>
+                  <Space direction="horizontal" size="small">
+                    <Radio value="no_issues">🟢 Ready</Radio>
+                    <Radio value="fixable_issues">🟡 Fixable</Radio>
+                    <Radio value="exclude_completely">🔴 Exclude</Radio>
+                  </Space>
+                </Radio.Group>
               </Form.Item>
 
-              <Form.Item name="notes" className="mb-0">
-                <TextArea rows={3} placeholder="Any additional observations..." className="text-xs" />
+              {/* Technical Metadata Collapsible */}
+              <div className="mb-3">
+                {isOrthoLoading ? (
+                  <div className="text-xs text-gray-500">Loading metadata...</div>
+                ) : orthoMetadata?.ortho_info ? (
+                  <Collapse size="small">
+                    <Panel header="📋 Technical Metadata" key="1">
+                      <div className="max-h-32 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap rounded bg-gray-50 p-2 text-xs">
+                          {JSON.stringify(orthoMetadata.ortho_info, null, 2)}
+                        </pre>
+                      </div>
+                    </Panel>
+                  </Collapse>
+                ) : (
+                  <div className="text-xs text-gray-500">No technical metadata available</div>
+                )}
+              </div>
+
+              {/* Download Orthophoto for Testing */}
+              <div className="mb-3">
+                <Tooltip title="Download orthophoto image for local testing and detailed inspection">
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    disabled={isDownloading}
+                    loading={isDownloading && currentDownloadId === `${dataset.id}-ortho`}
+                    onClick={() => {
+                      // Prevent multiple downloads using global state
+                      if (isDownloading) {
+                        if (currentDownloadId !== `${dataset.id}-ortho`) {
+                          message.info("A download is already in progress. Please wait.");
+                        }
+                        return;
+                      }
+
+                      // Try to start the download in the global state
+                      const downloadStarted = startDownload(`${dataset.id}-ortho`);
+                      if (!downloadStarted) {
+                        return;
+                      }
+
+                      const baseUrl = `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
+
+                      // Show persistent loading message until download is ready
+                      const downloadMsg = message.loading({
+                        content: "Preparing orthophoto for download...",
+                        duration: 0,
+                      });
+
+                      // Use the same job-based approach as dataset.zip in DatasetDetails
+                      // First initiate the download
+                      fetch(baseUrl)
+                        .then((response) => response.json())
+                        .then((data) => {
+                          const jobId = data.job_id;
+
+                          // Function to check status
+                          const checkStatus = () => {
+                            fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
+                              .then((response) => response.json())
+                              .then((statusData) => {
+                                if (statusData.status === "completed") {
+                                  // Download is ready - close loading message
+                                  downloadMsg();
+                                  finishDownload(); // Update global state
+
+                                  // Start actual download
+                                  window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
+
+                                  // Show success message
+                                  message.success({
+                                    content:
+                                      "Orthophoto download started! The file will be saved to your downloads folder.",
+                                    duration: 5,
+                                  });
+                                } else if (statusData.status === "failed") {
+                                  // Handle failure
+                                  downloadMsg();
+                                  finishDownload(); // Update global state
+                                  message.error({
+                                    content: "Orthophoto download preparation failed. Please try again.",
+                                    duration: 5,
+                                  });
+                                } else {
+                                  // Still processing, check again in 1 second
+                                  setTimeout(checkStatus, 1000);
+                                }
+                              })
+                              .catch((error) => {
+                                // Handle error
+                                downloadMsg();
+                                finishDownload(); // Update global state
+                                message.error({
+                                  content: `Error checking download status: ${error.message}`,
+                                  duration: 5,
+                                });
+                              });
+                          };
+
+                          // Start checking status
+                          checkStatus();
+                        })
+                        .catch((error) => {
+                          // Handle error initiating download
+                          downloadMsg();
+                          finishDownload(); // Update global state
+                          message.error({
+                            content: `Error initiating download: ${error.message}`,
+                            duration: 5,
+                          });
+                        });
+                    }}
+                    className="w-full"
+                  >
+                    {isDownloading && currentDownloadId === `${dataset.id}-ortho`
+                      ? "Preparing Download..."
+                      : "Download Orthophoto"}
+                  </Button>
+                </Tooltip>
+              </div>
+
+              {/* Notes field - conditionally required based on final assessment */}
+              <Form.Item
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.final_assessment !== currentValues.final_assessment
+                }
+              >
+                {({ getFieldValue }) => {
+                  const assessment = getFieldValue("final_assessment");
+                  const isRequired = assessment === "fixable_issues" || assessment === "exclude_completely";
+
+                  let placeholder = "Additional observations...";
+                  if (assessment === "fixable_issues") {
+                    placeholder = "Required: Describe what issues can be fixed and how they should be addressed...";
+                  } else if (assessment === "exclude_completely") {
+                    placeholder =
+                      "Required: Explain why this dataset should be excluded completely from the platform...";
+                  }
+
+                  return (
+                    <Form.Item
+                      name="notes"
+                      className="mb-0"
+                      rules={
+                        isRequired
+                          ? [{ required: true, message: "Please provide detailed notes for this assessment" }]
+                          : []
+                      }
+                    >
+                      <TextArea rows={3} placeholder={placeholder} className="text-xs" />
+                    </Form.Item>
+                  );
+                }}
               </Form.Item>
             </Card>
 
-            {/* Action Buttons - Updated */}
+            {/* Updated Action Buttons */}
             <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
               <Space className="w-full justify-end">
                 <Button onClick={handleCancel}>Cancel</Button>
                 <Form.Item
                   shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.has_major_issue !== currentValues.has_major_issue
+                    prevValues.final_assessment !== currentValues.final_assessment
                   }
                   className="mb-0"
                 >
                   {({ getFieldValue }) => {
-                    const hasMajorIssue = getFieldValue("has_major_issue");
+                    const assessment = getFieldValue("final_assessment");
+                    const aoiRequired = assessment === "no_issues";
+
                     return (
                       <Button
                         type="primary"
                         onClick={() => form.submit()}
                         loading={isSaving}
                         icon={<SaveOutlined />}
-                        disabled={!hasMajorIssue && !hasAOI}
+                        disabled={aoiRequired && !hasAOI}
                       >
                         Save Audit
                       </Button>
