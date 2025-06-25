@@ -19,40 +19,44 @@ const Roadmap = () => {
         mode="left"
         items={[
           {
-            label: RoadmapItemDate({ date: "Q1 2025" }),
+            label: RoadmapItemDate({ date: "2026 QX" }),
             color: "gray",
-            children: <RoadmapItemLabel label="Analysis ready training data for AI models" />,
+            children: <RoadmapItemLabel label="Satellite predictions of forest & deadwood cover at global scale" />,
           },
           {
-            label: RoadmapItemDate({ date: "Q1 2025" }),
+            label: RoadmapItemDate({ date: "2025 Q3" }),
             color: "gray",
-            children: (
-              <RoadmapItemLabel label="Integration of a large-scale tree mortality map using satellite data (sentinel)" />
-            ),
+            children: <RoadmapItemLabel label="Satellite predictions of forest & deadwood cover at EU scale" />,
           },
           {
-            label: RoadmapItemDate({ date: "Q4 2024" }),
-            color: "blue",
-            children: <RoadmapItemLabel label="Automated segmentation of dead trees in airborne and drone images" />,
+            label: RoadmapItemDate({ date: "2025 Q3" }),
+            color: "gray",
+            children: <RoadmapItemLabel label="Web-labelling & feedback" />,
           },
           {
-            label: RoadmapItemDate({ date: "Q3 2024" }),
-            color: "blue",
-            children: <RoadmapItemLabel label="Automated integration and visualisation of uploaded data" />,
+            label: RoadmapItemDate({ date: "2025 Q3" }),
+            color: "gray",
+            children: <RoadmapItemLabel label="AI-ready datasets and community model integration" />,
           },
           {
-            label: RoadmapItemDate({ date: "Q2 2024" }),
+            label: RoadmapItemDate({ date: "2025 Q2" }),
             color: "blue",
-            children: (
-              <RoadmapItemLabel label="Download and upload functionality of drone images and tree mortality labels" />
-            ),
+            children: <RoadmapItemLabel label="Repository functionality (long-term storage + DOI generation)" />,
           },
           {
-            label: RoadmapItemDate({ date: "Q2 2024" }),
+            label: RoadmapItemDate({ date: "2025-Q1" }),
             color: "blue",
-            children: (
-              <RoadmapItemLabel label="Public release of a beta version of the platform and start of data collection" />
-            ),
+            children: <RoadmapItemLabel label="AI segmentation of forest and deadwood cover online" />,
+          },
+          {
+            label: RoadmapItemDate({ date: "2025 Q1" }),
+            color: "blue",
+            children: <RoadmapItemLabel label="Stable upload & download" />,
+          },
+          {
+            label: RoadmapItemDate({ date: "2024 Q2" }),
+            color: "blue",
+            children: <RoadmapItemLabel label="Deadtrees.earth beta launch" />,
           },
         ]}
       />
