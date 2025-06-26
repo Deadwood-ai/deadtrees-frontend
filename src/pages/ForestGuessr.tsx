@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import Confetti from 'react-confetti';
 import { Button, Spin, Result, Row, Col } from 'antd';
 import { useForestGuessrData } from '../hooks/useForestGuessrData';
 import ForestGuessrMap from '../components/ForestGuessr/ForestGuessrMap';
@@ -99,6 +100,10 @@ const ForestGuessr = () => {
     <div style={{ height: '100%', width: '100%' }}>
       {!gameStarted ? (
         <div style={{ textAlign: 'center', paddingTop: '50px' }}>
+          <h1>Welcome to ForestGuessr!</h1>
+          <p>Guess the location of the forest based on the provided orthophoto.</p>
+          <p>The closer your guess, the higher your score!</p>
+          <p>You will play 5 rounds. Good luck!</p>
           <Button type="primary" size="large" onClick={handleStartGame}>
             Start Game
           </Button>
@@ -121,8 +126,8 @@ const ForestGuessr = () => {
               <div style={{ textAlign: 'center', padding: '20px' }}>
                 <h2>Round {currentRound + 1} Results</h2>
                 <p>Distance: {Math.round(distance / 1000)} km</p>
-                <p>Round Score: {Math.round(roundScore)}</p>
-                <p>Total Score: {Math.round(score)}</p>
+                <p style={{ fontSize: '1.2em', fontWeight: 'bold' }}>Round Score: {Math.round(roundScore)}</p>
+                <p style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#1890ff' }}>Total Score: {Math.round(score)}</p>
                 <Button onClick={handleNextRound}>Next Round</Button>
               </div>
             )}
@@ -130,8 +135,9 @@ const ForestGuessr = () => {
         </Row>
       ) : (
         <div style={{ textAlign: 'center', paddingTop: '50px' }}>
+          <Confetti />
           <h1>Congratulations!</h1>
-          <h2>Your final score is: {Math.round(score)}</h2>
+          <h2 style={{ fontSize: '2em', fontWeight: 'bold' }}>Your final score is: {Math.round(score)}</h2>
           <Button type="primary" size="large" onClick={handleNewGame}>
             New Game
           </Button>
