@@ -20,6 +20,7 @@ import Impressum from "./pages/Impressum";
 import Footer from "./components/Footer";
 import Datenschutzerklaerung from "./pages/Datenschutzerklaerung";
 import TermsOfService from "./pages/TermsOfService";
+import ForestGuessr from "./pages/ForestGuessr";
 const { Content } = Layout;
 
 function LayoutWrapper() {
@@ -32,6 +33,7 @@ function LayoutWrapper() {
     "/sign-up",
     "/forgot-password",
     "/reset-password",
+    "/forest-guessr",
   ];
 
   const shouldUseFullHeight = fullHeightPaths.some((path) => location.pathname.startsWith(path));
@@ -91,6 +93,7 @@ function AppWithTracking() {
         <Route path="sign-in" element={<SignIn />} />
         <Route path="forgot-password" element={<Forgotpassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="forest-guessr" element={<ForestGuessr />} />
       </Route>
     </Routes>
   );

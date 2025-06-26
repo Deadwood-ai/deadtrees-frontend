@@ -21,6 +21,10 @@ const defaultNavigation = [
     label: <Link to="/dataset">Drone Products</Link>,
   },
   {
+    key: "/forest-guessr",
+    label: <Link to="/forest-guessr">ForestGuessr</Link>,
+  },
+  {
     key: "/about",
     label: <Link to="/about">About deadtrees.earth</Link>,
   },

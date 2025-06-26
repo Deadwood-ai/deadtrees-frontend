@@ -18,7 +18,7 @@ const COG_BASE_URL_PROD = STORAGE_SERVER_URL + "/cogs/v1/";
 const THUMBNAIL_URL_DEV = STORAGE_SERVER_DEV + "/thumbnails/v1/";
 const THUMBNAIL_URL_PROD = STORAGE_SERVER_URL + "/thumbnails/v1/";
 
-const SUPABASE_URL_DEV = "http://127.0.0.1:54321";
+const SUPABASE_URL_DEV = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_URL_PROD = import.meta.env.VITE_SUPABASE_URL;
 
 const SUPABASE_ANON_KEY_DEV = import.meta.env.VITE_SUPABASE_ANON_KEY;
