@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { Settings } from "../config";
 
-export function useForestGuessrData() {
+export function useForestGuessrData(gameKey: number) {
   return useQuery({
-    queryKey: ["forest-guessr-data"],
+    queryKey: ["forest-guessr-data", gameKey],
     queryFn: async () => {
       const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*");
       if (error) throw error;
@@ -28,8 +28,7 @@ export function useForestGuessrData() {
       const shuffled = filteredData.sort(() => 0.5 - Math.random());
       return shuffled.slice(0, 5);
     },
-    staleTime: Infinity, // Keep data fresh for the entire game session
-    cacheTime: 0, // Disable caching to get new data each time
     refetchOnWindowFocus: false, // Disable refetching on window focus
+    // Removed staleTime and cacheTime to ensure new random data is fetched on each component mount.
   });
 }

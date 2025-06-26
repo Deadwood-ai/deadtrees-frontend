@@ -19,7 +19,8 @@ const ForestGuessr = () => {
   const [clearGuessMarker, setClearGuessMarker] = useState(false);
   const [guessConfirmed, setGuessConfirmed] = useState(false);
 
-  const { data: datasets, isLoading, error } = useForestGuessrData();
+  const [gameKey, setGameKey] = useState(0);
+  const { data: datasets, isLoading, error } = useForestGuessrData(gameKey);
 
   useEffect(() => {
     console.log("Datasets:", datasets);
@@ -82,6 +83,7 @@ const ForestGuessr = () => {
     setShowResults(false);
     setClearGuessMarker(false);
     setGuessConfirmed(false);
+    setGameKey(prevKey => prevKey + 1);
   };
 
   if (isLoading) {
