@@ -1,0 +1,45 @@
+---
+description: OpenLayers Mapping Patterns
+globs:
+alwaysApply: false
+---
+
+# OpenLayers Mapping Patterns
+
+## Core Approach
+
+- Store map instances in refs, never state (prevents re-renders)
+- Always implement cleanup in useEffect returns
+- Handle coordinate transformations explicitly (EPSG:4326 ↔ EPSG:3857)
+
+## Reference Implementations
+
+- **Main Map Component**: `src/components/DatasetMap/DatasetMap.tsx`
+
+  - Shows proper map initialization and cleanup
+  - Layer management with refs
+  - Event handling patterns
+
+- **Details Map**: `src/components/DatasetDetailsMap/DatasetDetailsMap.tsx`
+
+  - WebGL layers for raster data (GeoTIFF/COG)
+  - Vector tile integration
+  - Viewport synchronization
+
+- **Audit Map**: `src/components/DatasetAudit/DatasetAuditMap.tsx`
+  - Drawing interactions
+  - Feature modification
+  - AOI (Area of Interest) handling
+
+## Key Patterns to Follow
+
+- Use `mapRef.current` pattern from DatasetMap.tsx
+- Layer disposal pattern from DatasetDetailsMap cleanup
+- Coordinate transformation utilities in `src/utils/parseBBox.tsx`
+- Event cleanup patterns in all map components
+
+## Avoid
+
+- Storing OpenLayers objects in React state
+- Creating new map instances on every render
+- Forgetting to dispose layers and sources

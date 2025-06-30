@@ -1,0 +1,42 @@
+---
+description: TypeScript Patterns
+globs:
+alwaysApply: false
+---
+
+# TypeScript Patterns
+
+## Core Approach
+
+- Interfaces prefixed with `I` (IDataset, ILabel)
+- Enums for controlled vocabularies
+- Strict typing for API responses
+
+## Reference Implementations
+
+- **Main Types**: `src/types/dataset.ts`
+
+  - Core data structures
+  - Enum definitions
+  - Status types
+
+- **Label Types**: `src/types/labels.ts`
+
+  - Geospatial annotation types
+  - Label classification enums
+
+- **Hook Types**: Check any hook in `src/hooks/`
+  - Return type patterns
+  - Parameter interfaces
+
+## Key Patterns
+
+- Dataset interface structure from dataset.ts
+- Enum usage (IDataAccess, IPlatform, ILicense)
+- Form value interfaces from UploadModal.tsx
+- API response typing from useDatasets.ts
+
+## Context Types
+
+- Follow AuthContextType pattern in `src/hooks/useAuthProvider.tsx`
+- DataContextType in `src/contexts/DataContext.tsx`

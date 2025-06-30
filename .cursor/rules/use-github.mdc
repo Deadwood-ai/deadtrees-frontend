@@ -1,0 +1,140 @@
+---
+description: GitHub CLI Inspection - Deadwood-AI Organization
+globs: 
+alwaysApply: false
+---
+## Finding Relevant Issues
+
+### Search Patterns for Common Development Tasks
+
+#### Profile & User Management Issues
+```bash
+# Search for profile-related issues
+gh issue list --search "org:deadwood-ai profile OR user OR account" --limit 10
+
+# Search for edit/update functionality
+gh issue list --search "org:deadwood-ai edit OR update OR modify" --limit 10
+
+# Search for data management issues
+gh issue list --search "org:deadwood-ai data OR dataset OR upload" --limit 10
+```
+
+#### Frontend Component Issues
+```bash
+# Search for UI/component issues
+gh issue list --search "org:deadwood-ai component OR UI OR interface" --limit 10
+
+# Search for form-related issues
+gh issue list --search "org:deadwood-ai form OR input OR validation" --limit 10
+
+# Search for modal/dialog issues
+gh issue list --search "org:deadwood-ai modal OR dialog OR popup" --limit 10
+```
+
+#### Feature-Specific Searches
+```bash
+# Map and geospatial issues
+gh issue list --search "org:deadwood-ai map OR geospatial OR coordinate" --limit 10
+
+# File upload issues
+gh issue list --search "org:deadwood-ai upload OR file OR chunk" --limit 10
+
+# Authentication issues
+gh issue list --search "org:deadwood-ai auth OR login OR permission" --limit 10
+```
+
+### Issue Analysis Workflow
+
+#### Before Starting New Work
+```bash
+# 1. Check if similar issue exists
+gh issue list --search "org:deadwood-ai [your-keyword]" --limit 20
+
+# 2. Check specific repository
+gh api repos/deadwood-ai/deadtrees-frontend-react/issues | jq '.[] | {number, title, state}' | grep -i "keyword"
+
+# 3. Get issue details if found
+gh api repos/deadwood-ai/deadtrees-frontend-react/issues/[NUMBER] | jq '{title, body, state, assignees: [.assignees[].login], labels: [.labels[].name]}'
+```
+
+#### Issue Context Gathering
+```bash
+# Get issue with comments
+gh api repos/deadwood-ai/deadtrees-frontend-react/issues/[NUMBER] | jq '{title, body, comments_url}'
+gh api repos/deadwood-ai/deadtrees-frontend-react/issues/[NUMBER]/comments | jq '.[] | {author: .user.login, body, created_at}'
+
+# Check related PRs
+gh pr list --search "org:deadwood-ai [issue-number]" --limit 5
+
+# Find linked issues
+gh api repos/deadwood-ai/deadtrees-frontend-react/issues/[NUMBER]/timeline | jq '.[] | select(.event == "cross-referenced")'
+```
+
+### Advanced Issue Queries
+
+#### By Status and Priority
+```bash
+# Open issues by repository
+gh issue list --search "org:deadwood-ai repo:deadtrees-frontend-react is:open" --limit 15
+
+# Issues by label
+gh issue list --search "org:deadwood-ai label:enhancement" --limit 10
+gh issue list --search "org:deadwood-ai label:bug" --limit 10
+gh issue list --search "org:deadwood-ai label:frontend" --limit 10
+
+# Recent activity
+gh issue list --search "org:deadwood-ai updated:>2024-01-01" --limit 15
+gh issue list --search "org:deadwood-ai created:>2024-06-01" --limit 10
+```
+
+#### By Assignee and Author
+```bash
+# Unassigned issues
+gh issue list --search "org:deadwood-ai no:assignee is:open" --limit 10
+
+# Issues by specific author
+gh issue list --search "org:deadwood-ai author:username" --limit 10
+
+# Issues assigned to specific person
+gh issue list --search "org:deadwood-ai assignee:username" --limit 10
+```
+
+### Project Board Integration
+
+#### Finding Issues in Project Boards
+```bash
+# Get all project items with status
+gh project item-list 5 --owner deadwood-ai --format json | jq '.[] | {title, status, repository}'
+
+# Filter by specific status
+gh project item-list 5 --owner deadwood-ai --format json | jq '.[] | select(.status == "Todo") | {title, url}'
+
+# Find issues by project column
+gh project item-list 5 --owner deadwood-ai --format json | jq '.[] | select(.status == "In Progress") | {title, assignees}'
+```
+
+### Quick Reference Commands
+
+#### Essential Issue Discovery
+```bash
+# Most common searches for development work
+alias gh-profile="gh issue list --search 'org:deadwood-ai profile OR user' --limit 10"
+alias gh-frontend="gh issue list --search 'org:deadwood-ai repo:deadtrees-frontend-react is:open' --limit 15"
+alias gh-recent="gh issue list --search 'org:deadwood-ai updated:>$(date -d '7 days ago' +%Y-%m-%d)' --limit 10"
+alias gh-unassigned="gh issue list --search 'org:deadwood-ai no:assignee is:open' --limit 10"
+```
+
+#### Context-Specific Searches
+```bash
+# Before working on Profile page
+gh issue list --search "org:deadwood-ai profile OR user OR account OR edit" --limit 10
+
+# Before working on uploads
+gh issue list --search "org:deadwood-ai upload OR file OR storage" --limit 10
+
+# Before working on maps
+gh issue list --search "org:deadwood-ai map OR geospatial OR coordinate OR layer" --limit 10
+```
+```
+
+You can add this section to your `.cursor/rules/use-github.mdc` file. It provides comprehensive patterns for finding relevant issues before starting development work, which will help ensure you don't duplicate existing issues and can build upon existing discussions and requirements.
