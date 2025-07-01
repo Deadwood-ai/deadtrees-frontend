@@ -113,7 +113,24 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
 
     setOrcidLoading(true);
     try {
-      const orcidId = currentOrcid.replace(/\s/g, "");
+      // Extract ORCID ID from full URL or use as-is if it's just the ID
+      let orcidId = currentOrcid.replace(/\s/g, "");
+
+      // Check if it's a full ORCID URL and extract the ID
+      const orcidUrlPattern = /(?:https?:\/\/)?(?:www\.)?orcid\.org\/(.+)/i;
+      const match = orcidId.match(orcidUrlPattern);
+
+      if (match) {
+        orcidId = match[1]; // Extract just the ORCID ID part
+      }
+
+      // Validate ORCID ID format (should be like 0000-0000-0000-0000)
+      const orcidIdPattern = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
+      if (!orcidIdPattern.test(orcidId)) {
+        message.error("Please enter a valid ORCID ID format (e.g., 0000-0002-1825-0097)");
+        return;
+      }
+
       const response = await fetch(`https://pub.orcid.org/v3.0/${orcidId}`, {
         headers: {
           Accept: "application/json",
@@ -409,7 +426,7 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
             <Col span={14}>
               <Space.Compact style={{ width: "100%" }}>
                 <Input
-                  placeholder="Enter ORCID ID (e.g., 0000-0002-1825-0097)"
+                  placeholder="Enter ORCID ID or URL (e.g., 0000-0002-1825-0097 or https://orcid.org/0000-0002-1825-0097)"
                   value={currentOrcid}
                   onChange={(e) => setCurrentOrcid(e.target.value)}
                 />

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from "react";
 
-import { Button, Table, Tag, Tooltip } from "antd";
+import { Button, Table, Tag, Tooltip, Dropdown, MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
 import {
-  ClockCircleOutlined,
-  CloseCircleOutlined,
   SyncOutlined,
   EnvironmentOutlined,
   PlusOutlined,
-  CheckCircleOutlined,
+  DownOutlined,
+  EditOutlined,
+  MinusOutlined,
 } from "@ant-design/icons";
-import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
+import EditDatasetModal from "./EditDatasetModal";
+import ProcessingProgress from "./ProcessingProgress";
 
 interface Dataset {
   id: number;
@@ -22,6 +23,8 @@ interface Dataset {
   aquisition_month?: number;
   aquisition_year?: number;
   platform?: string;
+  authors?: string[];
+  additional_information?: string;
   citation_doi?: string;
   freidata_doi?: string;
   admin_level_1?: string;
@@ -35,6 +38,7 @@ interface Dataset {
   is_cog_done?: boolean;
   is_thumbnail_done?: boolean;
   is_metadata_done?: boolean;
+  is_deadwood_done?: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
 }
 
@@ -49,11 +53,14 @@ const DataTable: React.FC<DataTableProps> = ({
   resetSelection = false,
   onResetSelectionComplete,
 }) => {
-  useDatasetSubscription();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { data: userData, isLoading: isLoadingData } = useUserDatasets();
   const { user } = useAuth();
   const [datasetsInPublication, setDatasetsInPublication] = useState<number[]>([]);
+
+  // State for edit modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedDatasetForEdit, setSelectedDatasetForEdit] = useState<Dataset | null>(null);
 
   const nav = useNavigate();
 
@@ -114,7 +121,8 @@ const DataTable: React.FC<DataTableProps> = ({
       record.is_ortho_done &&
       record.is_cog_done &&
       record.is_thumbnail_done &&
-      record.is_metadata_done
+      record.is_metadata_done &&
+      record.is_deadwood_done
     );
   };
 
@@ -128,6 +136,65 @@ const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
+  const handleRemoveFromSelection = (record: Dataset) => {
+    const newKeys = selectedRowKeys.filter((key) => key !== record.id);
+    setSelectedRowKeys(newKeys);
+
+    if (onSelectedRowsChange && userData) {
+      const selectedRows = userData.filter((item) => newKeys.includes(item.id));
+      onSelectedRowsChange(selectedRows as Dataset[]);
+    }
+  };
+
+  const handleEditDataset = (record: Dataset) => {
+    setSelectedDatasetForEdit(record);
+    setEditModalVisible(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalVisible(false);
+    setSelectedDatasetForEdit(null);
+  };
+
+  const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
+    const isComplete = isDatasetComplete(record);
+    const isSelected = selectedRowKeys.includes(record.id);
+    const isPublished = !!record.freidata_doi || !!record.citation_doi;
+
+    const publishAction = isSelected
+      ? {
+          key: "remove-publish",
+          label: "Remove from Publication",
+          icon: <MinusOutlined />,
+          onClick: () => handleRemoveFromSelection(record),
+        }
+      : {
+          key: "publish",
+          label: "Quick Publish",
+          icon: <PlusOutlined />,
+          disabled: !isComplete || isPublished,
+          onClick: () => handleAddToSelection(record),
+        };
+
+    return [
+      {
+        key: "view",
+        label: "View Map",
+        icon: <EnvironmentOutlined />,
+        disabled: !isComplete,
+        onClick: () => nav(`/dataset/${record.id}`),
+      },
+      {
+        key: "edit",
+        label: "Edit Metadata",
+        icon: <EditOutlined />,
+        onClick: () => handleEditDataset(record),
+      },
+      // Only show publish/remove action if not already published
+      ...(!isPublished ? [publishAction] : []),
+    ];
+  };
+
   const columns = [
     {
       title: "ID",
@@ -135,11 +202,19 @@ const DataTable: React.FC<DataTableProps> = ({
       key: "id",
       defaultSortOrder: "descend" as const,
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
+      width: 80,
     },
     {
       title: "Date",
       dataIndex: "aquisition_day",
       key: "aquisition_day",
+      width: 120,
+      sorter: (a: Dataset, b: Dataset) => {
+        // Create comparable date values (YYYYMMDD format for sorting)
+        const dateA = (a.aquisition_year || 0) * 10000 + (a.aquisition_month || 0) * 100 + (a.aquisition_day || 0);
+        const dateB = (b.aquisition_year || 0) * 10000 + (b.aquisition_month || 0) * 100 + (b.aquisition_day || 0);
+        return dateA - dateB;
+      },
       render: (_: unknown, record: Dataset) => (
         <span>
           {record.aquisition_day && record.aquisition_day + "/"}
@@ -149,7 +224,76 @@ const DataTable: React.FC<DataTableProps> = ({
       ),
     },
     {
-      title: "Publication Status",
+      title: "File Name",
+      dataIndex: "file_name",
+      key: "file_name",
+      width: 200,
+      sorter: (a: Dataset, b: Dataset) => {
+        // Case-insensitive string comparison
+        const fileNameA = a.file_name?.toLowerCase() || "";
+        const fileNameB = b.file_name?.toLowerCase() || "";
+        return fileNameA.localeCompare(fileNameB);
+      },
+      render: (fileName: string) => (
+        <Tooltip title={fileName}>
+          <span className="block max-w-[180px] truncate">{fileName}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Platform",
+      dataIndex: "platform",
+      key: "platform",
+      width: 100,
+      render: (tag: string | undefined) => (tag ? <Tag color="blue">{tag}</Tag> : null),
+    },
+    {
+      title: "Authors",
+      dataIndex: "authors",
+      key: "authors",
+      width: 200,
+      render: (authors: string[] | undefined) => {
+        if (!authors || authors.length === 0) return null;
+
+        const maxVisible = 2;
+        const visibleAuthors = authors.slice(0, maxVisible);
+        const remainingCount = authors.length - maxVisible;
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visibleAuthors.map((author, index) => (
+              <Tag key={index} color="geekblue" className="text-xs">
+                {author}
+              </Tag>
+            ))}
+            {remainingCount > 0 && (
+              <Tooltip title={`Additional authors: ${authors.slice(maxVisible).join(", ")}`}>
+                <Tag color="default" className="text-xs">
+                  +{remainingCount} more
+                </Tag>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: "Info",
+      dataIndex: "additional_information",
+      key: "additional_information",
+      width: 200,
+      render: (info: string | undefined) => {
+        if (!info) return null;
+
+        return (
+          <Tooltip title={info}>
+            <span className="block max-w-[180px] truncate">{info}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Publication",
       dataIndex: "freidata_doi",
       key: "publication_status",
       render: (freidataDoiValue: string | undefined, record: Dataset) => {
@@ -193,46 +337,41 @@ const DataTable: React.FC<DataTableProps> = ({
           );
         }
 
-        // Dataset has no DOI, show add button
-        return (
-          <Button
-            type="primary"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddToSelection(record);
-            }}
-            disabled={selectedRowKeys.includes(record.id) || !isDatasetComplete(record)}
-          >
-            {selectedRowKeys.includes(record.id) ? "Added" : "publish"}
-          </Button>
-        );
-      },
-    },
-    {
-      title: "Platform",
-      dataIndex: "platform",
-      key: "platform",
-      render: (tag: string | undefined) => (tag ? <Tag color="blue">{tag}</Tag> : null),
-    },
-    {
-      title: "Location",
-      dataIndex: "id",
-      key: "id",
-      render: (tag: number) => {
-        if (userData?.find((d) => d.id === tag)?.admin_level_1) {
+        // Dataset has no DOI, show add/remove button based on selection state
+        const isSelected = selectedRowKeys.includes(record.id);
+        const isComplete = isDatasetComplete(record);
+
+        if (isSelected) {
+          // Show remove button for selected datasets
           return (
-            <Tooltip title="View data on the map">
-              <Tag color="green">
-                {userData?.find((d) => d.id === tag)?.admin_level_1},{" "}
-                {userData?.find((d) => d.id === tag)?.admin_level_3 ||
-                  userData?.find((d) => d.id === tag)?.admin_level_2}
-              </Tag>
-            </Tooltip>
+            <Button
+              type="default"
+              size="small"
+              icon={<MinusOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveFromSelection(record);
+              }}
+            >
+              Remove
+            </Button>
           );
         } else {
-          return <Tag icon={<ClockCircleOutlined />} color="default"></Tag>;
+          // Show add button for unselected datasets
+          return (
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddToSelection(record);
+              }}
+              disabled={!isComplete}
+            >
+              Publish
+            </Button>
+          );
         }
       },
     },
@@ -240,105 +379,21 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
+      width: 180,
       render: (tag: string | undefined, record: Dataset) => {
-        // Check for error state first
-        if (record.has_error) {
+        // Handle audit status separately as it's not part of the main processing pipeline
+        if (tag === "audit_in_progress") {
           return (
-            <Tooltip title={record.error_message || "An error occurred during processing"}>
-              <Tag icon={<CloseCircleOutlined />} color="error">
-                error
+            <Tooltip title="Quality check in progress">
+              <Tag icon={<SyncOutlined spin />} color="warning">
+                audit
               </Tag>
             </Tooltip>
           );
         }
 
-        // Check if processing is complete
-        const isComplete = isDatasetComplete(record);
-
-        switch (tag) {
-          case "idle":
-            return isComplete ? (
-              <Tooltip title="Processing complete">
-                <Tag color="success" icon={<CheckCircleOutlined />} />
-              </Tooltip>
-            ) : (
-              <Tooltip title="Waiting to start processing">
-                <Tag icon={<ClockCircleOutlined />} color="default">
-                  idle
-                </Tag>
-              </Tooltip>
-            );
-          case "uploading":
-            return (
-              <Tooltip title="File is being uploaded">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  uploading
-                </Tag>
-              </Tooltip>
-            );
-          case "ortho_processing":
-            return (
-              <Tooltip title="Processing orthophoto">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  ortho processing
-                </Tag>
-              </Tooltip>
-            );
-          case "cog_processing":
-            return (
-              <Tooltip title="Converting to Cloud Optimized GeoTIFF">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  COG processing
-                </Tag>
-              </Tooltip>
-            );
-          case "thumbnail_processing":
-            return (
-              <Tooltip title="Generating thumbnail">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  thumbnail
-                </Tag>
-              </Tooltip>
-            );
-          case "deadwood_segmentation":
-            return (
-              <Tooltip title="Running deadwood detection">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  deadwood detection
-                </Tag>
-              </Tooltip>
-            );
-          case "forest_cover_segmentation":
-            return (
-              <Tooltip title="Analyzing forest cover">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  forest cover
-                </Tag>
-              </Tooltip>
-            );
-          case "metadata_processing":
-            return (
-              <Tooltip title="Processing metadata">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  metadata
-                </Tag>
-              </Tooltip>
-            );
-          case "audit_in_progress":
-            return (
-              <Tooltip title="Quality check in progress">
-                <Tag icon={<SyncOutlined spin />} color="warning">
-                  audit
-                </Tag>
-              </Tooltip>
-            );
-          default:
-            return (
-              <Tag icon={<ClockCircleOutlined />} color="default">
-                {tag}
-              </Tag>
-            );
-        }
+        // Use ProcessingProgress component for all other statuses
+        return <ProcessingProgress dataset={record} />;
       },
     },
     {
@@ -346,61 +401,35 @@ const DataTable: React.FC<DataTableProps> = ({
       dataIndex: "id",
       key: "id",
       render: (tag: number, record: Dataset) => {
-        const isComplete = isDatasetComplete(record);
-
         return (
-          <Button
-            size="small"
-            type="primary"
-            icon={<EnvironmentOutlined />}
-            onClick={() => nav(`/dataset/${tag}`)}
-            disabled={!isComplete}
-          >
-            View
-          </Button>
+          <Dropdown menu={{ items: getActionMenuItems(record) }} trigger={["click"]} placement="bottomRight">
+            <Button size="small">
+              Actions <DownOutlined />
+            </Button>
+          </Dropdown>
         );
       },
     },
   ];
 
-  const handleSelectionChange = (keys: React.Key[], rows: Dataset[]) => {
-    setSelectedRowKeys(keys);
-    if (onSelectedRowsChange) {
-      onSelectedRowsChange(rows);
-    }
-  };
-
   return (
-    <Table
-      rowKey={"id"}
-      rowSelection={{
-        selectedRowKeys,
-        onChange: (selectedRowKeys, selectedRows) => {
-          console.log(`selectedRowKeys: ${selectedRowKeys}`, "selectedRows: ", selectedRows);
-          handleSelectionChange(selectedRowKeys, selectedRows as Dataset[]);
-        },
-        getCheckboxProps: (record: Dataset) => ({
-          // Disable selection for datasets that already have a DOI or are incomplete
-          disabled: !!record.freidata_doi || !!record.citation_doi || !isDatasetComplete(record),
-        }),
-        renderCell: (checked, record, index, originNode) => {
-          const dataset = record as Dataset;
-          let tooltipText = "Click to add to publication";
+    <>
+      <Table
+        rowKey={"id"}
+        dataSource={userData as Dataset[]}
+        columns={columns}
+        pagination={{ pageSize: 50 }}
+        loading={isLoadingData}
+        rowClassName={(record) => {
+          const isSelected = selectedRowKeys.includes(record.id);
+          return isSelected ? "bg-blue-50 hover:bg-blue-100" : "";
+        }}
+      />
 
-          if (dataset.freidata_doi || dataset.citation_doi) {
-            tooltipText = "Already published";
-          } else if (!isDatasetComplete(dataset)) {
-            tooltipText = "Processing not complete";
-          }
-
-          return <Tooltip title={tooltipText}>{originNode}</Tooltip>;
-        },
-      }}
-      dataSource={userData as Dataset[]}
-      columns={columns}
-      pagination={{ pageSize: 10 }}
-      loading={isLoadingData}
-    />
+      {selectedDatasetForEdit && (
+        <EditDatasetModal visible={editModalVisible} onClose={handleCloseEditModal} dataset={selectedDatasetForEdit} />
+      )}
+    </>
   );
 };
 
