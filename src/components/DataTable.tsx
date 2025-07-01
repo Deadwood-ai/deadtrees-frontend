@@ -4,12 +4,9 @@ import { Button, Table, Tag, Tooltip, Dropdown, MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
 import {
-  ClockCircleOutlined,
-  CloseCircleOutlined,
   SyncOutlined,
   EnvironmentOutlined,
   PlusOutlined,
-  CheckCircleOutlined,
   DownOutlined,
   EditOutlined,
   MinusOutlined,
@@ -18,6 +15,7 @@ import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import EditDatasetModal from "./EditDatasetModal";
+import ProcessingProgress from "./ProcessingProgress";
 
 interface Dataset {
   id: number;
@@ -41,6 +39,7 @@ interface Dataset {
   is_cog_done?: boolean;
   is_thumbnail_done?: boolean;
   is_metadata_done?: boolean;
+  is_deadwood_done?: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
 }
 
@@ -124,7 +123,8 @@ const DataTable: React.FC<DataTableProps> = ({
       record.is_ortho_done &&
       record.is_cog_done &&
       record.is_thumbnail_done &&
-      record.is_metadata_done
+      record.is_metadata_done &&
+      record.is_deadwood_done
     );
   };
 
@@ -280,7 +280,7 @@ const DataTable: React.FC<DataTableProps> = ({
       },
     },
     {
-      title: "Additional Information",
+      title: "Additional Info",
       dataIndex: "additional_information",
       key: "additional_information",
       width: 200,
@@ -295,7 +295,7 @@ const DataTable: React.FC<DataTableProps> = ({
       },
     },
     {
-      title: "Publication Status",
+      title: "Publication",
       dataIndex: "freidata_doi",
       key: "publication_status",
       render: (freidataDoiValue: string | undefined, record: Dataset) => {
@@ -381,105 +381,21 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
+      width: 180,
       render: (tag: string | undefined, record: Dataset) => {
-        // Check for error state first
-        if (record.has_error) {
+        // Handle audit status separately as it's not part of the main processing pipeline
+        if (tag === "audit_in_progress") {
           return (
-            <Tooltip title={record.error_message || "An error occurred during processing"}>
-              <Tag icon={<CloseCircleOutlined />} color="error">
-                error
+            <Tooltip title="Quality check in progress">
+              <Tag icon={<SyncOutlined spin />} color="warning">
+                audit
               </Tag>
             </Tooltip>
           );
         }
 
-        // Check if processing is complete
-        const isComplete = isDatasetComplete(record);
-
-        switch (tag) {
-          case "idle":
-            return isComplete ? (
-              <Tooltip title="Processing complete">
-                <Tag color="success" icon={<CheckCircleOutlined />} />
-              </Tooltip>
-            ) : (
-              <Tooltip title="Waiting to start processing">
-                <Tag icon={<ClockCircleOutlined />} color="default">
-                  idle
-                </Tag>
-              </Tooltip>
-            );
-          case "uploading":
-            return (
-              <Tooltip title="File is being uploaded">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  uploading
-                </Tag>
-              </Tooltip>
-            );
-          case "ortho_processing":
-            return (
-              <Tooltip title="Processing orthophoto">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  ortho processing
-                </Tag>
-              </Tooltip>
-            );
-          case "cog_processing":
-            return (
-              <Tooltip title="Converting to Cloud Optimized GeoTIFF">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  COG processing
-                </Tag>
-              </Tooltip>
-            );
-          case "thumbnail_processing":
-            return (
-              <Tooltip title="Generating thumbnail">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  thumbnail
-                </Tag>
-              </Tooltip>
-            );
-          case "deadwood_segmentation":
-            return (
-              <Tooltip title="Running deadwood detection">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  deadwood detection
-                </Tag>
-              </Tooltip>
-            );
-          case "forest_cover_segmentation":
-            return (
-              <Tooltip title="Analyzing forest cover">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  forest cover
-                </Tag>
-              </Tooltip>
-            );
-          case "metadata_processing":
-            return (
-              <Tooltip title="Processing metadata">
-                <Tag icon={<SyncOutlined spin />} color="processing">
-                  metadata
-                </Tag>
-              </Tooltip>
-            );
-          case "audit_in_progress":
-            return (
-              <Tooltip title="Quality check in progress">
-                <Tag icon={<SyncOutlined spin />} color="warning">
-                  audit
-                </Tag>
-              </Tooltip>
-            );
-          default:
-            return (
-              <Tag icon={<ClockCircleOutlined />} color="default">
-                {tag}
-              </Tag>
-            );
-        }
+        // Use ProcessingProgress component for all other statuses
+        return <ProcessingProgress dataset={record} />;
       },
     },
     {
