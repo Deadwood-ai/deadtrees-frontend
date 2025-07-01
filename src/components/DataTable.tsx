@@ -278,7 +278,7 @@ const DataTable: React.FC<DataTableProps> = ({
       },
     },
     {
-      title: "Additional Info",
+      title: "Info",
       dataIndex: "additional_information",
       key: "additional_information",
       width: 200,
