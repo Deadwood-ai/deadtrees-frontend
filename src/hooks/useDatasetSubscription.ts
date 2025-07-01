@@ -4,10 +4,9 @@ import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
 import { useProcessingNotification } from "./useProcessingNotification";
 
-interface DatasetStatusData {
-  id: number;
-  user_id: string;
-  file_name: string;
+interface StatusPayloadData {
+  dataset_id: number;
+  current_status: string;
   is_upload_done: boolean;
   is_ortho_done: boolean;
   is_cog_done: boolean;
@@ -34,57 +33,84 @@ export function useDatasetSubscription() {
           table: "v2_statuses",
         },
         async (payload) => {
-          console.log("Status change payload:", payload);
+          const statusData = payload.new as StatusPayloadData;
+          const oldStatusData = payload.old as StatusPayloadData;
 
-          const newData = payload.new as DatasetStatusData;
-          const oldData = payload.old as DatasetStatusData;
-
-          // Check if processing just completed (was incomplete before, now complete)
-          const wasProcessingComplete =
-            oldData &&
-            oldData.is_upload_done &&
-            oldData.is_ortho_done &&
-            oldData.is_cog_done &&
-            oldData.is_thumbnail_done &&
-            oldData.is_metadata_done &&
-            oldData.is_deadwood_done;
-
-          const isNowProcessingComplete =
-            newData &&
-            newData.is_upload_done &&
-            newData.is_ortho_done &&
-            newData.is_cog_done &&
-            newData.is_thumbnail_done &&
-            newData.is_metadata_done &&
-            newData.is_deadwood_done;
-
-          // Check if processing just failed
-          const hadError = oldData && oldData.has_error;
-          const hasErrorNow = newData && newData.has_error;
-
-          // Always update user datasets for progress tracking
-          await queryClient.invalidateQueries({
-            queryKey: ["userDatasets", session?.user?.id],
-          });
-
-          // Show completion notification if processing just completed
-          if (!wasProcessingComplete && isNowProcessingComplete && session?.user?.id === newData.user_id) {
-            showProcessingCompleteNotification(newData.file_name || "Dataset", newData.id);
+          // Get dataset info from the dataset_id
+          if (!statusData?.dataset_id) {
+            return;
           }
 
-          // Show error notification if processing just failed
-          if (!hadError && hasErrorNow && session?.user?.id === newData.user_id) {
-            showProcessingErrorNotification(newData.file_name || "Dataset", newData.error_message);
-          }
+          try {
+            // Fetch the dataset info to get user_id and file_name
+            const { data: datasetInfo, error } = await supabase
+              .from("v2_datasets")
+              .select("user_id, file_name")
+              .eq("id", statusData.dataset_id)
+              .single();
 
-          // Only update global datasets and authors when processing is complete
-          if (isNowProcessingComplete) {
+            if (error || !datasetInfo) {
+              return;
+            }
+
+            // Check if this is the current user's dataset
+            if (session?.user?.id !== datasetInfo.user_id) {
+              // Still invalidate queries for progress tracking
+              await queryClient.invalidateQueries({
+                queryKey: ["userDatasets", session?.user?.id],
+              });
+              return;
+            }
+
+            // Check if processing just completed (was incomplete before, now complete)
+            const wasProcessingComplete =
+              oldStatusData &&
+              oldStatusData.is_upload_done &&
+              oldStatusData.is_ortho_done &&
+              oldStatusData.is_cog_done &&
+              oldStatusData.is_thumbnail_done &&
+              oldStatusData.is_metadata_done &&
+              oldStatusData.is_deadwood_done;
+
+            const isNowProcessingComplete =
+              statusData &&
+              statusData.is_upload_done &&
+              statusData.is_ortho_done &&
+              statusData.is_cog_done &&
+              statusData.is_thumbnail_done &&
+              statusData.is_metadata_done &&
+              statusData.is_deadwood_done;
+
+            // Check if processing just failed
+            const hadError = oldStatusData && oldStatusData.has_error;
+            const hasErrorNow = statusData && statusData.has_error;
+
+            // Always update user datasets for progress tracking
             await queryClient.invalidateQueries({
-              queryKey: ["datasets"],
+              queryKey: ["userDatasets", session?.user?.id],
             });
-            await queryClient.invalidateQueries({
-              queryKey: ["authors"],
-            });
+
+            // Show completion notification if processing just completed
+            if (!wasProcessingComplete && isNowProcessingComplete) {
+              showProcessingCompleteNotification(datasetInfo.file_name || "Dataset", statusData.dataset_id);
+            }
+
+            // Show error notification if processing just failed
+            if (!hadError && hasErrorNow) {
+              showProcessingErrorNotification(datasetInfo.file_name || "Dataset", statusData.error_message);
+            }
+
+            // Only update global datasets and authors when processing is complete
+            if (isNowProcessingComplete) {
+              await queryClient.invalidateQueries({
+                queryKey: ["datasets"],
+              });
+              await queryClient.invalidateQueries({
+                queryKey: ["authors"],
+              });
+            }
+          } catch (error) {
+            console.error("Error in dataset subscription handler:", error);
           }
         },
       )

@@ -1,32 +1,36 @@
 import { notification, Button } from "antd";
 import { CheckCircleOutlined, UserOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export const useProcessingNotification = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const showProcessingCompleteNotification = (datasetName: string, datasetId: number) => {
     const key = `processing-complete-${datasetId}`;
+    const isOnProfilePage = location.pathname === "/profile";
 
     notification.success({
       key,
       message: "Dataset Processing Complete!",
       description: (
         <div>
-          <div className="mb-3">
-            <strong>{datasetName}</strong> has been successfully processed and is ready for use.
+          <div className={isOnProfilePage ? "mb-0" : "mb-3"}>
+            <strong>{datasetName}</strong> has been successfully processed.
           </div>
-          <Button
-            type="primary"
-            size="small"
-            icon={<UserOutlined />}
-            onClick={() => {
-              navigate("/profile");
-              notification.destroy(key);
-            }}
-          >
-            View in Account
-          </Button>
+          {!isOnProfilePage && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<UserOutlined />}
+              onClick={() => {
+                navigate("/profile");
+                notification.destroy(key);
+              }}
+            >
+              View in Account
+            </Button>
+          )}
         </div>
       ),
       icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,

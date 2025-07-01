@@ -5,7 +5,6 @@ import DataTable from "../components/DataTable";
 import UploadButton from "../components/Upload/UploadButton";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
-import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 import { FileOutlined } from "@ant-design/icons";
 import PublicationModal from "../components/PublicationModal";
 import PublicationsTable from "../components/PublicationsTable";
@@ -48,7 +47,6 @@ export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
 export default function ProfilePage() {
   const { session, user } = useAuth();
   const navigate = useNavigate();
-  useDatasetSubscription();
 
   const { data: userData } = useUserDatasets();
 

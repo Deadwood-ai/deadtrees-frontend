@@ -3,6 +3,7 @@ import { Layout } from "antd";
 import { useEffect } from "react";
 import { trackPageView, initializePostHog } from "./utils/analytics";
 import { AOIProvider } from "./contexts/AOIContext";
+import { useDatasetSubscription } from "./hooks/useDatasetSubscription";
 
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/Home";
@@ -24,6 +25,10 @@ const { Content } = Layout;
 
 function LayoutWrapper() {
   const location = useLocation();
+
+  // Initialize dataset subscription for notifications across all pages
+  useDatasetSubscription();
+
   const fullHeightPaths = [
     "/dataset",
     "/deadtrees",

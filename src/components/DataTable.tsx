@@ -11,7 +11,6 @@ import {
   EditOutlined,
   MinusOutlined,
 } from "@ant-design/icons";
-import { useDatasetSubscription } from "../hooks/useDatasetSubscription";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import EditDatasetModal from "./EditDatasetModal";
@@ -54,7 +53,6 @@ const DataTable: React.FC<DataTableProps> = ({
   resetSelection = false,
   onResetSelectionComplete,
 }) => {
-  useDatasetSubscription();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { data: userData, isLoading: isLoadingData } = useUserDatasets();
   const { user } = useAuth();
