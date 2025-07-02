@@ -39,6 +39,29 @@ export interface DatasetProgress {
   is_cog_done?: boolean;
   is_deadwood_done?: boolean;
   has_error?: boolean;
+  current_status?: string;
+}
+
+/**
+ * Smart detection for when deadwood processing is actually complete
+ * even when is_deadwood_done = false (no deadwood found case)
+ */
+function isDeadwoodProcessingComplete(dataset: DatasetProgress): boolean {
+  // If is_deadwood_done is already true, processing is definitely complete
+  if (dataset.is_deadwood_done) {
+    return true;
+  }
+
+  // If all previous steps are done, status is idle, and no errors,
+  // assume deadwood processing completed (just found no results)
+  return !!(
+    dataset.is_upload_done &&
+    dataset.is_ortho_done &&
+    dataset.is_metadata_done &&
+    dataset.is_cog_done &&
+    !dataset.has_error &&
+    dataset.current_status === "idle"
+  );
 }
 
 export function calculateProcessingProgress(dataset: DatasetProgress): {
@@ -61,13 +84,13 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
     };
   }
 
-  // Check completion status for each step
+  // Check completion status for each step with smart deadwood detection
   const stepCompletions = [
     dataset.is_upload_done || false,
     dataset.is_ortho_done || false,
     dataset.is_metadata_done || false,
     dataset.is_cog_done || false,
-    dataset.is_deadwood_done || false,
+    isDeadwoodProcessingComplete(dataset), // Smart deadwood completion check
   ];
 
   // Find the current step (first incomplete step)
