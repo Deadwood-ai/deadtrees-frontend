@@ -3,6 +3,7 @@ import { Modal, Form, Input, Button, Typography, Table, Spin, message, Tag, Row,
 import { PlusOutlined, DeleteOutlined, SearchOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
+import { processOrcidInput } from "../utils/orcidUtils";
 
 interface Author {
   id?: number;
@@ -106,31 +107,15 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
   }, [visible, datasets, authors, form]);
 
   const fetchOrcidInfo = async () => {
-    if (!currentOrcid) {
-      message.error("Please enter an ORCID ID");
+    const { orcidId, isValid, error } = processOrcidInput(currentOrcid);
+
+    if (!isValid || !orcidId) {
+      message.error(error || "Please enter a valid ORCID ID");
       return;
     }
 
     setOrcidLoading(true);
     try {
-      // Extract ORCID ID from full URL or use as-is if it's just the ID
-      let orcidId = currentOrcid.replace(/\s/g, "");
-
-      // Check if it's a full ORCID URL and extract the ID
-      const orcidUrlPattern = /(?:https?:\/\/)?(?:www\.)?orcid\.org\/(.+)/i;
-      const match = orcidId.match(orcidUrlPattern);
-
-      if (match) {
-        orcidId = match[1]; // Extract just the ORCID ID part
-      }
-
-      // Validate ORCID ID format (should be like 0000-0000-0000-0000)
-      const orcidIdPattern = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
-      if (!orcidIdPattern.test(orcidId)) {
-        message.error("Please enter a valid ORCID ID format (e.g., 0000-0002-1825-0097)");
-        return;
-      }
-
       const response = await fetch(`https://pub.orcid.org/v3.0/${orcidId}`, {
         headers: {
           Accept: "application/json",
