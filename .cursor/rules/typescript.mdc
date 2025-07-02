@@ -1,5 +1,5 @@
 ---
-description: TypeScript Patterns
+description:
 globs:
 alwaysApply: false
 ---
@@ -35,6 +35,7 @@ alwaysApply: false
 - Enum usage (IDataAccess, IPlatform, ILicense)
 - Form value interfaces from UploadModal.tsx
 - API response typing from useDatasets.ts
+- Keep enum values concise and readable
 
 ## Context Types
 

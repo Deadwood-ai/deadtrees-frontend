@@ -1,8 +1,14 @@
 ---
-description: OpenLayers Mapping Patterns
+description:
 globs:
 alwaysApply: false
 ---
+
+# OpenLayers Mapping Patterns
+
+## Core Approach
+
+- Store map instances in refs, never state (prevents re-renders)
 
 # OpenLayers Mapping Patterns
 
@@ -37,6 +43,7 @@ alwaysApply: false
 - Layer disposal pattern from DatasetDetailsMap cleanup
 - Coordinate transformation utilities in `src/utils/parseBBox.tsx`
 - Event cleanup patterns in all map components
+- Dispose layers and sources in useEffect cleanup
 
 ## Avoid
 

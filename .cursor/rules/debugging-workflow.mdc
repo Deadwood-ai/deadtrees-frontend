@@ -1,0 +1,163 @@
+---
+description: Issue Investigation & Debugging Workflow
+globs: 
+alwaysApply: false
+---
+# Issue Investigation & Debugging Workflow
+
+## Core Approach
+
+- Systematic investigation from user report to technical root cause
+- Evidence-based debugging with database validation
+- Multi-layered analysis: Database → Backend → Frontend → Integration
+- Document findings and create comprehensive GitHub issues
+
+## Investigation Methodology
+
+### 1. User Issue Analysis
+- **Reproduce the problem**: Understand exact user experience
+- **Identify affected scope**: Single dataset, user, or system-wide
+- **Check recent changes**: Correlate with deployments or data migrations
+- **Gather evidence**: Screenshots, user details, specific datasets
+
+### 2. Database Investigation Patterns
+
+```sql
+-- Check dataset processing status
+SELECT 
+  s.*,
+  d.file_name,
+  d.created_at
+FROM v2_statuses s
+JOIN v2_datasets d ON s.dataset_id = d.id
+WHERE s.dataset_id = [DATASET_ID];
+
+-- Find problematic datasets by pattern
+SELECT COUNT(*) as affected_count
+FROM v2_statuses s
+WHERE [CONDITION];
+
+-- Cross-reference actual data vs status flags
+SELECT 
+  l.dataset_id,
+  COUNT(dg.id) as actual_results,
+  s.is_[FIELD]_done as status_flag
+FROM v2_labels l
+LEFT JOIN v2_[RESULT_TABLE] dg ON l.id = dg.label_id
+JOIN v2_statuses s ON l.dataset_id = s.dataset_id
+GROUP BY l.dataset_id, s.is_[FIELD]_done;
+```
+
+### 3. Frontend Logic Validation
+- **Check processing logic**: `src/utils/processingSteps.ts`
+- **Verify UI components**: `src/components/ProcessingProgress.tsx`
+- **Validate data interfaces**: Ensure database fields match TypeScript interfaces
+- **Test edge cases**: No results found, error states, incomplete data
+
+### 4. Integration Points Analysis
+- **Real-time updates**: Check `useDatasetSubscription.ts` for status changes
+- **Query invalidation**: Verify React Query cache updates
+- **Status synchronization**: Ensure database triggers and frontend state align
+
+## Issue Documentation Patterns
+
+### GitHub Issue Structure
+```markdown
+## Problem Description
+[User-facing issue description]
+
+## Investigation Results
+**Scope:** [Number] affected datasets/users
+**Root Cause:** [Technical explanation]
+**Evidence:** [Database queries, frontend behavior]
+
+## Database Fix
+[SQL statements with verification queries]
+
+## Frontend Impact
+[Component changes needed, if any]
+
+## Testing Strategy
+[How to verify the fix works]
+```
+
+### Evidence Collection
+- **Database queries**: Show current state vs expected state  
+- **Affected dataset examples**: Specific IDs and file names
+- **User impact assessment**: How many users/datasets affected
+- **Timeline analysis**: When did the issue start occurring
+
+## Fix Strategy Framework
+
+### 1. Immediate Band-aid
+- **Purpose**: Stop user pain quickly
+- **Approach**: Frontend logic fixes, UI improvements
+- **Risk**: Low, isolated changes
+- **Timeline**: Same day
+
+### 2. Proper Solution  
+- **Purpose**: Fix root cause
+- **Approach**: Database schema changes, process improvements
+- **Risk**: Medium, requires testing
+- **Timeline**: Next sprint
+
+### 3. Prevention
+- **Purpose**: Avoid similar issues
+- **Approach**: Better validation, monitoring, tests
+- **Risk**: Low, additive changes
+- **Timeline**: Ongoing
+
+## Common Issue Patterns
+
+### Status Flag Inconsistencies
+- **Symptom**: UI shows processing but work is done
+- **Investigation**: Compare status flags with actual result tables
+- **Common Causes**: Processing completed but flags not updated
+- **Fix Pattern**: Update status flags + improve processing pipeline
+
+### Real-time Update Failures
+- **Symptom**: UI doesn't update when processing completes
+- **Investigation**: Check subscription handlers and query invalidation
+- **Common Causes**: Missing query invalidation, subscription errors
+- **Fix Pattern**: Fix subscription logic + add error handling
+
+### Data Migration Issues
+- **Symptom**: Old datasets behave differently than new ones
+- **Investigation**: Compare database schemas and processing logic across dataset ID ranges
+- **Common Causes**: Schema changes not retroactively applied
+- **Fix Pattern**: Backfill missing data + update validation logic
+
+## Tools and Commands
+
+### Database Investigation
+```bash
+# Connect to production database
+mcp_deadtrees-prod_execute_sql
+
+# Check table schemas
+mcp_deadtrees-prod_get_object_details
+
+# Analyze query performance
+mcp_deadtrees-prod_explain_query
+```
+
+### GitHub Issue Management
+```bash
+# Create comprehensive issue
+gh issue create --title "[SCOPE]: [PROBLEM]" --body "[TEMPLATE]"
+
+# Link related issues  
+gh issue edit [NUMBER] --body "[BODY with #123 references]"
+
+# Close duplicates
+gh issue close [NUMBER] --comment "Closed in favor of #[MAIN_ISSUE]"
+```
+
+## Key Principles
+
+1. **Evidence First**: Always validate assumptions with database queries
+2. **Scope Assessment**: Understand impact before proposing solutions  
+3. **Layered Analysis**: Check each system layer systematically
+4. **Documentation**: Create comprehensive issues for future reference
+5. **User Focus**: Keep user impact and experience central to decisions
+6. **Progressive Enhancement**: Band-aid → Proper fix → Prevention

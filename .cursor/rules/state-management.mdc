@@ -1,0 +1,292 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# State Management & Processing Status
+
+## Core Approach
+
+- Clear separation between processing completion and result existence
+- Smart status detection with fallback logic
+- Real-time updates via Supabase subscriptions
+- Consistent status representation across UI components
+
+## Processing Status Patterns
+
+### Status Flag Semantics
+```typescript
+// Distinguish between "processing done" vs "results found"
+interface ProcessingStatus {
+  is_upload_done: boolean;         // File uploaded successfully
+  is_ortho_done: boolean;          // Image processing completed
+  is_metadata_done: boolean;       // Metadata extraction completed
+  is_cog_done: boolean;            // Format optimization completed
+  is_deadwood_done: boolean;       // AI analysis completed (regardless of results)
+  has_error: boolean;              // Processing failed
+  current_status: string;          // Current processing stage
+}
+```
+
+### Smart Completion Detection
+```typescript
+// Handle edge cases where status flags don't reflect actual completion
+function isProcessingActuallyComplete(dataset: ProcessingStatus): boolean {
+  // Direct completion check
+  if (dataset.is_field_done) return true;
+  
+  // Smart fallback: infer completion from overall state
+  return !!(
+    dataset.is_previous_steps_done &&
+    dataset.current_status === 'idle' &&
+    !dataset.has_error
+  );
+}
+```
+
+### Processing Progress Calculation
+```typescript
+// From src/utils/processingSteps.ts pattern
+export function calculateProcessingProgress(dataset: DatasetProgress): ProgressResult {
+  const stepCompletions = [
+    dataset.is_upload_done || false,
+    dataset.is_ortho_done || false,
+    dataset.is_metadata_done || false,
+    dataset.is_cog_done || false,
+    isSmartCompletionCheck(dataset), // Smart detection for edge cases
+  ];
+
+  const currentStep = stepCompletions.findIndex(completed => !completed);
+  const isComplete = currentStep === -1;
+
+  return {
+    currentStep: isComplete ? totalSteps : currentStep + 1,
+    totalSteps,
+    percentage: Math.round((stepCompletions.filter(Boolean).length / totalSteps) * 100),
+    isComplete,
+    currentStepInfo: PROCESSING_STEPS[isComplete ? totalSteps - 1 : currentStep]
+  };
+}
+```
+
+## Real-time State Synchronization
+
+### Supabase Subscription Pattern
+```typescript
+// From src/hooks/useDatasetSubscription.ts
+useEffect(() => {
+  const channel = supabase
+    .channel("status_changes")
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public", 
+      table: "v2_statuses"
+    }, async (payload) => {
+      // Process status change
+      const statusData = payload.new as StatusPayloadData;
+      
+      // Validate user ownership
+      const { data: datasetInfo } = await supabase
+        .from("v2_datasets")
+        .select("user_id, file_name")
+        .eq("id", statusData.dataset_id)
+        .single();
+        
+      if (session?.user?.id !== datasetInfo.user_id) return;
+      
+      // Check for completion state changes
+      const wasComplete = checkWasComplete(payload.old);
+      const isNowComplete = checkIsComplete(payload.new);
+      
+      // Invalidate queries and show notifications
+      await queryClient.invalidateQueries(["userDatasets", session.user.id]);
+      
+      if (!wasComplete && isNowComplete) {
+        showProcessingCompleteNotification(datasetInfo.file_name, statusData.dataset_id);
+      }
+    })
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [queryClient, session]);
+```
+
+### Query Invalidation Strategy
+```typescript
+// Selective invalidation based on completion state
+if (isProcessingComplete) {
+  // Update global data when processing completes
+  await queryClient.invalidateQueries(["datasets"]);
+  await queryClient.invalidateQueries(["authors"]);
+} else {
+  // Update only user-specific data during processing
+  await queryClient.invalidateQueries(["userDatasets", userId]);
+}
+```
+
+## UI Status Representation
+
+### Processing Progress Component
+```typescript
+// From src/components/ProcessingProgress.tsx pattern
+const ProcessingProgress: React.FC<{dataset: DatasetProgress}> = ({ dataset }) => {
+  const progress = calculateProcessingProgress(dataset);
+  
+  // Error state
+  if (dataset.has_error) {
+    return <Tag icon={<CloseCircleOutlined />} color="error">Error</Tag>;
+  }
+  
+  // Completion state
+  if (progress.isComplete) {
+    return <Tag icon={<CheckCircleOutlined />} color="success">Complete</Tag>;
+  }
+  
+  // Processing state
+  return (
+    <div className="flex items-center gap-2">
+      <span>Step {progress.currentStep} of {progress.totalSteps}</span>
+      <ProgressBar percentage={progress.percentage} />
+      <SyncOutlined spin />
+    </div>
+  );
+};
+```
+
+### Status-Based Actions
+```typescript
+// Enable/disable actions based on processing state
+const isComplete = calculateProcessingProgress(dataset).isComplete;
+
+<Button 
+  disabled={!isComplete}
+  onClick={handleAction}
+>
+  {isComplete ? "Publish" : "Processing..."}
+</Button>
+```
+
+## Common State Issues & Solutions
+
+### Issue: Stuck Processing Spinners
+**Symptom**: UI shows processing but work is actually done
+**Cause**: Status flags don't reflect completion (especially for "no results found" cases)
+**Solution**: Smart completion detection with fallback logic
+
+```typescript
+function isDeadwoodProcessingComplete(dataset: DatasetProgress): boolean {
+  if (dataset.is_deadwood_done) return true;
+  
+  // Fallback: if all other steps done + idle + no error = completed
+  return !!(
+    dataset.is_upload_done &&
+    dataset.is_ortho_done &&
+    dataset.is_metadata_done &&
+    dataset.is_cog_done &&
+    !dataset.has_error &&
+    dataset.current_status === 'idle'
+  );
+}
+```
+
+### Issue: Inconsistent Status Across Components
+**Symptom**: Different components show different processing states
+**Cause**: Multiple status calculation logics
+**Solution**: Centralized status calculation utility
+
+```typescript
+// Single source of truth for status calculation
+export { calculateProcessingProgress } from 'src/utils/processingSteps';
+
+// Use consistently across all components
+const progress = calculateProcessingProgress(dataset);
+```
+
+### Issue: Real-time Updates Not Working
+**Symptom**: UI doesn't update when processing completes
+**Cause**: Missing query invalidation or subscription errors
+**Solution**: Comprehensive subscription handling with error boundaries
+
+```typescript
+// Robust subscription with error handling
+.on("postgres_changes", { ... }, async (payload) => {
+  try {
+    // Process status change
+    await handleStatusChange(payload);
+  } catch (error) {
+    console.error("Subscription error:", error);
+    // Fallback: manual refresh
+    await queryClient.invalidateQueries(["userDatasets"]);
+  }
+})
+```
+
+## Testing Status Logic
+
+### Unit Tests for Status Calculation
+```typescript
+describe('calculateProcessingProgress', () => {
+  it('should detect completion with smart fallback', () => {
+    const dataset = {
+      is_upload_done: true,
+      is_ortho_done: true,
+      is_metadata_done: true,
+      is_cog_done: true,
+      is_deadwood_done: false, // Explicitly false
+      current_status: 'idle',
+      has_error: false
+    };
+    
+    const result = calculateProcessingProgress(dataset);
+    expect(result.isComplete).toBe(true); // Should be complete via smart detection
+  });
+});
+```
+
+### Integration Tests for Real-time Updates
+```typescript
+// Test subscription handling
+it('should update UI when processing completes', async () => {
+  const { queryClient } = renderWithProviders(<Component />);
+  
+  // Simulate status update
+  await simulateStatusChange({
+    dataset_id: 123,
+    is_deadwood_done: true
+  });
+  
+  // Verify query invalidation
+  expect(queryClient.getQueryState(['userDatasets'])).toBeInvalidated();
+});
+```
+
+## Performance Considerations
+
+### Minimize Re-renders
+```typescript
+// Memoize status calculations
+const processingStatus = useMemo(() => 
+  calculateProcessingProgress(dataset), 
+  [dataset.is_upload_done, dataset.is_ortho_done, /* ... all status fields */]
+);
+```
+
+### Efficient Subscriptions
+```typescript
+// Subscribe only to relevant changes
+.on("postgres_changes", {
+  event: "UPDATE",
+  schema: "public",
+  table: "v2_statuses",
+  filter: `user_id=eq.${userId}` // Only user's datasets
+}, handleStatusChange)
+```
+
+## Key Principles
+
+1. **Single Source of Truth**: Centralize status calculation logic
+2. **Smart Fallbacks**: Handle edge cases where flags don't reflect reality
+3. **Semantic Clarity**: Distinguish "processing done" from "results found"
+4. **Real-time Sync**: Keep UI updated via subscriptions + query invalidation
+5. **Error Resilience**: Handle subscription failures gracefully
+6. **Performance Aware**: Minimize unnecessary re-renders and subscriptions

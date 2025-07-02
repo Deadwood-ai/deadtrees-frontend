@@ -1,0 +1,35 @@
+---
+description: Collection of utility functions. Check if some functionality is already implemented.
+globs: 
+alwaysApply: false
+---
+# Utility Functions
+
+## Core Approach
+
+- Pure functions in `src/utils/` directory
+- Single responsibility principle
+- Proper TypeScript types with JSDoc documentation
+- Export individual functions rather than default exports for better tree-shaking
+
+## Reference Implementations
+
+- **String Processing**: `src/utils/orcidUtils.ts`
+  - Input sanitization patterns
+  - URL extraction with regex
+  - Format validation
+  
+- **Data Parsing**: `src/utils/parseBBox.tsx`
+  - Regex-based string parsing
+  - Type-safe return values
+  - Null handling for invalid input
+
+- **Data Transformation**: `src/utils/base64ToArrayBuffer.ts`
+  - Format conversion utilities
+  - Simple, focused functions
+
+## File Organization
+
+- One utility file per domain (e.g., `orcidUtils.ts`, `geoUtils.ts`)
+- Export individual functions, not default exports
+- Include JSDoc comments for complex functions

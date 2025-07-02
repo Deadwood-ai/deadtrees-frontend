@@ -1,0 +1,271 @@
+---
+description: Database Operations & Data Validation using the postgres MCP
+globs: 
+alwaysApply: false
+---
+# Database Operations & Data Validation
+
+## Core Approach
+
+- Evidence-based database investigation using MCP tools
+- Query validation before execution in production
+- Data consistency checking across related tables
+- Safe testing and rollback strategies for updates
+
+## Database Investigation Tools
+
+### Schema Exploration
+```bash
+# List all schemas
+mcp_deadtrees-prod_list_schemas
+
+# List tables in public schema
+mcp_deadtrees-prod_list_objects --schema_name public --object_type table
+
+# Get detailed table structure
+mcp_deadtrees-prod_get_object_details --schema_name public --object_name [TABLE_NAME]
+```
+
+### Query Execution
+```bash
+# Execute read-only queries safely
+mcp_deadtrees-prod_execute_sql --sql "[SELECT_QUERY]"
+
+# Analyze query performance
+mcp_deadtrees-prod_explain_query --sql "[QUERY]" --analyze false
+
+# Test with hypothetical indexes
+mcp_deadtrees-prod_explain_query --sql "[QUERY]" --hypothetical_indexes '[{"table": "table_name", "columns": ["col1", "col2"]}]'
+```
+
+## Common Query Patterns
+
+### Data Consistency Checks
+```sql
+-- Check for status flag inconsistencies
+SELECT COUNT(*) as inconsistent_records
+FROM v2_statuses s
+WHERE s.dataset_id IN (
+  SELECT DISTINCT l.dataset_id 
+  FROM v2_labels l
+  WHERE EXISTS (
+    SELECT 1 FROM v2_[RESULT_TABLE] r WHERE r.label_id = l.id
+  )
+)
+AND s.is_[FIELD]_done = false;
+
+-- Cross-table validation pattern
+SELECT 
+  main.id,
+  main.status_field,
+  COUNT(related.id) as actual_count,
+  CASE 
+    WHEN COUNT(related.id) > 0 AND main.status_field = false THEN 'INCONSISTENT'
+    WHEN COUNT(related.id) = 0 AND main.status_field = true THEN 'INCONSISTENT' 
+    ELSE 'CONSISTENT'
+  END as consistency_status
+FROM main_table main
+LEFT JOIN related_table related ON main.id = related.main_id
+GROUP BY main.id, main.status_field;
+```
+
+### Range-Based Analysis
+```sql
+-- Analyze issues by dataset ID ranges (useful for migration problems)
+SELECT 
+  CASE 
+    WHEN dataset_id <= 1000 THEN '1-1000'
+    WHEN dataset_id <= 2000 THEN '1001-2000'
+    WHEN dataset_id <= 3000 THEN '2001-3000'
+    ELSE '3000+'
+  END as id_range,
+  COUNT(*) as total_datasets,
+  COUNT(CASE WHEN is_problematic THEN 1 END) as problematic_count
+FROM v2_statuses s
+GROUP BY 
+  CASE 
+    WHEN dataset_id <= 1000 THEN '1-1000'
+    WHEN dataset_id <= 2000 THEN '1001-2000'
+    WHEN dataset_id <= 3000 THEN '2001-3000'
+    ELSE '3000+'
+  END
+ORDER BY MIN(dataset_id);
+```
+
+### Sample Data Investigation
+```sql
+-- Get representative examples for analysis
+SELECT 
+  dataset_id,
+  file_name,
+  status_fields...,
+  created_at
+FROM v2_datasets d
+JOIN v2_statuses s ON d.id = s.dataset_id
+WHERE [CONDITION]
+ORDER BY dataset_id
+LIMIT 10;
+```
+
+## Safe Update Patterns
+
+### Transaction Testing
+```sql
+-- ALWAYS test updates in transactions first
+BEGIN;
+
+-- Run your UPDATE statement
+UPDATE table_name 
+SET field = value
+WHERE condition;
+
+-- Check the results
+SELECT COUNT(*) as affected_rows FROM table_name WHERE condition;
+
+-- Verify sample records
+SELECT * FROM table_name WHERE id IN (1, 2, 3) ORDER BY id;
+
+-- ROLLBACK to test, COMMIT when ready
+ROLLBACK; -- or COMMIT;
+```
+
+### Batch Testing
+```sql
+-- Test with small batch first
+BEGIN;
+
+UPDATE table_name 
+SET field = value
+WHERE id IN (SELECT id FROM table_name WHERE condition LIMIT 5);
+
+-- Verify small batch results
+SELECT * FROM table_name WHERE id IN (...);
+
+-- If successful, COMMIT and run full update
+COMMIT;
+```
+
+### Pre-Update Validation
+```sql
+-- Count records that will be affected
+SELECT COUNT(*) as will_be_updated
+FROM table_name 
+WHERE condition AND current_field != new_value;
+
+-- Show examples of what will change
+SELECT 
+  id,
+  current_field as before_value,
+  'new_value' as after_value
+FROM table_name 
+WHERE condition AND current_field != new_value
+LIMIT 10;
+```
+
+## Schema Validation Patterns
+
+### Interface Synchronization
+```typescript
+// Ensure TypeScript interfaces match database schema
+export interface DatasetProgress {
+  is_upload_done?: boolean;        // boolean NOT NULL DEFAULT false
+  is_ortho_done?: boolean;         // boolean NOT NULL DEFAULT false  
+  is_metadata_done?: boolean;      // boolean NOT NULL DEFAULT false
+  is_cog_done?: boolean;           // boolean NOT NULL DEFAULT false
+  is_deadwood_done?: boolean;      // boolean NOT NULL DEFAULT false
+  has_error?: boolean;             // boolean NOT NULL DEFAULT false
+  current_status?: string;         // USER-DEFINED (enum) NOT NULL
+}
+```
+
+### Column Existence Checks
+```sql
+-- Verify expected columns exist before querying
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns 
+WHERE table_name = '[TABLE_NAME]' 
+AND table_schema = 'public'
+ORDER BY ordinal_position;
+```
+
+## Data Quality Monitoring
+
+### Orphaned Record Detection
+```sql
+-- Find records that should be linked but aren't
+SELECT l.dataset_id, COUNT(*) as label_count
+FROM v2_labels l
+LEFT JOIN v2_datasets d ON l.dataset_id = d.id
+WHERE d.id IS NULL
+GROUP BY l.dataset_id;
+```
+
+### Status Flag Consistency
+```sql
+-- Monitor status flag accuracy
+SELECT 
+  status_field,
+  COUNT(*) as count,
+  COUNT(CASE WHEN has_actual_data THEN 1 END) as with_data,
+  COUNT(CASE WHEN NOT has_actual_data THEN 1 END) as without_data
+FROM (
+  SELECT 
+    s.is_[FIELD]_done as status_field,
+    EXISTS(SELECT 1 FROM related_table r WHERE r.main_id = s.dataset_id) as has_actual_data
+  FROM v2_statuses s
+) analysis
+GROUP BY status_field;
+```
+
+## Performance Considerations
+
+### Index Utilization
+```sql
+-- Check if queries use indexes effectively
+EXPLAIN (ANALYZE, BUFFERS) 
+SELECT * FROM large_table WHERE indexed_column = 'value';
+
+-- Look for sequential scans on large tables
+EXPLAIN SELECT * FROM v2_deadwood_geometries WHERE label_id = 123;
+```
+
+### Query Optimization
+```sql
+-- Use EXISTS instead of JOIN for existence checks
+SELECT dataset_id 
+FROM v2_statuses s
+WHERE EXISTS (
+  SELECT 1 FROM v2_deadwood_geometries dg 
+  JOIN v2_labels l ON dg.label_id = l.id 
+  WHERE l.dataset_id = s.dataset_id
+);
+
+-- Prefer specific columns over SELECT *
+SELECT id, dataset_id, is_deadwood_done 
+FROM v2_statuses 
+WHERE dataset_id IN (...);
+```
+
+## Error Handling
+
+### Query Timeout Management
+- Read queries: 30 second limit in restricted mode
+- Complex joins: Use EXISTS instead of multiple JOINs
+- Large datasets: Use LIMIT for testing, then remove for full queries
+- Range queries: Break into smaller chunks if needed
+
+### Connection Issues
+```sql
+-- If "prepared statement already exists" error:
+-- The error indicates connection reuse issues
+-- Simply retry the query - usually resolves automatically
+```
+
+## Key Principles
+
+1. **Test First**: Always use transactions to test updates before committing
+2. **Validate Assumptions**: Check data consistency before and after changes
+3. **Document Evidence**: Include actual query results in GitHub issues
+4. **Performance Aware**: Use EXPLAIN to understand query performance
+5. **Safety First**: Use small batches and verification queries
+6. **Schema Sync**: Keep TypeScript interfaces aligned with database schema

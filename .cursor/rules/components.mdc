@@ -11,20 +11,33 @@ alwaysApply: false
 - Functional components with TypeScript interfaces
 - Ant Design components with consistent patterns
 - Proper loading states and error handling
+- Smart status detection for processing states
 
 ## Reference Implementations
 
 - **Table Component**: `src/components/DataTable.tsx`
 
   - Column definitions
-  - Status rendering
-  - Action buttons
+  - Status rendering with ProcessingProgress
+  - Action buttons based on completion state
+
+- **Processing Component**: `src/components/ProcessingProgress.tsx`
+
+  - Smart completion detection
+  - Status visualization (spinner, complete, error)
+  - Consistent progress representation
 
 - **Form Component**: `src/components/Upload/UploadModal.tsx`
 
   - Form validation
   - File upload integration
   - Loading states
+
+- **Modal Component**: `src/components/PublicationModal.tsx`
+
+  - Complex form handling
+  - External API integration
+  - Input sanitization patterns
 
 - **List Component**: `src/components/DataList.tsx`
   - Item rendering
@@ -37,9 +50,133 @@ alwaysApply: false
 - Form handling from UploadModal.tsx
 - Loading/error states from any page component
 - Ant Design integration patterns throughout components/
+- Processing status logic from ProcessingProgress.tsx
+
+## Processing Status Patterns
+
+### Status Display Component
+
+```typescript
+// Use centralized processing logic
+import { calculateProcessingProgress } from '../utils/processingSteps';
+
+const StatusComponent = ({ dataset }) => {
+  const progress = calculateProcessingProgress(dataset);
+
+  if (dataset.has_error) {
+    return <Tag color="error">Error</Tag>;
+  }
+
+  if (progress.isComplete) {
+    return <Tag color="success">Complete</Tag>;
+  }
+
+  return <ProcessingProgress dataset={dataset} />;
+};
+```
+
+### Smart Status Detection
+
+- Handle "no results found" cases where processing completed but flags show incomplete
+- Use fallback logic: all prior steps done + idle status + no errors = completed
+- Distinguish between "processing incomplete" vs "processing complete but no results"
+
+### Action Button States
+
+```typescript
+// Enable actions based on actual completion status
+const isComplete = calculateProcessingProgress(dataset).isComplete;
+
+<Button
+  disabled={!isComplete}
+  type={isComplete ? "primary" : "default"}
+>
+  {isComplete ? "Publish" : "Processing..."}
+</Button>
+```
+
+## Input Handling Patterns
+
+- **Flexible Input Acceptance**: Accept multiple input formats (URLs, IDs, etc.)
+- **Input Sanitization**: Use regex patterns to extract essential data from various formats
+- **Pre-validation**: Validate input format before external API calls
+- **User Guidance**: Update placeholder text to indicate acceptable formats
+
+## Processing Status Patterns
+
+### Status Display Component
+
+```typescript
+// Use centralized processing logic
+import { calculateProcessingProgress } from '../utils/processingSteps';
+
+const StatusComponent = ({ dataset }) => {
+  const progress = calculateProcessingProgress(dataset);
+
+  if (dataset.has_error) {
+    return <Tag color="error">Error</Tag>;
+  }
+
+  if (progress.isComplete) {
+    return <Tag color="success">Complete</Tag>;
+  }
+
+  return <ProcessingProgress dataset={dataset} />;
+};
+```
+
+### Smart Status Detection
+
+- Handle "no results found" cases where processing completed but flags show incomplete
+- Use fallback logic: all prior steps done + idle status + no errors = completed
+- Distinguish between "processing incomplete" vs "processing complete but no results"
+
+### Action Button States
+
+```typescript
+// Enable actions based on actual completion status
+const isComplete = calculateProcessingProgress(dataset).isComplete;
+
+<Button
+  disabled={!isComplete}
+  type={isComplete ? "primary" : "default"}
+>
+  {isComplete ? "Publish" : "Processing..."}
+</Button>
+```
 
 ## Layout Patterns
 
 - Navigation structure in `src/components/Navigation.tsx`
 - Page layouts in `src/pages/` directory
 - Modal patterns from various Modal components
+
+## Loading & Error States
+
+### Processing States
+
+- **Loading**: Show progress with step indicators
+- **Complete**: Clear success indication with green checkmark
+- **Error**: Red error state with descriptive message
+- **Stuck**: Smart detection to avoid infinite spinners
+
+### Consistent Status Representation
+
+- Use `ProcessingProgress` component for all processing displays
+- Centralize status calculation in `src/utils/processingSteps.ts`
+- Handle edge cases with smart completion detection
+
+## Loading & Error States
+
+### Processing States
+
+- **Loading**: Show progress with step indicators
+- **Complete**: Clear success indication with green checkmark
+- **Error**: Red error state with descriptive message
+- **Stuck**: Smart detection to avoid infinite spinners
+
+### Consistent Status Representation
+
+- Use `ProcessingProgress` component for all processing displays
+- Centralize status calculation in `src/utils/processingSteps.ts`
+- Handle edge cases with smart completion detection

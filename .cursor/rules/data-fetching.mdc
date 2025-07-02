@@ -1,5 +1,5 @@
 ---
-description: React Query & Supabase Patterns
+description:
 globs:
 alwaysApply: false
 ---
@@ -36,6 +36,7 @@ alwaysApply: false
 - Mutation onSuccess invalidation from useDatasetAudit.ts
 - Real-time subscription cleanup from useDatasetSubscription.ts
 - Token refresh pattern from uploadOrtho.ts
+- Avoid `staleTime: 0, cacheTime: 0` unless necessary
 
 ## Context Integration
 
