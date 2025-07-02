@@ -1,12 +1,12 @@
 import { GeoJSON } from "geojson";
 
-export enum LabelSource {
+export enum ILabelSource {
   MANUAL = "manual",
   AUTOMATIC = "automatic",
   SEMI_AUTOMATIC = "semi_automatic",
 }
 
-export enum LabelType {
+export enum ILabelType {
   SEGMENTATION = "segmentation",
   POINT_OBSERVATION = "point_observation",
   INSTANCE_SEGMENTATION = "instance_segmentation",
@@ -35,9 +35,9 @@ export interface ILabel {
   dataset_id: number;
   aoi_id?: number;
   user_id: string;
-  label_source: LabelSource;
-  label_type: LabelType;
-  label_data: any; // You might want to type this more specifically
+  label_source: ILabelSource;
+  label_type: ILabelType;
+  label_data: ILabelData;
   label_quality?: number;
   model_config?: Record<string, any>;
   created_at: string;
