@@ -163,52 +163,7 @@ export default function DatasetDetails() {
               </div>
 
               <div className="flex justify-between">
-                <Typography.Text className="pr-2">Vegetation Activity: </Typography.Text>
-                <div className="flex items-center">
-                  {isPhenologyLoading ? (
-                    <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
-                  ) : phenologyData ? (
-                    (() => {
-                      // Calculate vegetation activity for acquisition date
-                      const acquisitionDay = new Date(
-                        dataset.aquisition_year,
-                        dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-                        dataset.aquisition_day ?? 1,
-                      );
-                      const startOfYear = new Date(dataset.aquisition_year, 0, 1);
-                      const dayOfYear =
-                        Math.floor((acquisitionDay.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                      const phenologyValue = phenologyData.phenology_curve[Math.min(dayOfYear - 1, 365)] || 0;
-
-                      let emoji, activity, tagColor;
-                      if (phenologyValue <= 85) {
-                        emoji = "🟤";
-                        activity = "Low";
-                        tagColor = "red";
-                      } else if (phenologyValue <= 170) {
-                        emoji = "🟡";
-                        activity = "Moderate";
-                        tagColor = "orange";
-                      } else {
-                        emoji = "🟢";
-                        activity = "High";
-                        tagColor = "green";
-                      }
-
-                      return (
-                        <Tag color={tagColor}>
-                          {emoji} {activity}
-                        </Tag>
-                      );
-                    })()
-                  ) : (
-                    <Typography.Text className="text-gray-500">Not available</Typography.Text>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between">
-                <Typography.Text className="pr-4">Growing Season: </Typography.Text>
+                <Typography.Text className="pr-4">Phenology: </Typography.Text>
                 <div className="max-w-[200px] flex-1">
                   {isPhenologyLoading ? (
                     <div className="h-4 w-full animate-pulse rounded bg-gray-200" />

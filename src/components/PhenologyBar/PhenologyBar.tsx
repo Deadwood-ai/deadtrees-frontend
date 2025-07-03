@@ -58,17 +58,16 @@ export default function PhenologyBar({
     const phenologyValue = phenologyData.phenology_curve[hoveredDay - 1] || 0;
     const baseTooltip = formatPhenologyTooltip(hoveredDay, phenologyValue);
 
-    // Add source information if available
-    if (phenologyData.source) {
-      return (
-        <div style={{ whiteSpace: "pre-line" }}>
-          {baseTooltip}
-          {"\n"}Source: {phenologyData.source}
-        </div>
-      );
-    }
-
-    return <div style={{ whiteSpace: "pre-line" }}>{baseTooltip}</div>;
+    // Add detailed source information
+    return (
+      <div style={{ whiteSpace: "pre-line", maxWidth: "280px" }}>
+        {baseTooltip}
+        {"\n\n"}
+        10km pixel: 365 daily values (0-255) showing growing season probability 2013-2022.
+        {"\n"}
+        Gap-filled VIIRS phenology data (VNP22Q2v001).
+      </div>
+    );
   }, [hoveredDay, phenologyData]);
 
   // Calculate acquisition marker position and style

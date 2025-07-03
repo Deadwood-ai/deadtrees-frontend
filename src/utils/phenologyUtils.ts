@@ -131,9 +131,9 @@ function dayOfYearToDate(dayOfYear: number): string {
  * Get phenology season description from value
  */
 function getPhenologySeason(value: number): string {
-  if (value <= 85) return "Low vegetation activity";
-  if (value <= 170) return "Moderate vegetation activity";
-  return "High vegetation activity";
+  if (value <= 85) return "Off season";
+  if (value <= 170) return "Transition";
+  return "Peak season";
 }
 
 /**
