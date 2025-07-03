@@ -15,6 +15,8 @@ import {
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDownload } from "../../hooks/useDownloadProvider";
 import { Settings } from "../../config";
+import PhenologyBar from "../PhenologyBar/PhenologyBar";
+import { usePhenologyData } from "../../hooks/usePhenologyData";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -70,6 +72,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
   // Add ortho metadata hook
   const { data: orthoMetadata, isLoading: isOrthoLoading } = useOrthoMetadata(dataset.id);
+
+  // Add phenology data hook
+  const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset.id);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
@@ -377,6 +382,22 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 <div className="mb-2 rounded bg-green-50 p-2">
                   <Text className="text-xs font-medium text-green-800">🌿 Biome: {dataset.biome_name}</Text>
                 </div>
+              )}
+
+              {/* Phenology Bar */}
+              {isPhenologyLoading ? (
+                <div className="mb-2 h-4 w-full animate-pulse rounded bg-gray-200" />
+              ) : phenologyData ? (
+                <PhenologyBar
+                  phenologyData={phenologyData}
+                  acquisitionYear={dataset.aquisition_year}
+                  acquisitionMonth={dataset.aquisition_month}
+                  acquisitionDay={dataset.aquisition_day}
+                  className="mb-2"
+                  showTooltips={true}
+                />
+              ) : (
+                <div className="mb-2 text-xs text-gray-500">Phenology data not available</div>
               )}
 
               <Form.Item

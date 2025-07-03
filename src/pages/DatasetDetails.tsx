@@ -14,6 +14,8 @@ import { useDownload } from "../hooks/useDownloadProvider";
 import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
 import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
+import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
+import { usePhenologyData } from "../hooks/usePhenologyData";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -36,6 +38,9 @@ export default function DatasetDetails() {
     labelData: ILabelData.DEADWOOD,
     enabled: !!dataset?.id,
   });
+
+  // Fetch phenology data
+  const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset?.id);
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -126,24 +131,40 @@ export default function DatasetDetails() {
 
               <div className="flex justify-between">
                 <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
-                <Typography.Text strong>
-                  {
-                    // date.toLocaleString("en-US", {
-                    //   year: "numeric",
-                    //   month: "long",
-                    //   day: "numeric",
-                    // })
-                    new Date(
-                      dataset.aquisition_year,
-                      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-                      dataset.aquisition_day ?? 1,
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      ...(dataset.aquisition_month && { month: "long" }),
-                      ...(dataset.aquisition_day && { day: "numeric" }),
-                    })
-                  }
-                </Typography.Text>
+                <div className="flex flex-col items-end">
+                  <Typography.Text strong>
+                    {
+                      // date.toLocaleString("en-US", {
+                      //   year: "numeric",
+                      //   month: "long",
+                      //   day: "numeric",
+                      // })
+                      new Date(
+                        dataset.aquisition_year,
+                        dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
+                        dataset.aquisition_day ?? 1,
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        ...(dataset.aquisition_month && { month: "long" }),
+                        ...(dataset.aquisition_day && { day: "numeric" }),
+                      })
+                    }
+                  </Typography.Text>
+                  {/* Phenology Bar */}
+                  <div className="mt-1 w-full max-w-[200px]">
+                    {isPhenologyLoading ? (
+                      <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
+                    ) : phenologyData ? (
+                      <PhenologyBar
+                        phenologyData={phenologyData}
+                        acquisitionYear={dataset.aquisition_year}
+                        acquisitionMonth={dataset.aquisition_month}
+                        acquisitionDay={dataset.aquisition_day}
+                        showTooltips={true}
+                      />
+                    ) : null}
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between">
                 <Typography.Text style={{ margin: 0 }}>
