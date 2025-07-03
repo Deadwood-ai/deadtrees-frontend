@@ -68,19 +68,9 @@ export function mapPhenologyValueToColor(value: number): string {
   // Clamp value to 0-255 range
   const clampedValue = Math.max(0, Math.min(255, value));
 
-  if (clampedValue <= 50) {
-    // Browns/dormant colors (0-50)
-    const ratio = clampedValue / 50;
-    return interpolateColor("#8B4513", "#D2B48C", ratio);
-  } else if (clampedValue <= 150) {
-    // Greens/growing season (51-150)
-    const ratio = (clampedValue - 51) / 99;
-    return interpolateColor("#90EE90", "#228B22", ratio);
-  } else {
-    // Peak greens (151-255)
-    const ratio = (clampedValue - 151) / 104;
-    return interpolateColor("#006400", "#32CD32", ratio);
-  }
+  // Simple gradient from light grey to dark green
+  const ratio = clampedValue / 255;
+  return interpolateColor("#F5F5F5", "#388E3C", ratio);
 }
 
 /**
@@ -88,7 +78,7 @@ export function mapPhenologyValueToColor(value: number): string {
  */
 export function generatePhenologyGradient(phenologyCurve: number[]): string {
   if (!phenologyCurve || phenologyCurve.length === 0) {
-    return "linear-gradient(to right, #D2B48C, #D2B48C)";
+    return "linear-gradient(to right, #F5F5F5, #F5F5F5)";
   }
 
   // Sample points for gradient (every ~7 days to keep gradient manageable)
@@ -118,8 +108,9 @@ export function generatePhenologyGradient(phenologyCurve: number[]): string {
 export function formatPhenologyTooltip(dayOfYear: number, phenologyValue: number): string {
   const date = dayOfYearToDate(dayOfYear);
   const season = getPhenologySeason(phenologyValue);
+  const emoji = getVegetationEmoji(phenologyValue);
 
-  return `Day ${dayOfYear} (${date}): ${season} (Value: ${phenologyValue}/255)`;
+  return `Day ${dayOfYear} (${date})\n${emoji} ${season}`;
 }
 
 /**
@@ -140,9 +131,18 @@ function dayOfYearToDate(dayOfYear: number): string {
  * Get phenology season description from value
  */
 function getPhenologySeason(value: number): string {
-  if (value <= 50) return "Dormant season";
-  if (value <= 150) return "Growing season";
-  return "Peak growing season";
+  if (value <= 85) return "Low vegetation activity";
+  if (value <= 170) return "Moderate vegetation activity";
+  return "High vegetation activity";
+}
+
+/**
+ * Get vegetation emoji based on phenology value
+ */
+function getVegetationEmoji(value: number): string {
+  if (value <= 85) return "🟤"; // Brown for low activity
+  if (value <= 170) return "🟡"; // Yellow for moderate activity
+  return "🟢"; // Green for high activity
 }
 
 /**

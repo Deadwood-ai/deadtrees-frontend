@@ -385,20 +385,21 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               )}
 
               {/* Phenology Bar */}
-              {isPhenologyLoading ? (
-                <div className="mb-2 h-4 w-full animate-pulse rounded bg-gray-200" />
-              ) : phenologyData ? (
-                <PhenologyBar
-                  phenologyData={phenologyData}
-                  acquisitionYear={dataset.aquisition_year}
-                  acquisitionMonth={dataset.aquisition_month}
-                  acquisitionDay={dataset.aquisition_day}
-                  className="mb-2"
-                  showTooltips={true}
-                />
-              ) : (
-                <div className="mb-2 text-xs text-gray-500">Phenology data not available</div>
-              )}
+              <div className="mb-3 rounded bg-gray-50 p-3">
+                {isPhenologyLoading ? (
+                  <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
+                ) : phenologyData ? (
+                  <PhenologyBar
+                    phenologyData={phenologyData}
+                    acquisitionYear={dataset.aquisition_year}
+                    acquisitionMonth={dataset.aquisition_month}
+                    acquisitionDay={dataset.aquisition_day}
+                    showTooltips={true}
+                  />
+                ) : (
+                  <div className="text-xs text-gray-500">Phenology data not available</div>
+                )}
+              </div>
 
               <Form.Item
                 name="has_valid_phenology"
