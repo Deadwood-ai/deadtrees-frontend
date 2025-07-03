@@ -14,6 +14,8 @@ import { useDownload } from "../hooks/useDownloadProvider";
 import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
 import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
+import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
+import { usePhenologyData } from "../hooks/usePhenologyData";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -36,6 +38,9 @@ export default function DatasetDetails() {
     labelData: ILabelData.DEADWOOD,
     enabled: !!dataset?.id,
   });
+
+  // Fetch phenology data
+  const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset?.id);
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -123,28 +128,10 @@ export default function DatasetDetails() {
                   <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-between">
-                <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
-                <Typography.Text strong>
-                  {
-                    // date.toLocaleString("en-US", {
-                    //   year: "numeric",
-                    //   month: "long",
-                    //   day: "numeric",
-                    // })
-                    new Date(
-                      dataset.aquisition_year,
-                      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-                      dataset.aquisition_day ?? 1,
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      ...(dataset.aquisition_month && { month: "long" }),
-                      ...(dataset.aquisition_day && { day: "numeric" }),
-                    })
-                  }
-                </Typography.Text>
-              </div>
+            {/* Environmental Context Box */}
+            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
               <div className="flex justify-between">
                 <Typography.Text style={{ margin: 0 }}>
                   <Typography.Text className="pr-2">Biome: </Typography.Text>
@@ -156,6 +143,87 @@ export default function DatasetDetails() {
                       : "Unknown"}
                   </Tag>
                 </Tooltip>
+              </div>
+
+              <div className="flex justify-between">
+                <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
+                <div className="flex flex-col items-end">
+                  <Typography.Text strong>
+                    {new Date(
+                      dataset.aquisition_year,
+                      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
+                      dataset.aquisition_day ?? 1,
+                    ).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      ...(dataset.aquisition_month && { month: "long" }),
+                      ...(dataset.aquisition_day && { day: "numeric" }),
+                    })}
+                  </Typography.Text>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Typography.Text className="pr-2">Vegetation Activity: </Typography.Text>
+                <div className="flex items-center">
+                  {isPhenologyLoading ? (
+                    <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                  ) : phenologyData ? (
+                    (() => {
+                      // Calculate vegetation activity for acquisition date
+                      const acquisitionDay = new Date(
+                        dataset.aquisition_year,
+                        dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
+                        dataset.aquisition_day ?? 1,
+                      );
+                      const startOfYear = new Date(dataset.aquisition_year, 0, 1);
+                      const dayOfYear =
+                        Math.floor((acquisitionDay.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                      const phenologyValue = phenologyData.phenology_curve[Math.min(dayOfYear - 1, 365)] || 0;
+
+                      let emoji, activity, tagColor;
+                      if (phenologyValue <= 85) {
+                        emoji = "🟤";
+                        activity = "Low";
+                        tagColor = "red";
+                      } else if (phenologyValue <= 170) {
+                        emoji = "🟡";
+                        activity = "Moderate";
+                        tagColor = "orange";
+                      } else {
+                        emoji = "🟢";
+                        activity = "High";
+                        tagColor = "green";
+                      }
+
+                      return (
+                        <Tag color={tagColor}>
+                          {emoji} {activity}
+                        </Tag>
+                      );
+                    })()
+                  ) : (
+                    <Typography.Text className="text-gray-500">Not available</Typography.Text>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Typography.Text className="pr-4">Growing Season: </Typography.Text>
+                <div className="max-w-[200px] flex-1">
+                  {isPhenologyLoading ? (
+                    <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
+                  ) : phenologyData ? (
+                    <PhenologyBar
+                      phenologyData={phenologyData}
+                      acquisitionYear={dataset.aquisition_year}
+                      acquisitionMonth={dataset.aquisition_month}
+                      acquisitionDay={dataset.aquisition_day}
+                      showTooltips={true}
+                    />
+                  ) : (
+                    <Typography.Text className="text-gray-500">Not available</Typography.Text>
+                  )}
+                </div>
               </div>
             </div>
 
