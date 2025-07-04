@@ -107,10 +107,15 @@ export function generatePhenologyGradient(phenologyCurve: number[]): string {
  */
 export function formatPhenologyTooltip(dayOfYear: number, phenologyValue: number): string {
   const date = dayOfYearToDate(dayOfYear);
-  const season = getPhenologySeason(phenologyValue);
-  const emoji = getVegetationEmoji(phenologyValue);
 
-  return `Day ${dayOfYear} (${date})\n${emoji} ${season}`;
+  return `Day ${dayOfYear} (${date})
+Value: ${phenologyValue}/255
+
+Gap-filled VIIRS phenology data (VNP22Q2v001)
+10km pixel, growing season probability 2013-2022
+
+Source: NASA VIIRS Land Phenology ESDR
+Paper: deadtrees.earth bioRxiv preprint`;
 }
 
 /**
@@ -125,24 +130,6 @@ function dayOfYearToDate(dayOfYear: number): string {
     month: "short",
     day: "numeric",
   });
-}
-
-/**
- * Get phenology season description from value
- */
-function getPhenologySeason(value: number): string {
-  if (value <= 85) return "Off season";
-  if (value <= 170) return "Transition";
-  return "Peak season";
-}
-
-/**
- * Get vegetation emoji based on phenology value
- */
-function getVegetationEmoji(value: number): string {
-  if (value <= 85) return "🟤"; // Brown for low activity
-  if (value <= 170) return "🟡"; // Yellow for moderate activity
-  return "🟢"; // Green for high activity
 }
 
 /**
