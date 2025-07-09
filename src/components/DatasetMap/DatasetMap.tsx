@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { Map, View } from "ol";
-import { BingMaps } from "ol/source";
+import { BingMaps, XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -105,10 +105,9 @@ const DatasetMapOL = ({
       });
 
       const basemapLayer = new TileLayer({
-        source: new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: "RoadOnDemand",
-          culture: "en-us",
+        source: new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
 

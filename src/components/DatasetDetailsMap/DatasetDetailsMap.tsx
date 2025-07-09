@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BingMaps } from "ol/source";
+import { BingMaps, XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import VectorLayer from "ol/layer/Vector";
@@ -75,11 +75,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
       // Create all other layers before map initialization
       const basemapLayer = new TileLayer({
-        source: new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
-          culture: "en-us",
+        source: new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
+        // source: new XYZ({
+        //   url: `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${import.meta.env.VITE_MAPTILER_KEY}`,
+        //   attributions: "© MapTiler © OpenStreetMap contributors",
+        // }),
       });
 
       // Only create deadwood vector layer if labels exist

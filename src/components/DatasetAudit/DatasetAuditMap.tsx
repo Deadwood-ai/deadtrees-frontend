@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BingMaps } from "ol/source";
+import { BingMaps, XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
@@ -105,11 +105,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
       // Create basemap layer
       const basemapLayer = new TileLayer({
-        source: new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
-          culture: "en-us",
+        source: new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
+        // source: new BingMaps({
+        //   key: import.meta.env.VITE_BING_MAPS_KEY,
+        //   imagerySet: mapStyle,
+        //   culture: "en-us",
+        // }),
       });
 
       // Create ortho layer if COG path exists

@@ -4,7 +4,7 @@ import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
-import { BingMaps } from "ol/source";
+import { BingMaps, XYZ } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import View from "ol/View";
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
@@ -77,10 +77,9 @@ const DeadtreesMap = () => {
         zoom: DeadwoodMapViewport.zoom,
       });
       const basemapLayer = new TileLayer({
-        source: new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: DeadwoodMapStyle,
-          culture: "en-us",
+        source: new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
@@ -159,10 +158,9 @@ const DeadtreesMap = () => {
       const layer = map.getLayers().getArray()[0]; // basemap layer
       // console.log(layer);
       layer.setSource(
-        new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: DeadwoodMapStyle,
-          culture: "en-us",
+        new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );
     }
