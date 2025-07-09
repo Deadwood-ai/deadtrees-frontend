@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BingMaps, XYZ } from "ol/source";
+import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import VectorLayer from "ol/layer/Vector";
@@ -7,16 +7,13 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
 import { Style, Fill, Stroke } from "ol/style";
-import Feature from "ol/Feature";
-import RenderFeature from "ol/render/Feature";
 import { FeatureLike } from "ol/Feature";
 
 import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "./DeadwoodCardDetails";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
-import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "./createVectorLayer";
-import createDeadwoodGeotiffLayer from "../DeadwoodMap/createDeadwoodGeotiffLayer";
+import { createDeadwoodVectorLayer } from "./createVectorLayer";
 import { useDatasetLabels } from "../../hooks/useDatasetLabels";
 import { ILabelData } from "../../types/labels";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
@@ -25,10 +22,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const [mapStyle, setMapStyle] = useState("RoadOnDemand");
+  const [mapStyle, setMapStyle] = useState("satellite-streets-v12");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
-  const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
@@ -42,7 +38,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
-    basemap?: TileLayer<BingMaps>;
+    basemap?: TileLayer<XYZ>;
     orthoCog?: TileLayerWebGL;
     vectorAOI?: VectorLayer<any>;
     vectorLabels?: VectorLayer<any>;
@@ -51,8 +47,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     selectionLayer?: VectorTileLayer;
   }>({});
 
-  if (!data) return null;
-
+  // Main map initialization effect
   useEffect(() => {
     if (!mapRef.current && data?.file_name && !isLoadingLabel) {
       // Create ortho layer first
@@ -76,13 +71,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       // Create all other layers before map initialization
       const basemapLayer = new TileLayer({
         source: new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
-        // source: new XYZ({
-        //   url: `https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${import.meta.env.VITE_MAPTILER_KEY}`,
-        //   attributions: "© MapTiler © OpenStreetMap contributors",
-        // }),
       });
 
       // Only create deadwood vector layer if labels exist
@@ -221,7 +212,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               mapRef.current = newMap;
             }
           })
-          .catch((error) => {
+          .catch(() => {
             // console.error("Error initializing map:", error);
           });
       }
@@ -303,13 +294,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [deadwoodOpacity]);
 
-  // update forest cover layer opacity
-  useEffect(() => {
-    if (mapRef.current && layerRefs.current.forestCoverVector) {
-      layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
-    }
-  }, [forestCoverOpacity]);
-
   // update satellite layer opacity
   useEffect(() => {
     if (mapRef.current && layerRefs.current.orthoCog) {
@@ -326,10 +310,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
       // Just update the source, don't recreate the map
       layerRefs.current.basemap.setSource(
-        new BingMaps({
-          key: import.meta.env.VITE_BING_MAPS_KEY,
-          imagerySet: mapStyle,
-          culture: "en-us",
+        new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );
 
@@ -374,6 +357,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     // We don't need to do anything special for 'navigation' source
     // as the viewport is already preserved
   }, [navigatedFrom, setViewport]);
+
+  if (!data) return null;
 
   return (
     <div className="h-full w-full">

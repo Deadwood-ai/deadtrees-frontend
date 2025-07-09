@@ -10,8 +10,8 @@ const MapStyleSwitchButtons = ({
   return (
     // <div className="absolute left-8 top-28 z-20">
     <Radio.Group value={mapStyle} onChange={(e) => setMapStyle(e.target.value)}>
-      <Radio.Button value="AerialWithLabelsOnDemand">Satellite</Radio.Button>
-      <Radio.Button value="RoadOnDemand">Streets</Radio.Button>
+      <Radio.Button value="satellite-streets-v12">Satellite</Radio.Button>
+      <Radio.Button value="streets-v12">Streets</Radio.Button>
     </Radio.Group>
     // </div>
   );

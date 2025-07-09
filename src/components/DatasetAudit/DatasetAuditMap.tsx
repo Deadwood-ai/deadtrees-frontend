@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BingMaps, XYZ } from "ol/source";
+import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
@@ -41,7 +41,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // Use ref instead of state to avoid re-renders
   const currentAOIRef = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
 
-  const [mapStyle, setMapStyle] = useState("AerialWithLabelsOnDemand");
+  const [mapStyle, setMapStyle] = useState("satellite-streets-v12");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
@@ -73,7 +73,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
-    basemap?: TileLayer<BingMaps>;
+    basemap?: TileLayer<XYZ>;
     orthoCog?: TileLayerWebGL;
     deadwoodVector?: Layer;
     forestCoverVector?: Layer;
@@ -106,14 +106,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       // Create basemap layer
       const basemapLayer = new TileLayer({
         source: new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
-        // source: new BingMaps({
-        //   key: import.meta.env.VITE_BING_MAPS_KEY,
-        //   imagerySet: mapStyle,
-        //   culture: "en-us",
-        // }),
       });
 
       // Create ortho layer if COG path exists
@@ -461,6 +456,18 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
     }
   }, [forestCoverOpacity]);
+
+  // Update map style effect
+  useEffect(() => {
+    if (mapInstanceRef.current && layerRefs.current.basemap) {
+      layerRefs.current.basemap.setSource(
+        new XYZ({
+          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          attributions: "© Mapbox © OpenStreetMap contributors",
+        }),
+      );
+    }
+  }, [mapStyle]);
 
   // Simplified startDrawing - always draws one polygon
   const startDrawing = () => {
