@@ -50,6 +50,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [hasAOI, setHasAOI] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   // Add state to track if a polygon is selected during editing
   const [selectedFeatureForEdit, setSelectedFeatureForEdit] = useState<any>(null);
@@ -201,12 +202,20 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
                 // Replace the current view with the constrained one
                 mapInstanceRef.current.setView(constrainedView);
+
+                // Map is ready after ortho layer has loaded and view is set
+                setIsMapReady(true);
               }
             })
-            .catch((error) => {
+            .catch(() => {
               // console.error("Error getting ortho extent:", error);
+              // Even if ortho fails, show the map
+              setIsMapReady(true);
             });
         }
+      } else {
+        // No ortho layer, map is ready immediately
+        setIsMapReady(true);
       }
 
       // console.log("Map initialized successfully");
@@ -241,8 +250,11 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         mapInstanceRef.current.setTarget(undefined);
         mapInstanceRef.current = null;
       }
+
+      // Reset map ready state
+      setIsMapReady(false);
     };
-  }, [dataset, mapStyle, labelData, forestCoverLabelData]);
+  }, [dataset, labelData, forestCoverLabelData]);
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
@@ -732,6 +744,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
   return (
     <div className="relative h-full w-full">
+      {!isMapReady && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="mb-2 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <p className="text-sm text-gray-600">Loading map...</p>
+          </div>
+        </div>
+      )}
       <div ref={mapRef} className="h-full w-full" />
 
       {/* Simplified AOI Controls */}
