@@ -50,340 +50,344 @@ export default function DatasetDetails() {
 
   return (
     <Row
-      className="bg-slate-50"
+      className="h-full bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
       }}
     >
-      <Col className="flex w-96 flex-col p-3  pr-4 align-middle ">
-        {/* {id} */}
-        {dataset ? (
-          <div className="p-2">
-            <div>
-              <Button
-                size="large"
-                shape="circle"
-                onClick={() => {
-                  // Reset the viewport context before navigating back
-                  setViewport({
-                    center: [0, 0],
-                    zoom: 2,
-                  });
+      <Col className="flex h-full w-96 flex-col">
+        {/* Fixed Header - Back Button */}
+        <div className="p-3 pb-0 pr-4">
+          <Button
+            size="large"
+            shape="circle"
+            onClick={() => {
+              // Reset the viewport context before navigating back
+              setViewport({
+                center: [0, 0],
+                zoom: 2,
+              });
 
-                  // Clear navigation source
-                  setNavigationSource(null);
+              // Clear navigation source
+              setNavigationSource(null);
 
-                  // If we navigated here from another dataset detail page,
-                  // go directly back to the main dataset list instead of the previous detail page
-                  if (navigatedFrom === "navigation") {
-                    navigate("/dataset");
-                  } else {
-                    // Regular back behavior
-                    navigate(-1);
-                  }
-                }}
-                icon={<ArrowLeftOutlined />}
-              ></Button>
-            </div>
-            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
-              <div className="flex items-center pb-4">
-                <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
-                <Tooltip
-                  title={
-                    <div>
-                      {dataset.admin_level_3 ? dataset.admin_level_3 : dataset.admin_level_2}
-                      {dataset.admin_level_1 && <div>{dataset.admin_level_1}</div>}
-                    </div>
-                  }
-                >
-                  <Typography.Title style={{ margin: 0 }} level={5}>
-                    {dataset.admin_level_1
-                      ? `${
-                          dataset.admin_level_3 || dataset.admin_level_2
-                            ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
-                            : ""
-                        }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
-                      : "unknown"}
-                  </Typography.Title>
-                </Tooltip>
-              </div>
+              // If we navigated here from another dataset detail page,
+              // go directly back to the main dataset list instead of the previous detail page
+              if (navigatedFrom === "navigation") {
+                navigate("/dataset");
+              } else {
+                // Regular back behavior
+                navigate(-1);
+              }
+            }}
+            icon={<ArrowLeftOutlined />}
+          />
+        </div>
 
-              <div className="flex justify-between">
-                <Typography.Text className="pr-2">Author: </Typography.Text>
-                <Tooltip title={dataset.authors?.join(", ")}>
-                  <Typography.Text strong>
-                    {dataset.authors && dataset.authors.length > 0
-                      ? dataset.authors[0].slice(0, 18) +
-                        (dataset.authors[0].length > 18 ? "..." : "") +
-                        (dataset.authors.length > 1 ? ` +${dataset.authors.length - 1}` : "")
-                      : ""}
-                  </Typography.Text>
-                </Tooltip>
-              </div>
-
-              <div className="flex justify-between">
-                <Typography.Text className="pr-2">DOI: </Typography.Text>
-                <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
-                  <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-3 pr-4 pt-0">
+          {dataset ? (
+            <div className="p-2">
+              <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+                <div className="flex items-center pb-4">
+                  <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
+                  <Tooltip
+                    title={
+                      <div>
+                        {dataset.admin_level_3 ? dataset.admin_level_3 : dataset.admin_level_2}
+                        {dataset.admin_level_1 && <div>{dataset.admin_level_1}</div>}
+                      </div>
+                    }
+                  >
+                    <Typography.Title style={{ margin: 0 }} level={5}>
+                      {dataset.admin_level_1
+                        ? `${
+                            dataset.admin_level_3 || dataset.admin_level_2
+                              ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
+                              : ""
+                          }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
+                        : "unknown"}
+                    </Typography.Title>
+                  </Tooltip>
                 </div>
-              </div>
-            </div>
 
-            {/* Environmental Context Box */}
-            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
-              <div className="flex justify-between">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Biome: </Typography.Text>
-                </Typography.Text>
-                <Tooltip title={dataset.biome_name}>
-                  <Tag color="default" className="m-0">
-                    {dataset.biome_name
-                      ? dataset.biome_name.slice(0, 30) + (dataset.biome_name.length > 30 ? "..." : "")
-                      : "Unknown"}
-                  </Tag>
-                </Tooltip>
-              </div>
+                <div className="flex justify-between">
+                  <Typography.Text className="pr-2">Author: </Typography.Text>
+                  <Tooltip title={dataset.authors?.join(", ")}>
+                    <Typography.Text strong>
+                      {dataset.authors && dataset.authors.length > 0
+                        ? dataset.authors[0].slice(0, 18) +
+                          (dataset.authors[0].length > 18 ? "..." : "") +
+                          (dataset.authors.length > 1 ? ` +${dataset.authors.length - 1}` : "")
+                        : ""}
+                    </Typography.Text>
+                  </Tooltip>
+                </div>
 
-              <div className="flex justify-between">
-                <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
-                <div className="flex flex-col items-end">
-                  <Typography.Text strong>
-                    {new Date(
-                      dataset.aquisition_year,
-                      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-                      dataset.aquisition_day ?? 1,
-                    ).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      ...(dataset.aquisition_month && { month: "long" }),
-                      ...(dataset.aquisition_day && { day: "numeric" }),
-                    })}
-                  </Typography.Text>
+                <div className="flex justify-between">
+                  <Typography.Text className="pr-2">DOI: </Typography.Text>
+                  <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
+                    <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-between">
-                <Typography.Text className="pr-4">Phenology: </Typography.Text>
-                <div className="max-w-[200px] flex-1">
-                  {isPhenologyLoading ? (
-                    <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
-                  ) : phenologyData ? (
-                    <PhenologyBar
-                      phenologyData={phenologyData}
-                      acquisitionYear={dataset.aquisition_year}
-                      acquisitionMonth={dataset.aquisition_month}
-                      acquisitionDay={dataset.aquisition_day}
-                      showTooltips={true}
-                    />
-                  ) : (
-                    <Typography.Text className="text-gray-500">Not available</Typography.Text>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3 rounded-md bg-white p-4">
-              <div className="flex justify-between">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">Platform: </Typography.Text>
-                </Typography.Text>
-                <Tag color="default">{dataset.platform}</Tag>
-              </div>
-              <div className="flex justify-between">
-                <Typography.Text style={{ margin: 0 }}>
-                  <Typography.Text className="pr-2">File Size: </Typography.Text>
-                </Typography.Text>
-                {dataset.ortho_file_size > 1024 * 1024 * 1024
-                  ? `${dataset.ortho_file_size.toFixed(1)} MB`
-                  : `${dataset.ortho_file_size.toFixed(0)} MB`}
-              </div>
-            </div>
-            {labelsData && (
+              {/* Environmental Context Box */}
               <div className="mt-4 space-y-3 rounded-md bg-white p-4">
                 <div className="flex justify-between">
                   <Typography.Text style={{ margin: 0 }}>
-                    <Typography.Text className="pr-2">Label Source: </Typography.Text>
+                    <Typography.Text className="pr-2">Biome: </Typography.Text>
                   </Typography.Text>
-                  <Tag color="default">
-                    {labelsData.label_source
-                      .replace("_", " ")
-                      .split(" ")
-                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(" ")}
-                  </Tag>
+                  <Tooltip title={dataset.biome_name}>
+                    <Tag color="default" className="m-0">
+                      {dataset.biome_name
+                        ? dataset.biome_name.slice(0, 30) + (dataset.biome_name.length > 30 ? "..." : "")
+                        : "Unknown"}
+                    </Tag>
+                  </Tooltip>
                 </div>
+
                 <div className="flex justify-between">
-                  <Typography.Text style={{ margin: 0 }}>
-                    <Typography.Text className="pr-2">Label Type: </Typography.Text>
-                  </Typography.Text>
-                  <Tag color="default">
-                    {labelsData.label_type
-                      .replace("_", " ")
-                      .split(" ")
-                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(" ")}
-                  </Tag>
+                  <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
+                  <div className="flex flex-col items-end">
+                    <Typography.Text strong>
+                      {new Date(
+                        dataset.aquisition_year,
+                        dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
+                        dataset.aquisition_day ?? 1,
+                      ).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        ...(dataset.aquisition_month && { month: "long" }),
+                        ...(dataset.aquisition_day && { day: "numeric" }),
+                      })}
+                    </Typography.Text>
+                  </div>
                 </div>
+
                 <div className="flex justify-between">
-                  <Typography.Text style={{ margin: 0 }}>
-                    <Typography.Text className="pr-2">Label Quality: </Typography.Text>
-                  </Typography.Text>
-                  <Tag color="default">{labelsData.label_quality}</Tag>
+                  <Typography.Text className="pr-4">Phenology: </Typography.Text>
+                  <div className="max-w-[200px] flex-1">
+                    {isPhenologyLoading ? (
+                      <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
+                    ) : phenologyData ? (
+                      <PhenologyBar
+                        phenologyData={phenologyData}
+                        acquisitionYear={dataset.aquisition_year}
+                        acquisitionMonth={dataset.aquisition_month}
+                        acquisitionDay={dataset.aquisition_day}
+                        showTooltips={true}
+                      />
+                    ) : (
+                      <Typography.Text className="text-gray-500">Not available</Typography.Text>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Add the dataset navigation component near the bottom */}
-            {dataset.id && (
-              <DatasetNavigation
-                currentDatasetId={dataset.id}
-                overlappingDatasets={overlappingDatasets || []}
-                isLoading={isLoadingOverlapping}
-              />
-            )}
+              <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+                <div className="flex justify-between">
+                  <Typography.Text style={{ margin: 0 }}>
+                    <Typography.Text className="pr-2">Platform: </Typography.Text>
+                  </Typography.Text>
+                  <Tag color="default">{dataset.platform}</Tag>
+                </div>
+                <div className="flex justify-between">
+                  <Typography.Text style={{ margin: 0 }}>
+                    <Typography.Text className="pr-2">File Size: </Typography.Text>
+                  </Typography.Text>
+                  {dataset.ortho_file_size > 1024 * 1024 * 1024
+                    ? `${dataset.ortho_file_size.toFixed(1)} MB`
+                    : `${dataset.ortho_file_size.toFixed(0)} MB`}
+                </div>
+              </div>
+              {labelsData && (
+                <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+                  <div className="flex justify-between">
+                    <Typography.Text style={{ margin: 0 }}>
+                      <Typography.Text className="pr-2">Label Source: </Typography.Text>
+                    </Typography.Text>
+                    <Tag color="default">
+                      {labelsData.label_source
+                        .replace("_", " ")
+                        .split(" ")
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(" ")}
+                    </Tag>
+                  </div>
+                  <div className="flex justify-between">
+                    <Typography.Text style={{ margin: 0 }}>
+                      <Typography.Text className="pr-2">Label Type: </Typography.Text>
+                    </Typography.Text>
+                    <Tag color="default">
+                      {labelsData.label_type
+                        .replace("_", " ")
+                        .split(" ")
+                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(" ")}
+                    </Tag>
+                  </div>
+                  <div className="flex justify-between">
+                    <Typography.Text style={{ margin: 0 }}>
+                      <Typography.Text className="pr-2">Label Quality: </Typography.Text>
+                    </Typography.Text>
+                    <Tag color="default">{labelsData.label_quality}</Tag>
+                  </div>
+                </div>
+              )}
 
-            <div className="mt-6 space-y-3 rounded-md bg-white p-4">
-              <Space direction="vertical" className="w-full">
-                {isDownloading && currentDownloadId !== dataset.id.toString() && (
-                  <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
-                )}
-                <Tooltip
-                  title={
-                    isDownloading
-                      ? currentDownloadId === dataset.id.toString()
-                        ? "This dataset is currently being prepared for download..."
-                        : "Another download is in progress. Only one download can be active at a time."
-                      : labelsOnly
-                        ? "Download vector data of tree mortality predictions (GPKG format)"
-                        : "Download both orthophoto and tree mortality predictions"
-                  }
-                >
-                  <Button
-                    type="primary"
-                    icon={<DownloadOutlined />}
-                    className="w-full"
-                    disabled={isDownloading}
-                    loading={isDownloading && currentDownloadId === dataset.id.toString()}
-                    onClick={() => {
-                      // Prevent multiple downloads using global state
-                      if (isDownloading) {
-                        // If this dataset is already being downloaded, don't show an info message
-                        if (currentDownloadId !== dataset.id.toString()) {
-                          message.info("A download is already in progress. Please wait.");
+              {/* Add the dataset navigation component near the bottom */}
+              {dataset.id && (
+                <DatasetNavigation
+                  currentDatasetId={dataset.id}
+                  overlappingDatasets={overlappingDatasets || []}
+                  isLoading={isLoadingOverlapping}
+                />
+              )}
+
+              <div className="mt-6 space-y-3 rounded-md bg-white p-4">
+                <Space direction="vertical" className="w-full">
+                  {isDownloading && currentDownloadId !== dataset.id.toString() && (
+                    <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
+                  )}
+                  <Tooltip
+                    title={
+                      isDownloading
+                        ? currentDownloadId === dataset.id.toString()
+                          ? "This dataset is currently being prepared for download..."
+                          : "Another download is in progress. Only one download can be active at a time."
+                        : labelsOnly
+                          ? "Download vector data of tree mortality predictions (GPKG format)"
+                          : "Download both orthophoto and tree mortality predictions"
+                    }
+                  >
+                    <Button
+                      type="primary"
+                      icon={<DownloadOutlined />}
+                      className="w-full"
+                      disabled={isDownloading}
+                      loading={isDownloading && currentDownloadId === dataset.id.toString()}
+                      onClick={() => {
+                        // Prevent multiple downloads using global state
+                        if (isDownloading) {
+                          // If this dataset is already being downloaded, don't show an info message
+                          if (currentDownloadId !== dataset.id.toString()) {
+                            message.info("A download is already in progress. Please wait.");
+                          }
+                          return;
                         }
-                        return;
-                      }
 
-                      // Try to start the download in the global state
-                      const downloadStarted = startDownload(dataset.id.toString());
-                      if (!downloadStarted) {
-                        return;
-                      }
+                        // Try to start the download in the global state
+                        const downloadStarted = startDownload(dataset.id.toString());
+                        if (!downloadStarted) {
+                          return;
+                        }
 
-                      const baseUrl = labelsOnly
-                        ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
-                        : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
+                        const baseUrl = labelsOnly
+                          ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
+                          : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
 
-                      // Show persistent loading message until download is ready
-                      const downloadMsg = message.loading({
-                        content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
-                        duration: 0,
-                      });
+                        // Show persistent loading message until download is ready
+                        const downloadMsg = message.loading({
+                          content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
+                          duration: 0,
+                        });
 
-                      // For dataset.zip, use the new status checking approach
-                      if (!labelsOnly) {
-                        // First initiate the download
-                        fetch(baseUrl)
-                          .then((response) => response.json())
-                          .then((data) => {
-                            const jobId = data.job_id;
+                        // For dataset.zip, use the new status checking approach
+                        if (!labelsOnly) {
+                          // First initiate the download
+                          fetch(baseUrl)
+                            .then((response) => response.json())
+                            .then((data) => {
+                              const jobId = data.job_id;
 
-                            // Function to check status
-                            const checkStatus = () => {
-                              fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
-                                .then((response) => response.json())
-                                .then((statusData) => {
-                                  if (statusData.status === "completed") {
-                                    // Download is ready - close loading message
-                                    downloadMsg();
-                                    finishDownload(); // Update global state
+                              // Function to check status
+                              const checkStatus = () => {
+                                fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
+                                  .then((response) => response.json())
+                                  .then((statusData) => {
+                                    if (statusData.status === "completed") {
+                                      // Download is ready - close loading message
+                                      downloadMsg();
+                                      finishDownload(); // Update global state
 
-                                    // Start actual download
-                                    window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
+                                      // Start actual download
+                                      window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
 
-                                    // Show success message
-                                    message.success({
-                                      content: "Download started! The file will be saved to your downloads folder.",
-                                      duration: 5,
-                                    });
-                                  } else if (statusData.status === "failed") {
-                                    // Handle failure
+                                      // Show success message
+                                      message.success({
+                                        content: "Download started! The file will be saved to your downloads folder.",
+                                        duration: 5,
+                                      });
+                                    } else if (statusData.status === "failed") {
+                                      // Handle failure
+                                      downloadMsg();
+                                      finishDownload(); // Update global state
+                                      message.error({
+                                        content: "Download preparation failed. Please try again.",
+                                        duration: 5,
+                                      });
+                                    } else {
+                                      // Still processing, check again in 1 second
+                                      setTimeout(checkStatus, 1000);
+                                    }
+                                  })
+                                  .catch((error) => {
+                                    // Handle error
                                     downloadMsg();
                                     finishDownload(); // Update global state
                                     message.error({
-                                      content: "Download preparation failed. Please try again.",
+                                      content: `Error checking download status: ${error.message}`,
                                       duration: 5,
                                     });
-                                  } else {
-                                    // Still processing, check again in 1 second
-                                    setTimeout(checkStatus, 1000);
-                                  }
-                                })
-                                .catch((error) => {
-                                  // Handle error
-                                  downloadMsg();
-                                  finishDownload(); // Update global state
-                                  message.error({
-                                    content: `Error checking download status: ${error.message}`,
-                                    duration: 5,
                                   });
-                                });
-                            };
+                              };
 
-                            // Start checking status
-                            checkStatus();
-                          })
-                          .catch((error) => {
-                            // Handle error initiating download
+                              // Start checking status
+                              checkStatus();
+                            })
+                            .catch((error) => {
+                              // Handle error initiating download
+                              downloadMsg();
+                              finishDownload(); // Update global state
+                              message.error({
+                                content: `Error initiating download: ${error.message}`,
+                                duration: 5,
+                              });
+                            });
+                        } else {
+                          // For labels.gpkg, use direct download as before
+                          window.location.href = baseUrl;
+
+                          // Close loading message after a brief delay
+                          setTimeout(() => {
                             downloadMsg();
                             finishDownload(); // Update global state
-                            message.error({
-                              content: `Error initiating download: ${error.message}`,
+                            message.success({
+                              content: "Download started! The file will be saved to your downloads folder.",
                               duration: 5,
                             });
-                          });
-                      } else {
-                        // For labels.gpkg, use direct download as before
-                        window.location.href = baseUrl;
-
-                        // Close loading message after a brief delay
-                        setTimeout(() => {
-                          downloadMsg();
-                          finishDownload(); // Update global state
-                          message.success({
-                            content: "Download started! The file will be saved to your downloads folder.",
-                            duration: 5,
-                          });
-                        }, 3000);
-                      }
-                    }}
-                  >
-                    {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
-                  </Button>
-                </Tooltip>
-                {labelsData && (
-                  <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
-                    <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
-                      Download predictions only
-                    </Checkbox>
+                          }, 3000);
+                        }
+                      }}
+                    >
+                      {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
+                    </Button>
                   </Tooltip>
-                )}
-              </Space>
+                  {labelsData && (
+                    <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
+                      <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
+                        Download predictions only
+                      </Checkbox>
+                    </Tooltip>
+                  )}
+                </Space>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div>Loading...</div>
-        )}
+          ) : (
+            <div>Loading...</div>
+          )}
+        </div>
       </Col>
       <Col className="flex-1 pt-2">
         {/* Add key prop to force remount when dataset changes */}
