@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchData, fetchCollaborators } from "../utils/dataFetching";
+import { fetchCollaborators } from "../utils/dataFetching";
 import { useAuth } from "./useAuthProvider";
 import { supabase } from "./useSupabase";
 import { Settings } from "../config";
@@ -13,8 +13,8 @@ export function useDatasets() {
       if (error) throw error;
       return data;
     },
-    staleTime: 0,
-    cacheTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
   });
 }
 
@@ -30,8 +30,8 @@ export function useUserDatasets() {
       return data;
     },
     enabled: !!session?.user?.id,
-    staleTime: 0,
-    cacheTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
   });
 }
 
