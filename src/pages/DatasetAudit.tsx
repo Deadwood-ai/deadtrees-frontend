@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space } from "antd";
+import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuthProvider";
@@ -15,6 +15,34 @@ const { Title } = Typography;
 
 type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded";
 
+// Month constants for filtering
+const MONTHS = [
+  { label: "Jan", value: 1 },
+  { label: "Feb", value: 2 },
+  { label: "Mar", value: 3 },
+  { label: "Apr", value: 4 },
+  { label: "May", value: 5 },
+  { label: "Jun", value: 6 },
+  { label: "Jul", value: 7 },
+  { label: "Aug", value: 8 },
+  { label: "Sep", value: 9 },
+  { label: "Oct", value: 10 },
+  { label: "Nov", value: 11 },
+  { label: "Dec", value: 12 },
+];
+
+// Helper function to check if dataset processing is complete (moved outside component to prevent re-renders)
+const isProcessingComplete = (dataset: IDataset) => {
+  return (
+    dataset.is_upload_done &&
+    dataset.is_ortho_done &&
+    dataset.is_cog_done &&
+    dataset.is_thumbnail_done &&
+    dataset.is_deadwood_done &&
+    dataset.is_metadata_done
+  );
+};
+
 export default function DatasetAudit() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,21 +56,10 @@ export default function DatasetAudit() {
   // Filter states
   const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
   const [idFilter, setIdFilter] = useState<string>("");
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
   // Add a constant for the minimum dataset ID
   const MIN_AUDIT_DATASET_ID = 2559;
-
-  // Helper function to check if dataset processing is complete
-  const isProcessingComplete = (dataset: IDataset) => {
-    return (
-      dataset.is_upload_done &&
-      dataset.is_ortho_done &&
-      dataset.is_cog_done &&
-      dataset.is_thumbnail_done &&
-      dataset.is_deadwood_done &&
-      dataset.is_metadata_done
-    );
-  };
 
   // Create a map of dataset_id to audit data for quick lookup
   const auditMap = useMemo(() => {
@@ -50,7 +67,7 @@ export default function DatasetAudit() {
     return new Map(audits.map((audit) => [audit.dataset_id, audit]));
   }, [audits]);
 
-  // Filter datasets based on audit status and ID
+  // Filter datasets based on audit status, ID, and months
   const filteredDatasets = useMemo(() => {
     if (!datasets) return [];
 
@@ -90,8 +107,22 @@ export default function DatasetAudit() {
       }
     }
 
+    // Filter by selected months if any are selected
+    if (selectedMonths.length > 0) {
+      filtered = filtered.filter((dataset) => {
+        // Handle the aquisition_month field (note: typo in field name is preserved)
+        const monthStr = dataset.aquisition_month;
+        if (!monthStr) return false; // Skip datasets with no month data
+
+        const month = parseInt(monthStr);
+        if (isNaN(month) || month < 1 || month > 12) return false; // Skip invalid months
+
+        return selectedMonths.includes(month);
+      });
+    }
+
     return filtered;
-  }, [datasets, auditFilter, idFilter, auditMap]);
+  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap]);
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
@@ -285,44 +316,61 @@ export default function DatasetAudit() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex items-center justify-between">
-        <Space size="large">
-          <div>
-            <Segmented
-              value={auditFilter}
-              onChange={(value) => setAuditFilter(value as AuditFilter)}
-              options={[
-                {
-                  label: `Needs Audit (${needsAuditCount})`,
-                  value: "needs-audit",
-                },
-                {
-                  label: `Ready (${readyCount})`,
-                  value: "ready",
-                },
-                {
-                  label: `Fixable (${fixableIssuesCount})`,
-                  value: "fixable-issues",
-                },
-                {
-                  label: `Excluded (${excludedCount})`,
-                  value: "excluded",
-                },
-              ]}
-            />
-          </div>
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Space size="large">
+            <div>
+              <Segmented
+                value={auditFilter}
+                onChange={(value) => setAuditFilter(value as AuditFilter)}
+                options={[
+                  {
+                    label: `Needs Audit (${needsAuditCount})`,
+                    value: "needs-audit",
+                  },
+                  {
+                    label: `Ready (${readyCount})`,
+                    value: "ready",
+                  },
+                  {
+                    label: `Fixable (${fixableIssuesCount})`,
+                    value: "fixable-issues",
+                  },
+                  {
+                    label: `Excluded (${excludedCount})`,
+                    value: "excluded",
+                  },
+                ]}
+              />
+            </div>
 
-          <div>
-            <Input
-              placeholder="Filter by ID"
-              prefix={<SearchOutlined />}
-              value={idFilter}
-              onChange={(e) => setIdFilter(e.target.value)}
-              style={{ width: 150 }}
-              allowClear
-            />
-          </div>
-        </Space>
+            <div>
+              <Input
+                placeholder="Filter by ID"
+                prefix={<SearchOutlined />}
+                value={idFilter}
+                onChange={(e) => setIdFilter(e.target.value)}
+                style={{ width: 150 }}
+                allowClear
+              />
+            </div>
+          </Space>
+        </div>
+
+        {/* Month Filter */}
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-600">Filter by Month:</span>
+          <Checkbox.Group
+            options={MONTHS}
+            value={selectedMonths}
+            onChange={(checkedValues) => setSelectedMonths(checkedValues as number[])}
+          />
+          {selectedMonths.length > 0 && (
+            <Button size="small" type="link" onClick={() => setSelectedMonths([])}>
+              Clear months
+            </Button>
+          )}
+        </div>
       </div>
 
       <Table
