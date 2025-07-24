@@ -18,7 +18,7 @@ import {
 import { InfoCircleOutlined, UploadOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
-import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/dataset";
+import { IDataAccess, ILabelObject, ILicense, IPlatform, UploadType } from "../../types/dataset";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
@@ -28,6 +28,7 @@ import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 import { useCanUploadPrivate } from "../../hooks/useUserPrivileges";
+import { detectUploadType, validateFileSize } from "../../utils/fileValidation";
 
 import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
@@ -224,7 +225,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     return session!.access_token;
   };
 
-  const processDataset = async (datasetId: number, token: string) => {
+  const processDataset = async (datasetId: number, token: string, processingSteps: string[]) => {
     logger({
       user_id: session!.user.id,
       file_name: fileNameFull,
@@ -233,7 +234,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       message: "Adding process",
     });
 
-    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood"], token);
+    await addProcess(datasetId, processingSteps, token);
   };
 
   const cancelUpload = () => {
@@ -268,12 +269,18 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
+
+      // Detect file type and validate file size
+      const uploadType = detectUploadType(uploadFile.name);
+      validateFileSize(uploadFile.originFileObj, uploadType);
+
       // console.log("values.author", values.author);
       // Create metadata object
       const metadata = {
         license: values.license,
         platform: values.platform,
         authors: values.author,
+        upload_type: uploadType,
         project_id: undefined,
         aquisition_year: values.aquisition_date?.year(),
         aquisition_month: values.aquisition_date?.month() + 1,
@@ -307,8 +314,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         }
       }
 
-      // Process dataset
-      await processDataset(Number(uploadResponse.id), validAccessToken);
+      // Process dataset with appropriate steps based on upload type
+      const processingSteps =
+        uploadType === UploadType.RAW_IMAGES_ZIP
+          ? ["odm_processing", "cog", "thumbnail", "metadata", "geotiff", "deadwood"] // Raw images workflow includes ODM
+          : ["cog", "thumbnail", "metadata", "geotiff", "deadwood"]; // GeoTIFF workflow (no ODM needed)
+
+      await processDataset(Number(uploadResponse.id), validAccessToken, processingSteps);
 
       showSuccessNotification();
     } catch (error) {

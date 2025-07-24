@@ -9,6 +9,7 @@ interface UploadOptions {
     license: string;
     platform: string;
     authors: string[];
+    upload_type?: string;
     project_id?: string;
     aquisition_year?: number;
     aquisition_month?: number;
@@ -120,6 +121,7 @@ function createFormData(
     license: string;
     platform: string;
     authors: string[];
+    upload_type?: string;
     project_id?: string;
     aquisition_year?: number;
     aquisition_month?: number;
@@ -146,6 +148,7 @@ function createFormData(
   });
 
   // Optional fields
+  if (metadata.upload_type) formData.append("upload_type", metadata.upload_type);
   if (metadata.project_id) formData.append("project_id", metadata.project_id);
   if (metadata.aquisition_year) formData.append("aquisition_year", metadata.aquisition_year.toString());
   if (metadata.aquisition_month) formData.append("aquisition_month", metadata.aquisition_month.toString());
