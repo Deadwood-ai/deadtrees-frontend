@@ -9,11 +9,11 @@ interface LoggerProps {
 }
 
 const logger = async ({ user_id, file_name, process, level, message }: LoggerProps) => {
-  const { data, error } = await supabase.from("deadtrees_logs").insert([
+  const { error } = await supabase.from("v2_logs").insert([
     {
       user_id,
-      file_name,
-      process,
+      name: file_name, // Map file_name to name
+      category: process, // Map process to category
       level,
       message,
     },
