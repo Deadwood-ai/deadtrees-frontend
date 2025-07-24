@@ -47,7 +47,7 @@ This document outlines the minimal frontend changes needed to support ODM raw dr
 
 **Subtasks:**
 
-- [ ] Add `UploadType` enum to `src/types/dataset.ts`
+- [x] Add `UploadType` enum to `src/types/dataset.ts`
 
 ```typescript
 export enum UploadType {
@@ -56,7 +56,7 @@ export enum UploadType {
 }
 ```
 
-- [ ] Add missing `is_odm_done` field to `IDataset` interface in `src/types/dataset.ts`
+- [x] Add missing `is_odm_done` field to `IDataset` interface in `src/types/dataset.ts`
 
 ```typescript
 export interface IDataset {
@@ -74,11 +74,11 @@ export interface IDataset {
 
 **Subtasks:**
 
-- [ ] Update file input accept attribute in `src/components/Upload/UploadModal.tsx`
+- [x] Update file input accept attribute in `src/components/Upload/UploadModal.tsx`
 
   - Change from `accept=".tif,.tiff"` to `accept=".tif,.tiff,.zip"`
 
-- [ ] Add file type detection utility
+- [x] Add file type detection utility
   - Simple extension-based detection for UI behavior
   - Located in `src/utils/` directory
 

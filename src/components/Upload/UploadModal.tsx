@@ -386,7 +386,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   fileList={fileList}
                   onChange={onFileChange}
                   beforeUpload={beforeUpload}
-                  accept=".tif,.tiff"
+                  accept=".tif,.tiff,.zip"
                   maxCount={1}
                   className="w-full"
                 >

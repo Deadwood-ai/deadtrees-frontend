@@ -15,6 +15,11 @@ export enum IDataAccess {
   viewonly = "viewonly",
 }
 
+export enum UploadType {
+  GEOTIFF = "geotiff",
+  RAW_IMAGES_ZIP = "raw_images_zip",
+}
+
 export interface ILabelObject {
   dataset_id: number;
   user_id: string;
@@ -62,6 +67,7 @@ export interface IDataset {
   sha256: string;
   current_status: string;
   is_upload_done: boolean;
+  is_odm_done: boolean;
   is_ortho_done: boolean;
   is_cog_done: boolean;
   is_thumbnail_done: boolean;
