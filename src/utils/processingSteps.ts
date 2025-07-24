@@ -16,7 +16,7 @@ export const GEOTIFF_PROCESSING_STEPS: ProcessingStep[] = [
 export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
   // New workflow for raw drone images
   { key: "upload", label: "Uploading", description: "Uploading your raw drone images" },
-  { key: "odm", label: "ODM Processing", description: "Creating orthomosaic from raw drone images" },
+  { key: "odm_processing", label: "ODM Processing", description: "Creating orthomosaic from raw drone images" },
   { key: "ortho", label: "Processing Image", description: "Processing and validating your orthophoto" },
   { key: "metadata", label: "Extracting Information", description: "Extracting geographic and technical metadata" },
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
