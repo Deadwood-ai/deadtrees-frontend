@@ -30,7 +30,6 @@ import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 import { useCanUploadPrivate } from "../../hooks/useUserPrivileges";
 import { detectUploadType, validateFileSize } from "../../utils/fileValidation";
 
-import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
 import { RcFile } from "antd/es/upload";
@@ -189,23 +188,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         metadata,
         signal: abortControllerRef.current.signal,
         onSuccess: (response) => {
-          logger({
-            user_id: session!.user.id,
-            file_name: fileNameFull,
-            process: "upload",
-            level: "info",
-            message: "Upload success",
-          });
           resolve(response);
         },
         onError: (error) => {
-          logger({
-            user_id: session!.user.id,
-            file_name: fileNameFull,
-            process: "upload",
-            level: "error",
-            message: `Upload error: ${error}`,
-          });
           reject(error);
         },
         onProgress: (event) => {
@@ -226,14 +211,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   };
 
   const processDataset = async (datasetId: number, token: string, processingSteps: string[]) => {
-    logger({
-      user_id: session!.user.id,
-      file_name: fileNameFull,
-      process: "upload",
-      level: "info",
-      message: "Adding process",
-    });
-
     await addProcess(datasetId, processingSteps, token);
   };
 
@@ -241,13 +218,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-      logger({
-        user_id: session!.user.id,
-        file_name: fileNameFull,
-        process: "upload",
-        level: "info",
-        message: "Upload cancelled by user",
-      });
       closeNotification();
       setIsUploading(false);
     }
@@ -256,13 +226,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const handleUpload = async (values: IFormValues) => {
     setIsUploading(true);
     showUploadingNotification(cancelUpload);
-    logger({
-      user_id: session!.user.id,
-      file_name: fileNameFull,
-      process: "upload",
-      level: "info",
-      message: "Upload started",
-    });
 
     try {
       const uploadFile = fileList[0];
@@ -329,13 +292,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         // console.log("Upload was cancelled by the user");
       } else {
         console.error("Upload error:", error);
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "error",
-          message: `Upload error: ${error}`,
-        });
         showErrorNotification();
       }
     } finally {
