@@ -38,44 +38,6 @@
 
 ### Frontend Development Workflow
 
-#### **Environment Setup**
-
-Before starting implementation:
-
-1. **Development Environment:**
-
-   ```bash
-   npm install                            # Install dependencies
-   npm run dev                            # Start development server
-   ```
-
-2. **Code Quality Checks:**
-   ```bash
-   npm run type-check                     # TypeScript compilation check
-   npm run lint                           # ESLint check
-   npm run lint:fix                       # Auto-fix linting issues
-   ```
-
-#### **Development Commands**
-
-```bash
-# Development server
-npm run dev                              # Start Vite dev server (usually localhost:5173)
-
-# Type checking
-npm run type-check                       # Check TypeScript without building
-tsc --noEmit                            # Alternative TypeScript check
-
-# Code quality
-npm run lint                            # Run ESLint
-npm run lint:fix                        # Auto-fix ESLint issues
-npm run format                          # Run Prettier (if configured)
-
-# Build verification
-npm run build                           # Production build check
-npm run preview                         # Preview production build
-```
-
 #### **File Organization Patterns**
 
 - **Types**: Add to existing files in `src/types/` or create new ones as needed

@@ -8,6 +8,7 @@ interface StatusPayloadData {
   dataset_id: number;
   current_status: string;
   is_upload_done: boolean;
+  is_odm_done?: boolean;
   is_ortho_done: boolean;
   is_cog_done: boolean;
   is_thumbnail_done: boolean;
@@ -62,24 +63,27 @@ export function useDatasetSubscription() {
               return;
             }
 
-            // Check if processing just completed (was incomplete before, now complete)
-            const wasProcessingComplete =
-              oldStatusData &&
-              oldStatusData.is_upload_done &&
-              oldStatusData.is_ortho_done &&
-              oldStatusData.is_cog_done &&
-              oldStatusData.is_thumbnail_done &&
-              oldStatusData.is_metadata_done &&
-              oldStatusData.is_deadwood_done;
+            // Helper function to check if processing is complete
+            const isProcessingComplete = (data: StatusPayloadData | null): boolean => {
+              if (!data) return false;
 
-            const isNowProcessingComplete =
-              statusData &&
-              statusData.is_upload_done &&
-              statusData.is_ortho_done &&
-              statusData.is_cog_done &&
-              statusData.is_thumbnail_done &&
-              statusData.is_metadata_done &&
-              statusData.is_deadwood_done;
+              // Check if ODM step is required (presence of is_odm_done field)
+              const odmComplete = data.is_odm_done === undefined || data.is_odm_done;
+
+              return (
+                data.is_upload_done &&
+                odmComplete &&
+                data.is_ortho_done &&
+                data.is_cog_done &&
+                data.is_thumbnail_done &&
+                data.is_metadata_done &&
+                data.is_deadwood_done
+              );
+            };
+
+            // Check if processing just completed (was incomplete before, now complete)
+            const wasProcessingComplete = isProcessingComplete(oldStatusData);
+            const isNowProcessingComplete = isProcessingComplete(statusData);
 
             // Check if processing just failed
             const hadError = oldStatusData && oldStatusData.has_error;

@@ -94,13 +94,13 @@ export const detectUploadType = (fileName: string): UploadType => {
 };
 ```
 
-- [ ] Add file size validation for ZIP files
+- [x] Add file size validation for ZIP files
 
   - 5GB limit for ZIP files
   - Show clear error message if exceeded
-  - Allow existing size limits for GeoTIFF files
+  - 8GB limit for GeoTIFF files
 
-- [ ] Update upload modal help text
+- [x] Update upload modal help text
   - Add mention of ZIP file support for raw drone images
   - Explain ODM processing workflow
 
@@ -110,7 +110,7 @@ export const detectUploadType = (fileName: string): UploadType => {
 
 **Subtasks:**
 
-- [ ] Extend `src/utils/processingSteps.ts`
+- [x] Extend `src/utils/processingSteps.ts`
   - Add new ODM processing step
   - Show different steps based on upload type
   - Update progress calculation to include `is_odm_done` status
@@ -136,9 +136,9 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 ];
 ```
 
-- [ ] Update `calculateProcessingProgress()` function to include `is_odm_done` in step completion checks
-- [ ] Add file type detection to progress components to show appropriate steps
-- [ ] Update `useDatasetSubscription` hook to track `is_odm_done` changes for real-time progress updates
+- [x] Update `calculateProcessingProgress()` function to include `is_odm_done` in step completion checks
+- [x] Add file type detection to progress components to show appropriate steps
+- [x] Update `useDatasetSubscription` hook to track `is_odm_done` changes for real-time progress updates
 
 **Note:** Database has `v2_statuses.is_odm_done` field ready for tracking ODM processing completion.
 
@@ -148,13 +148,13 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 
 **Subtasks:**
 
-- [ ] Update account page Alert component
+- [x] Update account page Alert component
 
   - Add section explaining raw drone image upload support
   - Include requirements (overlap, formats, etc.)
   - Mention ODM processing workflow
 
-- [ ] Update upload modal help text
+- [x] Update upload modal help text
   - Explain difference between GeoTIFF and raw image workflows
   - Add file size limits and format requirements
 
@@ -178,13 +178,13 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 ```typescript
 const validateFileSize = (file: File, uploadType: UploadType): boolean => {
   const MAX_ZIP_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
-  const MAX_GEOTIFF_SIZE = 2 * 1024 * 1024 * 1024; // 2GB (existing limit)
+  const MAX_GEOTIFF_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
 
   if (uploadType === UploadType.RAW_IMAGES_ZIP && file.size > MAX_ZIP_SIZE) {
     throw new Error("ZIP files must be smaller than 5GB");
   }
   if (uploadType === UploadType.GEOTIFF && file.size > MAX_GEOTIFF_SIZE) {
-    throw new Error("GeoTIFF files must be smaller than 2GB");
+    throw new Error("GeoTIFF files must be smaller than 8GB");
   }
   return true;
 };
@@ -221,23 +221,23 @@ const validateFileSize = (file: File, uploadType: UploadType): boolean => {
 
 ### **Critical Database Schema Fixes:**
 
-- [ ] Add missing `is_odm_done` field to `IDataset` interface
-- [ ] Update `calculateProcessingProgress()` to include ODM step
-- [ ] Update `useDatasetSubscription` to track `is_odm_done` changes
+- [x] Add missing `is_odm_done` field to `IDataset` interface
+- [x] Update `calculateProcessingProgress()` to include ODM step
+- [x] Update `useDatasetSubscription` to track `is_odm_done` changes
 
 ### **Core Upload Support:**
 
-- [ ] Add UploadType enum to types
-- [ ] Update file input accept attribute to include `.zip`
-- [ ] Add file size validation for ZIP files (5GB limit)
-- [ ] Create file type detection utility
+- [x] Add UploadType enum to types
+- [x] Update file input accept attribute to include `.zip`
+- [x] Add file size validation for ZIP files (5GB limit)
+- [x] Create file type detection utility
 
 ### **Progress & UI Updates:**
 
-- [ ] Add ODM processing step to progress indication
-- [ ] Show different processing workflows based on file type
-- [ ] Update help text in upload modal
-- [ ] Update account page documentation
+- [x] Add ODM processing step to progress indication
+- [x] Show different processing workflows based on file type
+- [x] Update help text in upload modal
+- [x] Update account page documentation
 
 ### **Testing & Validation:**
 

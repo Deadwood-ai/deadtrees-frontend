@@ -9,3 +9,16 @@ export const detectUploadType = (fileName: string): UploadType => {
   }
   throw new Error(`Unsupported file type: ${ext}`);
 };
+
+export const validateFileSize = (file: File, uploadType: UploadType): boolean => {
+  const MAX_ZIP_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
+  const MAX_GEOTIFF_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
+
+  if (uploadType === UploadType.RAW_IMAGES_ZIP && file.size > MAX_ZIP_SIZE) {
+    throw new Error("ZIP files must be smaller than 5GB");
+  }
+  if (uploadType === UploadType.GEOTIFF && file.size > MAX_GEOTIFF_SIZE) {
+    throw new Error("GeoTIFF files must be smaller than 8GB");
+  }
+  return true;
+};

@@ -395,10 +395,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       <InboxOutlined />
                     </p>
                     <div className="text-start">
-                      <p className="ant-upload-text mb-0">Click or drag GeoTIFF file to this area</p>
+                      <p className="ant-upload-text mb-0">Click or drag file to this area</p>
                       <p className="ant-upload-hint mb-0">
-                        Upload your orthophoto in GeoTIFF format (.tif, .tiff). This georeferenced image is essential
-                        for spatial analysis.
+                        GeoTIFF (.tif, .tiff) max 8GB or ZIP with raw drone images (.zip) max 5GB, ODM processing,
+                        60-80% overlap
                       </p>
                     </div>
                   </div>
