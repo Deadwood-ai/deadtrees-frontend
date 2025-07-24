@@ -1,4 +1,5 @@
 import { supabase } from "../hooks/useSupabase";
+import { Settings } from "../config";
 
 interface LoggerProps {
   user_id: string;
@@ -9,7 +10,7 @@ interface LoggerProps {
 }
 
 const logger = async ({ user_id, file_name, process, level, message }: LoggerProps) => {
-  const { error } = await supabase.from("v2_logs").insert([
+  const { error } = await supabase.from(Settings.LOGS_TABLE).insert([
     {
       user_id,
       name: file_name, // Map file_name to name
