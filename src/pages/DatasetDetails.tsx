@@ -390,8 +390,7 @@ export default function DatasetDetails() {
         </div>
       </Col>
       <Col className="flex-1 pt-2">
-        {/* Add key prop to force remount when dataset changes */}
-        <DatasetDetailsMap key={`map-${dataset.id}`} data={dataset} />
+        <DatasetDetailsMap data={dataset} />
       </Col>
     </Row>
   );
