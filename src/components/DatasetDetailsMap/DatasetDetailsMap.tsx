@@ -68,13 +68,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         // preload: 4,
       });
 
-      // Create all other layers before map initialization - using Raster Tiles API for more free requests
+      // Create all other layers before map initialization - Raster API for satellite, Static API for streets
       const basemapLayer = new TileLayer({
         source: new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
@@ -311,13 +311,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const currentCenter = currentView.getCenter();
       const currentZoom = currentView.getZoom();
 
-      // Just update the source, don't recreate the map - using Raster Tiles API
+      // Just update the source, don't recreate the map - Raster API for satellite, Static API for streets
       layerRefs.current.basemap.setSource(
         new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );

@@ -104,13 +104,13 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       });
       aoiLayerRef.current = aoiLayer;
 
-      // Create basemap layer - using Raster Tiles API for more free requests
+      // Create basemap layer - Raster API for satellite, Static API for streets
       const basemapLayer = new TileLayer({
         source: new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
@@ -480,7 +480,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );
