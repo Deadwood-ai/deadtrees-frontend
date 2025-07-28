@@ -78,7 +78,10 @@ const DeadtreesMap = () => {
       });
       const basemapLayer = new TileLayer({
         source: new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/${DeadwoodMapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url:
+            DeadwoodMapStyle === "satellite-streets-v12"
+              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
@@ -159,7 +162,10 @@ const DeadtreesMap = () => {
       // console.log(layer);
       layer.setSource(
         new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/${DeadwoodMapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url:
+            DeadwoodMapStyle === "satellite-streets-v12"
+              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+              : `https://api.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );
