@@ -24,6 +24,7 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 ];
 
 export interface DatasetProgress {
+  file_name?: string;
   is_upload_done?: boolean;
   is_odm_done?: boolean;
   is_ortho_done?: boolean;
@@ -65,8 +66,8 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
   currentStepInfo: ProcessingStep;
   isComplete: boolean;
 } {
-  // Determine if this is an ODM workflow (raw images) based on is_odm_done presence
-  const isOdmWorkflow = dataset.is_odm_done !== undefined;
+  // Determine if this is an ODM workflow (raw images) based on file extension
+  const isOdmWorkflow = dataset.file_name?.toLowerCase().endsWith(".zip") || false;
   const steps = isOdmWorkflow ? RAW_IMAGES_PROCESSING_STEPS : GEOTIFF_PROCESSING_STEPS;
   const totalSteps = steps.length;
 
