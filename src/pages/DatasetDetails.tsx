@@ -6,6 +6,7 @@ import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import PublicationLink from "../components/PublicationLink";
 import countryList from "../utils/countryList";
+import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../utils/datasetUtils";
 import { useDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
@@ -45,6 +46,9 @@ export default function DatasetDetails() {
   if (!dataset) {
     return <div>Loading...</div>;
   }
+
+  // Check if this is a GeoNadir dataset
+  const isFromGeonadir = isGeonadirDataset(dataset);
 
   // console.log(dataset);
 
@@ -114,13 +118,9 @@ export default function DatasetDetails() {
 
                 <div className="flex justify-between">
                   <Typography.Text className="pr-2">Author: </Typography.Text>
-                  <Tooltip title={dataset.authors?.join(", ")}>
+                  <Tooltip title={dataset.authors?.join(", ") + (isFromGeonadir ? " (via GeoNadir)" : "")}>
                     <Typography.Text strong>
-                      {dataset.authors && dataset.authors.length > 0
-                        ? dataset.authors[0].slice(0, 18) +
-                          (dataset.authors[0].length > 18 ? "..." : "") +
-                          (dataset.authors.length > 1 ? ` +${dataset.authors.length - 1}` : "")
-                        : ""}
+                      {getTruncatedAuthorDisplay(dataset.authors, isFromGeonadir)}
                     </Typography.Text>
                   </Tooltip>
                 </div>
@@ -256,18 +256,28 @@ export default function DatasetDetails() {
                         ? currentDownloadId === dataset.id.toString()
                           ? "This dataset is currently being prepared for download..."
                           : "Another download is in progress. Only one download can be active at a time."
-                        : labelsOnly
-                          ? "Download vector data of tree mortality predictions (GPKG format)"
-                          : "Download both orthophoto and tree mortality predictions"
+                        : isFromGeonadir && !labelsOnly
+                          ? "Dataset download restricted by data provider. Labels/predictions are still available."
+                          : labelsOnly
+                            ? "Download vector data of tree mortality predictions (GPKG format)"
+                            : "Download both orthophoto and tree mortality predictions"
                     }
                   >
                     <Button
                       type="primary"
                       icon={<DownloadOutlined />}
                       className="w-full"
-                      disabled={isDownloading}
+                      disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
                       loading={isDownloading && currentDownloadId === dataset.id.toString()}
                       onClick={() => {
+                        // Prevent downloads for GeoNadir datasets (except labels-only)
+                        if (isFromGeonadir && !labelsOnly) {
+                          message.warning(
+                            "Dataset download restricted by data provider. You can download labels/predictions only.",
+                          );
+                          return;
+                        }
+
                         // Prevent multiple downloads using global state
                         if (isDownloading) {
                           // If this dataset is already being downloaded, don't show an info message

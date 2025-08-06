@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDownload } from "../../hooks/useDownloadProvider";
 import { Settings } from "../../config";
+import { isGeonadirDataset } from "../../utils/datasetUtils";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../../hooks/usePhenologyData";
 
@@ -49,6 +50,9 @@ const AUDIT_INFO = {
 
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
   const navigate = useNavigate();
+
+  // Check if this is a GeoNadir dataset
+  const isFromGeonadir = isGeonadirDataset(dataset);
   const [form] = Form.useForm<AuditFormValues>();
   const { user } = useAuth();
 
@@ -631,13 +635,25 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
               {/* Download Orthophoto for Testing */}
               <div className="mb-3">
-                <Tooltip title="Download orthophoto image for local testing and detailed inspection">
+                <Tooltip
+                  title={
+                    isFromGeonadir
+                      ? "Download restricted by data provider"
+                      : "Download orthophoto image for local testing and detailed inspection"
+                  }
+                >
                   <Button
                     size="small"
                     icon={<DownloadOutlined />}
-                    disabled={isDownloading}
+                    disabled={isDownloading || isFromGeonadir}
                     loading={isDownloading && currentDownloadId === `${dataset.id}-ortho`}
                     onClick={() => {
+                      // Prevent downloads for GeoNadir datasets
+                      if (isFromGeonadir) {
+                        message.warning("Download restricted by data provider.");
+                        return;
+                      }
+
                       // Prevent multiple downloads using global state
                       if (isDownloading) {
                         if (currentDownloadId !== `${dataset.id}-ortho`) {

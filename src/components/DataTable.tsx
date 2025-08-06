@@ -15,6 +15,8 @@ import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import EditDatasetModal from "./EditDatasetModal";
 import ProcessingProgress from "./ProcessingProgress";
+import { isGeonadirDataset } from "../utils/datasetUtils";
+import { IDataset } from "../types/dataset";
 
 interface Dataset {
   id: number;
@@ -252,9 +254,10 @@ const DataTable: React.FC<DataTableProps> = ({
       dataIndex: "authors",
       key: "authors",
       width: 200,
-      render: (authors: string[] | undefined) => {
+      render: (authors: string[] | undefined, record: Dataset) => {
         if (!authors || authors.length === 0) return null;
 
+        const isFromGeonadir = isGeonadirDataset(record as unknown as IDataset);
         const maxVisible = 2;
         const visibleAuthors = authors.slice(0, maxVisible);
         const remainingCount = authors.length - maxVisible;
@@ -272,6 +275,11 @@ const DataTable: React.FC<DataTableProps> = ({
                   +{remainingCount} more
                 </Tag>
               </Tooltip>
+            )}
+            {isFromGeonadir && (
+              <Tag color="orange" className="text-xs">
+                via GeoNadir
+              </Tag>
             )}
           </div>
         );
@@ -400,7 +408,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Actions",
       dataIndex: "id",
       key: "id",
-      render: (tag: number, record: Dataset) => {
+      render: (_: number, record: Dataset) => {
         return (
           <Dropdown menu={{ items: getActionMenuItems(record) }} trigger={["click"]} placement="bottomRight">
             <Button size="small">
