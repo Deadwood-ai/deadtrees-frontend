@@ -201,6 +201,19 @@ export default function DatasetDetails() {
                     : `${dataset.ortho_file_size.toFixed(0)} MB`}
                 </div>
               </div>
+
+              {/* Additional Information */}
+              {dataset.additional_information && (
+                <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+                  <div>
+                    <Typography.Text className="pr-2" strong>
+                      Additional Information:
+                    </Typography.Text>
+                    <Typography.Text className="mt-2 block text-sm">{dataset.additional_information}</Typography.Text>
+                  </div>
+                </div>
+              )}
+
               {labelsData && (
                 <div className="mt-4 space-y-3 rounded-md bg-white p-4">
                   <div className="flex justify-between">

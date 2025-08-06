@@ -90,26 +90,28 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const forestCoverVectorLayer =
         data.is_forest_cover_done && forestCover.data?.id ? createForestCoverVectorLayer(forestCover.data.id) : null;
 
-      // Create selection layer for hover effect
-      const selectionLayer = new VectorTileLayer({
-        source: deadwoodVectorLayer.getSource(),
-        style: (feature: FeatureLike) => {
-          if (feature === hoveredFeature) {
-            return new Style({
-              fill: new Fill({
-                color: "rgba(255, 100, 100, 0.9)",
-              }),
-              stroke: new Stroke({
-                color: "rgba(255, 255, 255, 1)",
-                width: 2.5,
-              }),
-            });
-          }
-          return undefined;
-        },
-        renderMode: "vector",
-        renderBuffer: 512,
-      });
+      // Create selection layer for hover effect (only if deadwood layer exists)
+      const selectionLayer = deadwoodVectorLayer
+        ? new VectorTileLayer({
+            source: deadwoodVectorLayer.getSource(),
+            style: (feature: FeatureLike) => {
+              if (feature === hoveredFeature) {
+                return new Style({
+                  fill: new Fill({
+                    color: "rgba(255, 100, 100, 0.9)",
+                  }),
+                  stroke: new Stroke({
+                    color: "rgba(255, 255, 255, 1)",
+                    width: 2.5,
+                  }),
+                });
+              }
+              return undefined;
+            },
+            renderMode: "vector",
+            renderBuffer: 512,
+          })
+        : null;
 
       // Store references
       layerRefs.current = {
@@ -117,13 +119,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         orthoCog: orthoCogLayer,
         deadwoodVector: deadwoodVectorLayer || undefined,
         forestCoverVector: forestCoverVectorLayer || undefined,
-        selectionLayer: selectionLayer,
+        selectionLayer: selectionLayer || undefined,
       };
 
       // Wait for the source to be ready and create map
-      if (orthoCogLayer.getSource()) {
-        orthoCogLayer
-          .getSource()
+      const orthoCogSource = orthoCogLayer.getSource();
+      if (orthoCogSource) {
+        orthoCogSource
           .getView()
           .then((viewOptions) => {
             if (!viewOptions?.extent) {
@@ -146,7 +148,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               const layers = [basemapLayer, orthoCogLayer];
               if (forestCoverVectorLayer) layers.push(forestCoverVectorLayer);
               if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
-              layers.push(selectionLayer);
+              if (selectionLayer) layers.push(selectionLayer);
 
               const newMap = new Map({
                 target: mapContainer.current,
