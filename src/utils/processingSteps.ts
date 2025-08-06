@@ -4,41 +4,31 @@ export interface ProcessingStep {
   description: string;
 }
 
-export const PROCESSING_STEPS: ProcessingStep[] = [
-  {
-    key: "upload",
-    label: "Uploading",
-    description: "Uploading your data to the platform",
-  },
-  {
-    key: "ortho",
-    label: "Processing Image",
-    description: "Processing and validating your orthophoto",
-  },
-  {
-    key: "metadata",
-    label: "Extracting Information",
-    description: "Extracting geographic and technical metadata",
-  },
-  {
-    key: "cog",
-    label: "Optimizing Data",
-    description: "Converting to optimized format for visualization",
-  },
-  {
-    key: "deadwood",
-    label: "AI Analysis",
-    description: "Running AI analysis for deadwood detection",
-  },
-  {
-    key: "treecover",
-    label: "Tree Cover Analysis",
-    description: "Running AI analysis for tree cover segmentation",
-  },
+export const GEOTIFF_PROCESSING_STEPS: ProcessingStep[] = [
+  // Existing steps for GeoTIFF uploads
+  { key: "upload", label: "Uploading", description: "Uploading your data to the platform" },
+  { key: "ortho", label: "Processing Image", description: "Processing and validating your orthophoto" },
+  { key: "metadata", label: "Extracting Information", description: "Extracting geographic and technical metadata" },
+  { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
+  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
+  { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
+];
+
+export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
+  // New workflow for raw drone images
+  { key: "upload", label: "Uploading", description: "Uploading your raw drone images" },
+  { key: "odm_processing", label: "ODM Processing", description: "Creating orthomosaic from raw drone images" },
+  { key: "ortho", label: "Processing Image", description: "Processing and validating your orthophoto" },
+  { key: "metadata", label: "Extracting Information", description: "Extracting geographic and technical metadata" },
+  { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
+  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
+  { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
 ];
 
 export interface DatasetProgress {
+  file_name?: string;
   is_upload_done?: boolean;
+  is_odm_done?: boolean;
   is_ortho_done?: boolean;
   is_metadata_done?: boolean;
   is_cog_done?: boolean;
@@ -60,8 +50,10 @@ function isDeadwoodProcessingComplete(dataset: DatasetProgress): boolean {
 
   // If all previous steps are done, status is idle, and no errors,
   // assume deadwood processing completed (just found no results)
+  const odmComplete = dataset.is_odm_done === undefined || dataset.is_odm_done;
   return !!(
     dataset.is_upload_done &&
+    odmComplete &&
     dataset.is_ortho_done &&
     dataset.is_metadata_done &&
     dataset.is_cog_done &&
@@ -100,7 +92,10 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
   currentStepInfo: ProcessingStep;
   isComplete: boolean;
 } {
-  const totalSteps = PROCESSING_STEPS.length;
+  // Determine if this is an ODM workflow (raw images) based on file extension
+  const isOdmWorkflow = dataset.file_name?.toLowerCase().endsWith(".zip") || false;
+  const steps = isOdmWorkflow ? RAW_IMAGES_PROCESSING_STEPS : GEOTIFF_PROCESSING_STEPS;
+  const totalSteps = steps.length;
 
   // If there's an error, return error state
   if (dataset.has_error) {
@@ -108,7 +103,7 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
       currentStep: 0,
       totalSteps,
       percentage: 0,
-      currentStepInfo: PROCESSING_STEPS[0],
+      currentStepInfo: steps[0],
       isComplete: false,
     };
   }
@@ -116,6 +111,7 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
   // Check completion status for each step with smart detection
   const stepCompletions = [
     dataset.is_upload_done || false,
+    ...(isOdmWorkflow ? [dataset.is_odm_done || false] : []), // ODM step only for raw images
     dataset.is_ortho_done || false,
     dataset.is_metadata_done || false,
     dataset.is_cog_done || false,
@@ -132,7 +128,7 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
       currentStep: totalSteps,
       totalSteps,
       percentage: 100,
-      currentStepInfo: PROCESSING_STEPS[totalSteps - 1],
+      currentStepInfo: steps[totalSteps - 1],
       isComplete: true,
     };
   }
@@ -145,7 +141,7 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
     currentStep: currentStep + 1, // 1-based for display
     totalSteps,
     percentage,
-    currentStepInfo: PROCESSING_STEPS[currentStep],
+    currentStepInfo: steps[currentStep],
     isComplete: false,
   };
 }

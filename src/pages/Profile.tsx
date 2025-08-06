@@ -106,36 +106,30 @@ export default function ProfilePage() {
               description={
                 <>
                   <p>
-                    Orthophoto and label uploads are now available! Once uploaded, your data will be seamlessly
-                    integrated and visualized on the platform. You can also publish your datasets via{" "}
+                    Upload and visualize your data on the platform. Publish datasets via{" "}
                     <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer">
                       FreiDATA
                     </a>{" "}
-                    , the University of Freiburg's data repository, to get a DOI and make your data citable.
-                  </p>
-                  <p>
-                    If you encounter any issues or have questions, feel free to{" "}
-                    <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">contact us</a>.
+                    to get a DOI. Questions?{" "}
+                    <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">Contact us</a>.
                   </p>
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                     <li>
-                      📏 <strong>Resolution:</strong> Higher than 20 cm
+                      🗺️ <strong>Formats:</strong> GeoTIFF (max 8GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
+                      5GB)
                     </li>
                     <li>
-                      🌈 <strong>Color:</strong> RGB format, but you can upload NIRRGB images
+                      🔧 <strong>Raw Images:</strong> Automatic ODM processing into orthomosaics (60-80% overlap
+                      recommended)
                     </li>
                     <li>
-                      🗺️ <strong>File Format:</strong> GeoTIFF
+                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;20cm resolution, any reference system
                     </li>
                     <li>
-                      🌐 <strong>Reference Systems:</strong> All supported
-                    </li>
-                    <li>
-                      🏆 <strong>Publication:</strong> Get a DOI via{" "}
+                      🏆 <strong>Publishing:</strong> Get DOI via{" "}
                       <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer">
                         FreiDATA
-                      </a>{" "}
-                      for your datasets
+                      </a>
                     </li>
                   </ul>
                 </>

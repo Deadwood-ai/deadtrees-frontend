@@ -18,7 +18,7 @@ import {
 import { InfoCircleOutlined, UploadOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
 import addMetadata from "../../api/addMetadata";
-import { IDataAccess, ILabelObject, ILicense, IPlatform } from "../../types/dataset";
+import { IDataAccess, ILabelObject, ILicense, IPlatform, UploadType } from "../../types/dataset";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
@@ -28,8 +28,8 @@ import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 import { useCanUploadPrivate } from "../../hooks/useUserPrivileges";
+import { detectUploadType, validateFileSize } from "../../utils/fileValidation";
 
-import logger from "../../utils/logger";
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
 import { RcFile } from "antd/es/upload";
@@ -188,23 +188,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         metadata,
         signal: abortControllerRef.current.signal,
         onSuccess: (response) => {
-          logger({
-            user_id: session!.user.id,
-            file_name: fileNameFull,
-            process: "upload",
-            level: "info",
-            message: "Upload success",
-          });
           resolve(response);
         },
         onError: (error) => {
-          logger({
-            user_id: session!.user.id,
-            file_name: fileNameFull,
-            process: "upload",
-            level: "error",
-            message: `Upload error: ${error}`,
-          });
           reject(error);
         },
         onProgress: (event) => {
@@ -224,29 +210,14 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     return session!.access_token;
   };
 
-  const processDataset = async (datasetId: number, token: string) => {
-    logger({
-      user_id: session!.user.id,
-      file_name: fileNameFull,
-      process: "upload",
-      level: "info",
-      message: "Adding process",
-    });
-
-    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood", "treecover"], token);
+  const processDataset = async (datasetId: number, token: string, processingSteps: string[]) => {
+    await addProcess(datasetId, processingSteps, token);
   };
 
   const cancelUpload = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-      logger({
-        user_id: session!.user.id,
-        file_name: fileNameFull,
-        process: "upload",
-        level: "info",
-        message: "Upload cancelled by user",
-      });
       closeNotification();
       setIsUploading(false);
     }
@@ -255,25 +226,24 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const handleUpload = async (values: IFormValues) => {
     setIsUploading(true);
     showUploadingNotification(cancelUpload);
-    logger({
-      user_id: session!.user.id,
-      file_name: fileNameFull,
-      process: "upload",
-      level: "info",
-      message: "Upload started",
-    });
 
     try {
       const uploadFile = fileList[0];
       if (!uploadFile?.originFileObj) {
         throw new Error("No file selected for upload.");
       }
+
+      // Detect file type and validate file size
+      const uploadType = detectUploadType(uploadFile.name);
+      validateFileSize(uploadFile.originFileObj, uploadType);
+
       // console.log("values.author", values.author);
       // Create metadata object
       const metadata = {
         license: values.license,
         platform: values.platform,
         authors: values.author,
+        upload_type: uploadType,
         project_id: undefined,
         aquisition_year: values.aquisition_date?.year(),
         aquisition_month: values.aquisition_date?.month() + 1,
@@ -307,8 +277,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         }
       }
 
-      // Process dataset
-      await processDataset(Number(uploadResponse.id), validAccessToken);
+      // Process dataset with appropriate steps based on upload type
+      const processingSteps =
+        uploadType === UploadType.RAW_IMAGES_ZIP
+          ? ["odm_processing", "cog", "thumbnail", "metadata", "geotiff", "deadwood"] // Raw images workflow includes ODM
+          : ["cog", "thumbnail", "metadata", "geotiff", "deadwood"]; // GeoTIFF workflow (no ODM needed)
+
+      await processDataset(Number(uploadResponse.id), validAccessToken, processingSteps);
 
       showSuccessNotification();
     } catch (error) {
@@ -317,13 +292,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         // console.log("Upload was cancelled by the user");
       } else {
         console.error("Upload error:", error);
-        logger({
-          user_id: session!.user.id,
-          file_name: fileNameFull,
-          process: "upload",
-          level: "error",
-          message: `Upload error: ${error}`,
-        });
         showErrorNotification();
       }
     } finally {
@@ -386,7 +354,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   fileList={fileList}
                   onChange={onFileChange}
                   beforeUpload={beforeUpload}
-                  accept=".tif,.tiff"
+                  accept=".tif,.tiff,.zip"
                   maxCount={1}
                   className="w-full"
                 >
@@ -395,10 +363,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                       <InboxOutlined />
                     </p>
                     <div className="text-start">
-                      <p className="ant-upload-text mb-0">Click or drag GeoTIFF file to this area</p>
+                      <p className="ant-upload-text mb-0">Click or drag file to this area</p>
                       <p className="ant-upload-hint mb-0">
-                        Upload your orthophoto in GeoTIFF format (.tif, .tiff). This georeferenced image is essential
-                        for spatial analysis.
+                        GeoTIFF (.tif, .tiff) max 8GB or ZIP with raw drone images (.zip) max 5GB, ODM processing,
+                        60-80% overlap
                       </p>
                     </div>
                   </div>
