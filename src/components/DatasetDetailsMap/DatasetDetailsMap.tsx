@@ -14,8 +14,8 @@ import DeadwoodCardDetails from "./DeadwoodCardDetails";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 import { createDeadwoodVectorLayer } from "./createVectorLayer";
-import { useDatasetLabels } from "../../hooks/useDatasetLabels";
-import { ILabelData } from "../../types/labels";
+import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
+import { createForestCoverVectorLayer } from "./createVectorLayer";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
@@ -25,14 +25,18 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [mapStyle, setMapStyle] = useState("satellite-streets-v12");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
+  const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
 
-  // Fetch label data for the current dataset
-  const { data: labelData, isLoading: isLoadingLabel } = useDatasetLabels({
+  // Fetch label data for the current dataset using modular hook
+  const {
+    deadwood,
+    forestCover,
+    isLoading: isLoadingLabels,
+  } = useDatasetLabelTypes({
     datasetId: data?.id,
-    labelData: ILabelData.DEADWOOD,
     enabled: !!data?.id,
   });
 
@@ -49,7 +53,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // Main map initialization effect
   useEffect(() => {
-    if (!mapRef.current && data?.file_name && !isLoadingLabel) {
+    if (!mapRef.current && data?.file_name && !isLoadingLabels) {
       // Create ortho layer first
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -68,16 +72,23 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         // preload: 4,
       });
 
-      // Create all other layers before map initialization
+      // Create all other layers before map initialization - Raster API for satellite, Static API for streets
       const basemapLayer = new TileLayer({
         source: new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url:
+            mapStyle === "satellite-streets-v12"
+              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       });
 
-      // Only create deadwood vector layer if labels exist
-      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
+      // Create vector layers conditionally based on data availability
+      const deadwoodVectorLayer = deadwood.data?.id ? createDeadwoodVectorLayer(deadwood.data.id) : null;
+
+      // Only create forest cover layer if forest cover processing is done AND labels exist
+      const forestCoverVectorLayer =
+        data.is_forest_cover_done && forestCover.data?.id ? createForestCoverVectorLayer(forestCover.data.id) : null;
 
       // Create selection layer for hover effect
       const selectionLayer = new VectorTileLayer({
@@ -104,7 +115,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       layerRefs.current = {
         basemap: basemapLayer,
         orthoCog: orthoCogLayer,
-        deadwoodVector: deadwoodVectorLayer,
+        deadwoodVector: deadwoodVectorLayer || undefined,
+        forestCoverVector: forestCoverVectorLayer || undefined,
         selectionLayer: selectionLayer,
       };
 
@@ -129,68 +141,77 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             });
 
             if (mapContainer.current) {
+              // Create layers array with proper ordering: basemap → ortho → forest cover → deadwood → selection
+              // This ensures deadwood appears on top of forest cover
+              const layers = [basemapLayer, orthoCogLayer];
+              if (forestCoverVectorLayer) layers.push(forestCoverVectorLayer);
+              if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
+              layers.push(selectionLayer);
+
               const newMap = new Map({
                 target: mapContainer.current,
-                layers: [basemapLayer, orthoCogLayer, deadwoodVectorLayer, selectionLayer],
+                layers: layers,
                 view: MapView,
                 // maxTilesLoading: 4,
                 overlays: [],
                 controls: [],
               });
 
-              // Add pointer move event handler
-              newMap.on("pointermove", (event) => {
-                // Get current zoom level
-                const currentZoom = MapView.getZoom();
-                // Minimum zoom level for enabling hover selection (adjust as needed)
-                const MIN_HOVER_ZOOM = 16;
+              // Add pointer move event handler (only if deadwood layer exists)
+              if (deadwoodVectorLayer) {
+                newMap.on("pointermove", (event) => {
+                  // Get current zoom level
+                  const currentZoom = MapView.getZoom();
+                  // Minimum zoom level for enabling hover selection (adjust as needed)
+                  const MIN_HOVER_ZOOM = 16;
 
-                // Skip hover selection if zoom level is too low
-                if (!currentZoom || currentZoom < MIN_HOVER_ZOOM) {
-                  // Reset hover state if we're zoomed out too far
-                  if (hoveredFeature || hoveredLabelId) {
-                    setHoveredFeature(null);
-                    setHoveredLabelId(null);
-
-                    const targetElement = newMap.getTargetElement();
-                    if (targetElement) {
-                      targetElement.style.cursor = "";
-                    }
-                  }
-                  return;
-                }
-
-                const pixel = newMap.getEventPixel(event.originalEvent);
-                const hit = newMap.hasFeatureAtPixel(pixel, {
-                  layerFilter: (layer) => layer === deadwoodVectorLayer,
-                });
-
-                const targetElement = newMap.getTargetElement();
-                if (targetElement) {
-                  targetElement.style.cursor = hit ? "pointer" : "";
-                }
-
-                if (hit) {
-                  event.preventDefault();
-                  event.stopPropagation();
-
-                  deadwoodVectorLayer.getFeatures(pixel).then((features) => {
-                    if (features.length > 0) {
-                      const feature = features[0];
-                      setHoveredFeature(feature);
-                      // Store the label_id of the hovered feature
-                      const polygonId = feature.get("id");
-                      setHoveredLabelId(polygonId);
-                    } else {
+                  // Skip hover selection if zoom level is too low
+                  if (!currentZoom || currentZoom < MIN_HOVER_ZOOM) {
+                    // Reset hover state if we're zoomed out too far
+                    if (hoveredFeature || hoveredLabelId) {
                       setHoveredFeature(null);
                       setHoveredLabelId(null);
+
+                      const targetElement = newMap.getTargetElement();
+                      if (targetElement) {
+                        targetElement.style.cursor = "";
+                      }
                     }
+                    return;
+                  }
+
+                  const pixel = newMap.getEventPixel(event.originalEvent);
+                  const hit = newMap.hasFeatureAtPixel(pixel, {
+                    layerFilter: (layer) => layer === deadwoodVectorLayer,
                   });
-                } else {
-                  setHoveredFeature(null);
-                  setHoveredLabelId(null);
-                }
-              });
+
+                  const targetElement = newMap.getTargetElement();
+                  if (targetElement) {
+                    targetElement.style.cursor = hit ? "pointer" : "";
+                  }
+
+                  if (hit) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    deadwoodVectorLayer.getFeatures(pixel).then((features) => {
+                      if (features.length > 0) {
+                        const feature = features[0];
+                        setHoveredFeature(feature);
+                        // Store the label_id of the hovered feature
+                        const polygonId = feature.get("id");
+                        setHoveredLabelId(polygonId);
+                      } else {
+                        setHoveredFeature(null);
+                        setHoveredLabelId(null);
+                      }
+                    });
+                  } else {
+                    setHoveredFeature(null);
+                    setHoveredLabelId(null);
+                  }
+                });
+              }
 
               // Add view change handler
               MapView.on("change", () => {
@@ -285,7 +306,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, isLoadingLabel, labelData]);
+  }, [data, isLoadingLabels, deadwood.data, forestCover.data]);
 
   // update deadwood layer opacity
   useEffect(() => {
@@ -301,6 +322,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [droneImageOpacity]);
 
+  // update forest cover layer opacity
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.forestCoverVector) {
+      layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
+    }
+  }, [forestCoverOpacity]);
+
   // Update the map style effect to preserve the viewport
   useEffect(() => {
     if (mapRef.current && layerRefs.current.basemap) {
@@ -308,10 +336,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const currentCenter = currentView.getCenter();
       const currentZoom = currentView.getZoom();
 
-      // Just update the source, don't recreate the map
+      // Just update the source, don't recreate the map - Raster API for satellite, Static API for streets
       layerRefs.current.basemap.setSource(
         new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
+          url:
+            mapStyle === "satellite-streets-v12"
+              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
           attributions: "© Mapbox © OpenStreetMap contributors",
         }),
       );
@@ -378,7 +409,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             setDeadwoodOpacity={setDeadwoodOpacity}
             droneImageOpacity={droneImageOpacity}
             setDroneImageOpacity={setDroneImageOpacity}
-            showLegend={labelData ? true : false}
+            forestCoverOpacity={forestCoverOpacity}
+            setForestCoverOpacity={setForestCoverOpacity}
+            showLegend={!!deadwood.data}
+            showForestCoverLegend={!!forestCover.data && !!data.is_forest_cover_done}
           />
         </div>
       </div>
