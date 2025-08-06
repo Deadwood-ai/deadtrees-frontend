@@ -21,8 +21,7 @@ import DeadwoodCardDetails from "../DatasetDetailsMap/DeadwoodCardDetails";
 import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
-import { useDatasetLabels } from "../../hooks/useDatasetLabels";
-import { ILabelData } from "../../types/labels";
+import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 
 interface DatasetAuditMapProps {
@@ -55,17 +54,9 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // Add state to track if a polygon is selected during editing
   const [selectedFeatureForEdit, setSelectedFeatureForEdit] = useState<any>(null);
 
-  // Fetch label data for the current dataset
-  const { data: labelData } = useDatasetLabels({
+  // Fetch label data for the current dataset using modular hook
+  const { deadwood, forestCover } = useDatasetLabelTypes({
     datasetId: dataset?.id,
-    labelData: ILabelData.DEADWOOD,
-    enabled: !!dataset?.id,
-  });
-
-  // Fetch forest cover label data for the current dataset
-  const { data: forestCoverLabelData } = useDatasetLabels({
-    datasetId: dataset?.id,
-    labelData: ILabelData.FOREST_COVER,
     enabled: !!dataset?.id,
   });
 
@@ -136,10 +127,10 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       }
 
       // Create deadwood vector layer - always create it, let the layer handle null labelId
-      const deadwoodVectorLayer = createDeadwoodVectorLayer(labelData?.id);
+      const deadwoodVectorLayer = createDeadwoodVectorLayer(deadwood.data?.id);
 
       // Create forest cover vector layer - always create it, let the layer handle null labelId
-      const forestCoverVectorLayer = createForestCoverVectorLayer(forestCoverLabelData?.id);
+      const forestCoverVectorLayer = createForestCoverVectorLayer(forestCover.data?.id);
 
       // Store references
       layerRefs.current = {
@@ -257,7 +248,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       // Reset map ready state
       setIsMapReady(false);
     };
-  }, [dataset, labelData, forestCoverLabelData]);
+  }, [dataset, deadwood.data, forestCover.data]);
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
@@ -848,8 +839,8 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           setDroneImageOpacity={setDroneImageOpacity}
           forestCoverOpacity={forestCoverOpacity}
           setForestCoverOpacity={setForestCoverOpacity}
-          showLegend={labelData ? true : false}
-          showForestCoverLegend={forestCoverLabelData ? true : false}
+          showLegend={!!deadwood.data}
+          showForestCoverLegend={!!forestCover.data}
         />
       </div>
     </div>
