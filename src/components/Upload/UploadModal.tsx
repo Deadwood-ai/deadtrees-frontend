@@ -233,7 +233,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       message: "Adding process",
     });
 
-    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood"], token);
+    await addProcess(datasetId, ["cog", "thumbnail", "metadata", "geotiff", "deadwood", "treecover"], token);
   };
 
   const cancelUpload = () => {
