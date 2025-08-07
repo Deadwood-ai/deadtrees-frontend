@@ -1,4 +1,6 @@
-import { Slider } from "antd";
+import { Slider, Button, Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { useState } from "react";
 
 interface DeadwoodCardDetailsProps {
   deadwoodOpacity: number;
@@ -21,6 +23,7 @@ export function DeadwoodCardDetails({
   showLegend,
   showForestCoverLegend = false,
 }: DeadwoodCardDetailsProps) {
+  const [showAttributions, setShowAttributions] = useState(false);
   return (
     <div>
       <div className="flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
@@ -81,16 +84,54 @@ export function DeadwoodCardDetails({
           </div>
         </div>
 
-        {/* Method attribution - show when deadwood exists but forest cover doesn't */}
-        {showLegend && !showForestCoverLegend && (
-          <div className="mb-4 flex items-center space-x-2 pt-2">
-            <p className="m-0 text-xs text-gray-800">Method by:</p>
-            <a
-              className="m-0 italic underline"
-              href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
-            >
-              Möhring et al. (under review)
-            </a>
+        {/* Unified Model Attribution Section */}
+        {(showLegend || showForestCoverLegend) && (
+          <div className="pt-2">
+            <div className="mb-2 flex items-center space-x-2">
+              <p className="m-0 text-xs text-gray-800">Models by:</p>
+              <Tooltip title="View model attributions and papers">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<InfoCircleOutlined />}
+                  onClick={() => setShowAttributions(!showAttributions)}
+                  className="m-0 p-0 text-xs"
+                >
+                  View Citations
+                </Button>
+              </Tooltip>
+            </div>
+
+            {showAttributions && (
+              <div className="mb-4 space-y-2 rounded bg-gray-50 p-2 text-xs">
+                {showLegend && (
+                  <div>
+                    <strong>Deadwood Detection:</strong>
+                    <a
+                      href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
+                      className="ml-1 text-blue-600 underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Möhring et al. (under review)
+                    </a>
+                  </div>
+                )}
+                {showForestCoverLegend && (
+                  <div>
+                    <strong>Forest Cover:</strong>
+                    <a
+                      href="https://proceedings.neurips.cc/paper_files/paper/2024/file/58efdd77196fa8159062afa0408245da-Paper-Datasets_and_Benchmarks_Track.pdf"
+                      className="ml-1 text-blue-600 underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Veitch-Michaelis et al. (2024)
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
