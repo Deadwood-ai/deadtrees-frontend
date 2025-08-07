@@ -127,7 +127,23 @@ export default function DatasetDetails() {
                 </div>
 
                 <div className="flex justify-between">
-                  <Typography.Text className="pr-2">DOI: </Typography.Text>
+                  <Typography.Text className="pr-2">
+                    {(() => {
+                      // Determine the appropriate label based on available data
+                      if (dataset.freidata_doi) {
+                        return "DOI: ";
+                      }
+                      if (dataset.citation_doi) {
+                        // Check if it's a DOI-like string (contains doi.org or has DOI format)
+                        const isDoi =
+                          dataset.citation_doi.includes("doi.org") ||
+                          /^10\.\d{4,}\//.test(dataset.citation_doi) ||
+                          dataset.citation_doi.toLowerCase().includes("zenodo");
+                        return isDoi ? "DOI: " : "Link: ";
+                      }
+                      return "Source: ";
+                    })()}
+                  </Typography.Text>
                   <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
                     <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
                   </div>
