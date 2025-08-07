@@ -16,6 +16,7 @@ import { useAuth } from "../hooks/useAuthProvider";
 import EditDatasetModal from "./EditDatasetModal";
 import ProcessingProgress from "./ProcessingProgress";
 import { isGeonadirDataset } from "../utils/datasetUtils";
+import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
 
 interface Dataset {
@@ -257,10 +258,14 @@ const DataTable: React.FC<DataTableProps> = ({
       render: (authors: string[] | undefined, record: Dataset) => {
         if (!authors || authors.length === 0) return null;
 
+        // Clean author names to fix encoding issues
+        const cleanedAuthors = fixAuthorNamesEncoding(authors);
+        if (cleanedAuthors.length === 0) return null;
+
         const isFromGeonadir = isGeonadirDataset(record as unknown as IDataset);
         const maxVisible = 2;
-        const visibleAuthors = authors.slice(0, maxVisible);
-        const remainingCount = authors.length - maxVisible;
+        const visibleAuthors = cleanedAuthors.slice(0, maxVisible);
+        const remainingCount = cleanedAuthors.length - maxVisible;
 
         return (
           <div className="flex flex-wrap gap-1">
@@ -270,7 +275,7 @@ const DataTable: React.FC<DataTableProps> = ({
               </Tag>
             ))}
             {remainingCount > 0 && (
-              <Tooltip title={`Additional authors: ${authors.slice(maxVisible).join(", ")}`}>
+              <Tooltip title={`Additional authors: ${cleanedAuthors.slice(maxVisible).join(", ")}`}>
                 <Tag color="default" className="text-xs">
                   +{remainingCount} more
                 </Tag>
@@ -293,9 +298,13 @@ const DataTable: React.FC<DataTableProps> = ({
       render: (info: string | undefined) => {
         if (!info) return null;
 
+        // Clean the additional information text to fix encoding issues
+        const cleanedInfo = sanitizeText(info);
+        if (!cleanedInfo) return null;
+
         return (
-          <Tooltip title={info}>
-            <span className="block max-w-[180px] truncate">{info}</span>
+          <Tooltip title={cleanedInfo}>
+            <span className="block max-w-[180px] truncate">{cleanedInfo}</span>
           </Tooltip>
         );
       },

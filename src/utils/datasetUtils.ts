@@ -1,4 +1,5 @@
 import { IDataset } from "../types/dataset";
+import { fixAuthorNamesEncoding } from "./textUtils";
 
 /**
  * Checks if a dataset is from GeoNadir provider
@@ -24,8 +25,14 @@ export const isGeonadirDataset = (dataset: IDataset): boolean => {
 export const getAuthorDisplayText = (authors: string[] | null, isGeonadir: boolean): string => {
   if (!authors || authors.length === 0) return "";
 
+  // Clean the author names to fix encoding issues
+  const cleanedAuthors = fixAuthorNamesEncoding(authors);
+  if (cleanedAuthors.length === 0) return "";
+
   const baseText =
-    authors.length === 1 ? authors[0] : `${authors[0]}${authors[0].length > 18 ? "..." : ""} +${authors.length - 1}`;
+    cleanedAuthors.length === 1
+      ? cleanedAuthors[0]
+      : `${cleanedAuthors[0]}${cleanedAuthors[0].length > 18 ? "..." : ""} +${cleanedAuthors.length - 1}`;
 
   return isGeonadir ? `${baseText} via GeoNadir` : baseText;
 };
@@ -39,8 +46,12 @@ export const getAuthorDisplayText = (authors: string[] | null, isGeonadir: boole
 export const getTruncatedAuthorDisplay = (authors: string[] | null, isGeonadir: boolean): string => {
   if (!authors || authors.length === 0) return "";
 
-  const firstAuthor = authors[0].slice(0, 18) + (authors[0].length > 18 ? "..." : "");
-  const additionalCount = authors.length > 1 ? ` +${authors.length - 1}` : "";
+  // Clean the author names to fix encoding issues
+  const cleanedAuthors = fixAuthorNamesEncoding(authors);
+  if (cleanedAuthors.length === 0) return "";
+
+  const firstAuthor = cleanedAuthors[0].slice(0, 18) + (cleanedAuthors[0].length > 18 ? "..." : "");
+  const additionalCount = cleanedAuthors.length > 1 ? ` +${cleanedAuthors.length - 1}` : "";
   const baseText = firstAuthor + additionalCount;
 
   return isGeonadir ? `${baseText} via GeoNadir` : baseText;

@@ -7,6 +7,7 @@ import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap
 import PublicationLink from "../components/PublicationLink";
 import countryList from "../utils/countryList";
 import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../utils/datasetUtils";
+import { sanitizeText } from "../utils/textUtils";
 import { useDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
@@ -209,8 +210,8 @@ export default function DatasetDetails() {
                     <Typography.Text className="pr-2" strong>
                       Additional Information:
                     </Typography.Text>
-                    <div className="mt-2 block text-xs text-gray-600">
-                      {dataset.additional_information
+                    <div className="mt-2 block text-sm text-gray-500">
+                      {sanitizeText(dataset.additional_information)
                         .split(/(https?:\/\/[^\s]+)/g)
                         .map((part: string, index: number) => {
                           if (part.match(/https?:\/\/[^\s]+/)) {

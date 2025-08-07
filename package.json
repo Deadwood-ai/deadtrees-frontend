@@ -37,7 +37,8 @@
     "react-slick": "^0.30.3",
     "react-viewport-list": "^7.1.2",
     "react-virtualized": "^9.22.6",
-    "sort-by": "^1.2.0"
+    "sort-by": "^1.2.0",
+    "utf8": "^3.0.0"
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
