@@ -1,6 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image, Tag } from "antd";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 const { Header } = Layout;
 
 import { useAuth } from "../hooks/useAuthProvider";
@@ -10,30 +10,30 @@ import { useNavigate } from "react-router-dom";
 const defaultNavigation = [
   {
     key: "/home",
-    label: <Link to="/">Home</Link>,
+    label: "Home",
   },
   {
     key: "/deadtrees",
-    label: <Link to="/deadtrees">Satellite Products</Link>,
+    label: "Satellite Products",
   },
   {
     key: "/dataset",
-    label: <Link to="/dataset">Drone Products</Link>,
+    label: "Drone Products",
   },
   {
     key: "/about",
-    label: <Link to="/about">About deadtrees.earth</Link>,
+    label: "About deadtrees.earth",
   },
   {
     key: "/profile",
-    label: <Link to="/profile">Account</Link>,
+    label: "Account",
   },
 ];
 
 // Additional navigation item for users who can audit
 const auditNavigation = {
   key: "/dataset-audit",
-  label: <Link to="/dataset-audit">Audit Datasets</Link>,
+  label: "Audit Datasets",
 };
 
 export default function Navigation() {
@@ -44,6 +44,9 @@ export default function Navigation() {
 
   // Get the base path for matching navigation
   const currentPath = "/" + location.pathname.split("/")[1];
+
+  // Check if currently in audit detail page
+  const isInAuditDetail = location.pathname.match(/^\/dataset-audit\/\d+$/);
 
   // Add audit navigation if user has audit privileges
   const navigation = [...defaultNavigation];
@@ -57,9 +60,46 @@ export default function Navigation() {
   } = theme.useToken();
 
   const handleSignOut = async () => {
+    if (isInAuditDetail) {
+      // Dispatch custom event for audit page to handle
+      window.dispatchEvent(
+        new CustomEvent("audit-navigation-attempt", {
+          detail: { to: "/sign-in", action: "signout" },
+        }),
+      );
+      return;
+    }
+
     await signOut();
-    // Force navigation to sign-in page immediately after sign-out
     nav("/sign-in");
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (isInAuditDetail) {
+      e.preventDefault();
+      window.dispatchEvent(
+        new CustomEvent("audit-navigation-attempt", {
+          detail: { to: "/" },
+        }),
+      );
+    } else {
+      nav("/");
+    }
+  };
+
+  const handleMenuClick = (e: any) => {
+    if (isInAuditDetail) {
+      // When in audit detail, dispatch custom event instead of navigating
+      window.dispatchEvent(
+        new CustomEvent("audit-navigation-attempt", {
+          detail: { to: e.key === "/home" ? "/" : e.key },
+        }),
+      );
+    } else {
+      // Normal navigation - convert menu key to actual path
+      const path = e.key === "/home" ? "/" : e.key;
+      nav(path);
+    }
   };
 
   return (
@@ -79,7 +119,7 @@ export default function Navigation() {
           <img
             src="/assets/logo.png"
             alt="deadtrees.earth"
-            onClick={() => nav("/")}
+            onClick={handleLogoClick}
             className="mr-3 h-12 cursor-pointer"
           />
           {/* <Tag color="warning">BETA</Tag> */}
@@ -89,6 +129,7 @@ export default function Navigation() {
             mode="horizontal"
             selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
             items={navigation}
+            onClick={handleMenuClick}
             style={{
               justifyContent: "end",
               minWidth: 0,
@@ -101,7 +142,21 @@ export default function Navigation() {
         <Button
           className="ml-8"
           type={session ? "default" : "primary"}
-          onClick={session ? handleSignOut : () => nav("/sign-in")}
+          onClick={
+            session
+              ? handleSignOut
+              : () => {
+                  if (isInAuditDetail) {
+                    window.dispatchEvent(
+                      new CustomEvent("audit-navigation-attempt", {
+                        detail: { to: "/sign-in" },
+                      }),
+                    );
+                  } else {
+                    nav("/sign-in");
+                  }
+                }
+          }
         >
           {session ? "Sign Out" : "Sign In"}
         </Button>

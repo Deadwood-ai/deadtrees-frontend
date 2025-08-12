@@ -14,6 +14,7 @@ import {
 } from "../../hooks/useDatasetAudit";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDownload } from "../../hooks/useDownloadProvider";
+import { useAuditNavigationGuard } from "../../hooks/useAuditNavigationGuard";
 import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
@@ -83,6 +84,19 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
   const [isLockingAudit, setIsLockingAudit] = useState(true);
+  const [hasFormChanges, setHasFormChanges] = useState(false);
+
+  // Navigation guard setup
+  const { showExitConfirmation, isCleaningUp } = useAuditNavigationGuard({
+    isActive: !auditLockError && !isSubmitting,
+    onCleanup: async () => {
+      if (!auditLockError) {
+        await clearAuditLock(dataset.id);
+      }
+    },
+    datasetId: dataset.id,
+    hasFormChanges,
+  });
 
   // Set audit lock when component mounts
   useEffect(() => {
@@ -92,6 +106,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
         await setAuditLock(dataset.id);
         setAuditLockError(null);
         setIsLockingAudit(false);
+        setHasFormChanges(true); // Consider audit as "in progress" immediately
       } catch (error) {
         console.error("Failed to set audit lock:", error);
         const errorMessage = error instanceof Error ? error.message : "Could not lock dataset for audit";
@@ -107,16 +122,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     };
 
     lockAudit();
-
-    // Clear audit lock when component unmounts
-    return () => {
-      if (!auditLockError) {
-        clearAuditLock(dataset.id).catch((error) => {
-          console.error("Failed to clear audit lock:", error);
-        });
-      }
-    };
-  }, [dataset.id, setAuditLock, clearAuditLock, navigate]);
+  }, [dataset.id, setAuditLock, navigate]);
 
   // Set form values when audit data is loaded
   useEffect(() => {
@@ -124,6 +130,32 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       form.setFieldsValue(auditData);
     }
   }, [auditData, form]);
+
+  // Track form changes for navigation guard
+  useEffect(() => {
+    const handleFormChange = () => {
+      setHasFormChanges(true);
+    };
+
+    // Set up form field change listeners
+    const formInstance = form.getInternalHooks?.("RC_FORM_INTERNAL_HOOKS");
+    if (formInstance) {
+      // Use Ant Design's internal form change detection
+      const unsubscribe = form.getFieldsValue ? form.__INTERNAL_HOOKS__ || null : null;
+    }
+
+    // Simple approach: any interaction with form means changes
+    const formElement = document.querySelector(".ant-form");
+    if (formElement) {
+      formElement.addEventListener("change", handleFormChange);
+      formElement.addEventListener("input", handleFormChange);
+
+      return () => {
+        formElement.removeEventListener("change", handleFormChange);
+        formElement.removeEventListener("input", handleFormChange);
+      };
+    }
+  }, [form]);
 
   const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
     console.log("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
@@ -187,6 +219,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       await saveAudit(auditPayload);
       message.success(auditData ? "Audit data updated successfully" : "Audit data saved successfully");
 
+      // Clear form changes flag to disable navigation guard
+      setHasFormChanges(false);
+
       // Always navigate back to audit list
       setTimeout(() => {
         navigate("/dataset-audit");
@@ -199,15 +234,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   };
 
-  const handleCancel = async () => {
-    try {
-      if (!auditLockError) {
-        await clearAuditLock(dataset.id);
-      }
-    } catch (error) {
-      console.error("Failed to clear audit lock:", error);
-    }
-    navigate("/dataset-audit");
+  const handleCancel = () => {
+    showExitConfirmation(() => {
+      navigate("/dataset-audit");
+    });
   };
 
   const isLoading = isAuditLoading || !user || isLockingAudit;

@@ -161,7 +161,7 @@ export function useSaveDatasetAOI() {
   });
 }
 
-// Hook to set audit lock
+// Hook to set audit lock with auto-recovery for stale locks
 export function useSetAuditLock() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -171,17 +171,46 @@ export function useSetAuditLock() {
       // First check if already in audit
       const { data: statusCheck, error: checkError } = await supabase
         .from("v2_statuses")
-        .select("is_in_audit")
+        .select("is_in_audit, updated_at")
         .eq("dataset_id", datasetId)
         .single();
 
       if (checkError) throw checkError;
 
       if (statusCheck.is_in_audit) {
-        throw new Error("Dataset is already being audited by another user");
+        // Check if the lock is stale (older than 1 hour)
+        const lockTime = new Date(statusCheck.updated_at).getTime();
+        const currentTime = new Date().getTime();
+        const hoursSinceUpdate = (currentTime - lockTime) / (1000 * 60 * 60);
+
+        if (hoursSinceUpdate >= 1) {
+          // Auto-clear stale lock
+          console.log(
+            `Auto-clearing stale audit lock for dataset ${datasetId} (${hoursSinceUpdate.toFixed(1)} hours old)`,
+          );
+
+          const { error: clearError } = await supabase
+            .from("v2_statuses")
+            .update({
+              is_in_audit: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("dataset_id", datasetId);
+
+          if (clearError) {
+            console.error("Failed to clear stale lock:", clearError);
+            throw new Error("Failed to clear stale audit lock");
+          }
+        } else {
+          // Lock is recent, still active
+          const timeRemaining = 60 - Math.floor(hoursSinceUpdate * 60);
+          throw new Error(
+            `Dataset is currently being audited by another user. Lock expires in ~${timeRemaining} minutes.`,
+          );
+        }
       }
 
-      // Set audit lock
+      // Set new audit lock
       const { error } = await supabase
         .from("v2_statuses")
         .update({
