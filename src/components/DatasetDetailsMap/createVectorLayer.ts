@@ -188,7 +188,7 @@ export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Po
         width: 2,
       }),
       fill: new Fill({
-        color: "rgba(255, 107, 53, 0.15)", // Light orange fill
+        color: "rgba(0, 0, 0, 0)",
       }),
     }),
     className: "aoi-vector",
