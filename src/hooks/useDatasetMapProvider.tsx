@@ -23,7 +23,7 @@ const DatasetMapProvider = (props: { children: React.ReactNode }) => {
   // center of germany in  epsg:3857
   const center = transform([10.451526, 51.165691], "EPSG:4326", "EPSG:3857");
   const [DeadwoodMapViewport, setDeadwoodMapViewport] = useState({ center: center, zoom: 6 });
-  const [DeadwoodMapStyle, setDeadwoodMapStyle] = useState("satellite-streets-v12");
+  const [DeadwoodMapStyle, setDeadwoodMapStyle] = useState("streets-v12");
   return (
     <MapViewportContext.Provider
       value={{

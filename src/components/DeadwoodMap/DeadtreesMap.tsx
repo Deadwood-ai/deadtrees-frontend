@@ -77,12 +77,18 @@ const DeadtreesMap = () => {
         zoom: DeadwoodMapViewport.zoom,
       });
       const basemapLayer = new TileLayer({
+        preload: 0,
         source: new XYZ({
           url:
             DeadwoodMapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${DeadwoodMapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+              : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions:
+            DeadwoodMapStyle === "satellite-streets-v12"
+              ? "© Mapbox © OpenStreetMap contributors"
+              : "© OpenStreetMap contributors",
+          maxZoom: DeadwoodMapStyle === "satellite-streets-v12" ? undefined : 19,
+          tileSize: DeadwoodMapStyle === "satellite-streets-v12" ? 512 : 256,
         }),
       });
       const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
@@ -158,15 +164,22 @@ const DeadtreesMap = () => {
   // update on mapStyle change
   useEffect(() => {
     if (map) {
-      const layer = map.getLayers().getArray()[0]; // basemap layer
-      // console.log(layer);
+      const layer = map.getLayers().getArray()[0];
+      const nextIsSatellite = DeadwoodMapStyle === "satellite-streets-v12";
+      if (nextIsSatellite) {
+        const zoom = map.getView().getZoom();
+        if (!zoom || zoom < 14) {
+          return; // gate satellite at >=14
+        }
+      }
       layer.setSource(
         new XYZ({
-          url:
-            DeadwoodMapStyle === "satellite-streets-v12"
-              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${DeadwoodMapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+          url: nextIsSatellite
+            ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+            : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: nextIsSatellite ? "© Mapbox © OpenStreetMap contributors" : "© OpenStreetMap contributors",
+          maxZoom: nextIsSatellite ? undefined : 19,
+          tileSize: nextIsSatellite ? 512 : 256,
         }),
       );
     }
@@ -275,7 +288,19 @@ const DeadtreesMap = () => {
           </div>
         </div>
         <div className="absolute left-4 top-24 z-50">
-          <MapStyleSwitchButtons mapStyle={DeadwoodMapStyle} setMapStyle={setDeadwoodMapStyle} />
+          <MapStyleSwitchButtons
+            mapStyle={DeadwoodMapStyle}
+            onChange={(next) => {
+              if (next === "satellite-streets-v12" && mapRef.current) {
+                const zoom = mapRef.current.getView().getZoom();
+                if (!zoom || zoom < 14) {
+                  // gate switch below 14
+                  return;
+                }
+              }
+              setDeadwoodMapStyle(next);
+            }}
+          />
         </div>
         <div className="absolute bottom-10 left-4 z-20">
           <SideSelectionButtons />
