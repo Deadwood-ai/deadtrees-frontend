@@ -119,11 +119,10 @@ export default function ProfilePage() {
                       5GB)
                     </li>
                     <li>
-                      🔧 <strong>Raw Images:</strong> Automatic ODM processing into orthomosaics (60-80% overlap
-                      recommended)
+                      🔧 <strong>Raw Images:</strong> ODM processing with 85%-front, 75%-side overlap
                     </li>
                     <li>
-                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;20cm resolution, any reference system
+                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;10cm resolution, any reference system
                     </li>
                     <li>
                       🏆 <strong>Publishing:</strong> Get DOI via{" "}

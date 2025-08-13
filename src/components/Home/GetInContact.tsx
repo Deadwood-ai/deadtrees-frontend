@@ -93,7 +93,7 @@ const GetInContact = () => {
     <div className="m-auto mt-48 max-w-6xl rounded-xl bg-slate-100 p-8">
       <p className="m-0 text-center text-3xl font-semibold text-gray-800 md:text-4xl">Want to join?</p>
       <p className="m-auto max-w-3xl pt-8 text-center text-lg text-gray-500">
-        {`Do you have high-resolution (<20cm) orthoimagery and `}
+        {`Do you have high-resolution (<10cm) orthoimagery and `}
         <em>optionally</em>
         {` any labels for standing deadwood? We'd be excited to have you collaborate with us on this project.`}
       </p>

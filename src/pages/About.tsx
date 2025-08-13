@@ -303,7 +303,7 @@ export default function About() {
           dieback in the face of climate change.
         </Paragraph>
         <Paragraph className="text-gray-600">
-          We are always looking for new contributors to join our project. If you have high-resolution (&lt;20cm)
+          We are always looking for new contributors to join our project. If you have high-resolution (&lt;10cm)
           orthoimagery and optionally any labels for standing deadwood, we would be excited to have you collaborate with
           us on this project.
         </Paragraph>

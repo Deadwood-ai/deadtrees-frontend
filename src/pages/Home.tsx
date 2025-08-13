@@ -182,17 +182,15 @@ const FAQ = () => {
           </p>
           <ul className="text-md list-disc pl-5">
             <li>
-              <strong>Resolution:</strong> Higher than 20 cm (higher resolution provides better detection results)
+              <strong>Resolution:</strong> Better than 10 cm (higher resolution provides better detection results)
             </li>
             <li>
-              <strong>Format:</strong> GeoTIFF with proper spatial reference information
+              <strong>Format:</strong> GeoTIFF or ZIP of raw images (recommended overlap 85% vs. 75%)
             </li>
+
             <li>
-              <strong>Content:</strong> RGB imagery of forested areas
-            </li>
-            <li>
-              <strong>Optional:</strong> Vector data (GeoJSON, Shapefile, GeoPackage) with existing deadwood labels if
-              available
+              <strong>Optional:</strong> Vector data (GeoJSON, Shapefile, GeoPackage) with deadwood labels or other
+              reference data
             </li>
           </ul>
           <p className="text-md mt-2">
