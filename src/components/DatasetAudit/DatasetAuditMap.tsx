@@ -95,14 +95,20 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       });
       aoiLayerRef.current = aoiLayer;
 
-      // Create basemap layer - Raster API for satellite, Static API for streets
+      // Create basemap layer - OSM for streets, Mapbox Raster for satellite
       const basemapLayer = new TileLayer({
+        preload: 0,
         source: new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+              : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions:
+            mapStyle === "satellite-streets-v12"
+              ? "© Mapbox © OpenStreetMap contributors"
+              : "© OpenStreetMap contributors",
+          maxZoom: mapStyle === "satellite-streets-v12" ? undefined : 19,
+          tileSize: mapStyle === "satellite-streets-v12" ? 512 : 256,
         }),
       });
 
@@ -466,13 +472,15 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // Update map style effect
   useEffect(() => {
     if (mapInstanceRef.current && layerRefs.current.basemap) {
+      const nextIsSatellite = mapStyle === "satellite-streets-v12";
       layerRefs.current.basemap.setSource(
         new XYZ({
-          url:
-            mapStyle === "satellite-streets-v12"
-              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+          url: nextIsSatellite
+            ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+            : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: nextIsSatellite ? "© Mapbox © OpenStreetMap contributors" : "© OpenStreetMap contributors",
+          maxZoom: nextIsSatellite ? undefined : 19,
+          tileSize: nextIsSatellite ? 512 : 256,
         }),
       );
     }
@@ -828,7 +836,18 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       </div>
 
       <div className="absolute left-2 top-4 z-20">
-        <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+        <MapStyleSwitchButtons
+          mapStyle={mapStyle}
+          onChange={(next) => {
+            if (next === "satellite-streets-v12" && mapInstanceRef.current) {
+              const zoom = mapInstanceRef.current.getView().getZoom();
+              if (!zoom || zoom < 14) {
+                return;
+              }
+            }
+            setMapStyle(next);
+          }}
+        />
       </div>
 
       <div className="absolute bottom-4 right-6 z-50">
