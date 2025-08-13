@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDatasets, useUserDatasets, useAuthors, useCollaborators } from "./useDatasets";
+import { usePublicDatasets, useUserDatasets, useAuthors, useCollaborators } from "./useDatasets";
 import { IDataset, IThumbnail, ICollaborators } from "../types/dataset";
 import { useAuth } from "./useAuthProvider";
 
@@ -41,7 +41,7 @@ const DataProvider = ({ children }: DataProviderProps) => {
   const { session } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: rawData, isLoading: isLoadingRawData } = useDatasets();
+  const { data: rawData, isLoading: isLoadingRawData } = usePublicDatasets();
   const { data: collaborators, isLoading: isLoadingCollaborators } = useCollaborators();
   const { data: authors } = useAuthors();
   const { data: userData } = useUserDatasets();

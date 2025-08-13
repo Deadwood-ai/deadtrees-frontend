@@ -8,7 +8,7 @@ import PublicationLink from "../components/PublicationLink";
 import countryList from "../utils/countryList";
 import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../utils/datasetUtils";
 import { sanitizeText } from "../utils/textUtils";
-import { useDatasets } from "../hooks/useDatasets";
+import { usePublicDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
 import { useState } from "react";
@@ -22,7 +22,7 @@ import { usePhenologyData } from "../hooks/usePhenologyData";
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { data: datasets } = useDatasets();
+  const { data: datasets } = usePublicDatasets();
   const [labelsOnly, setLabelsOnly] = useState(false);
   const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
 

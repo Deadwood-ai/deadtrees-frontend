@@ -6,7 +6,7 @@ import DataList from "../components/DataList";
 import DatasetMapOL from "../components/DatasetMap/DatasetMap";
 import { CloseOutlined } from "@ant-design/icons";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
-import { useDatasets } from "../hooks/useDatasets";
+import { usePublicDatasets } from "../hooks/useDatasets";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 
@@ -14,7 +14,7 @@ type SortDirection = "asc" | "desc";
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
 
 export default function Dataset() {
-  const { data: allData } = useDatasets();
+  const { data: allData } = usePublicDatasets();
   const { filteredData } = useFilteredDatasets(allData);
 
   // Get filter state from context

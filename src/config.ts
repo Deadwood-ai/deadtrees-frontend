@@ -33,7 +33,8 @@ export const Settings = {
   API_URL_UPLOAD_ENDPOINT: DEV ? API_URL_UPLOAD_ENDPOINT_DEV : API_URL_UPLOAD_ENDPOINT_PROD,
   DEV: DEV,
 
-  DATA_TABLE_FULL: "v2_full_dataset_view",
+  DATA_TABLE_FULL: "v2_full_dataset_view", // For admin/audit use (includes excluded datasets)
+  DATA_TABLE_PUBLIC: "v2_full_dataset_view_public", // For public use (excludes excluded datasets)
   THUMBNAILS_TABLE: "v2_thumbnails",
   COLLABORATORS_TABLE: "collaborators",
   LABELS_TABLE: "v2_labels",

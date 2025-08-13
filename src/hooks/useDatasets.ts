@@ -4,7 +4,7 @@ import { useAuth } from "./useAuthProvider";
 import { supabase } from "./useSupabase";
 import { Settings } from "../config";
 
-// Base datasets hook
+// Base datasets hook - includes ALL datasets (for admin/audit use)
 export function useDatasets() {
   return useQuery({
     queryKey: ["datasets"],
@@ -18,14 +18,31 @@ export function useDatasets() {
   });
 }
 
-// User-specific datasets
+// Public datasets hook - excludes datasets marked as "exclude_completely"
+export function usePublicDatasets() {
+  return useQuery({
+    queryKey: ["public-datasets"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from(Settings.DATA_TABLE_PUBLIC).select("*");
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+  });
+}
+
+// User-specific datasets - uses public view to exclude their own excluded datasets
 export function useUserDatasets() {
   const { session } = useAuth();
 
   return useQuery({
     queryKey: ["userDatasets", session?.user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("user_id", session?.user.id);
+      const { data, error } = await supabase
+        .from(Settings.DATA_TABLE_PUBLIC)
+        .select("*")
+        .eq("user_id", session?.user.id);
       if (error) throw error;
       return data;
     },
@@ -35,9 +52,9 @@ export function useUserDatasets() {
   });
 }
 
-// Authors list
+// Authors list - based on public datasets only
 export function useAuthors() {
-  const { data: datasets } = useDatasets();
+  const { data: datasets } = usePublicDatasets();
 
   return useQuery({
     queryKey: ["authors"],

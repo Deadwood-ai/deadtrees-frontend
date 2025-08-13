@@ -62,6 +62,22 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Main map initialization effect
   useEffect(() => {
     if (!mapRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
+      // Determine whether to show prediction layers based on audit quality fields from public view
+      const allowDeadwoodPredictions = (() => {
+        const q: unknown = (data as any).deadwood_quality;
+        if (q === undefined || q === null) return true; // no audit info → allow
+        if (typeof q === "boolean") return q;
+        if (typeof q === "string") return q !== "bad";
+        return true;
+      })();
+
+      const allowForestCoverPredictions = (() => {
+        const q: unknown = (data as any).forest_cover_quality;
+        if (q === undefined || q === null) return true;
+        if (typeof q === "boolean") return q;
+        if (typeof q === "string") return q !== "bad";
+        return true;
+      })();
       // Create ortho layer first
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -97,12 +113,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         }),
       });
 
-      // Create vector layers conditionally based on data availability
-      const deadwoodVectorLayer = deadwood.data?.id ? createDeadwoodVectorLayer(deadwood.data.id) : undefined;
+      // Create vector layers conditionally based on data availability AND audit quality flags
+      const deadwoodVectorLayer =
+        deadwood.data?.id && allowDeadwoodPredictions ? createDeadwoodVectorLayer(deadwood.data.id) : undefined;
 
-      // Only create forest cover layer if forest cover processing is done AND labels exist
+      // Only create forest cover layer if forest cover processing is done AND labels exist AND audit quality is good
       const forestCoverVectorLayer =
-        data.is_forest_cover_done && forestCover.data?.id
+        data.is_forest_cover_done && forestCover.data?.id && allowForestCoverPredictions
           ? createForestCoverVectorLayer(forestCover.data.id)
           : undefined;
 
@@ -501,8 +518,27 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             setForestCoverOpacity={setForestCoverOpacity}
             aoiOpacity={aoiOpacity}
             setAoiOpacity={setAoiOpacity}
-            showLegend={!!deadwood.data}
-            showForestCoverLegend={!!forestCover.data && !!data.is_forest_cover_done}
+            showLegend={
+              !!deadwood.data &&
+              (() => {
+                const q: unknown = (data as any).deadwood_quality;
+                if (q === undefined || q === null) return true;
+                if (typeof q === "boolean") return q;
+                if (typeof q === "string") return q !== "bad";
+                return true;
+              })()
+            }
+            showForestCoverLegend={
+              !!forestCover.data &&
+              !!data.is_forest_cover_done &&
+              (() => {
+                const q: unknown = (data as any).forest_cover_quality;
+                if (q === undefined || q === null) return true;
+                if (typeof q === "boolean") return q;
+                if (typeof q === "string") return q !== "bad";
+                return true;
+              })()
+            }
             showAOI={!!aoiData}
           />
         </div>

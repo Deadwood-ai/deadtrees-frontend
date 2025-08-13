@@ -90,6 +90,19 @@ export interface IDataset {
   has_deadwood_prediction: boolean;
   ortho_upload_runtime?: number | null;
   freidata_doi?: string | null;
+
+  // Audit status fields (from database view)
+  final_assessment: "ready" | "fixable_issues" | "no_issues" | "exclude_completely" | null;
+  deadwood_quality: "great" | "sentinel_ok" | "bad" | null;
+  forest_cover_quality: "great" | "sentinel_ok" | "bad" | null;
+  has_major_issue: boolean | null;
+  audit_date: string | null;
+  audited_by: string | null;
+  audited_by_email: string | null;
+
+  // Quality flags for frontend display logic
+  show_deadwood_predictions: boolean;
+  show_forest_cover_predictions: boolean;
 }
 
 export interface ILabels {
