@@ -9,8 +9,11 @@ interface DeadwoodCardDetailsProps {
   setDroneImageOpacity: React.Dispatch<React.SetStateAction<number>>;
   forestCoverOpacity?: number;
   setForestCoverOpacity?: React.Dispatch<React.SetStateAction<number>>;
+  aoiOpacity?: number;
+  setAoiOpacity?: React.Dispatch<React.SetStateAction<number>>;
   showLegend: boolean;
   showForestCoverLegend?: boolean;
+  showAOI?: boolean;
 }
 
 export function DeadwoodCardDetails({
@@ -20,8 +23,11 @@ export function DeadwoodCardDetails({
   setDroneImageOpacity,
   forestCoverOpacity,
   setForestCoverOpacity,
+  aoiOpacity,
+  setAoiOpacity,
   showLegend,
   showForestCoverLegend = false,
+  showAOI = false,
 }: DeadwoodCardDetailsProps) {
   const [showAttributions, setShowAttributions] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -77,6 +83,24 @@ export function DeadwoodCardDetails({
               </div>
             )}
 
+            {/* AOI Controls - Only show if data exists */}
+            {showAOI && aoiOpacity !== undefined && setAoiOpacity && (
+              <div className="mb-2 flex w-full items-center">
+                <p className="m-0 w-2/3 text-xs text-gray-600">Training Area</p>
+                <div className="w-1/3 pl-3">
+                  <Slider
+                    className="m-0 w-full"
+                    defaultValue={0.8}
+                    step={0.01}
+                    max={1}
+                    value={aoiOpacity}
+                    onChange={(value) => setAoiOpacity(value as number)}
+                    min={0}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Drone Imagery Controls */}
             <div className="mb-2 flex w-full items-center">
               <p className="m-0 w-2/3 text-xs text-gray-600">Drone Imagery</p>
@@ -93,12 +117,12 @@ export function DeadwoodCardDetails({
               </div>
             </div>
 
-            {/* Unified Model Attribution Section */}
-            {(showLegend || showForestCoverLegend) && (
+            {/* Model Information Section */}
+            {(showLegend || showForestCoverLegend || showAOI) && (
               <div className="pt-1">
                 <div className="mb-2 flex items-center space-x-2">
-                  <p className="m-0 text-xs text-gray-800">Models by:</p>
-                  <Tooltip title="View model attributions and papers">
+                  <p className="m-0 text-xs text-gray-800">Model Info:</p>
+                  <Tooltip title="View model details, training areas, and research papers">
                     <Button
                       type="link"
                       size="small"
@@ -106,13 +130,22 @@ export function DeadwoodCardDetails({
                       onClick={() => setShowAttributions(!showAttributions)}
                       className="m-0 p-0 text-xs"
                     >
-                      View Citations
+                      Details
                     </Button>
                   </Tooltip>
                 </div>
 
                 {showAttributions && (
                   <div className="mb-4 space-y-3 rounded bg-gray-50 p-2 text-xs">
+                    {showAOI && (
+                      <div>
+                        <div className="font-semibold text-gray-800">Training Area:</div>
+                        <div className="text-gray-700">
+                          Valid region where predictions are used for satellite model training, based on ortho image
+                          quality.
+                        </div>
+                      </div>
+                    )}
                     {showLegend && (
                       <div>
                         <div className="font-semibold text-gray-800">Deadwood Detection:</div>

@@ -3,6 +3,7 @@ import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
@@ -15,8 +16,9 @@ import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
 import { createDeadwoodVectorLayer } from "./createVectorLayer";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
-import { createForestCoverVectorLayer } from "./createVectorLayer";
+import { createForestCoverVectorLayer, createAOIVectorLayer, createAOIMaskLayer } from "./createVectorLayer";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
+import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -26,6 +28,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
+  const [aoiOpacity, setAoiOpacity] = useState<number>(0.8);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
@@ -40,20 +43,25 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     enabled: !!data?.id,
   });
 
+  // Fetch AOI data for the current dataset
+  const { data: aoiData, isLoading: isAOILoading } = useDatasetAOI(data?.id);
+
   // Store layer references for cleanup
   const layerRefs = useRef<{
     basemap?: TileLayer<XYZ>;
     orthoCog?: TileLayerWebGL;
-    vectorAOI?: VectorLayer<any>;
-    vectorLabels?: VectorLayer<any>;
+    vectorAOI?: VectorLayer<VectorSource>;
+    vectorLabels?: VectorLayer<VectorSource>;
     deadwoodVector?: VectorTileLayer;
     forestCoverVector?: VectorTileLayer;
     selectionLayer?: VectorTileLayer;
+    aoiVector?: VectorLayer<VectorSource>;
+    aoiMask?: VectorLayer<VectorSource>;
   }>({});
 
   // Main map initialization effect
   useEffect(() => {
-    if (!mapRef.current && data?.file_name && !isLoadingLabels) {
+    if (!mapRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
       // Create ortho layer first
       const orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -84,16 +92,28 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       });
 
       // Create vector layers conditionally based on data availability
-      const deadwoodVectorLayer = deadwood.data?.id ? createDeadwoodVectorLayer(deadwood.data.id) : null;
+      const deadwoodVectorLayer = deadwood.data?.id ? createDeadwoodVectorLayer(deadwood.data.id) : undefined;
 
       // Only create forest cover layer if forest cover processing is done AND labels exist
       const forestCoverVectorLayer =
-        data.is_forest_cover_done && forestCover.data?.id ? createForestCoverVectorLayer(forestCover.data.id) : null;
+        data.is_forest_cover_done && forestCover.data?.id
+          ? createForestCoverVectorLayer(forestCover.data.id)
+          : undefined;
+
+      // Create AOI layer if AOI data exists
+      const aoiVectorLayer = aoiData?.geometry
+        ? createAOIVectorLayer(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
+        : undefined;
+
+      // Create AOI mask layer if AOI data exists - grays out areas outside AOI
+      const aoiMaskLayer = aoiData?.geometry
+        ? createAOIMaskLayer(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
+        : undefined;
 
       // Create selection layer for hover effect (only if deadwood layer exists)
       const selectionLayer = deadwoodVectorLayer
         ? new VectorTileLayer({
-            source: deadwoodVectorLayer.getSource(),
+            source: deadwoodVectorLayer.getSource()!,
             style: (feature: FeatureLike) => {
               if (feature === hoveredFeature) {
                 return new Style({
@@ -111,7 +131,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             renderMode: "vector",
             renderBuffer: 512,
           })
-        : null;
+        : undefined;
 
       // Store references
       layerRefs.current = {
@@ -120,6 +140,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         deadwoodVector: deadwoodVectorLayer || undefined,
         forestCoverVector: forestCoverVectorLayer || undefined,
         selectionLayer: selectionLayer || undefined,
+        aoiVector: aoiVectorLayer || undefined,
+        aoiMask: aoiMaskLayer || undefined,
       };
 
       // Wait for the source to be ready and create map
@@ -143,9 +165,14 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             });
 
             if (mapContainer.current) {
-              // Create layers array with proper ordering: basemap → ortho → forest cover → deadwood → selection
-              // This ensures deadwood appears on top of forest cover
-              const layers = [basemapLayer, orthoCogLayer];
+              // Create layers array with proper ordering: basemap → ortho → mask → AOI → forest cover → deadwood → selection
+              // The mask grays out areas outside AOI, then AOI shows the boundary, then analysis results on top
+              const layers: Array<TileLayer<XYZ> | TileLayerWebGL | VectorLayer<VectorSource> | VectorTileLayer> = [
+                basemapLayer,
+                orthoCogLayer,
+              ];
+              if (aoiMaskLayer) layers.push(aoiMaskLayer);
+              if (aoiVectorLayer) layers.push(aoiVectorLayer);
               if (forestCoverVectorLayer) layers.push(forestCoverVectorLayer);
               if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
               if (selectionLayer) layers.push(selectionLayer);
@@ -282,7 +309,31 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           layerRefs.current.deadwoodVector = undefined;
         }
 
-        // Clean up layers
+        // Clean up AOI layer specifically
+        if (layerRefs.current.aoiVector) {
+          mapRef.current.removeLayer(layerRefs.current.aoiVector);
+          const source = layerRefs.current.aoiVector.getSource();
+          if (source) {
+            source.clear();
+            source.dispose();
+          }
+          layerRefs.current.aoiVector.dispose();
+          layerRefs.current.aoiVector = undefined;
+        }
+
+        // Clean up AOI mask layer specifically
+        if (layerRefs.current.aoiMask) {
+          mapRef.current.removeLayer(layerRefs.current.aoiMask);
+          const source = layerRefs.current.aoiMask.getSource();
+          if (source) {
+            source.clear();
+            source.dispose();
+          }
+          layerRefs.current.aoiMask.dispose();
+          layerRefs.current.aoiMask = undefined;
+        }
+
+        // Clean up other layers
         Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {
             mapRef.current?.removeLayer(layer);
@@ -308,7 +359,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, isLoadingLabels, deadwood.data, forestCover.data]);
+  }, [data, isLoadingLabels, isAOILoading, deadwood.data, forestCover.data, aoiData]);
 
   // update deadwood layer opacity
   useEffect(() => {
@@ -330,6 +381,21 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
     }
   }, [forestCoverOpacity]);
+
+  // update AOI layer opacity
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.aoiVector) {
+      layerRefs.current.aoiVector.setOpacity(aoiOpacity);
+    }
+  }, [aoiOpacity]);
+
+  // update AOI mask layer opacity (synchronized with AOI boundary)
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.aoiMask) {
+      // Synchronized with AOI boundary: higher AOI opacity = stronger focus effect
+      layerRefs.current.aoiMask.setOpacity(aoiOpacity);
+    }
+  }, [aoiOpacity]);
 
   // Update the map style effect to preserve the viewport
   useEffect(() => {
@@ -413,8 +479,11 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             setDroneImageOpacity={setDroneImageOpacity}
             forestCoverOpacity={forestCoverOpacity}
             setForestCoverOpacity={setForestCoverOpacity}
+            aoiOpacity={aoiOpacity}
+            setAoiOpacity={setAoiOpacity}
             showLegend={!!deadwood.data}
             showForestCoverLegend={!!forestCover.data && !!data.is_forest_cover_done}
+            showAOI={!!aoiData}
           />
         </div>
       </div>

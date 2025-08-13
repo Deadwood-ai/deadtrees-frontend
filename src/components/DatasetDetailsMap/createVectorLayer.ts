@@ -1,7 +1,11 @@
 import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import { Fill, Stroke, Style } from "ol/style";
 import MVT from "ol/format/MVT";
+import GeoJSON from "ol/format/GeoJSON";
+import { Polygon } from "ol/geom";
 import { supabase } from "../../hooks/useSupabase";
 import { base64ToArrayBuffer } from "../../utils/base64ToArrayBuffer";
 import Feature from "ol/Feature";
@@ -138,3 +142,146 @@ export const createForestCoverVectorLayer = (labelId?: number) =>
     },
     labelId,
   });
+
+export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon) => {
+  const aoiSource = new VectorSource();
+  const format = new GeoJSON();
+
+  try {
+    // Handle MultiPolygon by creating separate features for each polygon
+    if (geometry.type === "MultiPolygon") {
+      geometry.coordinates.forEach((polygonCoords) => {
+        const polygonGeometry: GeoJSON.Polygon = {
+          type: "Polygon",
+          coordinates: polygonCoords,
+        };
+
+        const feature = format.readFeature(polygonGeometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        });
+
+        if (feature && !Array.isArray(feature) && feature.getGeometry()) {
+          aoiSource.addFeature(feature);
+        }
+      });
+    } else if (geometry.type === "Polygon") {
+      // Handle single Polygon
+      const feature = format.readFeature(geometry, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      });
+
+      if (feature && !Array.isArray(feature) && feature.getGeometry()) {
+        aoiSource.addFeature(feature);
+      }
+    }
+  } catch (error) {
+    console.error("Error processing AOI geometry:", error);
+  }
+
+  return new VectorLayer({
+    source: aoiSource,
+    style: new Style({
+      stroke: new Stroke({
+        color: "#ff6b35", // Orange stroke to match audit workflow
+        width: 2,
+      }),
+      fill: new Fill({
+        color: "rgba(255, 107, 53, 0.15)", // Light orange fill
+      }),
+    }),
+    className: "aoi-vector",
+  });
+};
+
+export const createAOIMaskLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon) => {
+  const maskSource = new VectorSource();
+  const format = new GeoJSON();
+
+  try {
+    // Create a large polygon covering the entire world
+    const worldExtent = [-20037508, -20037508, 20037508, 20037508]; // Web Mercator world bounds
+
+    // Convert AOI geometry to Web Mercator coordinates for hole creation
+    const holes: number[][][] = [];
+
+    if (geometry.type === "MultiPolygon") {
+      // For MultiPolygon, each polygon becomes a hole
+      geometry.coordinates.forEach((polygonCoords) => {
+        const polygonGeometry: GeoJSON.Polygon = {
+          type: "Polygon",
+          coordinates: polygonCoords,
+        };
+
+        const tempFeature = format.readFeature(polygonGeometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        });
+
+        if (tempFeature && !Array.isArray(tempFeature)) {
+          const geom = tempFeature.getGeometry();
+          if (geom && geom.getType() === "Polygon") {
+            // @ts-expect-error - OpenLayers Polygon type
+            const coords = geom.getCoordinates();
+            if (coords && coords[0]) {
+              holes.push(coords[0]);
+            }
+          }
+        }
+      });
+    } else if (geometry.type === "Polygon") {
+      // For single Polygon, it becomes the hole
+      const tempFeature = format.readFeature(geometry, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      });
+
+      if (tempFeature && !Array.isArray(tempFeature)) {
+        const geom = tempFeature.getGeometry();
+        if (geom && geom.getType() === "Polygon") {
+          // @ts-expect-error - OpenLayers Polygon type
+          const coords = geom.getCoordinates();
+          if (coords && coords[0]) {
+            holes.push(coords[0]);
+          }
+        }
+      }
+    }
+
+    // Create the mask polygon: world extent with AOI holes
+    const maskCoordinates = [
+      [
+        [worldExtent[0], worldExtent[1]], // bottom-left
+        [worldExtent[2], worldExtent[1]], // bottom-right
+        [worldExtent[2], worldExtent[3]], // top-right
+        [worldExtent[0], worldExtent[3]], // top-left
+        [worldExtent[0], worldExtent[1]], // close
+      ],
+      ...holes, // Add all AOI areas as holes
+    ];
+
+    // Create the mask feature directly in Web Mercator
+    const maskFeature = new Feature({
+      geometry: new Polygon(maskCoordinates),
+    });
+
+    maskSource.addFeature(maskFeature);
+  } catch (error) {
+    console.error("Error creating AOI mask:", error);
+  }
+
+  return new VectorLayer({
+    source: maskSource,
+    style: new Style({
+      fill: new Fill({
+        color: "rgba(0, 0, 0, 0.5)", // Stronger black mask for better focus effect
+      }),
+      stroke: new Stroke({
+        color: "transparent",
+        width: 0,
+      }),
+    }),
+    className: "aoi-mask",
+  });
+};
