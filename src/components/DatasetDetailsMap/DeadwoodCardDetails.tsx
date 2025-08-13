@@ -86,7 +86,7 @@ export function DeadwoodCardDetails({
             {/* AOI Controls - Only show if data exists */}
             {showAOI && aoiOpacity !== undefined && setAoiOpacity && (
               <div className="mb-2 flex w-full items-center">
-                <p className="m-0 w-2/3 text-xs text-gray-600">Training Area</p>
+                <p className="m-0 w-2/3 text-xs text-gray-600">Area of Interest</p>
                 <div className="w-1/3 pl-3">
                   <Slider
                     className="m-0 w-full"
@@ -139,7 +139,7 @@ export function DeadwoodCardDetails({
                   <div className="mb-4 space-y-3 rounded bg-gray-50 p-2 text-xs">
                     {showAOI && (
                       <div>
-                        <div className="font-semibold text-gray-800">Training Area:</div>
+                        <div className="font-semibold text-gray-800">Area of Interest:</div>
                         <div className="text-gray-700">
                           Valid region where predictions are used for satellite model training, based on ortho image
                           quality.
