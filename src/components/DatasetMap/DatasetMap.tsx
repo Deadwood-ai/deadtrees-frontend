@@ -105,9 +105,12 @@ const DatasetMapOL = ({
       });
 
       const basemapLayer = new TileLayer({
+        preload: 0,
         source: new XYZ({
-          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: "© OpenStreetMap contributors",
+          maxZoom: 19,
+          tileSize: 256,
         }),
       });
 
