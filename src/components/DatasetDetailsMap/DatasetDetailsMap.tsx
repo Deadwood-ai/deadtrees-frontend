@@ -24,7 +24,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const [mapStyle, setMapStyle] = useState("satellite-streets-v12");
+  const [mapStyle, setMapStyle] = useState("streets-v12");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
   const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
@@ -82,12 +82,18 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
       // Create all other layers before map initialization - Raster API for satellite, Static API for streets
       const basemapLayer = new TileLayer({
+        preload: 0,
         source: new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
               ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+              : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions:
+            mapStyle === "satellite-streets-v12"
+              ? "© Mapbox © OpenStreetMap contributors"
+              : "© OpenStreetMap contributors",
+          maxZoom: mapStyle === "satellite-streets-v12" ? undefined : 19,
+          tileSize: mapStyle === "satellite-streets-v12" ? 512 : 256,
         }),
       });
 
@@ -159,6 +165,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               center: viewport.center[0] !== 0 ? viewport.center : viewOptions.center,
               zoom: viewport.zoom !== 2 ? viewport.zoom : undefined,
               extent: viewOptions.extent,
+              minZoom: 14,
               maxZoom: 22,
               projection: "EPSG:3857",
               constrainOnlyCenter: true,
@@ -405,13 +412,15 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       const currentZoom = currentView.getZoom();
 
       // Just update the source, don't recreate the map - Raster API for satellite, Static API for streets
+      const nextIsSatellite = mapStyle === "satellite-streets-v12";
       layerRefs.current.basemap.setSource(
         new XYZ({
-          url:
-            mapStyle === "satellite-streets-v12"
-              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/tiles/512/{z}/{x}/{y}?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`,
-          attributions: "© Mapbox © OpenStreetMap contributors",
+          url: nextIsSatellite
+            ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+            : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: nextIsSatellite ? "© Mapbox © OpenStreetMap contributors" : "© OpenStreetMap contributors",
+          maxZoom: nextIsSatellite ? undefined : 19,
+          tileSize: nextIsSatellite ? 512 : 256,
         }),
       );
 
@@ -469,7 +478,18 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         ref={mapContainer}
       >
         <div className="absolute left-2 top-4 z-20">
-          <MapStyleSwitchButtons mapStyle={mapStyle} setMapStyle={setMapStyle} />
+          <MapStyleSwitchButtons
+            mapStyle={mapStyle}
+            onChange={(next) => {
+              if (next === "satellite-streets-v12" && mapRef.current) {
+                const zoom = mapRef.current.getView().getZoom();
+                if (!zoom || zoom < 14) {
+                  return;
+                }
+              }
+              setMapStyle(next);
+            }}
+          />
         </div>
         <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
