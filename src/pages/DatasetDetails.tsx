@@ -226,21 +226,22 @@ export default function DatasetDetails() {
                     <Typography.Text className="pr-2" strong>
                       Additional Information:
                     </Typography.Text>
-                    <div className="mt-2 block text-sm text-gray-500">
+                    <div className="mt-2 block whitespace-pre-wrap break-words text-sm text-gray-500">
                       {sanitizeText(dataset.additional_information)
                         .split(/(https?:\/\/[^\s]+)/g)
                         .map((part: string, index: number) => {
                           if (part.match(/https?:\/\/[^\s]+/)) {
                             return (
-                              <a
-                                key={index}
-                                href={part}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 underline hover:text-blue-800"
-                              >
-                                {part}
-                              </a>
+                              <Tooltip key={index} title={part}>
+                                <a
+                                  href={part}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="break-all text-blue-600 underline hover:text-blue-800"
+                                >
+                                  link
+                                </a>
+                              </Tooltip>
                             );
                           }
                           return part;
