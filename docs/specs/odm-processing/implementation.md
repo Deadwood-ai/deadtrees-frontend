@@ -12,7 +12,7 @@ This document outlines the minimal frontend changes needed to support ODM raw dr
 - Backend handles EXIF extraction and auto-detection
 - Minimal frontend processing (file validation only)
 - Extend current UI rather than rebuild
-- 5GB file size limit for ZIP files
+- 20GB file size limit for ZIP files
 
 ---
 
@@ -96,9 +96,9 @@ export const detectUploadType = (fileName: string): UploadType => {
 
 - [x] Add file size validation for ZIP files
 
-  - 5GB limit for ZIP files
+  - 20GB limit for ZIP files
   - Show clear error message if exceeded
-  - 8GB limit for GeoTIFF files
+  - 16GB limit for GeoTIFF files
 
 - [x] Update upload modal help text
   - Add mention of ZIP file support for raw drone images
@@ -165,7 +165,7 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 - Upload ZIP files containing raw drone images (JPEG, JPG, TIF)
 - Images will be processed into orthomosaics using ODM (OpenDroneMap)
 - Ensure 60-80% image overlap for best results
-- Maximum file size: 5GB
+- Maximum file size: 20GB
 - Processing time varies based on image count and quality
 ```
 
@@ -177,14 +177,14 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
 
 ```typescript
 const validateFileSize = (file: File, uploadType: UploadType): boolean => {
-  const MAX_ZIP_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
-  const MAX_GEOTIFF_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
+  const MAX_ZIP_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
+  const MAX_GEOTIFF_SIZE = 16 * 1024 * 1024 * 1024; // 16GB
 
   if (uploadType === UploadType.RAW_IMAGES_ZIP && file.size > MAX_ZIP_SIZE) {
-    throw new Error("ZIP files must be smaller than 5GB");
+    throw new Error("ZIP files must be smaller than 20GB");
   }
   if (uploadType === UploadType.GEOTIFF && file.size > MAX_GEOTIFF_SIZE) {
-    throw new Error("GeoTIFF files must be smaller than 8GB");
+    throw new Error("GeoTIFF files must be smaller than 16GB");
   }
   return true;
 };
@@ -229,7 +229,7 @@ const validateFileSize = (file: File, uploadType: UploadType): boolean => {
 
 - [x] Add UploadType enum to types
 - [x] Update file input accept attribute to include `.zip`
-- [x] Add file size validation for ZIP files (5GB limit)
+- [x] Add file size validation for ZIP files (20GB limit)
 - [x] Create file type detection utility
 
 ### **Progress & UI Updates:**

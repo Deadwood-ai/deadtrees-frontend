@@ -115,8 +115,8 @@ export default function ProfilePage() {
                   </p>
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                     <li>
-                      🗺️ <strong>Formats:</strong> GeoTIFF (max 8GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
-                      5GB)
+                      🗺️ <strong>Formats:</strong> GeoTIFF (max 16GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
+                      20GB)
                     </li>
                     <li>
                       🔧 <strong>Raw Images:</strong> ODM processing with 85%-front, 75%-side overlap
