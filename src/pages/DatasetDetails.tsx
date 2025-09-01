@@ -18,6 +18,8 @@ import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../hooks/usePhenologyData";
+import { useAuth } from "../hooks/useAuthProvider";
+import { createDownloadHeaders, handleDownloadAuthError } from "../utils/downloadAuth";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -28,6 +30,9 @@ export default function DatasetDetails() {
 
   // Use the global download state
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
+
+  // Get authentication session for download headers
+  const { session } = useAuth();
 
   const dataset = datasets?.find((d) => d.id.toString() === id);
 
@@ -355,16 +360,46 @@ export default function DatasetDetails() {
 
                         // For dataset.zip, use the new status checking approach
                         if (!labelsOnly) {
-                          // First initiate the download
-                          fetch(baseUrl)
-                            .then((response) => response.json())
+                          // First initiate the download with authentication headers
+                          fetch(baseUrl, {
+                            headers: createDownloadHeaders(session),
+                          })
+                            .then((response) => {
+                              // Check for authentication errors
+                              if (handleDownloadAuthError(response, (msg) => message.error(msg))) {
+                                downloadMsg();
+                                finishDownload();
+                                return Promise.reject(new Error("Authentication error"));
+                              }
+
+                              if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                              }
+
+                              return response.json();
+                            })
                             .then((data) => {
                               const jobId = data.job_id;
 
                               // Function to check status
                               const checkStatus = () => {
-                                fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
-                                  .then((response) => response.json())
+                                fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`, {
+                                  headers: createDownloadHeaders(session),
+                                })
+                                  .then((response) => {
+                                    // Check for authentication errors
+                                    if (handleDownloadAuthError(response, (msg) => message.error(msg))) {
+                                      downloadMsg();
+                                      finishDownload();
+                                      return Promise.reject(new Error("Authentication error"));
+                                    }
+
+                                    if (!response.ok) {
+                                      throw new Error(`HTTP error! Status: ${response.status}`);
+                                    }
+
+                                    return response.json();
+                                  })
                                   .then((statusData) => {
                                     if (statusData.status === "completed") {
                                       // Download is ready - close loading message
@@ -416,18 +451,50 @@ export default function DatasetDetails() {
                               });
                             });
                         } else {
-                          // For labels.gpkg, use direct download as before
-                          window.location.href = baseUrl;
+                          // For labels.gpkg, check authentication before download
+                          fetch(baseUrl, {
+                            method: "HEAD", // Use HEAD to check access without downloading
+                            headers: createDownloadHeaders(session),
+                          })
+                            .then((response) => {
+                              // Check for authentication errors
+                              if (handleDownloadAuthError(response, (msg) => message.error(msg))) {
+                                downloadMsg();
+                                finishDownload();
+                                return;
+                              }
 
-                          // Close loading message after a brief delay
-                          setTimeout(() => {
-                            downloadMsg();
-                            finishDownload(); // Update global state
-                            message.success({
-                              content: "Download started! The file will be saved to your downloads folder.",
-                              duration: 5,
+                              if (!response.ok) {
+                                downloadMsg();
+                                finishDownload();
+                                message.error({
+                                  content: `Error accessing download: ${response.status}`,
+                                  duration: 5,
+                                });
+                                return;
+                              }
+
+                              // Access check passed, start download
+                              window.location.href = baseUrl;
+
+                              // Close loading message after a brief delay
+                              setTimeout(() => {
+                                downloadMsg();
+                                finishDownload(); // Update global state
+                                message.success({
+                                  content: "Download started! The file will be saved to your downloads folder.",
+                                  duration: 5,
+                                });
+                              }, 3000);
+                            })
+                            .catch((error) => {
+                              downloadMsg();
+                              finishDownload();
+                              message.error({
+                                content: `Error checking download access: ${error.message}`,
+                                duration: 5,
+                              });
                             });
-                          }, 3000);
                         }
                       }}
                     >

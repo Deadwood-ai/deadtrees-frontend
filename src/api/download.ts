@@ -1,17 +1,33 @@
 import { Settings } from "../config";
 
-const download = async (dataset_id, token) => {
+interface DownloadOptions {
+  onAuthError?: (message: string) => void;
+}
+
+const download = async (dataset_id: string, token?: string, options?: DownloadOptions) => {
   try {
-    const response = await fetch(
-      // `${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,
-      `${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`, {
+      method: "GET",
+      headers,
+    });
+
+    // Handle authentication errors
+    if (response.status === 401 || response.status === 403) {
+      const errorMessage =
+        response.status === 401
+          ? "Authentication required to download this dataset. Please sign in."
+          : "You don't have permission to download this dataset.";
+
+      if (options?.onAuthError) {
+        options.onAuthError(errorMessage);
+      }
+      throw new Error(errorMessage);
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
