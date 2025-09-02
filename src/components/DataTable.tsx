@@ -386,7 +386,7 @@ const DataTable: React.FC<DataTableProps> = ({
               }}
               disabled={!isComplete}
             >
-              Publish
+              request DOI
             </Button>
           );
         }
