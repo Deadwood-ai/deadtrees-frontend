@@ -1,14 +1,13 @@
-import { Typography, Button, Card, Tabs, Collapse } from "antd";
+import { Typography, Button, Card, Tabs, Collapse, Tooltip, message, Input } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, ExportOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExportOutlined, CopyOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
 import LogoBannerBand from "../components/Home/LogoBanner";
 import { useData } from "../hooks/useDataProvider";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ReactPlayer from "react-player";
-import { PlayCircleFilled } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
@@ -56,15 +55,39 @@ export default function About() {
 
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const today = new Date();
+  const bibtexPreprint = String.raw`@article {mosig2024deadtrees,
+  author = {Mosig, Clemens and Vajna-Jehle, Janusch and Mahecha, Miguel D. and Cheng, Yan and Hartmann, Henrik and Montero, David and Junttila, Samuli and Horion, St{\'e}phanie and Schwenke, Mirela Beloiu and Adu-Bredu, Stephen and Al-Halbouni, Djamil and Allen, Matthew and Altman, Jan and Angiolini, Claudia and Astrup, Rasmus and Barrasso, Caterina and Bartholomeus, Harm and Brede, Benjamin and Buras, Allan and Carrieri, Erik and Chirici, Gherardo and Cloutier, Myriam and Cushman, KC and Dalling, James W. and Dempewolf, Jan and Denter, Martin and Ecke, Simon and Eichel, Jana and Eltner, Anette and Fabi, Maximilian and Fassnacht, Fabian and Feirreira, Matheus Pinheiro and Frey, Julian and Frick, Annett and Ganz, Selina and Garbarino, Matteo and Garc{\'\i}a, Milton and Gassilloud, Matthias and Ghasemi, Marziye and Giannetti, Francesca and Gonzalez, Roy and Gosper, Carl and Greinwald, Konrad and Grieve, Stuart and Gutierrez, Jesus Aguirre and G{\"o}ritz, Anna and Hajek, Peter and Hedding, David and Hempel, Jan and Hern{\'a}ndez, Melvin and Heurich, Marco and Honkavaara, Eija and Jucker, Tommaso and Kalwij, Jesse M. and Khatri-Chhetri, Pratima and Klemmt, Hans-Joachim and Koivum{\"a}ki, Niko and Korznikov, Kirill and Kruse, Stefan and Kr{\"u}ger, Robert and Lalibert{\'e}, Etienne and Langan, Liam and Latifi, Hooman and Lehmann, Jan and Li, Linyuan and Lines, Emily and Lopatin, Javier and Lucieer, Arko and Ludwig, Marvin and Ludwig, Antonia and Lyytik{\"a}inen-Saarenmaa, P{\"a}ivi and Ma, Qin and Marino, Giovanni and Maroschek, Michael and Meloni, Fabio and Menzel, Annette and Meyer, Hanna and Miraki, Mojdeh and Moreno-Fern{\'a}ndez, Daniel and Muller-Landau, Helene C. and M{\"a}licke, Mirko and M{\"o}hring, Jakobus and M{\"u}llerova, Jana and Neumeier, Paul and N{\"a}si, Roope and Oppgenoorth, Lars and Palmer, Melanie and Paul, Thomas and Potts, Alastair and Prober, Suzanne and Puliti, Stefano and P{\'e}rez-Priego, Oscar and Reudenbach, Chris and Rossi, Christian and Ruehr, Nadine Katrin and Ruiz-Benito, Paloma and Runge, Christian Mestre and Scherer-Lorenzen, Michael and Schiefer, Felix and Schladebach, Jacob and Schmehl, Marie-Therese and Schwarz, Selina and Seidl, Rupert and Shafeian, Elham and de Simone, Leopoldo and Sohrabi, Hormoz and Sotomayor, Laura and Sparrow, Ben and Steer, Benjamin S.C. and Stenson, Matt and St{\"o}ckigt, Benjamin and Su, Yanjun and Suomalainen, Juha and Torresani, Michele and Umlauft, Josefine and Vargas-Ram{\'\i}rez, Nicol{\'a}s and Volpi, Michele and V{\'a}squez, Vicente and Weinstein, Ben and Ximena, Tagle Casapia and Zdunic, Katherine and Zielewska-B{\"u}ttner, Katarzyna and de Oliveira, Raquel Alves and van Wagtendonk, Liz and von Dosky, Vincent and Kattenborn, Teja},
+  title = {deadtrees.earth - An Open-Access and Interactive Database for Centimeter-Scale Aerial Imagery to Uncover Global Tree Mortality Dynamics},
+  elocation-id = {2024.10.18.619094},
+  year = {2024},
+  doi = {10.1101/2024.10.18.619094},
+  publisher = {Cold Spring Harbor Laboratory},
+  abstract = {Excessive tree mortality is a global concern and remains poorly understood as it is a complex phenomenon. We lack global and temporally continuous coverage on tree mortality data. Ground-based observations on tree mortality, e.g., derived from national inventories, are very sparse, not standardized and not spatially explicit. Earth observation data, combined with supervised machine learning, offer a promising approach to map tree mortality over time. However, global-scale machine learning requires broad training data covering a wide range of environmental settings and forest types. Drones provide a cost-effective source of training data by capturing high-resolution orthophotos of tree mortality events at sub-centimeter resolution. Here, we introduce deadtrees.earth, an open-access platform hosting more than a thousand centimeter-resolution orthophotos, covering already more than 300,000 ha, of which more than 58,000 ha are fully annotated. This community-sourced and rigorously curated dataset shall serve as a foundation for a global initiative to gather comprehensive reference data. In concert with Earth observation data and machine learning it will serve to uncover tree mortality patterns from local to global scales. This will provide the foundation to attribute tree mortality patterns to environmental changes or project tree mortality dynamics to the future. Thus, the open and interactive nature of deadtrees.earth together with the collective effort of the community is meant to continuously increase our capacity to uncover and understand tree mortality patterns.,
+  URL = {https://www.biorxiv.org/content/early/2024/10/20/2024.10.18.619094.1},
+  eprint = {https://www.biorxiv.org/content/early/2024/10/20/2024.10.18.619094.1.full.pdf},
+  journal = {bioRxiv}
+}`;
 
+  const apaCitation = `Mosig, C., Vajna-Jehle, J., Mahecha, M. D., Cheng, Y., Hartmann, H., Montero, D., Junttila, S., Horion, S., Schwenke, M. B., Adu-Bredu, S., Al-Halbouni, D., Allen, M., Altman, J., Angiolini, C., Astrup, R., Barrasso, C., Bartholomeus, H., Brede, B., Buras, A., … Kattenborn, T. (2024). deadtrees.earth – An open-access and interactive database for centimeter-scale aerial imagery to uncover global tree mortality dynamics [Preprint]. bioRxiv. https://doi.org/10.1101/2024.10.18.619094`;
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success("Copied to clipboard");
+    } catch (err) {
+      message.error("Copy failed");
+    }
+  };
+
+  type ContributionItem = { title: string; event: string; date: string; link: string };
   const contributions = useMemo(() => {
-    if (!presentations) return { upcoming: [], past: [] };
+    if (!presentations) return { upcoming: [] as ContributionItem[], past: [] as ContributionItem[] };
 
+    const now = Date.now();
     return presentations.reduce(
-      (acc, presentation) => {
-        const presentationDate = new Date(presentation.date);
-        const item = {
+      (acc: { upcoming: ContributionItem[]; past: ContributionItem[] }, presentation) => {
+        const presentationTime = new Date(presentation.date).getTime();
+        const item: ContributionItem = {
           title: presentation.title,
           event: presentation.event,
           date: new Date(presentation.date).toLocaleDateString("en-US", {
@@ -75,7 +98,7 @@ export default function About() {
           link: presentation.url,
         };
 
-        if (presentationDate > today) {
+        if (presentationTime > now) {
           acc.upcoming.push(item);
         } else {
           acc.past.push(item);
@@ -83,26 +106,9 @@ export default function About() {
 
         return acc;
       },
-      { upcoming: [], past: [] },
+      { upcoming: [] as ContributionItem[], past: [] as ContributionItem[] },
     );
   }, [presentations]);
-
-  const [displayedCollaborators, setDisplayedCollaborators] = useState<Array<any>>([]);
-
-  useEffect(() => {
-    if (!collaborators?.length) return;
-
-    shuffleCollaborators();
-
-    const interval = setInterval(shuffleCollaborators, 5000);
-
-    return () => clearInterval(interval);
-
-    function shuffleCollaborators() {
-      const shuffled = [...collaborators].sort(() => Math.random() - 0.5);
-      setDisplayedCollaborators(shuffled.slice(0, 20));
-    }
-  }, [collaborators]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -190,6 +196,59 @@ export default function About() {
             },
           ]}
         />
+      </div>
+      {/* How to cite Section - moved above Mission */}
+      <div className="mb-16">
+        <Title level={2}>How to cite</Title>
+        <Paragraph className="text-gray-600">
+          If you use datasets from deadtrees.earth, please cite each dataset by its DOI. You can find the DOI on the
+          dataset page (look for the DOI badge and link).
+        </Paragraph>
+        <Title level={5} className="mt-4 text-gray-600">
+          BibTeX:
+        </Title>
+        <div className="relative w-full">
+          <Tooltip title="Copy BibTeX">
+            <Button
+              // type="link"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopy(bibtexPreprint)}
+              className="absolute right-4 top-4 z-10"
+            >
+              Copy
+            </Button>
+          </Tooltip>
+          <Input.TextArea
+            readOnly
+            value={bibtexPreprint}
+            autoSize={{ minRows: 1, maxRows: 16 }}
+            className="pr-14 font-mono text-sm"
+            style={{ whiteSpace: "pre", overflowX: "auto", width: "100%" }}
+          />
+        </div>
+        <Title level={5} className="mt-4 text-gray-600">
+          APA:
+        </Title>
+        <div className="relative w-full">
+          <Tooltip title="Copy APA">
+            <Button
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopy(apaCitation)}
+              className="absolute right-4 top-4 z-10"
+            >
+              Copy
+            </Button>
+          </Tooltip>
+          <Input.TextArea
+            readOnly
+            value={apaCitation}
+            autoSize={{ minRows: 1, maxRows: 8 }}
+            className="pr-14 font-mono text-sm"
+            style={{ whiteSpace: "pre-wrap", overflowX: "auto", width: "100%" }}
+          />
+        </div>
       </div>
       {/* Publications Section */}
       <div className="mb-16">
