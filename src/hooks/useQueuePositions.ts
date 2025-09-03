@@ -1,0 +1,42 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "./useSupabase";
+
+export interface QueueInfo {
+  dataset_id: number;
+  current_position: number | null;
+  estimated_time: number | null;
+  is_processing: boolean | null;
+  task_types: string[] | null;
+}
+
+export type QueueInfoByDatasetId = Record<number, QueueInfo>;
+
+export function useQueuePositions(datasetIds: number[] | undefined) {
+  return useQuery<QueueInfoByDatasetId>({
+    queryKey: ["queue-positions", datasetIds?.join(",")],
+    enabled: !!datasetIds && datasetIds.length > 0,
+    queryFn: async () => {
+      if (!datasetIds || datasetIds.length === 0) {
+        return {};
+      }
+
+      const { data, error } = await supabase
+        .from("v2_queue_positions")
+        .select("dataset_id,current_position,estimated_time,is_processing,task_types")
+        .in("dataset_id", datasetIds);
+
+      if (error) throw error;
+
+      const byId: QueueInfoByDatasetId = {};
+      for (const row of data as unknown as QueueInfo[]) {
+        if (row && typeof row.dataset_id === "number") {
+          byId[row.dataset_id] = row;
+        }
+      }
+      return byId;
+    },
+    staleTime: 15 * 1000,
+    gcTime: 60 * 1000,
+    refetchInterval: 15 * 1000,
+  });
+}

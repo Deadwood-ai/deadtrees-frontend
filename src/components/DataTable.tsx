@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 import { Button, Table, Tag, Tooltip, Dropdown, MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ import ProcessingProgress from "./ProcessingProgress";
 import { isGeonadirDataset } from "../utils/datasetUtils";
 import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
+import { useQueuePositions } from "../hooks/useQueuePositions";
 
 interface Dataset {
   id: number;
@@ -66,6 +67,10 @@ const DataTable: React.FC<DataTableProps> = ({
   const [selectedDatasetForEdit, setSelectedDatasetForEdit] = useState<Dataset | null>(null);
 
   const nav = useNavigate();
+
+  // Queue positions for user datasets
+  const datasetIds = useMemo(() => (userData ? (userData as Dataset[]).map((d) => d.id) : []), [userData]);
+  const { data: queueById } = useQueuePositions(datasetIds);
 
   // Effect to reset selection when requested
   useEffect(() => {
@@ -410,7 +415,7 @@ const DataTable: React.FC<DataTableProps> = ({
         }
 
         // Use ProcessingProgress component for all other statuses
-        return <ProcessingProgress dataset={record} />;
+        return <ProcessingProgress dataset={record} queueInfo={queueById?.[record.id]} />;
       },
     },
     {

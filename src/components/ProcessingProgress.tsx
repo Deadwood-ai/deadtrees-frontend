@@ -2,13 +2,15 @@ import React from "react";
 import { Tooltip, Tag } from "antd";
 import { CheckCircleOutlined, SyncOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { calculateProcessingProgress, DatasetProgress } from "../utils/processingSteps";
+import { QueueInfo } from "../hooks/useQueuePositions";
 
 interface ProcessingProgressProps {
   dataset: DatasetProgress;
   showDetails?: boolean;
+  queueInfo?: QueueInfo;
 }
 
-const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDetails = true }) => {
+const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDetails = true, queueInfo }) => {
   const progress = calculateProcessingProgress(dataset);
 
   // Handle error state
@@ -18,6 +20,40 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
         <Tag icon={<CloseCircleOutlined />} color="error">
           Error
         </Tag>
+      </Tooltip>
+    );
+  }
+
+  // Handle pending state (uploaded, not started yet → queued)
+  const hasStartedAnyStep = Boolean(
+    dataset.is_odm_done ||
+      dataset.is_ortho_done ||
+      dataset.is_metadata_done ||
+      dataset.is_cog_done ||
+      dataset.is_deadwood_done ||
+      dataset.is_forest_cover_done,
+  );
+
+  const isQueued = Boolean(
+    dataset.is_upload_done &&
+      !hasStartedAnyStep &&
+      !dataset.has_error &&
+      (dataset.current_status === "idle" || dataset.current_status === undefined || dataset.current_status === null),
+  );
+
+  if (isQueued) {
+    const positionText =
+      queueInfo && typeof queueInfo.current_position === "number"
+        ? `In queue: #${queueInfo.current_position}`
+        : "Pending in queue";
+
+    const tooltipText = queueInfo?.estimated_time
+      ? `Estimated start in ~${Math.round(queueInfo.estimated_time)} min`
+      : "Waiting for processing to start";
+
+    return (
+      <Tooltip title={tooltipText}>
+        <Tag color="blue">{positionText}</Tag>
       </Tooltip>
     );
   }
