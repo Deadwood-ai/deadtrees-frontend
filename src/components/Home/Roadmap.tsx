@@ -39,6 +39,11 @@ const Roadmap = () => {
             children: <RoadmapItemLabel label="AI-ready datasets and community model integration" />,
           },
           {
+            label: RoadmapItemDate({ date: "2025 Q3" }),
+            color: "blue",
+            children: <RoadmapItemLabel label="Automated orthomosaic generation with ODM (OpenDroneMap)" />,
+          },
+          {
             label: RoadmapItemDate({ date: "2025 Q2" }),
             color: "blue",
             children: <RoadmapItemLabel label="Repository functionality (long-term storage + DOI generation)" />,
