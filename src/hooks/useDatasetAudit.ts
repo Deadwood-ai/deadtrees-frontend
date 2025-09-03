@@ -54,6 +54,32 @@ export interface OrthoMetadata {
   updated_at?: string;
 }
 
+// Public view row for dataset audit info
+export interface DatasetAuditUserInfo {
+  dataset_id: number;
+  audit_date: string | null;
+  is_georeferenced: boolean | null;
+  has_valid_acquisition_date: boolean | null;
+  acquisition_date_notes: string | null;
+  has_valid_phenology: boolean | null;
+  phenology_notes: string | null;
+  deadwood_quality: PredictionQuality | null;
+  deadwood_notes: string | null;
+  forest_cover_quality: PredictionQuality | null;
+  forest_cover_notes: string | null;
+  aoi_done: boolean | null;
+  has_cog_issue: boolean | null;
+  cog_issue_notes: string | null;
+  has_thumbnail_issue: boolean | null;
+  thumbnail_issue_notes: string | null;
+  audited_by: string | null;
+  audited_by_email: string | null;
+  uploaded_by_email: string | null;
+  has_major_issue: boolean | null;
+  final_assessment: "no_issues" | "fixable_issues" | "exclude_completely" | null;
+  notes: string | null;
+}
+
 // Hook to get all dataset audits
 export function useDatasetAudits() {
   return useQuery({
@@ -83,9 +109,31 @@ export function useDatasetAudit(datasetId: number | undefined) {
       if (error) throw error;
 
       // Return the first item if it exists, otherwise null
-      return data && data.length > 0 ? data[0] : null;
+      return data && data.length > 0 ? (data[0] as DatasetAuditUserInfo) : null;
     },
     enabled: !!datasetId,
+  });
+}
+
+// Bulk hook to get audits for a set of dataset IDs
+export function useDatasetAuditsByIds(datasetIds: number[]) {
+  const idsKey = useMemo(
+    () => (datasetIds && datasetIds.length > 0 ? [...new Set(datasetIds)].sort((a, b) => a - b) : []),
+    [datasetIds],
+  );
+
+  return useQuery({
+    queryKey: ["dataset-audits-by-ids", idsKey],
+    enabled: idsKey.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("dataset_audit_user_info").select("*").in("dataset_id", idsKey);
+
+      if (error) throw error;
+      const rows = (data || []) as DatasetAuditUserInfo[];
+      const map = new Map<number, DatasetAuditUserInfo>();
+      rows.forEach((row) => map.set(row.dataset_id, row));
+      return map;
+    },
   });
 }
 

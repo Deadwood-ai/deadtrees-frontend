@@ -19,6 +19,8 @@ import { isGeonadirDataset } from "../utils/datasetUtils";
 import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
 import { useQueuePositions } from "../hooks/useQueuePositions";
+import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
+import AuditBadge from "./AuditBadge";
 
 interface Dataset {
   id: number;
@@ -71,6 +73,7 @@ const DataTable: React.FC<DataTableProps> = ({
   // Queue positions for user datasets
   const datasetIds = useMemo(() => (userData ? (userData as Dataset[]).map((d) => d.id) : []), [userData]);
   const { data: queueById } = useQueuePositions(datasetIds);
+  const { data: auditsById } = useDatasetAuditsByIds(datasetIds);
 
   // Effect to reset selection when requested
   useEffect(() => {
@@ -414,8 +417,20 @@ const DataTable: React.FC<DataTableProps> = ({
           );
         }
 
-        // Use ProcessingProgress component for all other statuses
-        return <ProcessingProgress dataset={record} queueInfo={queueById?.[record.id]} />;
+        const progress = <ProcessingProgress dataset={record} queueInfo={queueById?.[record.id]} />;
+
+        const isComplete = isDatasetComplete(record);
+        const audit = auditsById?.get(record.id);
+
+        if (isComplete && audit?.final_assessment) {
+          return (
+            <div className="flex items-center gap-2">
+              <AuditBadge datasetId={record.id} audit={audit} />
+            </div>
+          );
+        }
+
+        return progress;
       },
     },
     {

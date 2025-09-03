@@ -1,8 +1,10 @@
 import React from "react";
 import { Tooltip, Tag } from "antd";
-import { CheckCircleOutlined, SyncOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { SyncOutlined, CloseCircleOutlined, ScheduleOutlined } from "@ant-design/icons";
 import { calculateProcessingProgress, DatasetProgress } from "../utils/processingSteps";
 import { QueueInfo } from "../hooks/useQueuePositions";
+import AuditBadge from "./AuditBadge";
+import { useDatasetAudit } from "../hooks/useDatasetAudit";
 
 interface ProcessingProgressProps {
   dataset: DatasetProgress;
@@ -12,6 +14,7 @@ interface ProcessingProgressProps {
 
 const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDetails = true, queueInfo }) => {
   const progress = calculateProcessingProgress(dataset);
+  const { data: audit } = useDatasetAudit((dataset as DatasetProgress & { id: number }).id);
 
   // Handle error state
   if (dataset.has_error) {
@@ -60,10 +63,13 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
 
   // Handle complete state
   if (progress.isComplete) {
+    if (audit?.final_assessment) {
+      return <AuditBadge datasetId={(dataset as DatasetProgress & { id: number }).id} audit={audit} />;
+    }
     return (
-      <Tooltip title="Processing complete">
-        <Tag icon={<CheckCircleOutlined />} color="success">
-          Complete
+      <Tooltip title="Processing complete - awaiting audit">
+        <Tag icon={<ScheduleOutlined />} color="blue">
+          Awaiting audit
         </Tag>
       </Tooltip>
     );

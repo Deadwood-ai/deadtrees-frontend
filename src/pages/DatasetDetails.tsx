@@ -18,6 +18,8 @@ import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../hooks/usePhenologyData";
+import AuditBadge from "../components/AuditBadge";
+import { useDatasetAudit } from "../hooks/useDatasetAudit";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -43,6 +45,9 @@ export default function DatasetDetails() {
 
   // Fetch phenology data
   const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset?.id);
+
+  // Fetch audit (for conditional rendering)
+  const { data: auditInfo } = useDatasetAudit(dataset?.id);
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -148,6 +153,15 @@ export default function DatasetDetails() {
                     <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
                   </div>
                 </div>
+
+                {auditInfo?.final_assessment && (
+                  <div className="flex justify-between">
+                    <Typography.Text className="pr-2">Audit Status:</Typography.Text>
+                    <div className="max-w-[70%] text-right">
+                      <AuditBadge datasetId={dataset.id} audit={auditInfo} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Environmental Context Box */}
