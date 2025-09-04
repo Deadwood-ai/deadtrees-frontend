@@ -126,10 +126,22 @@ export function useDatasetAuditsByIds(datasetIds: number[]) {
     queryKey: ["dataset-audits-by-ids", idsKey],
     enabled: idsKey.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase.from("dataset_audit_user_info").select("*").in("dataset_id", idsKey);
+      // Chunk to avoid URL length issues
+      const chunkSize = 200;
+      const chunks: number[][] = [];
+      for (let i = 0; i < idsKey.length; i += chunkSize) {
+        chunks.push(idsKey.slice(i, i + chunkSize));
+      }
 
-      if (error) throw error;
-      const rows = (data || []) as DatasetAuditUserInfo[];
+      const results = await Promise.all(
+        chunks.map(async (ids) => {
+          const { data, error } = await supabase.from("dataset_audit_user_info").select("*").in("dataset_id", ids);
+          if (error) throw error;
+          return (data || []) as DatasetAuditUserInfo[];
+        }),
+      );
+
+      const rows = results.flat();
       const map = new Map<number, DatasetAuditUserInfo>();
       rows.forEach((row) => map.set(row.dataset_id, row));
       return map;

@@ -13,24 +13,39 @@ export type QueueInfoByDatasetId = Record<number, QueueInfo>;
 
 export function useQueuePositions(datasetIds: number[] | undefined) {
   return useQuery<QueueInfoByDatasetId>({
-    queryKey: ["queue-positions", datasetIds?.join(",")],
+    queryKey: ["queue-positions", Array.isArray(datasetIds) ? [...new Set(datasetIds)].sort((a, b) => a - b) : []],
     enabled: !!datasetIds && datasetIds.length > 0,
     queryFn: async () => {
       if (!datasetIds || datasetIds.length === 0) {
         return {};
       }
 
-      const { data, error } = await supabase
-        .from("v2_queue_positions")
-        .select("dataset_id,current_position,estimated_time,is_processing,task_types")
-        .in("dataset_id", datasetIds);
+      const uniqueSortedIds = [...new Set(datasetIds)].sort((a, b) => a - b);
 
-      if (error) throw error;
+      // Chunk to avoid very long URLs in PostgREST GET requests
+      const chunkSize = 200;
+      const chunks: number[][] = [];
+      for (let i = 0; i < uniqueSortedIds.length; i += chunkSize) {
+        chunks.push(uniqueSortedIds.slice(i, i + chunkSize));
+      }
+
+      const results = await Promise.all(
+        chunks.map(async (ids) => {
+          const { data, error } = await supabase
+            .from("v2_queue_positions")
+            .select("dataset_id,current_position,estimated_time,is_processing,task_types")
+            .in("dataset_id", ids);
+          if (error) throw error;
+          return data as unknown as QueueInfo[];
+        }),
+      );
 
       const byId: QueueInfoByDatasetId = {};
-      for (const row of data as unknown as QueueInfo[]) {
-        if (row && typeof row.dataset_id === "number") {
-          byId[row.dataset_id] = row;
+      for (const group of results) {
+        for (const row of group) {
+          if (row && typeof row.dataset_id === "number") {
+            byId[row.dataset_id] = row;
+          }
         }
       }
       return byId;
