@@ -275,12 +275,19 @@ const DataTable: React.FC<DataTableProps> = ({
         const visibleAuthors = cleanedAuthors.slice(0, maxVisible);
         const remainingCount = cleanedAuthors.length - maxVisible;
 
+        // Cap overly long author strings to avoid oversized tags
+        const MAX_AUTHOR_CHARS = 30;
+        const truncateAuthorName = (name: string) =>
+          name.length > MAX_AUTHOR_CHARS ? name.slice(0, MAX_AUTHOR_CHARS - 1) + "…" : name;
+
         return (
           <div className="flex flex-wrap gap-1">
             {visibleAuthors.map((author, index) => (
-              <Tag key={index} color="geekblue" className="text-xs">
-                {author}
-              </Tag>
+              <Tooltip key={index} title={author}>
+                <Tag color="geekblue" className="text-xs">
+                  {truncateAuthorName(author)}
+                </Tag>
+              </Tooltip>
             ))}
             {remainingCount > 0 && (
               <Tooltip title={`Additional authors: ${cleanedAuthors.slice(maxVisible).join(", ")}`}>
