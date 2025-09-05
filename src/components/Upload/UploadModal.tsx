@@ -443,7 +443,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <Form.Item
                 label={
                   <div>
-                    <Tooltip title="Select the platform used for capturing the orthophoto (e.g., Drone, Airborne, or Satellite)">
+                    <Tooltip title="Select the platform used for capturing the orthophoto (Drone or Airborne). Satellite imagery is not supported in this upload.">
                       <InfoCircleOutlined className="mr-2" />
                     </Tooltip>
                     Platform
@@ -454,7 +454,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                 <Radio.Group>
                   <Radio value="drone">Drone</Radio>
                   <Radio value="airborne">Airborne</Radio>
-                  <Radio value="satellite">Satellite</Radio>
                 </Radio.Group>
               </Form.Item>
               <Form.Item
