@@ -1,6 +1,5 @@
 ---
-description:
-globs:
+description: React Query & Supabase Patterns use when implementing data fetching or db functions
 alwaysApply: false
 ---
 

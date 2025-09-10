@@ -1,6 +1,5 @@
 ---
-description:
-globs:
+description: OpenLayers Mapping Patterns use when imlementing any mapping
 alwaysApply: false
 ---
 
