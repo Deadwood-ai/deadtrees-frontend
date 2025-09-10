@@ -3,7 +3,7 @@ import { Alert, Avatar, Badge, Button, Segmented, Typography, Table, Tag, Toolti
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import UploadButton from "../components/Upload/UploadButton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 // import { useUserDatasets } from "../hooks/useDatasets";
 import { useMyFlags } from "../hooks/useDatasetFlags";
 import type { DatasetFlag } from "../types/flags";
@@ -199,9 +199,9 @@ export default function ProfilePage() {
                         dataIndex: "dataset_id",
                         key: "dataset_id",
                         render: (id: number) => (
-                          <a href={`/dataset/${id}`} className="text-blue-600" rel="noreferrer">
+                          <Link to={`/dataset/${id}`} className="text-blue-600">
                             {id}
-                          </a>
+                          </Link>
                         ),
                       },
                       {
@@ -240,6 +240,15 @@ export default function ProfilePage() {
                         render: (iso: string) => new Date(iso).toLocaleString(),
                       },
                       // Removed last status change per requirements
+                      {
+                        title: "Actions",
+                        key: "actions",
+                        render: (_: unknown, f: DatasetFlag) => (
+                          <Button size="small" onClick={() => navigate(`/dataset/${f.dataset_id}`)}>
+                            View Map
+                          </Button>
+                        ),
+                      },
                     ]}
                     pagination={{ pageSize: 10 }}
                   />

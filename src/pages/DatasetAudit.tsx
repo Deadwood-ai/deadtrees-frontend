@@ -81,8 +81,8 @@ export default function DatasetAudit() {
 
     let filtered = datasets;
 
-    // First filter by minimum ID for auditing (only if applicable for current dataset set)
-    if (hasAboveMinId) {
+    // First filter by minimum ID for auditing (skip for Flagged tab)
+    if (auditFilter !== "flagged" && hasAboveMinId) {
       filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
     }
 
