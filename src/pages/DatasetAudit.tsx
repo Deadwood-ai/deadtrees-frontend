@@ -64,6 +64,10 @@ export default function DatasetAudit() {
 
   // Add a constant for the minimum dataset ID
   const MIN_AUDIT_DATASET_ID = 2559;
+  // Dynamically enable the min-ID filter only if such IDs exist in current dataset list (fixes empty views in dev)
+  const hasAboveMinId = useMemo(() => {
+    return (datasets || []).some((d) => d.id > MIN_AUDIT_DATASET_ID);
+  }, [datasets]);
 
   // Create a map of dataset_id to audit data for quick lookup
   const auditMap = useMemo(() => {
@@ -77,8 +81,10 @@ export default function DatasetAudit() {
 
     let filtered = datasets;
 
-    // First filter by minimum ID for auditing
-    filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
+    // First filter by minimum ID for auditing (only if applicable for current dataset set)
+    if (hasAboveMinId) {
+      filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
+    }
 
     // Filter by audit status and disposition
     if (auditFilter === "needs-audit") {
@@ -133,32 +139,37 @@ export default function DatasetAudit() {
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
-    return datasets?.filter((d) => d.id > MIN_AUDIT_DATASET_ID && !d.is_audited && isProcessingComplete(d)).length || 0;
-  }, [datasets]);
+    if (!datasets) return 0;
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => !d.is_audited && isProcessingComplete(d)).length;
+  }, [datasets, hasAboveMinId]);
 
   const readyCount = useMemo(() => {
     if (!datasets || !audits) return 0;
-    return datasets.filter((d) => {
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "no_issues";
     }).length;
-  }, [datasets, audits, auditMap]);
+  }, [datasets, audits, auditMap, hasAboveMinId]);
 
   const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
-    return datasets.filter((d) => {
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "fixable_issues";
     }).length;
-  }, [datasets, audits, auditMap]);
+  }, [datasets, audits, auditMap, hasAboveMinId]);
 
   const excludedCount = useMemo(() => {
     if (!datasets || !audits) return 0;
-    return datasets.filter((d) => {
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "exclude_completely";
     }).length;
-  }, [datasets, audits, auditMap]);
+  }, [datasets, audits, auditMap, hasAboveMinId]);
 
   const flaggedCount = useMemo(() => flaggedAgg.length, [flaggedAgg]);
   const flaggedMap = useMemo(() => new Map(flaggedAgg.map((r) => [r.dataset_id, r])), [flaggedAgg]);
