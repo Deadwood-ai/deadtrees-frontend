@@ -153,6 +153,7 @@ const PrivacyLink = () => (
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
   const [form] = Form.useForm();
+  const agreementAccepted = Form.useWatch("agreement", form);
 
   const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
@@ -508,7 +509,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     </div>
                   </Form.Item>
                   <Space>
-                    <Button type="primary" htmlType="submit" disabled={fileList.length === 0}>
+                    <Button type="primary" htmlType="submit" disabled={fileList.length === 0 || !agreementAccepted}>
                       Upload
                     </Button>
                     <Button type="default" onClick={onClose}>
