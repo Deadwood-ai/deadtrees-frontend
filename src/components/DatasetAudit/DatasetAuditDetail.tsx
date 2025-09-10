@@ -269,7 +269,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   }
 
   const InfoIcon = ({ content }: { content: string }) => (
-    <Tooltip title={content} placement="right" overlayStyle={{ maxWidth: 300 }}>
+    <Tooltip title={content} placement="right" styles={{ root: { maxWidth: 300 } }}>
       <InfoCircleOutlined className="ml-1 cursor-help text-blue-500" />
     </Tooltip>
   );

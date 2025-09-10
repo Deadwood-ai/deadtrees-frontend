@@ -86,7 +86,7 @@ function buildTooltip(audit: DatasetAuditUserInfo) {
   );
 }
 
-const AuditBadge: React.FC<Props> = ({ datasetId, audit: auditProp, size = "small" }) => {
+const AuditBadge: React.FC<Props> = ({ datasetId, audit: auditProp }) => {
   const { data: auditFetched } = useDatasetAudit(datasetId);
 
   const audit = (auditProp ?? auditFetched) as DatasetAuditUserInfo | null;
@@ -97,7 +97,7 @@ const AuditBadge: React.FC<Props> = ({ datasetId, audit: auditProp, size = "smal
   if (!show) return null;
 
   return (
-    <Tooltip title={audit ? buildTooltip(audit) : undefined} overlayStyle={{ maxWidth: 360 }}>
+    <Tooltip title={audit ? buildTooltip(audit) : undefined} styles={{ root: { maxWidth: 360 } }}>
       <Tag color={visual.color}>{visual.text}</Tag>
     </Tooltip>
   );
