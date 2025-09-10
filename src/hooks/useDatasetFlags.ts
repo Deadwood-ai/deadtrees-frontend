@@ -86,14 +86,10 @@ export function useCreateFlag() {
 export function useUpdateFlagStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { flag_id: number; dataset_id: number; new_status: FlagStatus; note?: string }) => {
-      if (payload.new_status === "resolved" && !payload.note?.trim()) {
-        throw new Error("Resolution note is required when resolving a flag");
-      }
+    mutationFn: async (payload: { flag_id: number; dataset_id: number; new_status: FlagStatus }) => {
       const { error } = await supabase.rpc("update_flag_status", {
         p_flag_id: payload.flag_id,
         p_new_status: payload.new_status,
-        p_note: payload.note ?? null,
       });
       if (error) throw error;
     },
@@ -110,30 +106,17 @@ export function useFlaggedDatasets() {
   return useQuery({
     queryKey: ["flagged-datasets"],
     queryFn: async (): Promise<
-      {
-        dataset_id: number;
-        open_count: number;
-        acknowledged_count: number;
-        latest_status: FlagStatus;
-        latest_note: string | null;
-      }[]
+      { dataset_id: number; open_count: number; acknowledged_count: number; latest_status: FlagStatus }[]
     > => {
       // If a view exists, use it; else aggregate client-side from flags
       const { data, error } = await supabase
         .from("dataset_flags")
-        .select("dataset_id, status, auditor_comment, created_at, updated_at")
+        .select("dataset_id, status, created_at, updated_at")
         .in("status", ["open", "acknowledged"]);
       if (error) throw error;
       const map = new Map<
         number,
-        {
-          dataset_id: number;
-          open_count: number;
-          acknowledged_count: number;
-          latest_status: FlagStatus;
-          latest_note: string | null;
-          latest_ts: string | null;
-        }
+        { dataset_id: number; open_count: number; acknowledged_count: number; latest_status: FlagStatus }
       >();
       for (const row of data ?? []) {
         if (!map.has(row.dataset_id)) {
@@ -142,8 +125,6 @@ export function useFlaggedDatasets() {
             open_count: 0,
             acknowledged_count: 0,
             latest_status: row.status,
-            latest_note: row.auditor_comment ?? null,
-            latest_ts: row.updated_at || row.created_at || null,
           });
         }
         const agg = map.get(row.dataset_id)!;
@@ -152,24 +133,8 @@ export function useFlaggedDatasets() {
         // latest_status heuristic: if any open → open; else if any acknowledged → acknowledged
         if (row.status === "open") agg.latest_status = "open";
         else if (agg.latest_status !== "open" && row.status === "acknowledged") agg.latest_status = "acknowledged";
-        // latest note by timestamp string compare
-        const tsStr = row.updated_at || row.created_at || null;
-        if (tsStr && (!agg.latest_ts || tsStr >= agg.latest_ts)) {
-          agg.latest_ts = tsStr;
-          if (row.auditor_comment && row.auditor_comment.length > 0) {
-            agg.latest_note = row.auditor_comment;
-          }
-        }
       }
-      return Array.from(map.values())
-        .filter((r) => r.open_count > 0 || r.acknowledged_count > 0)
-        .map((r) => ({
-          dataset_id: r.dataset_id,
-          open_count: r.open_count,
-          acknowledged_count: r.acknowledged_count,
-          latest_status: r.latest_status,
-          latest_note: r.latest_note,
-        }));
+      return Array.from(map.values()).filter((r) => r.open_count > 0 || r.acknowledged_count > 0);
     },
     staleTime: 30_000,
   });

@@ -348,18 +348,7 @@ export default function DatasetAudit() {
               },
               width: 160,
             },
-            {
-              title: "Latest Note",
-              key: "latest_note",
-              render: (_: unknown, record: IDataset) => {
-                const agg = flaggedMap.get(record.id);
-                if (!agg || !agg.latest_note) return <span className="text-gray-400">—</span>;
-                const txt = agg.latest_note || "";
-                const short = txt.slice(0, 80) + (txt.length > 80 ? "…" : "");
-                return <Tooltip title={txt}>{short}</Tooltip>;
-              },
-              width: 220,
-            },
+            // Removed Latest Note column per requirement
             baseColumns[baseColumns.length - 1],
           ]
         : baseColumns;

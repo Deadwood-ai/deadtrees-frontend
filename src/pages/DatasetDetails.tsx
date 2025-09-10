@@ -570,12 +570,14 @@ export default function DatasetDetails() {
           layout="vertical"
           initialValues={{ is_ortho_mosaic_issue: false, is_prediction_issue: false }}
         >
-          <Form.Item name="is_ortho_mosaic_issue" valuePropName="checked">
-            <Checkbox>Auto mosaic issue</Checkbox>
-          </Form.Item>
-          <Form.Item name="is_prediction_issue" valuePropName="checked">
-            <Checkbox>Prediction issue</Checkbox>
-          </Form.Item>
+          <div className="flex gap-2">
+            <Form.Item name="is_ortho_mosaic_issue" valuePropName="checked">
+              <Checkbox>Auto mosaic issue</Checkbox>
+            </Form.Item>
+            <Form.Item name="is_prediction_issue" valuePropName="checked">
+              <Checkbox>Prediction issue</Checkbox>
+            </Form.Item>
+          </div>
           <Form.Item
             name="description"
             label="Description"

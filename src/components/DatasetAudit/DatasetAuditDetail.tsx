@@ -88,10 +88,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
   const [isLockingAudit, setIsLockingAudit] = useState(true);
   const [hasFormChanges, setHasFormChanges] = useState(false);
-  const [flagNotes, setFlagNotes] = useState<Record<number, string>>({});
+  // Removed per requirement: we no longer collect per-flag auditor notes
 
   // Navigation guard setup
-  const { showExitConfirmation, isCleaningUp } = useAuditNavigationGuard({
+  const { showExitConfirmation } = useAuditNavigationGuard({
     isActive: !auditLockError && !isSubmitting,
     onCleanup: async () => {
       if (!auditLockError) {
@@ -128,38 +128,29 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     lockAudit();
   }, [dataset.id, setAuditLock, navigate]);
 
-  // Set form values when audit data is loaded
+  // Set form values when audit data is loaded (strip nullable audit_date)
   useEffect(() => {
     if (auditData) {
-      form.setFieldsValue(auditData);
+      const partial: Partial<AuditFormValues> = { ...auditData } as unknown as Partial<AuditFormValues>;
+      // drop null audit_date to satisfy form typing
+      const toDelete: (keyof Partial<AuditFormValues>)[] = ["audit_date"];
+      toDelete.forEach((k) => delete (partial as Record<string, unknown>)[k as string]);
+      form.setFieldsValue(partial);
     }
   }, [auditData, form]);
 
   // Track form changes for navigation guard
   useEffect(() => {
-    const handleFormChange = () => {
-      setHasFormChanges(true);
-    };
-
-    // Set up form field change listeners
-    const formInstance = form.getInternalHooks?.("RC_FORM_INTERNAL_HOOKS");
-    if (formInstance) {
-      // Use Ant Design's internal form change detection
-      const unsubscribe = form.getFieldsValue ? form.__INTERNAL_HOOKS__ || null : null;
-    }
-
-    // Simple approach: any interaction with form means changes
+    const handleFormChange = () => setHasFormChanges(true);
     const formElement = document.querySelector(".ant-form");
-    if (formElement) {
-      formElement.addEventListener("change", handleFormChange);
-      formElement.addEventListener("input", handleFormChange);
-
-      return () => {
-        formElement.removeEventListener("change", handleFormChange);
-        formElement.removeEventListener("input", handleFormChange);
-      };
-    }
-  }, [form]);
+    if (!formElement) return;
+    formElement.addEventListener("change", handleFormChange);
+    formElement.addEventListener("input", handleFormChange);
+    return () => {
+      formElement.removeEventListener("change", handleFormChange);
+      formElement.removeEventListener("input", handleFormChange);
+    };
+  }, []);
 
   const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
     console.log("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
@@ -383,14 +374,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                         </Tag>
                       </div>
                       <div className="whitespace-pre-wrap text-xs text-gray-700">{f.description}</div>
-                      <div className="mt-2">
-                        <Input.TextArea
-                          rows={2}
-                          placeholder="Auditor note (optional)"
-                          value={flagNotes[f.id] ?? ""}
-                          onChange={(e) => setFlagNotes((m) => ({ ...m, [f.id]: e.target.value }))}
-                        />
-                      </div>
+                      {/* Auditor note input removed */}
                       <div className="mt-2 flex items-center gap-8">
                         <Button
                           size="small"
@@ -400,7 +384,6 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                                 flag_id: f.id,
                                 dataset_id: dataset.id,
                                 new_status: "acknowledged",
-                                note: flagNotes[f.id],
                               });
                               message.success("Flag acknowledged");
                             } catch (e) {
@@ -420,7 +403,6 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                                 flag_id: f.id,
                                 dataset_id: dataset.id,
                                 new_status: "resolved",
-                                note: flagNotes[f.id],
                               });
                               message.success("Flag resolved");
                             } catch (e) {
