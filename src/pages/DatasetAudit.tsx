@@ -149,7 +149,7 @@ export default function DatasetAudit() {
     const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
     return base.filter((d) => {
       const audit = auditMap.get(d.id);
-      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "no_issues";
+      return d.is_audited && audit && audit.final_assessment === "no_issues";
     }).length;
   }, [datasets, audits, auditMap, hasAboveMinId]);
 
@@ -158,7 +158,7 @@ export default function DatasetAudit() {
     const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
     return base.filter((d) => {
       const audit = auditMap.get(d.id);
-      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "fixable_issues";
+      return d.is_audited && audit && audit.final_assessment === "fixable_issues";
     }).length;
   }, [datasets, audits, auditMap, hasAboveMinId]);
 
@@ -167,7 +167,7 @@ export default function DatasetAudit() {
     const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
     return base.filter((d) => {
       const audit = auditMap.get(d.id);
-      return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "exclude_completely";
+      return d.is_audited && audit && audit.final_assessment === "exclude_completely";
     }).length;
   }, [datasets, audits, auditMap, hasAboveMinId]);
 

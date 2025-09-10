@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
-import type { DatasetFlag, DatasetFlagHistory, FlagStatus } from "../types/flags";
+import type { DatasetFlag, FlagStatus } from "../types/flags";
 
 // Fetch flags for a single dataset
 export function useDatasetFlags(datasetId: number | undefined) {
@@ -82,41 +82,20 @@ export function useCreateFlag() {
   });
 }
 
-// Auditor-only: update flag status with optional comment via RPC if available, fallback to direct update
+// Auditor-only: update flag status via RPC transaction
 export function useUpdateFlagStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { flag_id: number; dataset_id: number; new_status: FlagStatus; note?: string }) => {
-      // Try RPC first
-      const { error: rpcError } = await supabase.rpc("update_flag_status", {
+      if (payload.new_status === "resolved" && !payload.note?.trim()) {
+        throw new Error("Resolution note is required when resolving a flag");
+      }
+      const { error } = await supabase.rpc("update_flag_status", {
         p_flag_id: payload.flag_id,
         p_new_status: payload.new_status,
         p_note: payload.note ?? null,
       });
-
-      if (rpcError) {
-        // Fallback: direct update + insert history (requires RLS allowing auditors)
-        const { data: flagRow, error: fetchError } = await supabase
-          .from("dataset_flags")
-          .select("*")
-          .eq("id", payload.flag_id)
-          .single();
-        if (fetchError) throw fetchError;
-
-        const { error: updError } = await supabase
-          .from("dataset_flags")
-          .update({ status: payload.new_status, auditor_comment: payload.note ?? null })
-          .eq("id", payload.flag_id);
-        if (updError) throw updError;
-
-        const { error: histError } = await supabase.from("dataset_flag_status_history").insert({
-          flag_id: payload.flag_id,
-          old_status: flagRow?.status ?? null,
-          new_status: payload.new_status,
-          note: payload.note ?? null,
-        } as unknown as DatasetFlagHistory);
-        if (histError) throw histError;
-      }
+      if (error) throw error;
     },
     onSuccess: (_res, variables) => {
       queryClient.invalidateQueries({ queryKey: ["dataset-flags", variables.dataset_id] });
@@ -153,7 +132,7 @@ export function useFlaggedDatasets() {
           acknowledged_count: number;
           latest_status: FlagStatus;
           latest_note: string | null;
-          latest_ts: number; // internal only
+          latest_ts: string | null;
         }
       >();
       for (const row of data ?? []) {
@@ -164,23 +143,19 @@ export function useFlaggedDatasets() {
             acknowledged_count: 0,
             latest_status: row.status,
             latest_note: row.auditor_comment ?? null,
-            latest_ts:
-              (row.updated_at ? Date.parse(row.updated_at as unknown as string) : 0) ||
-              (row.created_at ? Date.parse(row.created_at as unknown as string) : 0),
+            latest_ts: row.updated_at || row.created_at || null,
           });
         }
         const agg = map.get(row.dataset_id)!;
         if (row.status === "open") agg.open_count += 1;
         if (row.status === "acknowledged") agg.acknowledged_count += 1;
-        // latest_status heuristic: if any open → open; else if any acknowledged → acknowledged; else resolved
+        // latest_status heuristic: if any open → open; else if any acknowledged → acknowledged
         if (row.status === "open") agg.latest_status = "open";
         else if (agg.latest_status !== "open" && row.status === "acknowledged") agg.latest_status = "acknowledged";
-        // track latest note by timestamp
-        const ts =
-          (row.updated_at ? Date.parse(row.updated_at as unknown as string) : 0) ||
-          (row.created_at ? Date.parse(row.created_at as unknown as string) : 0);
-        if (ts >= agg.latest_ts) {
-          agg.latest_ts = ts;
+        // latest note by timestamp string compare
+        const tsStr = row.updated_at || row.created_at || null;
+        if (tsStr && (!agg.latest_ts || tsStr >= agg.latest_ts)) {
+          agg.latest_ts = tsStr;
           if (row.auditor_comment && row.auditor_comment.length > 0) {
             agg.latest_note = row.auditor_comment;
           }
@@ -188,7 +163,13 @@ export function useFlaggedDatasets() {
       }
       return Array.from(map.values())
         .filter((r) => r.open_count > 0 || r.acknowledged_count > 0)
-        .map(({ latest_ts, ...rest }) => rest);
+        .map((r) => ({
+          dataset_id: r.dataset_id,
+          open_count: r.open_count,
+          acknowledged_count: r.acknowledged_count,
+          latest_status: r.latest_status,
+          latest_note: r.latest_note,
+        }));
     },
     staleTime: 30_000,
   });

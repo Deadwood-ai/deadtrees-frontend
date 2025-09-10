@@ -1,5 +1,5 @@
 import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge } from "antd";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 
 import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined, FlagOutlined } from "@ant-design/icons";
 import { Settings } from "../config";
@@ -60,6 +60,12 @@ export default function DatasetDetails() {
   const [isReportModalOpen, setReportModalOpen] = useState(false);
   const [reportForm] = Form.useForm();
   const { mutateAsync: createFlag, isPending: isCreatingFlag } = useCreateFlag();
+
+  // Watch fields for reactive validation
+  const watchOrtho = Form.useWatch("is_ortho_mosaic_issue", reportForm);
+  const watchPred = Form.useWatch("is_prediction_issue", reportForm);
+  const watchDesc = Form.useWatch("description", reportForm);
+  const canSubmit = !!((watchOrtho || watchPred) && (watchDesc || "").trim().length > 0);
 
   const myFlags = useMemo(() => (user?.id ? flags.filter((f) => f.created_by === user.id) : []), [flags, user?.id]);
   // Intentionally no extra computed counters; popover shows a short list and total badge
@@ -513,9 +519,9 @@ export default function DatasetDetails() {
                       {myFlags.length > 3 && (
                         <div className="text-xs text-gray-500">+ {myFlags.length - 3} more in your profile</div>
                       )}
-                      <a href="/profile" className="text-blue-600">
+                      <Link to="/profile" className="text-blue-600">
                         View in Profile
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 ) : (
@@ -541,12 +547,7 @@ export default function DatasetDetails() {
         onCancel={() => setReportModalOpen(false)}
         okText="Submit"
         confirmLoading={isCreatingFlag}
-        okButtonProps={{
-          disabled: !(
-            (reportForm.getFieldValue("is_ortho_mosaic_issue") || reportForm.getFieldValue("is_prediction_issue")) &&
-            (reportForm.getFieldValue("description") || "").trim().length > 0
-          ),
-        }}
+        okButtonProps={{ disabled: !canSubmit }}
         onOk={async () => {
           try {
             const values = await reportForm.validateFields();
