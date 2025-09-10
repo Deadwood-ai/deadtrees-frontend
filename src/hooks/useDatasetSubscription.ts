@@ -110,6 +110,9 @@ export function useDatasetSubscription() {
                 queryKey: ["datasets"],
               });
               await queryClient.invalidateQueries({
+                queryKey: ["public-datasets"],
+              });
+              await queryClient.invalidateQueries({
                 queryKey: ["authors"],
               });
             }
