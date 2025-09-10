@@ -19,6 +19,8 @@ import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { createForestCoverVectorLayer, createAOIVectorLayer, createAOIMaskLayer } from "./createVectorLayer";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { useAISegmentation } from "../../hooks/useAISegmentation";
+import AISegmentationControl from "../AISegmentation/AISegmentationControl";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -59,12 +61,18 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     aoiMask?: VectorLayer<VectorSource>;
   }>({});
 
+  // AI Segmentation hook bound to this map and the ortho COG layer
+  const ai = useAISegmentation({
+    mapRef,
+    getOrthoLayer: () => layerRefs.current.orthoCog,
+  });
+
   // Main map initialization effect
   useEffect(() => {
     if (!mapRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
       // Determine whether to show prediction layers based on audit quality fields from public view
       const allowDeadwoodPredictions = (() => {
-        const q: unknown = (data as any).deadwood_quality;
+        const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
         if (q === undefined || q === null) return true; // no audit info → allow
         if (typeof q === "boolean") return q;
         if (typeof q === "string") return q !== "bad";
@@ -72,7 +80,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       })();
 
       const allowForestCoverPredictions = (() => {
-        const q: unknown = (data as any).forest_cover_quality;
+        const q: IDataset["forest_cover_quality"] | undefined = (data as IDataset).forest_cover_quality ?? undefined;
         if (q === undefined || q === null) return true;
         if (typeof q === "boolean") return q;
         if (typeof q === "string") return q !== "bad";
@@ -508,6 +516,16 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             }}
           />
         </div>
+        <div className="absolute left-2 top-16 z-20">
+          <AISegmentationControl
+            active={ai.isActive}
+            processing={ai.isProcessing}
+            canUse={ai.canUse}
+            onToggle={() => (ai.isActive ? ai.disable() : ai.enable())}
+            onClear={ai.clear}
+            error={ai.error}
+          />
+        </div>
         <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
             deadwoodOpacity={deadwoodOpacity}
@@ -521,7 +539,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             showLegend={
               !!deadwood.data &&
               (() => {
-                const q: unknown = (data as any).deadwood_quality;
+                const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
                 if (q === undefined || q === null) return true;
                 if (typeof q === "boolean") return q;
                 if (typeof q === "string") return q !== "bad";
@@ -532,7 +550,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               !!forestCover.data &&
               !!data.is_forest_cover_done &&
               (() => {
-                const q: unknown = (data as any).forest_cover_quality;
+                const q: IDataset["forest_cover_quality"] | undefined =
+                  (data as IDataset).forest_cover_quality ?? undefined;
                 if (q === undefined || q === null) return true;
                 if (typeof q === "boolean") return q;
                 if (typeof q === "string") return q !== "bad";
