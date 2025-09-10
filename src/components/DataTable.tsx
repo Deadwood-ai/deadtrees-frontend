@@ -21,6 +21,7 @@ import { IDataset } from "../types/dataset";
 import { useQueuePositions } from "../hooks/useQueuePositions";
 import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
 import AuditBadge from "./AuditBadge";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Dataset {
   id: number;
@@ -45,6 +46,7 @@ interface Dataset {
   is_thumbnail_done?: boolean;
   is_metadata_done?: boolean;
   is_deadwood_done?: boolean;
+  is_forest_cover_done?: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
 }
 
@@ -69,6 +71,7 @@ const DataTable: React.FC<DataTableProps> = ({
   const [selectedDatasetForEdit, setSelectedDatasetForEdit] = useState<Dataset | null>(null);
 
   const nav = useNavigate();
+  const queryClient = useQueryClient();
 
   // Queue positions for user datasets
   const datasetIds = useMemo(() => (userData ? (userData as Dataset[]).map((d) => d.id) : []), [userData]);
@@ -133,7 +136,8 @@ const DataTable: React.FC<DataTableProps> = ({
       record.is_cog_done &&
       record.is_thumbnail_done &&
       record.is_metadata_done &&
-      record.is_deadwood_done
+      record.is_deadwood_done &&
+      record.is_forest_cover_done
     );
   };
 
@@ -193,7 +197,15 @@ const DataTable: React.FC<DataTableProps> = ({
         label: "View Map",
         icon: <EnvironmentOutlined />,
         disabled: !isComplete,
-        onClick: () => nav(`/dataset/${record.id}`),
+        onClick: async () => {
+          try {
+            await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
+            await queryClient.refetchQueries({ queryKey: ["public-datasets"] });
+          } catch (e) {
+            // no-op; navigation still proceeds
+          }
+          nav(`/dataset/${record.id}`);
+        },
       },
       {
         key: "edit",
