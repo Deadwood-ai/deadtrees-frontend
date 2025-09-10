@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Form, Radio, Input, message, Tooltip, Card, Space, Image, Collapse } from "antd";
+import { Button, Typography, Form, Radio, Input, message, Tooltip, Card, Space, Image, Collapse, Tag } from "antd";
 import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, DownloadOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
@@ -19,6 +19,7 @@ import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../../hooks/usePhenologyData";
+import { useDatasetFlags, useUpdateFlagStatus } from "../../hooks/useDatasetFlags";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -67,6 +68,8 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
   // Get existing audit data if available
   const { data: auditData, isLoading: isAuditLoading } = useDatasetAudit(dataset.id);
+  const { data: flags = [], isLoading: isFlagsLoading } = useDatasetFlags(dataset.id);
+  const { mutateAsync: updateFlagStatus, isPending: isUpdatingFlag } = useUpdateFlagStatus();
 
   // Mutation to save audit data
   const { mutateAsync: saveAudit, isPending: isSavingAudit } = useSaveDatasetAudit();
@@ -85,6 +88,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
   const [isLockingAudit, setIsLockingAudit] = useState(true);
   const [hasFormChanges, setHasFormChanges] = useState(false);
+  const [flagNotes, setFlagNotes] = useState<Record<number, string>>({});
 
   // Navigation guard setup
   const { showExitConfirmation, isCleaningUp } = useAuditNavigationGuard({
@@ -186,6 +190,12 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     // Wait for AOI to be loaded/processed before validating
     if (!isAOILoaded) {
       message.warning("AOI is still loading, please wait...");
+      return;
+    }
+
+    // Flags must be at least acknowledged
+    if (flags.some((f) => f.status === "open")) {
+      message.error("There are open user-reported issues. Please acknowledge them before saving.");
       return;
     }
 
@@ -345,6 +355,88 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
             size="small"
             validateTrigger={["onChange", "onBlur"]}
           >
+            {/* User-reported issues */}
+            <Card size="small" className="mb-3 shadow-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <Text strong className="text-xs">
+                  User-reported issues
+                </Text>
+                <Text type="secondary" className="text-[11px]">
+                  Only visible to auditors and the reporter
+                </Text>
+              </div>
+              {isFlagsLoading ? (
+                <div className="text-xs text-gray-500">Loading flags...</div>
+              ) : flags.length === 0 ? (
+                <div className="text-xs text-gray-500">No issues reported by users for this dataset.</div>
+              ) : (
+                <div className="space-y-2">
+                  {flags.map((f) => (
+                    <div key={f.id} className="rounded border border-slate-200 p-2">
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="space-x-1">
+                          {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
+                          {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                        </div>
+                        <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
+                          {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+                        </Tag>
+                      </div>
+                      <div className="whitespace-pre-wrap text-xs text-gray-700">{f.description}</div>
+                      <div className="mt-2">
+                        <Input.TextArea
+                          rows={2}
+                          placeholder="Auditor note (optional)"
+                          value={flagNotes[f.id] ?? ""}
+                          onChange={(e) => setFlagNotes((m) => ({ ...m, [f.id]: e.target.value }))}
+                        />
+                      </div>
+                      <div className="mt-2 flex items-center gap-8">
+                        <Button
+                          size="small"
+                          onClick={async () => {
+                            try {
+                              await updateFlagStatus({
+                                flag_id: f.id,
+                                dataset_id: dataset.id,
+                                new_status: "acknowledged",
+                                note: flagNotes[f.id],
+                              });
+                              message.success("Flag acknowledged");
+                            } catch (e) {
+                              message.error("Failed to update flag");
+                            }
+                          }}
+                          disabled={f.status !== "open" || isUpdatingFlag}
+                        >
+                          Acknowledge
+                        </Button>
+                        <Button
+                          size="small"
+                          type="primary"
+                          onClick={async () => {
+                            try {
+                              await updateFlagStatus({
+                                flag_id: f.id,
+                                dataset_id: dataset.id,
+                                new_status: "resolved",
+                                note: flagNotes[f.id],
+                              });
+                              message.success("Flag resolved");
+                            } catch (e) {
+                              message.error("Failed to update flag");
+                            }
+                          }}
+                          disabled={isUpdatingFlag}
+                        >
+                          Resolve
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
             {/* Step 1: Georeferencing */}
             <Card size="small" className="mb-3 shadow-sm">
               <div className="mb-2 flex items-center">

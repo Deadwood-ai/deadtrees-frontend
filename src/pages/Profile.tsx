@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Avatar, Badge, Button, Segmented, Typography } from "antd";
+import { Alert, Avatar, Badge, Button, Segmented, Typography, Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import UploadButton from "../components/Upload/UploadButton";
 import { useNavigate } from "react-router-dom";
-import { useUserDatasets } from "../hooks/useDatasets";
+// import { useUserDatasets } from "../hooks/useDatasets";
+import { useMyFlags } from "../hooks/useDatasetFlags";
+import type { DatasetFlag } from "../types/flags";
 import { FileOutlined } from "@ant-design/icons";
 import PublicationModal from "../components/PublicationModal";
 import PublicationsTable from "../components/PublicationsTable";
@@ -32,6 +34,7 @@ interface DatasetType {
 enum ActiveTab {
   MyDatasets = "My Datasets",
   Publications = "Publications",
+  MyIssues = "My Issues",
 }
 
 export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
@@ -48,7 +51,8 @@ export default function ProfilePage() {
   const { session, user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: userData } = useUserDatasets();
+  // const { data: userData } = useUserDatasets();
+  const { data: myFlags = [] } = useMyFlags();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(ActiveTab.MyDatasets);
   const [selectedDatasets, setSelectedDatasets] = useState<DatasetType[]>([]);
@@ -91,7 +95,7 @@ export default function ProfilePage() {
       <div className="m-auto min-h-screen w-full max-w-7xl">
         <div className="flex items-center pb-8 pt-12">
           <div className="w-1/2">
-            <Badge count={userData?.length} color="red">
+            <Badge count={myFlags.length} color="red">
               <ProfileAvatar email={user?.email ?? ""} />
             </Badge>
             <Typography.Title style={{ marginBottom: "4px" }}>Profile</Typography.Title>
@@ -141,7 +145,7 @@ export default function ProfilePage() {
         <div className="w-full">
           <div className="mb-4 flex justify-between">
             <Segmented
-              options={["My Datasets", "Publications"]}
+              options={["My Datasets", "Publications", "My Issues"]}
               size="large"
               value={activeTab}
               onChange={(value) => {
@@ -169,8 +173,79 @@ export default function ProfilePage() {
               resetSelection={resetSelectionFlag}
               onResetSelectionComplete={handleResetComplete}
             />
-          ) : (
+          ) : activeTab === ActiveTab.Publications ? (
             <PublicationsTable />
+          ) : (
+            <div className="mt-4">
+              {myFlags.length === 0 ? (
+                <div className="mt-8 flex flex-col items-center justify-center">
+                  <Typography.Title level={4}>No issues yet</Typography.Title>
+                  <Typography.Paragraph type="secondary">
+                    Report an issue from any dataset’s details page to see it here.
+                  </Typography.Paragraph>
+                </div>
+              ) : (
+                <>
+                  <Typography.Title level={5}>My Issues</Typography.Title>
+                  <Typography.Paragraph type="secondary">
+                    User-reported issues you've filed. Only you and auditors can view them.
+                  </Typography.Paragraph>
+                  <Table
+                    rowKey="id"
+                    dataSource={myFlags}
+                    columns={[
+                      {
+                        title: "Dataset ID",
+                        dataIndex: "dataset_id",
+                        key: "dataset_id",
+                        render: (id: number) => (
+                          <a href={`/dataset/${id}`} className="text-blue-600" rel="noreferrer">
+                            {id}
+                          </a>
+                        ),
+                      },
+                      {
+                        title: "Description",
+                        key: "description",
+                        render: (_: unknown, f: DatasetFlag) => (
+                          <Tooltip title={f.description}>
+                            <span>{(f.description || "").slice(0, 120) + (f.description.length > 120 ? "…" : "")}</span>
+                          </Tooltip>
+                        ),
+                      },
+                      {
+                        title: "Categories",
+                        key: "categories",
+                        render: (_: unknown, f: DatasetFlag) => (
+                          <span>
+                            {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
+                            {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                          </span>
+                        ),
+                      },
+                      {
+                        title: "Status",
+                        dataIndex: "status",
+                        key: "status",
+                        render: (status: string) => (
+                          <Tag color={status === "open" ? "red" : status === "acknowledged" ? "gold" : "green"}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Tag>
+                        ),
+                      },
+                      {
+                        title: "Created",
+                        dataIndex: "created_at",
+                        key: "created_at",
+                        render: (iso: string) => new Date(iso).toLocaleString(),
+                      },
+                      // Removed last status change per requirements
+                    ]}
+                    pagination={{ pageSize: 10 }}
+                  />
+                </>
+              )}
+            </div>
           )}
 
           <PublicationModal

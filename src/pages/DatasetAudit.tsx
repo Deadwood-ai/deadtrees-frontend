@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useDatasets } from "../hooks/useDatasets";
@@ -10,10 +11,11 @@ import DatasetAuditDetail from "../components/DatasetAudit/DatasetAuditDetail";
 import { IDataset } from "../types/dataset";
 import { useDatasetAudits } from "../hooks/useDatasetAudit";
 import { supabase } from "../hooks/useSupabase";
+import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
 
 const { Title } = Typography;
 
-type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded";
+type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded" | "flagged" | "major-issues";
 
 // Month constants for filtering
 const MONTHS = [
@@ -48,10 +50,12 @@ export default function DatasetAudit() {
   const navigate = useNavigate();
 
   // ALL HOOKS MUST BE CALLED FIRST - NO EARLY RETURNS BEFORE THIS POINT
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user } = useAuth();
+  const isAuthLoading = false;
   const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
   const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
   const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
+  const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
 
   // Filter states
   const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
@@ -94,6 +98,9 @@ export default function DatasetAudit() {
         const audit = auditMap.get(dataset.id);
         return dataset.is_audited && audit && audit.final_assessment === "exclude_completely";
       });
+    } else if (auditFilter === "flagged") {
+      const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
+      filtered = filtered.filter((d) => flaggedSet.has(d.id));
     }
 
     // Filter by ID if provided
@@ -122,7 +129,7 @@ export default function DatasetAudit() {
     }
 
     return filtered;
-  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap]);
+  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg]);
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
@@ -135,7 +142,7 @@ export default function DatasetAudit() {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "no_issues";
     }).length;
-  }, [datasets, auditMap]);
+  }, [datasets, audits, auditMap]);
 
   const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
@@ -143,7 +150,7 @@ export default function DatasetAudit() {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "fixable_issues";
     }).length;
-  }, [datasets, auditMap]);
+  }, [datasets, audits, auditMap]);
 
   const excludedCount = useMemo(() => {
     if (!datasets || !audits) return 0;
@@ -151,7 +158,10 @@ export default function DatasetAudit() {
       const audit = auditMap.get(d.id);
       return d.id > MIN_AUDIT_DATASET_ID && d.is_audited && audit && audit.final_assessment === "exclude_completely";
     }).length;
-  }, [datasets, auditMap]);
+  }, [datasets, audits, auditMap]);
+
+  const flaggedCount = useMemo(() => flaggedAgg.length, [flaggedAgg]);
+  const flaggedMap = useMemo(() => new Map(flaggedAgg.map((r) => [r.dataset_id, r])), [flaggedAgg]);
 
   // Check if user has audit privileges
   useEffect(() => {
@@ -302,7 +312,46 @@ export default function DatasetAudit() {
           },
           baseColumns[baseColumns.length - 1], // Actions column
         ]
-      : baseColumns;
+      : auditFilter === "flagged"
+        ? [
+            ...baseColumns.slice(0, -1),
+            {
+              title: "Flag Count",
+              key: "flag_count",
+              render: (_: unknown, record: IDataset) => {
+                const agg = flaggedMap.get(record.id);
+                if (!agg) return 0;
+                return (agg.open_count || 0) + (agg.acknowledged_count || 0);
+              },
+              width: 120,
+            },
+            {
+              title: "Latest Flag Status",
+              key: "latest_flag_status",
+              render: (_: unknown, record: IDataset) => {
+                const agg = flaggedMap.get(record.id);
+                if (!agg) return <Tag>None</Tag>;
+                const status = agg.latest_status;
+                const color = status === "open" ? "red" : status === "acknowledged" ? "gold" : "green";
+                return <Tag color={color}>{status.charAt(0).toUpperCase() + status.slice(1)}</Tag>;
+              },
+              width: 160,
+            },
+            {
+              title: "Latest Note",
+              key: "latest_note",
+              render: (_: unknown, record: IDataset) => {
+                const agg = flaggedMap.get(record.id);
+                if (!agg || !agg.latest_note) return <span className="text-gray-400">—</span>;
+                const txt = agg.latest_note || "";
+                const short = txt.slice(0, 80) + (txt.length > 80 ? "…" : "");
+                return <Tooltip title={txt}>{short}</Tooltip>;
+              },
+              width: 220,
+            },
+            baseColumns[baseColumns.length - 1],
+          ]
+        : baseColumns;
 
   return (
     <div className="p-6">
@@ -339,6 +388,17 @@ export default function DatasetAudit() {
                   {
                     label: `Excluded (${excludedCount})`,
                     value: "excluded",
+                  },
+                  {
+                    label: (
+                      <span>
+                        Flagged ({flaggedCount}){" "}
+                        <Tooltip title="Datasets with user-reported issues visible only to reporters and auditors">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      </span>
+                    ),
+                    value: "flagged",
                   },
                 ]}
               />
@@ -377,7 +437,7 @@ export default function DatasetAudit() {
         dataSource={filteredDatasets}
         columns={columns}
         rowKey="id"
-        loading={isDatasetLoading || isAuditsLoading}
+        loading={isDatasetLoading || isAuditsLoading || (auditFilter === "flagged" && isFlaggedLoading)}
         pagination={{
           pageSize: 20,
           showSizeChanger: true,

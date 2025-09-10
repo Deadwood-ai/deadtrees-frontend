@@ -1,7 +1,7 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined, FlagOutlined } from "@ant-design/icons";
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import PublicationLink from "../components/PublicationLink";
@@ -11,7 +11,7 @@ import { sanitizeText } from "../utils/textUtils";
 import { usePublicDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDownload } from "../hooks/useDownloadProvider";
 import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
 import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
@@ -20,12 +20,16 @@ import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../hooks/usePhenologyData";
 import AuditBadge from "../components/AuditBadge";
 import { useDatasetAudit } from "../hooks/useDatasetAudit";
+import { Modal, Form, Input } from "antd";
+import { useAuth } from "../hooks/useAuthProvider";
+import { useCreateFlag, useDatasetFlags } from "../hooks/useDatasetFlags";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { data: datasets } = usePublicDatasets();
   const [labelsOnly, setLabelsOnly] = useState(false);
+  const { user } = useAuth();
   const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
 
   // Use the global download state
@@ -48,6 +52,17 @@ export default function DatasetDetails() {
 
   // Fetch audit (for conditional rendering)
   const { data: auditInfo } = useDatasetAudit(dataset?.id);
+
+  // Flags for this dataset (respect RLS - reporter sees own, auditors see all)
+  const { data: flags = [] } = useDatasetFlags(dataset?.id);
+
+  // Report Issue modal state
+  const [isReportModalOpen, setReportModalOpen] = useState(false);
+  const [reportForm] = Form.useForm();
+  const { mutateAsync: createFlag, isPending: isCreatingFlag } = useCreateFlag();
+
+  const myFlags = useMemo(() => (user?.id ? flags.filter((f) => f.created_by === user.id) : []), [flags, user?.id]);
+  // Intentionally no extra computed counters; popover shows a short list and total badge
 
   if (!dataset) {
     return <div>Loading...</div>;
@@ -93,6 +108,7 @@ export default function DatasetDetails() {
             }}
             icon={<ArrowLeftOutlined />}
           />
+          {/* Removed left-column Report button per feedback (use map overlay instead) */}
         </div>
 
         {/* Scrollable Content Area */}
@@ -264,6 +280,8 @@ export default function DatasetDetails() {
                   </div>
                 </div>
               )}
+
+              {/* Removed left-side banner per feedback */}
 
               {labelsData && (
                 <div className="mt-4 space-y-3 rounded-md bg-white p-4">
@@ -463,9 +481,110 @@ export default function DatasetDetails() {
           )}
         </div>
       </Col>
-      <Col className="flex-1 pt-2">
+      <Col className="relative flex-1 pt-2">
+        {/* Small Report Issue button overlay in top-right of the map, with badge and popover */}
+        {user && (
+          <div className="absolute right-3 top-5 z-10">
+            <Popover
+              placement="leftTop"
+              trigger={["hover"]}
+              content={
+                myFlags.length > 0 ? (
+                  <div style={{ maxWidth: 320 }}>
+                    <Typography.Text strong>You reported {myFlags.length} issue(s)</Typography.Text>
+                    <div className="mt-2 space-y-2">
+                      {myFlags.slice(0, 3).map((f) => {
+                        const text = (f.description || "").slice(0, 200) + (f.description.length > 200 ? "…" : "");
+                        return (
+                          <div key={f.id} className="rounded border p-2">
+                            <div className="mb-1 flex items-center gap-2">
+                              {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
+                              {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                              <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
+                                {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+                              </Tag>
+                            </div>
+                            <Tooltip title={f.description}>
+                              <div className="text-xs text-gray-700">{text}</div>
+                            </Tooltip>
+                          </div>
+                        );
+                      })}
+                      {myFlags.length > 3 && (
+                        <div className="text-xs text-gray-500">+ {myFlags.length - 3} more in your profile</div>
+                      )}
+                      <a href="/profile" className="text-blue-600">
+                        View in Profile
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-600">Report issues you notice for this dataset.</div>
+                )
+              }
+            >
+              <Badge count={myFlags.length} size="small" offset={[0, 0]}>
+                <Button size="small" icon={<FlagOutlined />} onClick={() => setReportModalOpen(true)}>
+                  Report
+                </Button>
+              </Badge>
+            </Popover>
+          </div>
+        )}
         <DatasetDetailsMap data={dataset} />
       </Col>
+
+      {/* Report Issue Modal */}
+      <Modal
+        title="Report an Issue"
+        open={isReportModalOpen}
+        onCancel={() => setReportModalOpen(false)}
+        okText="Submit"
+        confirmLoading={isCreatingFlag}
+        okButtonProps={{
+          disabled: !(
+            (reportForm.getFieldValue("is_ortho_mosaic_issue") || reportForm.getFieldValue("is_prediction_issue")) &&
+            (reportForm.getFieldValue("description") || "").trim().length > 0
+          ),
+        }}
+        onOk={async () => {
+          try {
+            const values = await reportForm.validateFields();
+            await createFlag({
+              dataset_id: dataset.id,
+              is_ortho_mosaic_issue: values.is_ortho_mosaic_issue || false,
+              is_prediction_issue: values.is_prediction_issue || false,
+              description: values.description,
+            });
+            message.success("Issue reported successfully");
+            setReportModalOpen(false);
+            reportForm.resetFields();
+          } catch (e) {
+            // Swallow validation errors; other errors will be surfaced by Ant message if thrown
+          }
+        }}
+      >
+        <Form
+          form={reportForm}
+          layout="vertical"
+          initialValues={{ is_ortho_mosaic_issue: false, is_prediction_issue: false }}
+        >
+          <Form.Item name="is_ortho_mosaic_issue" valuePropName="checked">
+            <Checkbox>Auto mosaic issue</Checkbox>
+          </Form.Item>
+          <Form.Item name="is_prediction_issue" valuePropName="checked">
+            <Checkbox>Prediction issue</Checkbox>
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="Description"
+            rules={[{ required: true, message: "Please describe the issue" }]}
+          >
+            <Input.TextArea rows={4} placeholder="Describe what seems wrong..." />
+          </Form.Item>
+          {/* Validation message removed; submit is disabled until valid per feedback */}
+        </Form>
+      </Modal>
     </Row>
   );
 }
