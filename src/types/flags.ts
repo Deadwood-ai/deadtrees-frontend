@@ -8,6 +8,7 @@ export interface DatasetFlag {
   is_prediction_issue: boolean;
   description: string;
   status: FlagStatus;
+  reporter_email?: string | null;
   auditor_comment?: string | null;
   resolved_by?: string | null; // uuid
   created_at: string; // ISO timestamp

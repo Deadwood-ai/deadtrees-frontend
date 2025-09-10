@@ -10,13 +10,58 @@ export function useDatasetFlags(datasetId: number | undefined) {
     enabled: !!datasetId,
     queryFn: async (): Promise<DatasetFlag[]> => {
       if (!datasetId) return [];
+      // Join to auth.users via RPC or use reporter email if available through a view; fallback to created_by only
       const { data, error } = await supabase
         .from("dataset_flags")
-        .select("*")
+        .select(
+          "id,dataset_id,created_by,is_ortho_mosaic_issue,is_prediction_issue,description,status,created_at,updated_at",
+        )
         .eq("dataset_id", datasetId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      // Try to enrich with reporter email via public.user_info if present
+      const flags = (data ?? []) as DatasetFlag[];
+      const uniqueUserIds = Array.from(new Set(flags.map((f) => f.created_by).filter(Boolean)));
+      if (uniqueUserIds.length > 0) {
+        // Try RPC to fetch emails from auth.users for auditors
+        try {
+          const { data: emails, error: rpcError } = await supabase.rpc("get_user_emails", {
+            p_user_ids: uniqueUserIds,
+          });
+          if (!rpcError && emails) {
+            const emailMap = new Map<string, string | null>();
+            (emails as { user_id: string; email: string | null }[]).forEach((row) => {
+              emailMap.set(row.user_id, row.email ?? null);
+            });
+            flags.forEach((f) => {
+              (f as DatasetFlag).reporter_email = emailMap.get(f.created_by) ?? null;
+            });
+            return flags;
+          }
+        } catch (_e) {
+          // Fall through to user_info enrichment
+        }
+
+        // Fallback: enrich via public.user_info (name as a proxy)
+        try {
+          const { data: profiles } = await supabase
+            .from("user_info")
+            .select("user, first_name, last_name")
+            .in("user", uniqueUserIds);
+          const profileMap = new Map<string, string | null>();
+          (profiles || []).forEach((p: { user: string; first_name: string | null; last_name: string | null }) => {
+            const nameParts = [p.first_name ?? "", p.last_name ?? ""].filter((s) => s && s.length > 0);
+            const name = nameParts.join(" ") || null;
+            profileMap.set(p.user, name);
+          });
+          flags.forEach((f) => {
+            (f as DatasetFlag).reporter_email = profileMap.get(f.created_by) ?? null;
+          });
+        } catch (_e) {
+          // ignore
+        }
+      }
+      return flags;
     },
     staleTime: 60_000,
   });
@@ -86,10 +131,16 @@ export function useCreateFlag() {
 export function useUpdateFlagStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { flag_id: number; dataset_id: number; new_status: FlagStatus }) => {
+    mutationFn: async (payload: {
+      flag_id: number;
+      dataset_id: number;
+      new_status: FlagStatus;
+      note?: string | null;
+    }) => {
       const { error } = await supabase.rpc("update_flag_status", {
         p_flag_id: payload.flag_id,
         p_new_status: payload.new_status,
+        p_note: payload.note ?? null,
       });
       if (error) throw error;
     },

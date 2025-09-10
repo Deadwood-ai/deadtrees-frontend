@@ -361,23 +361,26 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
               ) : flags.length === 0 ? (
                 <div className="text-xs text-gray-500">No issues reported by users for this dataset.</div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                   {flags.map((f) => (
-                    <div key={f.id} className="rounded border border-slate-200 p-2">
+                    <Card key={f.id} size="small" className="border-slate-200">
                       <div className="mb-1 flex items-center justify-between">
                         <div className="space-x-1">
-                          {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
-                          {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                          {f.is_ortho_mosaic_issue && <Tag color="default">Auto mosaic</Tag>}
+                          {f.is_prediction_issue && <Tag color="default">Prediction</Tag>}
                         </div>
                         <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
                           {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
                         </Tag>
                       </div>
+                      {f.reporter_email && (
+                        <div className="mb-1 text-[11px] text-gray-500">Reporter: {f.reporter_email}</div>
+                      )}
                       <div className="whitespace-pre-wrap text-xs text-gray-700">{f.description}</div>
-                      {/* Auditor note input removed */}
-                      <div className="mt-2 flex items-center gap-8">
+                      <div className="mt-3 flex items-center gap-3">
                         <Button
                           size="small"
+                          type="primary"
                           onClick={async () => {
                             try {
                               await updateFlagStatus({
@@ -396,14 +399,10 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                         </Button>
                         <Button
                           size="small"
-                          type="primary"
+                          type="default"
                           onClick={async () => {
                             try {
-                              await updateFlagStatus({
-                                flag_id: f.id,
-                                dataset_id: dataset.id,
-                                new_status: "resolved",
-                              });
+                              await updateFlagStatus({ flag_id: f.id, dataset_id: dataset.id, new_status: "resolved" });
                               message.success("Flag resolved");
                             } catch (e) {
                               message.error("Failed to update flag");
@@ -414,7 +413,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                           Resolve
                         </Button>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               )}
