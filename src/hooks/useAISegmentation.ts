@@ -56,6 +56,23 @@ export const useAISegmentation = ({
   const disabledInteractionsRef = useRef<boolean>(false);
   type HideableLayer = { setVisible: (v: boolean) => void; getVisible: () => boolean };
   const hiddenLayersRef = useRef<Array<{ layer: HideableLayer; prevVisible: boolean }>>([]);
+  const tempBboxFeatureRef = useRef<Feature | null>(null);
+  const spinnerRef = useRef<HTMLDivElement | null>(null);
+  const removeTempUI = useCallback(() => {
+    if (overlayCanvasRef.current) {
+      const parent = overlayCanvasRef.current.parentElement;
+      if (parent) parent.removeChild(overlayCanvasRef.current);
+      overlayCanvasRef.current = null;
+    }
+    if (tempBboxFeatureRef.current && resultSourceRef.current) {
+      resultSourceRef.current.removeFeature(tempBboxFeatureRef.current);
+      tempBboxFeatureRef.current = null;
+    }
+    if (spinnerRef.current && spinnerRef.current.parentElement) {
+      spinnerRef.current.parentElement.removeChild(spinnerRef.current);
+      spinnerRef.current = null;
+    }
+  }, []);
 
   const canUse = useMemo(() => !!getOrthoLayer(), [getOrthoLayer]);
 
@@ -133,12 +150,7 @@ export const useAISegmentation = ({
       hiddenLayersRef.current = [];
       map.renderSync();
     }
-    // Remove overlay canvas if present
-    if (overlayCanvasRef.current) {
-      const parent = overlayCanvasRef.current.parentElement;
-      if (parent) parent.removeChild(overlayCanvasRef.current);
-      overlayCanvasRef.current = null;
-    }
+    removeTempUI();
   }, [mapRef]);
 
   const enable = useCallback(() => {
@@ -177,6 +189,7 @@ export const useAISegmentation = ({
       try {
         setIsProcessing(true);
         setError(null);
+        removeTempUI();
 
         // Get extent in map coordinates from the drawn polygon
         const geometry = evt.feature.getGeometry();
@@ -198,43 +211,15 @@ export const useAISegmentation = ({
           const y1 = Math.round(topLeft[1]);
           const x2 = Math.round(bottomRight[0]);
           const y2 = Math.round(bottomRight[1]);
-          const width = Math.max(1, x2 - x1);
-          const height = Math.max(1, y2 - y1);
+          // const width = Math.max(1, x2 - x1);
+          // const height = Math.max(1, y2 - y1);
 
-          // Compose visible map into a single canvas and crop the bbox
+          // Compose visible map into a single canvas (ortho-only) and crop the bbox
           const composite = composeCurrentMapCanvas(map);
           if (!composite) {
             throw new Error("Failed to access map canvas for cropping.");
           }
-          const cropped = document.createElement("canvas");
-          cropped.width = width;
-          cropped.height = height;
-          const ctx = cropped.getContext("2d");
-          if (!ctx) throw new Error("Failed to get 2D context for crop");
-          // Ensure we read pixels after the map has fully rendered with hidden layers
-          await new Promise((r) => requestAnimationFrame(() => r(null)));
-          ctx.drawImage(composite, x1, y1, width, height, 0, 0, width, height);
-
-          // Place cropped canvas as absolute overlay at exact pixel position
-          const parent = map.getTargetElement();
-          if (!parent) throw new Error("Map target element not found");
-          // Remove previous overlay if any
-          if (overlayCanvasRef.current && overlayCanvasRef.current.parentElement) {
-            overlayCanvasRef.current.parentElement.removeChild(overlayCanvasRef.current);
-          }
-          cropped.style.position = "absolute";
-          cropped.style.left = `${x1}px`;
-          cropped.style.top = `${y1}px`;
-          cropped.style.width = `${width}px`;
-          cropped.style.height = `${height}px`;
-          cropped.style.pointerEvents = "none";
-          cropped.style.zIndex = "1000";
-          parent.appendChild(cropped);
-          // Debug outline to verify placement
-          // cropped.style.outline = "1px dashed #0ff";
-          overlayCanvasRef.current = cropped;
-
-          // Also render bbox polygon feature with cyan stroke
+          // Show temporary bbox and spinner
           const rectCoords = [
             [minX, minY],
             [maxX, minY],
@@ -243,10 +228,37 @@ export const useAISegmentation = ({
             [minX, minY],
           ];
           const rect = new Polygon([rectCoords]);
-          const f = new Feature(rect);
+          const tempFeature = new Feature(rect);
+          tempFeature.setStyle(
+            new Style({
+              stroke: new Stroke({ color: "#00c8ff", width: 2, lineDash: [6, 4] }),
+              fill: new Fill({ color: "rgba(0,200,255,0.06)" }),
+            }),
+          );
           ensureResultLayer();
-          resultSourceRef.current?.addFeature(f);
-          setFeatures((prev) => [...prev, f]);
+          resultSourceRef.current?.addFeature(tempFeature);
+          tempBboxFeatureRef.current = tempFeature;
+
+          ensureSpinnerKeyframes();
+          const target = map.getTargetElement();
+          if (target) {
+            const spinner = document.createElement("div");
+            spinner.style.position = "absolute";
+            spinner.style.left = `${Math.round((x1 + x2) / 2) - 8}px`;
+            spinner.style.top = `${Math.round((y1 + y2) / 2) - 8}px`;
+            spinner.style.width = "16px";
+            spinner.style.height = "16px";
+            spinner.style.borderRadius = "50%";
+            spinner.style.background = "rgba(0,200,255,0.7)";
+            spinner.style.boxShadow = "0 0 8px rgba(0,200,255,0.8)";
+            spinner.style.animation = "aiPulse 0.9s ease-in-out infinite";
+            spinner.style.zIndex = "1000";
+            target.appendChild(spinner);
+            spinnerRef.current = spinner;
+          }
+
+          // No overlay image: we only use composite to build the API input
+          await new Promise((r) => requestAnimationFrame(() => r(null)));
 
           // Now: send the SAME composite image and bbox to the API and render returned polygons
           const imageBlob: Blob = await canvasToBlob(composite, "image/jpeg", 0.92);
@@ -267,15 +279,23 @@ export const useAISegmentation = ({
           }
           const raw = await response.json();
           const fc = normalizeToFeatureCollection(raw);
-          if (fc && overlayCanvasRef.current) {
-            drawPixelGeoJSONOnCanvas(fc, overlayCanvasRef.current, x1, y1);
-          }
-          const created = fc ? convertPixelGeoJSONToMapFeatures(fc, map) : [];
+          const filtered = fc ? keepLargestPolygon(fc) : null;
+          const created = filtered ? convertPixelGeoJSONToMapFeatures(filtered, map) : [];
           ensureResultLayer();
           if (resultSourceRef.current && created.length) {
             resultSourceRef.current.addFeatures(created);
           }
           if (created.length) setFeatures((prev) => [...prev, ...created]);
+
+          // After rendering features, restore layers and interactions
+          if (hiddenLayersRef.current.length > 0) {
+            hiddenLayersRef.current.forEach(({ layer, prevVisible }) => {
+              layer.setVisible(prevVisible);
+            });
+            hiddenLayersRef.current = [];
+            map.renderSync();
+          }
+          removeTempUI();
         } else {
           // SEGMENT MODE (existing pipeline)
           // Build offscreen map with only the ortho layer
@@ -336,13 +356,24 @@ export const useAISegmentation = ({
         const message = e instanceof Error ? e.message : "Unknown error";
         setError(message);
       } finally {
+        const mapFinal = mapRef.current;
+        if (mapFinal) {
+          mapFinal.getInteractions().forEach((i) => i.setActive(true));
+        }
+        disabledInteractionsRef.current = false;
+        removeTempUI();
+        if (drawInteractionRef.current && mapFinal) {
+          mapFinal.removeInteraction(drawInteractionRef.current);
+          drawInteractionRef.current = null;
+        }
+        setIsActive(false);
         setIsProcessing(false);
       }
     });
 
     map.addInteraction(draw);
     drawInteractionRef.current = draw;
-  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, mode]);
+  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, mode, removeTempUI]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -526,6 +557,15 @@ function composeCurrentMapCanvas(map: Map): HTMLCanvasElement | null {
   return composite;
 }
 
+function ensureSpinnerKeyframes() {
+  const id = "ai-pulse-keyframes";
+  if (document.getElementById(id)) return;
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = `@keyframes aiPulse { 0% { transform: scale(0.9); opacity: 0.6; } 50% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.6; } }`;
+  document.head.appendChild(style);
+}
+
 // (intentionally left out) previously attempted layer-specific canvas detection
 
 type PixelPolygon = { type: "Polygon"; coordinates: number[][][] };
@@ -534,10 +574,9 @@ type PixelFeatureCollection = { type: "FeatureCollection"; features: PixelFeatur
 
 function convertPixelGeoJSONToMapFeatures(geojson: unknown, map: Map): Feature[] {
   const created: Feature[] = [];
-  const collection = geojson as Partial<PixelFeatureCollection>;
-  if (!collection || collection.type !== "FeatureCollection" || !Array.isArray(collection.features)) {
-    return created;
-  }
+  const collection = normalizeToFeatureCollection(geojson);
+  if (!collection) return created;
+  const sign = getYSign(collection);
   for (const feature of collection.features) {
     const geometry = feature.geometry;
     if (!geometry || geometry.type !== "Polygon" || !Array.isArray(geometry.coordinates)) continue;
@@ -547,9 +586,8 @@ function convertPixelGeoJSONToMapFeatures(geojson: unknown, map: Map): Feature[]
       const transformedRing: number[][] = [];
       for (const coord of ring) {
         const [x, y] = coord as [number, number];
-        // Backend returns (x, -y). Convert back to screen pixel space (top-left origin, y down)
         const tx = x;
-        const ty = -y;
+        const ty = sign * y;
         const mapCoord = map.getCoordinateFromPixel([tx, ty]);
         if (mapCoord) transformedRing.push(mapCoord);
       }
@@ -566,6 +604,8 @@ function convertPixelGeoJSONToMapFeatures(geojson: unknown, map: Map): Feature[]
 
 export default useAISegmentation;
 
+// Remove overlay renderer (kept here for reference, but commented out)
+/*
 function drawPixelGeoJSONOnCanvas(
   geojson: PixelFeatureCollection,
   canvas: HTMLCanvasElement,
@@ -575,7 +615,6 @@ function drawPixelGeoJSONOnCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // Decide sign: if most y values are negative, invert; else keep as-is
   const sign = getYSign(geojson);
 
   ctx.save();
@@ -593,7 +632,7 @@ function drawPixelGeoJSONOnCanvas(
       for (const coord of ring) {
         const [x, y] = coord as [number, number];
         const sx = x - offsetX;
-        const sy = sign * y - offsetY; // sign = 1 for y-down, -1 if API sent negative y
+        const sy = sign * y - offsetY;
         if (first) {
           ctx.moveTo(sx, sy);
           first = false;
@@ -608,6 +647,7 @@ function drawPixelGeoJSONOnCanvas(
   }
   ctx.restore();
 }
+*/
 
 function getYSign(fc: PixelFeatureCollection): 1 | -1 {
   let neg = 0;
@@ -635,4 +675,32 @@ function normalizeToFeatureCollection(raw: unknown): PixelFeatureCollection | nu
   const fc = direct && direct.type === "FeatureCollection" ? direct : nested;
   if (fc && fc.type === "FeatureCollection" && Array.isArray(fc.features)) return fc as PixelFeatureCollection;
   return null;
+}
+
+function keepLargestPolygon(fc: PixelFeatureCollection): PixelFeatureCollection | null {
+  let best: PixelFeature | null = null;
+  let bestArea = -1;
+  for (const f of fc.features) {
+    const g = f.geometry;
+    if (!g || g.type !== "Polygon" || !Array.isArray(g.coordinates) || g.coordinates.length === 0) continue;
+    const ring = g.coordinates[0] as number[][];
+    const area = Math.abs(shoelaceArea(ring));
+    if (area > bestArea) {
+      bestArea = area;
+      best = f;
+    }
+  }
+  if (!best) return null;
+  return { type: "FeatureCollection", features: [best] } as PixelFeatureCollection;
+}
+
+function shoelaceArea(points: number[][]): number {
+  if (points.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const [x1, y1] = points[i] as [number, number];
+    const [x2, y2] = points[(i + 1) % points.length] as [number, number];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return 0.5 * sum;
 }
