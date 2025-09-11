@@ -1,4 +1,4 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge } from "antd";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge, Spin } from "antd";
 import { useParams, useNavigate, Link } from "react-router-dom";
 
 import {
@@ -77,7 +77,11 @@ export default function DatasetDetails() {
   // Intentionally no extra computed counters; popover shows a short list and total badge
 
   if (!dataset) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-full w-full items-center justify-center" style={{ minHeight: "60vh" }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   // Check if this is a GeoNadir dataset
