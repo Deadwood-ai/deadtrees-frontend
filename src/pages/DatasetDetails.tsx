@@ -1,7 +1,13 @@
 import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge } from "antd";
 import { useParams, useNavigate, Link } from "react-router-dom";
 
-import { ArrowLeftOutlined, EnvironmentOutlined, DownloadOutlined, FlagOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  EnvironmentOutlined,
+  DownloadOutlined,
+  FlagOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import PublicationLink from "../components/PublicationLink";
@@ -504,8 +510,8 @@ export default function DatasetDetails() {
                         return (
                           <div key={f.id} className="rounded border p-2">
                             <div className="mb-1 flex items-center gap-2">
-                              {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
-                              {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                              {f.is_ortho_mosaic_issue && <Tag color="orange">Orthomosaic</Tag>}
+                              {f.is_prediction_issue && <Tag color="blue">Segmentation</Tag>}
                               <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
                                 {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
                               </Tag>
@@ -570,20 +576,50 @@ export default function DatasetDetails() {
           layout="vertical"
           initialValues={{ is_ortho_mosaic_issue: false, is_prediction_issue: false }}
         >
-          <div className="flex gap-2">
-            <Form.Item name="is_ortho_mosaic_issue" valuePropName="checked">
-              <Checkbox>Auto mosaic issue</Checkbox>
-            </Form.Item>
-            <Form.Item name="is_prediction_issue" valuePropName="checked">
-              <Checkbox>Prediction issue</Checkbox>
-            </Form.Item>
+          <div className="mb-2 mt-6 flex items-center">
+            <Typography.Text className="text-sm font-medium">Issue type</Typography.Text>
+            <Tooltip
+              title={
+                <div>
+                  <div>
+                    <strong>Orthomosaic</strong>: base image problems (misalignment, seams, black/white borders, color
+                    band issues, artifacts).
+                  </div>
+                  <div className="mt-1">
+                    <strong>Segmentation</strong>: prediction problems (missing deadwood, false positives, poor
+                    outlines, misclassification).
+                  </div>
+                </div>
+              }
+              placement="right"
+            >
+              <InfoCircleOutlined className="ml-1 text-blue-500" />
+            </Tooltip>
           </div>
+          <Form.Item className="mb-0" name="is_ortho_mosaic_issue" valuePropName="checked">
+            <Checkbox>
+              <Tooltip title="Base image problems: misalignment, seams, black/white borders, color band issues, artifacts">
+                <span>Orthomosaic issue</span>
+              </Tooltip>
+            </Checkbox>
+          </Form.Item>
+          <Form.Item className="mb-4" name="is_prediction_issue" valuePropName="checked">
+            <Checkbox>
+              <Tooltip title="Segmentation problems: missing deadwood, false positives, poor outlines, obvious misclassification">
+                <span>Segmentation issue</span>
+              </Tooltip>
+            </Checkbox>
+          </Form.Item>
+
           <Form.Item
             name="description"
             label="Description"
             rules={[{ required: true, message: "Please describe the issue" }]}
           >
-            <Input.TextArea rows={4} placeholder="Describe what seems wrong..." />
+            <Input.TextArea
+              rows={4}
+              placeholder="Describe the issue and where it occurs. Mention Orthomosaic (alignment, seams, borders, bands) or Segmentation (missing, false positives, misclassification)."
+            />
           </Form.Item>
           {/* Validation message removed; submit is disabled until valid per feedback */}
         </Form>

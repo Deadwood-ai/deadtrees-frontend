@@ -33,7 +33,7 @@ interface DatasetType {
 
 enum ActiveTab {
   MyDatasets = "My Datasets",
-  Publications = "Publications",
+  Publications = "Published datasets",
   MyIssues = "My Issues",
 }
 
@@ -145,7 +145,7 @@ export default function ProfilePage() {
         <div className="w-full">
           <div className="mb-4 flex justify-between">
             <Segmented
-              options={["My Datasets", "Publications", "My Issues"]}
+              options={["My Datasets", "Published datasets", "My Issues"]}
               size="large"
               value={activeTab}
               onChange={(value) => {
@@ -218,8 +218,8 @@ export default function ProfilePage() {
                         key: "categories",
                         render: (_: unknown, f: DatasetFlag) => (
                           <span>
-                            {f.is_ortho_mosaic_issue && <Tag color="orange">Auto mosaic</Tag>}
-                            {f.is_prediction_issue && <Tag color="blue">Prediction</Tag>}
+                            {f.is_ortho_mosaic_issue && <Tag color="orange">Orthomosaic</Tag>}
+                            {f.is_prediction_issue && <Tag color="blue">Segmentation</Tag>}
                           </span>
                         ),
                       },

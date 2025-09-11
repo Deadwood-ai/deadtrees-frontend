@@ -366,8 +366,8 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                     <Card key={f.id} size="small" className="border-slate-200">
                       <div className="mb-1 flex items-center justify-between">
                         <div className="space-x-1">
-                          {f.is_ortho_mosaic_issue && <Tag color="default">Auto mosaic</Tag>}
-                          {f.is_prediction_issue && <Tag color="default">Prediction</Tag>}
+                          {f.is_ortho_mosaic_issue && <Tag color="default">Orthomosaic</Tag>}
+                          {f.is_prediction_issue && <Tag color="default">Segmentation</Tag>}
                         </div>
                         <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
                           {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
