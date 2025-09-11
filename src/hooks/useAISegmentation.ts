@@ -11,6 +11,9 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import View from "ol/View";
 import { Settings } from "../config";
+import ImageLayer from "ol/layer/Image.js";
+import ImageStatic from "ol/source/ImageStatic.js";
+import BaseLayer from "ol/layer/Base.js";
 
 type GetOrthoLayerFn = () => TileLayerWebGL | undefined;
 
@@ -47,6 +50,8 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
   const drawInteractionRef = useRef<Draw | null>(null);
   const resultSourceRef = useRef<VectorSource | null>(null);
   const resultLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const debugLayerRef = useRef<BaseLayer | null>(null);
+  const debugUrlRef = useRef<string | null>(null);
 
   const canUse = useMemo(() => !!getOrthoLayer(), [getOrthoLayer]);
 
@@ -101,7 +106,16 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
     if (resultSourceRef.current) {
       resultSourceRef.current.clear();
     }
-  }, []);
+    // Remove debug overlay if present
+    if (mapRef.current && debugLayerRef.current) {
+      mapRef.current.removeLayer(debugLayerRef.current);
+      debugLayerRef.current = null;
+    }
+    if (debugUrlRef.current) {
+      URL.revokeObjectURL(debugUrlRef.current);
+      debugUrlRef.current = null;
+    }
+  }, [mapRef]);
 
   const disable = useCallback(() => {
     const map = mapRef.current;
@@ -165,6 +179,32 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
         // Render and capture JPEG
         const imageBlob = await exportMapToJPEG(offscreenMap, targetSize[0], targetSize[1]);
         const imageFile = new File([imageBlob], "view.jpg", { type: "image/jpeg" });
+
+        // DEBUG: overlay captured image on the main map to verify alignment
+        try {
+          const url = URL.createObjectURL(imageBlob);
+          debugUrlRef.current = url;
+          const captureExtent = offscreenMap.getView().calculateExtent(offscreenMap.getSize());
+          const debugLayer = new ImageLayer({
+            source: new ImageStatic({
+              url,
+              imageExtent: captureExtent,
+              projection: "EPSG:3857",
+            }),
+            opacity: 0.4,
+            className: "ai-segmentation-debug-capture",
+          });
+          // Remove previous debug layer, if any
+          if (mapRef.current && debugLayerRef.current) {
+            mapRef.current.removeLayer(debugLayerRef.current);
+          }
+          if (mapRef.current) {
+            mapRef.current.addLayer(debugLayer);
+            debugLayerRef.current = debugLayer;
+          }
+        } catch (_) {
+          // ignore debug overlay errors
+        }
 
         // Build and send request
         const form = new FormData();
