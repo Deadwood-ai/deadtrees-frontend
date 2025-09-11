@@ -8,8 +8,8 @@ import Feature from "ol/Feature.js";
 import Polygon from "ol/geom/Polygon.js";
 import Geometry from "ol/geom/Geometry.js";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
-import { GeoTIFF } from "ol/source";
-import View from "ol/View";
+// import { GeoTIFF } from "ol/source";
+// import View from "ol/View";
 import { Settings } from "../config";
 
 type GetOrthoLayerFn = () => TileLayerWebGL | undefined;
@@ -17,7 +17,6 @@ type GetOrthoLayerFn = () => TileLayerWebGL | undefined;
 interface UseAISegmentationParams {
   mapRef: React.MutableRefObject<Map | null>;
   getOrthoLayer: GetOrthoLayerFn;
-  mode?: "segment" | "crop-only";
 }
 
 interface UseAISegmentationReturn {
@@ -38,11 +37,7 @@ interface UseAISegmentationReturn {
  * - Sends JPEG and bbox (pixels) to SAM endpoint
  * - Converts returned pixel polygons to map coordinates and adds a temp vector layer
  */
-export const useAISegmentation = ({
-  mapRef,
-  getOrthoLayer,
-  mode = "segment",
-}: UseAISegmentationParams): UseAISegmentationReturn => {
+export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationParams): UseAISegmentationReturn => {
   const [isActive, setIsActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +47,7 @@ export const useAISegmentation = ({
   const drawInteractionRef = useRef<Draw | null>(null);
   const resultSourceRef = useRef<VectorSource | null>(null);
   const resultLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
-  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null); // no longer used for rendering
   const disabledInteractionsRef = useRef<boolean>(false);
   type HideableLayer = { setVisible: (v: boolean) => void; getVisible: () => boolean };
   const hiddenLayersRef = useRef<Array<{ layer: HideableLayer; prevVisible: boolean }>>([]);
@@ -200,7 +195,7 @@ export const useAISegmentation = ({
         const extent = geometry.getExtent();
         const [minX, minY, maxX, maxY] = extent;
 
-        if (mode === "crop-only") {
+        {
           // Compute bbox pixels in the CURRENT MAP pixel space (CSS pixels)
           const topLeft = map.getPixelFromCoordinate([minX, maxY]);
           const bottomRight = map.getPixelFromCoordinate([maxX, minY]);
@@ -296,61 +291,6 @@ export const useAISegmentation = ({
             map.renderSync();
           }
           removeTempUI();
-        } else {
-          // SEGMENT MODE (existing pipeline)
-          // Build offscreen map with only the ortho layer
-          const offscreen = await buildOffscreenOrthoMap(map, getOrthoLayer());
-          if (!offscreen) {
-            throw new Error("Failed to initialize offscreen map for capture.");
-          }
-          const { offscreenMap, container, targetSize } = offscreen;
-
-          // Compute bbox in offscreen pixel space
-          const topLeft = offscreenMap.getPixelFromCoordinate([minX, maxY]);
-          const bottomRight = offscreenMap.getPixelFromCoordinate([maxX, minY]);
-          if (!topLeft || !bottomRight) {
-            cleanupOffscreen(offscreenMap, container);
-            throw new Error("Failed to compute bbox pixels.");
-          }
-          const x1 = Math.round(topLeft[0]);
-          const y1 = Math.round(topLeft[1]);
-          const x2 = Math.round(bottomRight[0]);
-          const y2 = Math.round(bottomRight[1]);
-
-          // Render and capture JPEG
-          const imageBlob = await exportMapToJPEG(offscreenMap, targetSize[0], targetSize[1]);
-          const imageFile = new File([imageBlob], "view.jpg", { type: "image/jpeg" });
-
-          // Build and send request
-          const form = new FormData();
-          form.append("image", imageFile);
-          form.append("bboxes", JSON.stringify([x1, y1, x2, y2]));
-          form.append("labels", JSON.stringify([1]));
-
-          const response = await fetch(`${Settings.SAM_API_URL}/segment`, {
-            method: "POST",
-            mode: "cors",
-            headers: {
-              Accept: "application/json",
-            },
-            body: form,
-          });
-
-          if (!response.ok) {
-            throw new Error(`Segmentation failed (${response.status})`);
-          }
-
-          const raw = await response.json();
-          const fc = normalizeToFeatureCollection(raw);
-          // Convert using the SAME pixel space map as used for image capture
-          const created = fc ? convertPixelGeoJSONToMapFeatures(fc, offscreenMap) : [];
-          ensureResultLayer();
-          if (resultSourceRef.current) {
-            resultSourceRef.current.addFeatures(created);
-          }
-          setFeatures((prev) => [...prev, ...created]);
-          // Now we can clean up the offscreen resources
-          cleanupOffscreen(offscreenMap, container);
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : "Unknown error";
@@ -373,7 +313,7 @@ export const useAISegmentation = ({
 
     map.addInteraction(draw);
     drawInteractionRef.current = draw;
-  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, mode, removeTempUI]);
+  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, removeTempUI]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -395,123 +335,7 @@ export const useAISegmentation = ({
   };
 };
 
-// Build an offscreen map that shares the same View as the main map and contains only the ortho layer
-async function buildOffscreenOrthoMap(
-  mainMap: Map,
-  orthoLayer?: TileLayerWebGL,
-): Promise<{ offscreenMap: Map; container: HTMLDivElement; targetSize: [number, number] } | null> {
-  if (!orthoLayer) return null;
-  const mainSize = mainMap.getSize();
-  if (!mainSize) return null;
-
-  const maxDim = 1200;
-  const [w, h] = mainSize;
-  const scale = Math.min(maxDim / w, maxDim / h, 1);
-  const targetWidth = Math.max(1, Math.round(w * scale));
-  const targetHeight = Math.max(1, Math.round(h * scale));
-
-  const container = document.createElement("div");
-  container.style.position = "absolute";
-  container.style.left = "-10000px";
-  container.style.top = "0";
-  container.style.width = `${targetWidth}px`;
-  container.style.height = `${targetHeight}px`;
-  document.body.appendChild(container);
-
-  // Reuse the same source for consistency (safe for read-only capture)
-  const source = orthoLayer.getSource();
-  const offscreenOrtho = new TileLayerWebGL({
-    source: source ?? new GeoTIFF({ sources: [] }),
-  });
-
-  // Clone view state to avoid affecting the main map while matching center/zoom/rotation
-  const mainView = mainMap.getView();
-  const offscreenView = new View({
-    center: mainView.getCenter() ?? [0, 0],
-    zoom: mainView.getZoom() ?? 2,
-    rotation: mainView.getRotation() ?? 0,
-    projection: mainView.getProjection(),
-    constrainOnlyCenter: true,
-  });
-  const offscreenMap = new Map({
-    target: container,
-    layers: [offscreenOrtho],
-    view: offscreenView,
-    controls: [],
-    overlays: [],
-  });
-
-  // Wait a frame for layout
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  offscreenMap.setSize([targetWidth, targetHeight]);
-
-  return { offscreenMap, container, targetSize: [targetWidth, targetHeight] };
-}
-
-function cleanupOffscreen(offscreenMap: Map, container: HTMLDivElement) {
-  try {
-    offscreenMap.setTarget(undefined as unknown as HTMLElement);
-    const maybeDisposable = offscreenMap as unknown as { dispose?: () => void };
-    if (typeof maybeDisposable.dispose === "function") {
-      maybeDisposable.dispose();
-    }
-  } finally {
-    if (container && container.parentElement) {
-      container.parentElement.removeChild(container);
-    }
-  }
-}
-
-async function exportMapToJPEG(map: Map, width: number, height: number): Promise<Blob> {
-  const blob: Blob = await new Promise((resolve, reject) => {
-    const mapCanvas = document.createElement("canvas");
-    mapCanvas.width = width;
-    mapCanvas.height = height;
-    const mapContext = mapCanvas.getContext("2d");
-    if (!mapContext) {
-      reject(new Error("Failed to create canvas context"));
-      return;
-    }
-
-    const finalize = () => {
-      try {
-        mapCanvas.toBlob(
-          (b) => {
-            if (!b) {
-              reject(new Error("Failed to encode JPEG"));
-            } else {
-              resolve(b);
-            }
-          },
-          "image/jpeg",
-          0.92,
-        );
-      } catch (e) {
-        reject(e);
-      }
-    };
-
-    const drawLayers = () => {
-      const target = map.getTargetElement();
-      if (!target) {
-        finalize();
-        return;
-      }
-      const canvases = target.querySelectorAll("canvas");
-      canvases.forEach((canvas: HTMLCanvasElement) => {
-        if (canvas.width > 0 && canvas.height > 0) {
-          mapContext.drawImage(canvas, 0, 0);
-        }
-      });
-      finalize();
-    };
-
-    map.once("rendercomplete", drawLayers);
-    map.renderSync();
-  });
-
-  return blob;
-}
+// Removed offscreen helpers (not used in MVP path)
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {

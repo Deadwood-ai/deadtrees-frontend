@@ -65,7 +65,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const ai = useAISegmentation({
     mapRef,
     getOrthoLayer: () => layerRefs.current.orthoCog,
-    mode: "crop-only",
   });
 
   // Main map initialization effect
@@ -192,7 +191,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               zoom: viewport.zoom !== 2 ? viewport.zoom : undefined,
               extent: viewOptions.extent,
               minZoom: 14,
-              maxZoom: 22,
+              maxZoom: 23,
               projection: "EPSG:3857",
               constrainOnlyCenter: true,
             });
@@ -503,6 +502,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           position: "relative",
         }}
         ref={mapContainer}
+        data-rr-ignore
       >
         <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons
