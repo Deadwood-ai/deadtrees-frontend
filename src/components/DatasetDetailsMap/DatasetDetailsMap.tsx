@@ -65,6 +65,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const ai = useAISegmentation({
     mapRef,
     getOrthoLayer: () => layerRefs.current.orthoCog,
+    mode: "crop-only",
   });
 
   // Main map initialization effect
@@ -499,6 +500,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         style={{
           width: "100%",
           height: "100%",
+          position: "relative",
         }}
         ref={mapContainer}
       >
