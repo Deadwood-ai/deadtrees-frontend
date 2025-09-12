@@ -3,10 +3,13 @@ import Map from "ol/Map";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Draw, Modify, Select } from "ol/interaction";
+import { click } from "ol/events/condition";
 import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
 import { Style, Fill, Stroke } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
+import { union as geomUnion, difference as geomDifference, intersects as geomIntersects } from "../utils/geometry";
+import { message } from "antd";
 
 export interface UsePolygonEditorParams {
   mapRef: React.RefObject<Map | null>;
@@ -22,6 +25,8 @@ export interface UsePolygonEditorReturn {
   deleteSelected: () => void;
   clearAll: () => void;
   getOverlayLayer: () => VectorLayer<VectorSource> | null;
+  mergeSelected: () => void;
+  cutHoleWithDrawn: () => void;
 }
 
 export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): UsePolygonEditorReturn {
@@ -57,7 +62,8 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     });
 
     try {
-      layer.setZIndex(1000);
+      layer.setVisible(true);
+      layer.setZIndex(2000);
     } catch (e) {
       // ignore
     }
@@ -70,7 +76,6 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     if (!mapRef.current || isEditing) return;
 
     ensureOverlay();
-
     const overlay = overlayLayerRef.current!;
 
     // Select interaction limited to overlay layer
@@ -80,7 +85,16 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       stroke: new Stroke({ color: "#22c55e", width: 3 }), // green-500
     });
 
-    const select = new Select({ layers: [overlay], style: selectedStyle });
+    // Enable multi-selection by toggling on click
+    const select = new Select({
+      layers: [overlay],
+      style: selectedStyle,
+      multi: true,
+      condition: click,
+      addCondition: click,
+      removeCondition: click,
+      toggleCondition: click,
+    });
     mapRef.current.addInteraction(select);
     selectRef.current = select;
 
@@ -249,6 +263,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       }
       hoveredFeatureRef.current = null;
     }
+    // Clear overlay features on exit to restore base layer visibility via listeners upstream
+    if (overlayLayerRef.current) {
+      const src = overlayLayerRef.current.getSource() as VectorSource<Feature<Geometry>> | null;
+      src?.clear();
+    }
   }, [isEditing, mapRef]);
 
   const toggleDraw = useCallback(
@@ -282,11 +301,94 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
     if (!source) return;
 
-    const features = select.getFeatures().getArray() as Feature<Geometry>[];
-    features.forEach((f) => source.removeFeature(f));
+    const featuresToDelete = [...(select.getFeatures().getArray() as Feature<Geometry>[])];
+    featuresToDelete.forEach((f) => source.removeFeature(f));
     select.getFeatures().clear();
     setSelection([]);
   }, []);
+
+  const mergeSelected = useCallback(() => {
+    const overlay = overlayLayerRef.current;
+    const select = selectRef.current;
+    if (!overlay || !select) return;
+    const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
+    if (!source) return;
+    const selected = select.getFeatures().getArray() as Feature<Geometry>[];
+    if (selected.length !== 2) {
+      message.warning("Select exactly two polygons to merge.");
+      return;
+    }
+    const [a, b] = selected;
+    const ga = a.getGeometry();
+    const gb = b.getGeometry();
+    if (!ga || !gb) return;
+    // Enforce intersecting-only merge per MVP spec
+    if (!geomIntersects(ga, gb)) {
+      message.warning("Polygons must intersect to merge.");
+      return;
+    }
+    const merged = geomUnion(ga, gb);
+    if (!merged) return;
+    // keep id from first feature
+    a.setGeometry(merged);
+    source.removeFeature(b);
+    select.getFeatures().clear();
+    select.getFeatures().push(a);
+    setSelection([a]);
+  }, []);
+
+  // Cut hole flow: user draws a polygon, then we subtract from single selected feature
+  const cutHoleWithDrawn = useCallback(() => {
+    if (!mapRef.current) return;
+    ensureOverlay();
+    const select = selectRef.current;
+    if (!select) return;
+    const selected = select.getFeatures().getArray() as Feature<Geometry>[];
+    if (selected.length !== 1) {
+      message.warning("Select a single polygon, then draw a hole inside it.");
+      return;
+    }
+    const target = selected[0];
+    const targetGeom = target.getGeometry();
+    if (!targetGeom) return;
+
+    // temporary draw for the hole polygon
+    if (drawRef.current) {
+      mapRef.current.removeInteraction(drawRef.current);
+      drawRef.current = null;
+    }
+    // Use a temporary in-memory source that is NOT the overlay
+    const tempSource = new VectorSource<Feature<Geometry>>();
+    const draw = new Draw({ source: tempSource as unknown as VectorSource, type: "Polygon" });
+    mapRef.current.addInteraction(draw);
+    drawRef.current = draw;
+    setIsDrawing(true);
+
+    draw.once("drawend", (evt) => {
+      const holeFeature = evt.feature as Feature<Geometry>;
+      const holeGeom = holeFeature.getGeometry();
+      if (holeGeom) {
+        // Validate that hole overlaps the target
+        if (!geomIntersects(targetGeom, holeGeom)) {
+          message.warning("Hole must overlap the selected polygon.");
+        } else {
+          const diff = geomDifference(targetGeom, holeGeom);
+          if (!diff) {
+            message.error("Failed to cut hole.");
+          } else {
+            target.setGeometry(diff);
+            // Clear temp source; hole feature was never added to overlay
+            tempSource.clear();
+          }
+        }
+      }
+      if (drawRef.current) {
+        mapRef.current?.removeInteraction(drawRef.current);
+        drawRef.current = null;
+      }
+      setIsDrawing(false);
+    });
+  }, [ensureOverlay, mapRef]);
 
   const clearAll = useCallback(() => {
     const overlay = overlayLayerRef.current;
@@ -342,7 +444,20 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       deleteSelected,
       clearAll,
       getOverlayLayer: () => (overlayLayerRef.current as unknown as VectorLayer<VectorSource>) || null,
+      mergeSelected,
+      cutHoleWithDrawn,
     }),
-    [clearAll, deleteSelected, isDrawing, isEditing, selection, startEditing, stopEditing, toggleDraw],
+    [
+      clearAll,
+      deleteSelected,
+      isDrawing,
+      isEditing,
+      selection,
+      startEditing,
+      stopEditing,
+      toggleDraw,
+      mergeSelected,
+      cutHoleWithDrawn,
+    ],
   );
 }

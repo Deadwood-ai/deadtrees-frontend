@@ -248,3 +248,45 @@ QA (ongoing at each stage)
 - Vector tile id stability: We rely on `feature.get('id')` from MVT tiles as a stable unique identifier. Confirmed as acceptable.
 - Performance: `hiddenIds` checks in the layer style function should be fast; avoid very large sets. If polygon counts become large, consider indexing, batching, and minimal re‑styles. Do not over‑engineer for MVP.
 - Future persistence: When saving is introduced, write overlay edits to Supabase, invalidate/reload the MVT source, and tear down the overlay/hiddenIds.
+
+### Notes for the Next Developer (current state and caveats)
+
+- Performance and hover handling
+
+  - Avoid reinstalling `layer.setStyle` on every pointer move. We now install a single stable style function on the server MVT layer and drive it via refs (`hiddenIdsRef`, `hoveredServerIdRef`) + `layer.changed()`.
+  - Pointer move is unified and rAF‑throttled; we check the overlay first and only hit‑test the server layer when the overlay is not hit. We pause hover while AI is active/processing.
+
+- Infinite re‑render loop (fixed)
+
+  - Using React state for the server layer/style and updating them inside effects that depend on those values created a “Maximum update depth exceeded” loop. We replaced those with refs (`serverLayerRef`, `baseServerStyleRef`) and only call `layer.changed()`.
+
+- Z‑index ordering
+
+  - Keep the editable overlay above predictions: overlay `zIndex=1000`, predictions `zIndex=900`. If edited features appear to “vanish,” it’s typically a z‑index or style masking issue.
+
+- Style masking for copied features
+
+  - Prediction features that are copied into the overlay are temporarily hidden in the server layer using `hiddenIds`. The server style function returns `null` for those ids.
+
+- AI segmentation spinner/bbox
+
+  - Spinner is an OpenLayers `Overlay` positioned at bbox center (`positioning: 'center-center'`) to avoid pixel‑offset drift. Keep the editor overlay visible during capture.
+
+- Selection model
+
+  - Overlay selection supports multi‑select; toolbar actions appear only when applicable (e.g., Merge for exactly two selected, Cut Hole for one selected). Hover styling is intentionally separate from selection.
+
+- Boolean geometry
+
+  - Implemented in `src/utils/geometry.ts` using `polygon-clipping`. We convert OL `Polygon`/`MultiPolygon` <-> ring arrays in EPSG:3857.
+  - Merge: union two selected. Cut Hole: difference(selected, drawnHole). Ensure temporary hole feature is removed after difference.
+
+- Layer switching (WIP)
+
+  - The editor swaps a single prediction MVT layer (deadwood/forest cover). If you update this, ensure you rebuild the layer with the correct label id and re‑apply the stable style function. Keep overlay and toolbar state intact.
+
+- Known follow‑ups
+  - Wire a proper `setActiveLayer` UI (deadwood/forest cover) with clear visual feedback.
+  - Add concise status guidance under the toolbar (e.g., “Select two polygons to merge”, “Draw a hole inside the selected polygon”).
+  - Consider Shift‑click to add/remove from selection and optional box‑select.
+  - Add minimal error toasts for invalid ops (e.g., merge requires 2, hole requires 1, polygons must intersect).

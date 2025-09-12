@@ -8,6 +8,7 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { XYZ, GeoTIFF } from "ol/source";
 import { Settings } from "../config";
 import { useDatasets } from "../hooks/useDatasets";
+import { useDatasetLabelTypes } from "../hooks/useDatasetLabelTypes";
 import usePolygonEditor from "../hooks/usePolygonEditor";
 import useAISegmentation from "../hooks/useAISegmentation";
 import VectorTileLayer from "ol/layer/VectorTile";
@@ -24,7 +25,8 @@ import type MapBrowserEvent from "ol/MapBrowserEvent";
 
 type StyleFn = (f: Feature<Geometry>) => Style | null | undefined;
 
-type DatasetWithLabelIds = { deadwood_label_id?: number | null; forest_cover_label_id?: number | null };
+// deprecated: label ids are fetched via useDatasetLabelTypes
+// type DatasetWithLabelIds = { deadwood_label_id?: number | null; forest_cover_label_id?: number | null };
 
 export default function DatasetLabelEditor() {
   const { id } = useParams();
@@ -47,7 +49,7 @@ export default function DatasetLabelEditor() {
     getTargetVectorSource: () => editor.getOverlayLayer()?.getSource() || null,
   });
 
-  const [activeLayer] = useState<"deadwood" | "forest_cover">("deadwood");
+  const [activeLayer, setActiveLayer] = useState<"deadwood" | "forest_cover">("deadwood");
   const serverLayerRef = useRef<VectorTileLayer | null>(null);
   const baseServerStyleRef = useRef<StyleFn | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<string | number>>(new Set());
@@ -59,6 +61,8 @@ export default function DatasetLabelEditor() {
     () => (datasets || []).find((d) => d.id.toString() === id) as IDataset | undefined,
     [datasets, id],
   );
+
+  const labelTypes = useDatasetLabelTypes({ datasetId: dataset?.id, enabled: !!dataset?.id });
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || !dataset) return;
@@ -145,11 +149,12 @@ export default function DatasetLabelEditor() {
     }
 
     let newLayer: VectorTileLayer | undefined;
-    const labels = (dataset as unknown as DatasetWithLabelIds) || {};
+    const deadwoodId = labelTypes.deadwood.data?.id || null;
+    const forestCoverId = labelTypes.forestCover.data?.id || null;
     if (activeLayer === "deadwood") {
-      newLayer = createDeadwoodVectorLayer(labels.deadwood_label_id || undefined);
+      newLayer = createDeadwoodVectorLayer(deadwoodId || undefined);
     } else {
-      newLayer = createForestCoverVectorLayer(labels.forest_cover_label_id || undefined);
+      newLayer = createForestCoverVectorLayer(forestCoverId || undefined);
     }
 
     if (newLayer) {
@@ -179,7 +184,10 @@ export default function DatasetLabelEditor() {
       serverLayerRef.current = null;
       baseServerStyleRef.current = null;
     }
-  }, [activeLayer, dataset]);
+    // Reset masks and hover when swapping prediction layer to avoid stale ids
+    setHiddenIds(new Set());
+    setHoveredServerId(null);
+  }, [activeLayer, dataset, labelTypes.deadwood.data?.id, labelTypes.forestCover.data?.id]);
 
   // Keep style function driven by refs fresh
   useEffect(() => {
@@ -250,6 +258,37 @@ export default function DatasetLabelEditor() {
     };
   }, [editor, activeLayer, dataset, hiddenIds]);
 
+  // Listen to overlay removals/clears to unhide server features that were checked out
+  useEffect(() => {
+    const overlay = editor.getOverlayLayer();
+    const source = overlay?.getSource();
+    if (!source) return;
+    const handleRemove = (evt: unknown) => {
+      const e = evt as { feature?: Feature<Geometry> };
+      const f = e && e.feature;
+      const get = f && (f as Feature<Geometry>).get ? (f as Feature<Geometry>).get.bind(f) : null;
+      const idVal = get ? get("id") : undefined;
+      if (idVal !== undefined) {
+        setHiddenIds((prev) => {
+          if (!prev.has(idVal)) return prev;
+          const next = new Set(prev);
+          next.delete(idVal);
+          return next;
+        });
+      }
+    };
+    const handleClear = () => {
+      setHiddenIds(new Set());
+    };
+    // OL Source event names are strings; use 'any' cast for typing gap
+    (source as unknown as { on: (n: string, h: (e: unknown) => void) => void }).on("removefeature", handleRemove);
+    (source as unknown as { on: (n: string, h: () => void) => void }).on("clear", handleClear);
+    return () => {
+      (source as unknown as { un: (n: string, h: (e: unknown) => void) => void }).un("removefeature", handleRemove);
+      (source as unknown as { un: (n: string, h: () => void) => void }).un("clear", handleClear);
+    };
+  }, [editor]);
+
   // Unified pointermove: prefer overlay hover; otherwise compute server-layer hover. Throttled via rAF and paused during AI.
   useEffect(() => {
     if (!mapRef.current || !serverLayerRef.current) return;
@@ -314,41 +353,96 @@ export default function DatasetLabelEditor() {
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between p-2">
         <div className="text-sm font-medium">Label Editor — Dataset #{dataset.id}</div>
-        <div className="flex items-center gap-2">
-          <Space size="small">
-            {!editor.isEditing ? (
-              <Button type="primary" onClick={editor.startEditing} size="small">
-                Start Editing
-              </Button>
-            ) : (
-              <>
-                <Button size="small" onClick={() => editor.toggleDraw(true)} disabled={editor.isDrawing}>
+        <Button onClick={() => navigate(-1)} size="small">
+          Back
+        </Button>
+      </div>
+      <div className="relative flex-1">
+        <div ref={mapContainerRef} className="absolute inset-0" />
+        {/* Top-left compact toolbar */}
+        {editor.isEditing ? (
+          <div className="pointer-events-auto absolute left-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
+            <Space size="small" wrap>
+              {/* Draw controls */}
+              {!editor.isDrawing && (
+                <Button size="small" onClick={() => editor.toggleDraw(true)}>
                   Draw
                 </Button>
-                <Button size="small" onClick={() => editor.toggleDraw(false)} disabled={!editor.isDrawing}>
+              )}
+              {editor.isDrawing && (
+                <Button size="small" onClick={() => editor.toggleDraw(false)}>
                   Stop Draw
                 </Button>
-                <Button size="small" onClick={ai.enable} disabled={!ai.canUse || ai.isActive || ai.isProcessing}>
+              )}
+
+              {/* Segment only when map/AI ready */}
+              {!ai.isActive && !ai.isProcessing && ai.canUse && (
+                <Button size="small" onClick={ai.enable}>
                   Segment (Box)
                 </Button>
-                <Button size="small" onClick={editor.deleteSelected} disabled={editor.selection.length === 0}>
-                  Delete Selected
-                </Button>
-                <Button size="small" onClick={editor.clearAll}>
-                  Clear All
-                </Button>
-                <Button danger size="small" onClick={editor.stopEditing}>
-                  Exit Edit
-                </Button>
-              </>
-            )}
-            <Button onClick={() => navigate(-1)} size="small">
-              Back
+              )}
+
+              {/* Selection ops (hide when not applicable) */}
+              {editor.selection.length === 1 && (
+                <>
+                  <Button size="small" onClick={editor.cutHoleWithDrawn}>
+                    Cut Hole
+                  </Button>
+                  <Button size="small" onClick={editor.deleteSelected}>
+                    Delete Selected
+                  </Button>
+                </>
+              )}
+              {editor.selection.length === 2 && (
+                <>
+                  <Button size="small" onClick={editor.mergeSelected}>
+                    Merge
+                  </Button>
+                  <Button size="small" onClick={editor.deleteSelected}>
+                    Delete Selected
+                  </Button>
+                </>
+              )}
+
+              {/* Session ops */}
+              <Button size="small" onClick={editor.clearAll}>
+                Clear All
+              </Button>
+              <Button danger size="small" onClick={editor.stopEditing}>
+                Exit Edit
+              </Button>
+            </Space>
+          </div>
+        ) : (
+          <div className="pointer-events-auto absolute left-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
+            <Button type="primary" onClick={editor.startEditing} size="small">
+              Start Editing
+            </Button>
+          </div>
+        )}
+
+        {/* Layer selector (top-left under main toolbar) */}
+        <div className="pointer-events-auto absolute left-2 top-14 z-10 rounded bg-white/90 p-1 shadow">
+          <Space size="small">
+            <Button
+              size="small"
+              type={activeLayer === "deadwood" ? "primary" : "default"}
+              onClick={() => setActiveLayer("deadwood")}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              Deadwood
+            </Button>
+            <Button
+              size="small"
+              type={activeLayer === "forest_cover" ? "primary" : "default"}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setActiveLayer("forest_cover")}
+            >
+              Forest cover
             </Button>
           </Space>
         </div>
       </div>
-      <div className="flex-1" ref={mapContainerRef} />
     </div>
   );
 }
