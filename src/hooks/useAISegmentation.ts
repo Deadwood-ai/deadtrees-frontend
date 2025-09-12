@@ -11,12 +11,14 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 // import { GeoTIFF } from "ol/source";
 // import View from "ol/View";
 import { Settings } from "../config";
+import Overlay from "ol/Overlay";
 
 type GetOrthoLayerFn = () => TileLayerWebGL | undefined;
 
 interface UseAISegmentationParams {
   mapRef: React.MutableRefObject<Map | null>;
   getOrthoLayer: GetOrthoLayerFn;
+  getTargetVectorSource?: () => VectorSource | null | undefined;
 }
 
 interface UseAISegmentationReturn {
@@ -37,7 +39,11 @@ interface UseAISegmentationReturn {
  * - Sends JPEG and bbox (pixels) to SAM endpoint
  * - Converts returned pixel polygons to map coordinates and adds a temp vector layer
  */
-export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationParams): UseAISegmentationReturn => {
+export const useAISegmentation = ({
+  mapRef,
+  getOrthoLayer,
+  getTargetVectorSource,
+}: UseAISegmentationParams): UseAISegmentationReturn => {
   const [isActive, setIsActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +59,7 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
   const hiddenLayersRef = useRef<Array<{ layer: HideableLayer; prevVisible: boolean }>>([]);
   const tempBboxFeatureRef = useRef<Feature | null>(null);
   const spinnerRef = useRef<HTMLDivElement | null>(null);
+  const spinnerOverlayRef = useRef<Overlay | null>(null);
   const removeTempUI = useCallback(() => {
     if (overlayCanvasRef.current) {
       const parent = overlayCanvasRef.current.parentElement;
@@ -63,11 +70,19 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
       resultSourceRef.current.removeFeature(tempBboxFeatureRef.current);
       tempBboxFeatureRef.current = null;
     }
+    if (spinnerOverlayRef.current && mapRef.current) {
+      try {
+        mapRef.current.removeOverlay(spinnerOverlayRef.current);
+      } catch (e) {
+        // ignore overlay removal errors
+      }
+      spinnerOverlayRef.current = null;
+    }
     if (spinnerRef.current && spinnerRef.current.parentElement) {
       spinnerRef.current.parentElement.removeChild(spinnerRef.current);
       spinnerRef.current = null;
     }
-  }, []);
+  }, [mapRef]);
 
   const canUse = useMemo(() => !!getOrthoLayer(), [getOrthoLayer]);
 
@@ -77,6 +92,15 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
     if (!map) return;
     if (resultLayerRef.current && resultSourceRef.current) return;
 
+    // If caller provides a target vector source (e.g., polygon editor overlay), use it directly
+    const targetSource = getTargetVectorSource?.();
+    if (targetSource) {
+      resultSourceRef.current = targetSource;
+      resultLayerRef.current = null; // not owned here
+      return;
+    }
+
+    // Fallback: create a temporary result layer owned by this hook
     const source = new VectorSource();
     const layer = new VectorLayer<VectorSource>({
       source,
@@ -86,12 +110,10 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
       }),
       className: "ai-segmentation-layer",
     });
-
-    // Append above analysis layers
     map.addLayer(layer);
     resultSourceRef.current = source;
     resultLayerRef.current = layer;
-  }, [mapRef]);
+  }, [getTargetVectorSource, mapRef]);
 
   const removeResultLayer = useCallback(() => {
     const map = mapRef.current;
@@ -146,7 +168,7 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
       map.renderSync();
     }
     removeTempUI();
-  }, [mapRef]);
+  }, [mapRef, removeTempUI]);
 
   const enable = useCallback(() => {
     const map = mapRef.current;
@@ -165,7 +187,8 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
     const layers = map.getLayers().getArray();
     layers.forEach((layer: unknown) => {
       const l = layer as HideableLayer;
-      if (layer !== ortho && layer !== resultLayerRef.current && typeof l.setVisible === "function") {
+      const shouldHide = layer !== ortho && layer !== resultLayerRef.current;
+      if (shouldHide && typeof l.setVisible === "function") {
         hiddenLayersRef.current.push({ layer: l, prevVisible: l.getVisible() });
         l.setVisible(false);
       }
@@ -206,15 +229,13 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
           const y1 = Math.round(topLeft[1]);
           const x2 = Math.round(bottomRight[0]);
           const y2 = Math.round(bottomRight[1]);
-          // const width = Math.max(1, x2 - x1);
-          // const height = Math.max(1, y2 - y1);
 
           // Compose visible map into a single canvas (ortho-only) and crop the bbox
           const composite = composeCurrentMapCanvas(map);
           if (!composite) {
             throw new Error("Failed to access map canvas for cropping.");
           }
-          // Show temporary bbox and spinner
+          // Show temporary bbox and spinner (use OL overlay for pixel-perfect centering)
           const rectCoords = [
             [minX, minY],
             [maxX, minY],
@@ -235,22 +256,20 @@ export const useAISegmentation = ({ mapRef, getOrthoLayer }: UseAISegmentationPa
           tempBboxFeatureRef.current = tempFeature;
 
           ensureSpinnerKeyframes();
-          const target = map.getTargetElement();
-          if (target) {
-            const spinner = document.createElement("div");
-            spinner.style.position = "absolute";
-            spinner.style.left = `${Math.round((x1 + x2) / 2) - 8}px`;
-            spinner.style.top = `${Math.round((y1 + y2) / 2) - 8}px`;
-            spinner.style.width = "16px";
-            spinner.style.height = "16px";
-            spinner.style.borderRadius = "50%";
-            spinner.style.background = "rgba(0,200,255,0.7)";
-            spinner.style.boxShadow = "0 0 8px rgba(0,200,255,0.8)";
-            spinner.style.animation = "aiPulse 0.9s ease-in-out infinite";
-            spinner.style.zIndex = "1000";
-            target.appendChild(spinner);
-            spinnerRef.current = spinner;
-          }
+          const spinner = document.createElement("div");
+          spinner.style.width = "16px";
+          spinner.style.height = "16px";
+          spinner.style.borderRadius = "50%";
+          spinner.style.background = "rgba(0,200,255,0.7)";
+          spinner.style.boxShadow = "0 0 8px rgba(0,200,255,0.8)";
+          spinner.style.animation = "aiPulse 0.9s ease-in-out infinite";
+          spinner.style.zIndex = "1000";
+          spinnerRef.current = spinner;
+
+          const overlay = new Overlay({ element: spinner, positioning: "center-center", stopEvent: false });
+          overlay.setPosition([(minX + maxX) / 2, (minY + maxY) / 2]);
+          map.addOverlay(overlay);
+          spinnerOverlayRef.current = overlay;
 
           // No overlay image: we only use composite to build the API input
           await new Promise((r) => requestAnimationFrame(() => r(null)));

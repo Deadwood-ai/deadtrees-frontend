@@ -351,7 +351,23 @@ export default function DatasetAudit() {
             // Removed Latest Note column per requirement
             baseColumns[baseColumns.length - 1],
           ]
-        : baseColumns;
+        : auditFilter === "ready"
+          ? [
+              ...baseColumns,
+              {
+                title: "Edit Labels",
+                key: "edit_labels",
+                render: (_: unknown, record: IDataset) => (
+                  <Tooltip title="Open label editor for this dataset">
+                    <Button size="small" onClick={() => navigate(`/dataset-label/${record.id}`)}>
+                      Edit Labels
+                    </Button>
+                  </Tooltip>
+                ),
+                width: 130,
+              },
+            ]
+          : baseColumns;
 
   return (
     <div className="p-6">

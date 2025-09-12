@@ -1,15 +1,16 @@
-## Modular Polygon Editing for Label Layers (Audit)
+## Modular Polygon Editing — Dedicated Labeling View (Audit)
 
 ### Goals
 
-- Provide a modular polygon editing experience within the Audit section that can be reused elsewhere.
+- Provide a modular polygon editing experience in a dedicated labeling view within the Audit workflow that can be reused elsewhere.
 - Allow editing of label polygons from prediction layers (deadwood, forest cover) and AI‑generated polygons.
 - Keep AOI editing separate and undisturbed.
 - No persistence for the demo; edits are temporary and cleared when exiting edit mode.
 
 ### Scope (confirmed)
 
-- Start on `DatasetAuditMap` with an extra button to activate label editing mode.
+- Add a new page/route specifically for labeling: `/datasets/:id/label-editor`.
+- Add an entry button in the Audit “Ready” tab to navigate to this page.
 - Supported sources to edit:
   - Deadwood predictions (MVT vector tiles)
   - Forest cover predictions (MVT vector tiles)
@@ -23,17 +24,23 @@
 - Exiting edit mode: Remove temporary edited polygons and restore the base layers’ appearance.
 - Do not interfere with the current AOI flow; disable AOI interactions when label edit mode is on.
 
-### Key UX
+### Key UX (Dedicated View)
 
-- Add an “Edit Labels” button on `DatasetAuditMap` (top‑right near existing AOI controls). Clicking toggles label edit mode.
-- While in label edit mode, show a compact toolbar:
+- From the Audit “Ready” tab, click “Open Label Editor” to navigate to the new page.
+- In the labeling page, show a compact toolbar:
   - Layer dropdown: Deadwood | Forest cover
   - Tools: Select/Modify (auto‑on with selection), Draw, Freehand Draw (toggle), Cut Hole, Merge, Delete, Clear, Segment (AI), Exit
   - Status area for brief messages/errors (e.g., when merge not possible)
 - When the user selects a polygon from the MVT prediction layer:
   - Copy it to a local editable overlay and hide the same polygon in the MVT render to avoid double‑drawing.
 
-### Architecture Overview
+### Architecture Overview (Dedicated Page)
+
+- New page/route
+
+  - Route: `/datasets/:id/label-editor`
+  - Page: `src/pages/DatasetLabelEditor.tsx`
+  - Entry point button: in `DatasetAuditDetail` (Ready tab) → navigate to the route with dataset id
 
 - Target layers (server‑backed):
 
@@ -68,10 +75,10 @@
   - Behavior:
     - Creates and owns a single overlay `VectorLayer<VectorSource>` for the session.
     - Registers `Select` + `Modify` against the overlay. Modify is auto‑enabled when selection exists.
-    - Copies features from MVT to overlay on selection (via pixel hit or ID lookup). Adds their `id` to `hiddenIds`.
+    - Copies features from MVT to overlay on selection (via pixel hit or ID lookup). Adds their `id` to `hiddenIds` and hides them in the active MVT layer.
     - Exposes boolean operations (merge, hole) on overlay features.
     - Coordinates with AI to write new features directly into the overlay.
-    - Disables AOI interactions while active; re‑enables on exit.
+    - AOI is not used in the dedicated view for MVP (no AOI interactions here).
 
 - AI integration
   - Reuse `useAISegmentation`, extended with an optional parameter to target an existing `VectorSource` (the editor’s overlay). Results go directly to the overlay.
@@ -90,11 +97,10 @@
   - Convert result back to OL `Polygon` or `MultiPolygon` and replace geometry in the overlay feature.
   - Maintain attribute `id` mapping; edited overlay features carry the original `id` so we can hide/show in MVT appropriately.
 
-### Interaction Lifecycle
+### Interaction Lifecycle (Dedicated View)
 
-1. Enter label edit mode via “Edit Labels”.
+1. Open labeling page (navigated from Audit “Ready” tab”).
 
-   - Disable AOI interactions (and any other conflicting map interactions).
    - Create overlay layer and add to map above predictions.
    - Initialize `hiddenIds = new Set()` and wrap the active MVT layer’s style function to hide features with those ids.
 
@@ -126,9 +132,9 @@
    - Enable bounding‑box tool; results are added to overlay (not a separate AI layer).
    - User can then select/modify/merge them like any other overlay feature.
 
-8. Exit edit mode
+8. Exit (leave page)
    - Remove overlay and clear all temporary edits.
-   - Restore prediction MVT layer style function (unwrapped) and AOI interactions.
+   - Restore prediction MVT layer style function (unwrapped).
 
 ### Non‑Goals (MVP)
 
@@ -136,11 +142,10 @@
 - Snapping and undo/redo.
 - Editing AOI (already separate and working).
 
-### Integration with `DatasetAuditMap`
+### Integration points
 
-- UI placement: top‑right, beside AOI controls.
-- Do not alter existing AOI code; just gate it off when label edit mode is active.
-- Deadwood/Forest cover layer selection: dropdown in the toolbar, defaults to the first available.
+- Add a button in the Audit “Ready” tab (in `src/components/DatasetAudit/DatasetAuditDetail.tsx`) to navigate to `/datasets/:id/label-editor`.
+- In `DatasetLabelEditor.tsx`, show only the currently selected prediction layer (no extra layer panel) and the ortho COG (basemap optional).
 - Style hiding: wrap the active `VectorTileLayer`’s style function while editing:
   - `layer.setStyle((feature) => hiddenIds.has(feature.get('id')) ? null : baseStyle)`
   - Preserve the original base style (from `createVectorLayer`) for use when not hidden.
@@ -160,8 +165,12 @@
   - Thin wrappers around `polygon-clipping` for union/difference on OL geometries.
 
 - `src/components/DatasetAudit/DatasetAuditMap.tsx`
-  - Integrate Edit Labels button and render the toolbar during edit mode.
-  - Provide `getTargetVectorTileLayer()` and `getOrthoLayer()` to the hook.
+
+  - Add an "Open Label Editor" button in the Ready tab that navigates to the new page.
+
+- `src/pages/DatasetLabelEditor.tsx`
+  - Dedicated labeling map using `usePolygonEditor` and `PolygonEditorToolbar`.
+  - Provides `getTargetVectorTileLayer()` (only the chosen prediction layer is added) and `getOrthoLayer()`.
 
 ### API Sketches (TypeScript)
 
@@ -197,45 +206,45 @@ interface UsePolygonEditorReturn {
 }
 ```
 
-### Implementation Steps
+### Staged Implementation Plan
 
-1. Dependencies
+Stage 0 — Shell & Navigation
 
-   - Add `polygon-clipping` for union/difference.
+- Add `/datasets/:id/label-editor` route and `DatasetLabelEditor.tsx` with a basic OL map (basemap + ortho COG).
+- Add “Open Label Editor” button in Audit Ready tab to navigate here.
 
-2. Geometry Utilities
+Stage 1 — Overlay + Basic Editing
 
-   - `utils/geometry.ts`: converters between OL geometries and the arrays expected by `polygon-clipping`, plus union/difference helpers.
+- Add editable overlay (`VectorLayer<VectorSource>`) and interactions: select, modify (auto with selection), draw, delete, clear.
+- No MVT predictions yet.
 
-3. Editor Hook
+Stage 2 — AI Integration
 
-   - Create `usePolygonEditor` with overlay layer creation, `hiddenIds` logic, selection, modify, draw/freehand.
-   - Implement copy‑from‑MVT by reading MVT feature geometry and attributes, re‑creating as an OL `Feature` in overlay, and recording its `id` in `hiddenIds`.
-   - Wrap/un‑wrap MVT style function on start/stop to hide/show features under edit.
+- Wire `useAISegmentation` to add results directly to the overlay.
+- Add “Segment (Box)” to toolbar.
 
-4. Toolbar
+Stage 3 — Prediction Layer Integration
 
-   - Implement `PolygonEditorToolbar` with the described controls; wire into the hook commands and layer dropdown.
+- Add only the selected prediction MVT layer (default: deadwood) to the map.
+- Implement copy‑on‑select to overlay and `hiddenIds` style masking in the active MVT layer.
 
-5. AI Integration
+Stage 4 — Boolean Ops
 
-   - Extend `useAISegmentation` to accept an optional `getEditableSource()` sink. When provided, results are added to the overlay instead of a private result layer.
-   - Add “Segment (Box)” to the toolbar.
+- Add `polygon-clipping` dependency.
+- Implement Merge (two selected & intersecting) and Cut Hole (single selected → draw hole → difference).
 
-6. Integrate in `DatasetAuditMap`
+Stage 5 — Polish
 
-   - Add the “Edit Labels” button; when active, render toolbar and disable AOI draw/edit.
-   - Provide `getTargetVectorTileLayer()` based on toolbar dropdown selection and `getOrthoLayer()` for AI.
+- Layer dropdown (deadwood/forest cover), toolbar UX, messages, and performance checks.
 
-7. QA
-   - Validate merge only with intersecting polygons (message otherwise).
-   - Validate cut hole only with a single selected polygon.
-   - Confirm features remain hidden in MVT during edit and restored on exit.
-   - Confirm all temporary edits are cleared on exit.
+QA (ongoing at each stage)
+
+- Validate expected constraints (merge only if intersecting; hole only if single selection).
+- Confirm masking/unmasking and temporary edits are correct.
 
 ### Risks & Notes
 
 - Boolean ops on projected coordinates: Operating in EPSG:3857 is acceptable for local edits; for very large extents accuracy may degrade. If needed later, reproject to EPSG:4326 before boolean ops and back to map projection.
 - Vector tile id stability: We rely on `feature.get('id')` from MVT tiles as a stable unique identifier. Confirmed as acceptable.
-- Performance: `hiddenIds` checks in the layer style function should be fast; avoid very large sets. If polygon counts become large, consider indexing, batching, and minimal re‑styles.
+- Performance: `hiddenIds` checks in the layer style function should be fast; avoid very large sets. If polygon counts become large, consider indexing, batching, and minimal re‑styles. Do not over‑engineer for MVP.
 - Future persistence: When saving is introduced, write overlay edits to Supabase, invalidate/reload the MVT source, and tear down the overlay/hiddenIds.
