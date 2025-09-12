@@ -17,6 +17,14 @@ import {
   createDeadwoodVectorLayer,
   createForestCoverVectorLayer,
 } from "../components/DatasetDetailsMap/createVectorLayer";
+import { Style, Stroke, Fill } from "ol/style";
+import type { StyleFunction as OLStyleFunction } from "ol/style/Style";
+import type { IDataset } from "../types/dataset";
+import type MapBrowserEvent from "ol/MapBrowserEvent";
+
+type StyleFn = (f: Feature<Geometry>) => Style | null | undefined;
+
+type DatasetWithLabelIds = { deadwood_label_id?: number | null; forest_cover_label_id?: number | null };
 
 export default function DatasetLabelEditor() {
   const { id } = useParams();
@@ -40,11 +48,17 @@ export default function DatasetLabelEditor() {
   });
 
   const [activeLayer] = useState<"deadwood" | "forest_cover">("deadwood");
-  const [serverLayerRef, setServerLayerRef] = useState<VectorTileLayer | null>(null);
-  const [baseServerStyle, setBaseServerStyle] = useState<((f: Feature<Geometry>) => any) | null>(null);
+  const serverLayerRef = useRef<VectorTileLayer | null>(null);
+  const baseServerStyleRef = useRef<StyleFn | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<string | number>>(new Set());
+  const [hoveredServerId, setHoveredServerId] = useState<string | number | null>(null);
+  const hiddenIdsRef = useRef<Set<string | number>>(new Set());
+  const hoveredServerIdRef = useRef<string | number | null>(null);
 
-  const dataset = useMemo(() => (datasets || []).find((d) => d.id.toString() === id), [datasets, id]);
+  const dataset = useMemo(
+    () => (datasets || []).find((d) => d.id.toString() === id) as IDataset | undefined,
+    [datasets, id],
+  );
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || !dataset) return;
@@ -60,7 +74,7 @@ export default function DatasetLabelEditor() {
     });
 
     let orthoCogLayer: TileLayerWebGL | undefined;
-    if (dataset.cog_path) {
+    if (dataset?.cog_path) {
       orthoCogLayer = new TileLayerWebGL({
         source: new GeoTIFF({
           sources: [
@@ -113,8 +127,8 @@ export default function DatasetLabelEditor() {
         mapRef.current.setTarget(undefined);
         mapRef.current = null;
       }
-      setServerLayerRef(null);
-      setBaseServerStyle(null);
+      serverLayerRef.current = null;
+      baseServerStyleRef.current = null;
     };
   }, [dataset]);
 
@@ -124,59 +138,73 @@ export default function DatasetLabelEditor() {
     const map = mapRef.current;
 
     // Remove existing server layer
-    if (serverLayerRef) {
-      map.removeLayer(serverLayerRef);
+    if (serverLayerRef.current) {
+      map.removeLayer(serverLayerRef.current);
+      serverLayerRef.current = null;
+      baseServerStyleRef.current = null;
     }
 
     let newLayer: VectorTileLayer | undefined;
+    const labels = (dataset as unknown as DatasetWithLabelIds) || {};
     if (activeLayer === "deadwood") {
-      newLayer = createDeadwoodVectorLayer((dataset as any)?.deadwood_label_id || undefined);
+      newLayer = createDeadwoodVectorLayer(labels.deadwood_label_id || undefined);
     } else {
-      newLayer = createForestCoverVectorLayer((dataset as any)?.forest_cover_label_id || undefined);
+      newLayer = createForestCoverVectorLayer(labels.forest_cover_label_id || undefined);
     }
 
     if (newLayer) {
       map.addLayer(newLayer);
-      setServerLayerRef(newLayer);
-      const base = newLayer.getStyleFunction ? newLayer.getStyleFunction() : null;
-      setBaseServerStyle(base as any);
+      try {
+        newLayer.setZIndex(900);
+      } catch (e) {
+        // ignore
+      }
+      serverLayerRef.current = newLayer;
+      const base = newLayer.getStyleFunction ? (newLayer.getStyleFunction() as unknown as StyleFn) : null;
+      baseServerStyleRef.current = base;
+
+      // Install stable style function that reads from refs
+      const hoverStyle = new Style({
+        fill: new Fill({ color: "rgba(234,179,8,0.15)" }),
+        stroke: new Stroke({ color: "#eab308", width: 3, lineDash: [4, 2] }),
+      });
+      const styleFn: StyleFn = (feature) => {
+        const idVal = feature.get("id");
+        if (idVal !== undefined && hiddenIdsRef.current.has(idVal)) return null;
+        if (hoveredServerIdRef.current !== null && idVal === hoveredServerIdRef.current) return hoverStyle;
+        return baseServerStyleRef.current ? baseServerStyleRef.current(feature) : undefined;
+      };
+      newLayer.setStyle(styleFn as unknown as OLStyleFunction);
     } else {
-      setServerLayerRef(null);
-      setBaseServerStyle(null);
+      serverLayerRef.current = null;
+      baseServerStyleRef.current = null;
     }
   }, [activeLayer, dataset]);
 
-  // Style masking to hide features currently checked out in overlay
+  // Keep style function driven by refs fresh
   useEffect(() => {
-    if (!serverLayerRef) return;
-    const base = baseServerStyle;
-    const layer = serverLayerRef;
-    const styleFn = (feature: Feature<Geometry> | any) => {
-      const idVal = (feature as Feature<Geometry>).get?.("id");
-      if (idVal !== undefined && hiddenIds.has(idVal)) return null as any;
-      return base ? (base as any)(feature) : undefined;
-    };
-    layer.setStyle(styleFn as any);
-    return () => {
-      if (layer && base) {
-        layer.setStyle(base as any);
-      }
-    };
-  }, [serverLayerRef, baseServerStyle, hiddenIds]);
+    hiddenIdsRef.current = hiddenIds;
+    serverLayerRef.current?.changed();
+  }, [hiddenIds]);
+
+  useEffect(() => {
+    hoveredServerIdRef.current = hoveredServerId;
+    serverLayerRef.current?.changed();
+  }, [hoveredServerId]);
 
   // Copy-on-select: on single click on server layer, copy feature into overlay and hide it in server layer
   useEffect(() => {
-    if (!mapRef.current || !serverLayerRef) return;
+    if (!mapRef.current || !serverLayerRef.current) return;
     const map = mapRef.current;
 
-    const handleClick = (evt: any) => {
+    const handleClick = (evt: MapBrowserEvent<UIEvent>) => {
       if (!editor.isEditing) return;
       let picked: Feature<Geometry> | null = null;
       map.forEachFeatureAtPixel(
         evt.pixel,
         (f, layer) => {
-          if (layer === serverLayerRef) {
-            picked = f as unknown as Feature<Geometry>;
+          if (layer === serverLayerRef.current && f instanceof Feature) {
+            picked = f as Feature<Geometry>;
             return true;
           }
           return false;
@@ -185,6 +213,10 @@ export default function DatasetLabelEditor() {
       );
 
       if (!picked) return;
+      // Guard pick type at runtime to satisfy TS
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      if (!picked.get || typeof picked.get !== "function") return;
       const idVal = (picked as Feature<Geometry>).get("id");
       if (idVal === undefined) {
         message.warning("Feature has no id; cannot edit this feature.");
@@ -198,7 +230,9 @@ export default function DatasetLabelEditor() {
       // Preserve original id so delete/clear can unhide
       try {
         clone.set("id", idVal);
-      } catch {}
+      } catch (e) {
+        // ignore
+      }
       editor.getOverlayLayer()?.getSource()?.addFeature(clone);
 
       setHiddenIds((prev) => {
@@ -206,14 +240,71 @@ export default function DatasetLabelEditor() {
         next.add(idVal);
         return next;
       });
-      map.render();
+      setHoveredServerId(null);
+      serverLayerRef.current?.changed();
     };
 
     map.on("click", handleClick);
     return () => {
       map.un("click", handleClick);
     };
-  }, [editor, serverLayerRef]);
+  }, [editor, activeLayer, dataset, hiddenIds]);
+
+  // Unified pointermove: prefer overlay hover; otherwise compute server-layer hover. Throttled via rAF and paused during AI.
+  useEffect(() => {
+    if (!mapRef.current || !serverLayerRef.current) return;
+    const map = mapRef.current;
+    let raf = 0;
+    const onMove = (evt: MapBrowserEvent<UIEvent>) => {
+      if (ai.isProcessing || ai.isActive) return;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        // If overlay is hovered, clear server hover and exit
+        let overlayHit = false;
+        const overlay = editor.getOverlayLayer();
+        if (overlay) {
+          map.forEachFeatureAtPixel(
+            evt.pixel,
+            (_f, layer) => {
+              if (layer === overlay) {
+                overlayHit = true;
+                return true;
+              }
+              return false;
+            },
+            { hitTolerance: 4 },
+          );
+        }
+        if (overlayHit) {
+          if (hoveredServerId !== null) setHoveredServerId(null);
+          return;
+        }
+        let hovered: string | number | null = null;
+        map.forEachFeatureAtPixel(
+          evt.pixel,
+          (f, layer) => {
+            // Guard that feature has a get method
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            if (layer === serverLayerRef.current && f && typeof (f as Feature<Geometry>).get === "function") {
+              const idVal = (f as Feature<Geometry>).get("id");
+              if (idVal !== undefined && !hiddenIds.has(idVal)) hovered = idVal as string | number;
+              return true;
+            }
+            return false;
+          },
+          { hitTolerance: 4 },
+        );
+        if (hovered !== hoveredServerId) setHoveredServerId(hovered);
+      });
+    };
+    map.on("pointermove", onMove);
+    return () => {
+      map.un("pointermove", onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [activeLayer, dataset, hiddenIds, editor, ai.isProcessing, ai.isActive, hoveredServerId]);
 
   if (!dataset) {
     return <div className="p-4">Loading dataset...</div>;

@@ -56,6 +56,12 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       updateWhileInteracting: false,
     });
 
+    try {
+      layer.setZIndex(1000);
+    } catch (e) {
+      // ignore
+    }
+
     mapRef.current.addLayer(layer);
     overlayLayerRef.current = layer as unknown as VectorLayer<VectorSource<Feature<Geometry>>>;
   }, [mapRef]);
