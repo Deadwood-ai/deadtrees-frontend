@@ -187,7 +187,18 @@ export const useAISegmentation = ({
     const layers = map.getLayers().getArray();
     layers.forEach((layer: unknown) => {
       const l = layer as HideableLayer;
-      const shouldHide = layer !== ortho && layer !== resultLayerRef.current;
+      // Keep the editor overlay visible when using provided target source
+      let isTargetOverlay = false;
+      try {
+        if (resultSourceRef.current && layer instanceof VectorLayer) {
+          const src = (layer as VectorLayer<VectorSource>).getSource?.();
+          isTargetOverlay = src === resultSourceRef.current;
+        }
+      } catch (e) {
+        // ignore comparison errors
+      }
+
+      const shouldHide = layer !== ortho && layer !== resultLayerRef.current && !isTargetOverlay;
       if (shouldHide && typeof l.setVisible === "function") {
         hiddenLayersRef.current.push({ layer: l, prevVisible: l.getVisible() });
         l.setVisible(false);
@@ -245,6 +256,12 @@ export const useAISegmentation = ({
           ];
           const rect = new Polygon([rectCoords]);
           const tempFeature = new Feature(rect);
+          // Mark as temporary bbox to avoid hover styling overrides
+          try {
+            tempFeature.set("dt_role", "bbox");
+          } catch (e) {
+            // ignore tempFeature property set error
+          }
           tempFeature.setStyle(
             new Style({
               stroke: new Stroke({ color: "#00c8ff", width: 2, lineDash: [6, 4] }),

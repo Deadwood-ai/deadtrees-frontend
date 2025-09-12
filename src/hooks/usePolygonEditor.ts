@@ -6,6 +6,7 @@ import { Draw, Modify, Select } from "ol/interaction";
 import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
 import { Style, Fill, Stroke } from "ol/style";
+import MapBrowserEvent from "ol/MapBrowserEvent";
 
 export interface UsePolygonEditorParams {
   mapRef: React.RefObject<Map | null>;
@@ -32,18 +33,24 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
   const selectRef = useRef<Select | null>(null);
   const modifyRef = useRef<Modify | null>(null);
   const drawRef = useRef<Draw | null>(null);
+  const hoveredFeatureRef = useRef<Feature<Geometry> | null>(null);
+  const pointerMoveListenerRef = useRef<((evt: MapBrowserEvent<UIEvent>) => void) | null>(null);
 
   const ensureOverlay = useCallback(() => {
     if (!mapRef.current) return;
     if (overlayLayerRef.current) return;
 
-    const source = new VectorSource<Feature<Geometry>>({ wrapX: false } as any);
+    const source = new VectorSource<Feature<Geometry>>({ wrapX: false } as unknown as { wrapX: boolean });
+
+    // Base (unselected) style: subtle blue
+    const baseStyle = new Style({
+      fill: new Fill({ color: "rgba(59,130,246,0.10)" }), // blue-500 @ 10%
+      stroke: new Stroke({ color: "#3b82f6", width: 2 }), // blue-500
+    });
+
     const layer = new VectorLayer({
       source: source as unknown as VectorSource,
-      style: new Style({
-        fill: new Fill({ color: "rgba(0, 153, 255, 0.2)" }),
-        stroke: new Stroke({ color: "#0099ff", width: 2 }),
-      }),
+      style: baseStyle,
       updateWhileAnimating: false,
       updateWhileInteracting: false,
     });
@@ -60,7 +67,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const overlay = overlayLayerRef.current!;
 
     // Select interaction limited to overlay layer
-    const select = new Select({ layers: [overlay] });
+    // Selected style: green highlight
+    const selectedStyle = new Style({
+      fill: new Fill({ color: "rgba(34,197,94,0.15)" }), // green-500 @ 15%
+      stroke: new Stroke({ color: "#22c55e", width: 3 }), // green-500
+    });
+
+    const select = new Select({ layers: [overlay], style: selectedStyle });
     mapRef.current.addInteraction(select);
     selectRef.current = select;
 
@@ -80,6 +93,72 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       setSelection(selectedCollection.getArray() as Feature<Geometry>[]);
     };
     selectedCollection.on(["add", "remove"], updateModifyActive);
+
+    // If a feature becomes selected, clear any hover style so selection style is visible
+    selectedCollection.on(["add"], () => {
+      if (hoveredFeatureRef.current) {
+        try {
+          hoveredFeatureRef.current.setStyle(undefined);
+        } catch (e) {
+          // ignore
+        }
+        hoveredFeatureRef.current = null;
+      }
+    });
+
+    // Hover highlight handler
+    // Hover style: deeper blue
+    const hoverStyle = new Style({
+      fill: new Fill({ color: "rgba(29,78,216,0.12)" }), // blue-700 @ 12%
+      stroke: new Stroke({ color: "#1d4ed8", width: 3 }), // blue-700
+    });
+    const handlePointerMove = (evt: MapBrowserEvent<UIEvent>) => {
+      if (!mapRef.current || !overlayLayerRef.current) return;
+      let hitFeature: Feature<Geometry> | null = null;
+      mapRef.current.forEachFeatureAtPixel(
+        evt.pixel,
+        (f, layer) => {
+          if (layer === overlayLayerRef.current) {
+            // Ignore temporary bbox features from AI segmentation
+            try {
+              if ((f as Feature<Geometry>).get && (f as Feature<Geometry>).get("dt_role") === "bbox") {
+                return false;
+              }
+            } catch (e) {
+              // ignore
+            }
+            hitFeature = f as Feature<Geometry>;
+            return true;
+          }
+          return false;
+        },
+        { hitTolerance: 4 },
+      );
+      // Do not apply hover style for selected features
+      if (hitFeature && selectedCollection.getArray().includes(hitFeature as unknown as Feature<Geometry>)) {
+        hitFeature = null;
+      }
+
+      if (hoveredFeatureRef.current && hoveredFeatureRef.current !== hitFeature) {
+        try {
+          hoveredFeatureRef.current.setStyle(undefined);
+        } catch (e) {
+          // ignore
+        }
+        hoveredFeatureRef.current = null;
+      }
+
+      if (hitFeature && hoveredFeatureRef.current !== hitFeature) {
+        hoveredFeatureRef.current = hitFeature as Feature<Geometry>;
+        try {
+          (hitFeature as Feature<Geometry>).setStyle(hoverStyle);
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+    mapRef.current.on("pointermove", handlePointerMove);
+    pointerMoveListenerRef.current = handlePointerMove;
 
     // Draw interaction created lazily on toggle
     setIsEditing(true);
@@ -106,6 +185,20 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     setSelection([]);
     setIsDrawing(false);
     setIsEditing(false);
+
+    // Remove hover handler and reset hovered style
+    if (pointerMoveListenerRef.current && mapRef.current) {
+      mapRef.current.un("pointermove", pointerMoveListenerRef.current);
+      pointerMoveListenerRef.current = null;
+    }
+    if (hoveredFeatureRef.current) {
+      try {
+        hoveredFeatureRef.current.setStyle(undefined);
+      } catch (e) {
+        // ignore
+      }
+      hoveredFeatureRef.current = null;
+    }
   }, [isEditing, mapRef]);
 
   const toggleDraw = useCallback(
@@ -156,15 +249,20 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
   // Cleanup overlay layer on unmount
   useEffect(() => {
+    const map = mapRef.current;
     return () => {
-      if (!mapRef.current) return;
-      if (drawRef.current) mapRef.current.removeInteraction(drawRef.current);
-      if (modifyRef.current) mapRef.current.removeInteraction(modifyRef.current);
-      if (selectRef.current) mapRef.current.removeInteraction(selectRef.current);
+      if (!map) return;
+      if (pointerMoveListenerRef.current) {
+        map.un("pointermove", pointerMoveListenerRef.current);
+        pointerMoveListenerRef.current = null;
+      }
+      if (drawRef.current) map.removeInteraction(drawRef.current);
+      if (modifyRef.current) map.removeInteraction(modifyRef.current);
+      if (selectRef.current) map.removeInteraction(selectRef.current);
       if (overlayLayerRef.current) {
         try {
-          mapRef.current.removeLayer(overlayLayerRef.current);
-        } catch (_) {
+          map.removeLayer(overlayLayerRef.current);
+        } catch (e) {
           // ignore
         }
         overlayLayerRef.current = null;
