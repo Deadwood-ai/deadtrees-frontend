@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Space } from "antd";
+import { Button, Space, message } from "antd";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -10,6 +10,13 @@ import { Settings } from "../config";
 import { useDatasets } from "../hooks/useDatasets";
 import usePolygonEditor from "../hooks/usePolygonEditor";
 import useAISegmentation from "../hooks/useAISegmentation";
+import VectorTileLayer from "ol/layer/VectorTile";
+import Feature from "ol/Feature";
+import Geometry from "ol/geom/Geometry";
+import {
+  createDeadwoodVectorLayer,
+  createForestCoverVectorLayer,
+} from "../components/DatasetDetailsMap/createVectorLayer";
 
 export default function DatasetLabelEditor() {
   const { id } = useParams();
@@ -32,7 +39,12 @@ export default function DatasetLabelEditor() {
     getTargetVectorSource: () => editor.getOverlayLayer()?.getSource() || null,
   });
 
-  const dataset = (datasets || []).find((d) => d.id.toString() === id);
+  const [activeLayer] = useState<"deadwood" | "forest_cover">("deadwood");
+  const [serverLayerRef, setServerLayerRef] = useState<VectorTileLayer | null>(null);
+  const [baseServerStyle, setBaseServerStyle] = useState<((f: Feature<Geometry>) => any) | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<Set<string | number>>(new Set());
+
+  const dataset = useMemo(() => (datasets || []).find((d) => d.id.toString() === id), [datasets, id]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || !dataset) return;
@@ -101,8 +113,107 @@ export default function DatasetLabelEditor() {
         mapRef.current.setTarget(undefined);
         mapRef.current = null;
       }
+      setServerLayerRef(null);
+      setBaseServerStyle(null);
     };
   }, [dataset]);
+
+  // Swap prediction layer when activeLayer changes
+  useEffect(() => {
+    if (!mapRef.current || !dataset) return;
+    const map = mapRef.current;
+
+    // Remove existing server layer
+    if (serverLayerRef) {
+      map.removeLayer(serverLayerRef);
+    }
+
+    let newLayer: VectorTileLayer | undefined;
+    if (activeLayer === "deadwood") {
+      newLayer = createDeadwoodVectorLayer((dataset as any)?.deadwood_label_id || undefined);
+    } else {
+      newLayer = createForestCoverVectorLayer((dataset as any)?.forest_cover_label_id || undefined);
+    }
+
+    if (newLayer) {
+      map.addLayer(newLayer);
+      setServerLayerRef(newLayer);
+      const base = newLayer.getStyleFunction ? newLayer.getStyleFunction() : null;
+      setBaseServerStyle(base as any);
+    } else {
+      setServerLayerRef(null);
+      setBaseServerStyle(null);
+    }
+  }, [activeLayer, dataset]);
+
+  // Style masking to hide features currently checked out in overlay
+  useEffect(() => {
+    if (!serverLayerRef) return;
+    const base = baseServerStyle;
+    const layer = serverLayerRef;
+    const styleFn = (feature: Feature<Geometry> | any) => {
+      const idVal = (feature as Feature<Geometry>).get?.("id");
+      if (idVal !== undefined && hiddenIds.has(idVal)) return null as any;
+      return base ? (base as any)(feature) : undefined;
+    };
+    layer.setStyle(styleFn as any);
+    return () => {
+      if (layer && base) {
+        layer.setStyle(base as any);
+      }
+    };
+  }, [serverLayerRef, baseServerStyle, hiddenIds]);
+
+  // Copy-on-select: on single click on server layer, copy feature into overlay and hide it in server layer
+  useEffect(() => {
+    if (!mapRef.current || !serverLayerRef) return;
+    const map = mapRef.current;
+
+    const handleClick = (evt: any) => {
+      if (!editor.isEditing) return;
+      let picked: Feature<Geometry> | null = null;
+      map.forEachFeatureAtPixel(
+        evt.pixel,
+        (f, layer) => {
+          if (layer === serverLayerRef) {
+            picked = f as unknown as Feature<Geometry>;
+            return true;
+          }
+          return false;
+        },
+        { hitTolerance: 3 },
+      );
+
+      if (!picked) return;
+      const idVal = (picked as Feature<Geometry>).get("id");
+      if (idVal === undefined) {
+        message.warning("Feature has no id; cannot edit this feature.");
+        return;
+      }
+
+      const geom = (picked as Feature<Geometry>).getGeometry();
+      if (!geom) return;
+
+      const clone = (picked as Feature<Geometry>).clone() as Feature<Geometry>;
+      // Preserve original id so delete/clear can unhide
+      try {
+        clone.set("id", idVal);
+      } catch {}
+      editor.getOverlayLayer()?.getSource()?.addFeature(clone);
+
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.add(idVal);
+        return next;
+      });
+      map.render();
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.un("click", handleClick);
+    };
+  }, [editor, serverLayerRef]);
 
   if (!dataset) {
     return <div className="p-4">Loading dataset...</div>;

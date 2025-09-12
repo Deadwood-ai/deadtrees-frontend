@@ -177,35 +177,6 @@ export const useAISegmentation = ({
     setIsActive(true);
     ensureResultLayer();
 
-    // Disable map interactions while active (simplifies pixel math per requirements)
-    map.getInteractions().forEach((i) => i.setActive(false));
-    disabledInteractionsRef.current = true;
-
-    // Hide all non-ortho layers to avoid CORS taint. Keep our result layer visible.
-    const ortho = getOrthoLayer();
-    hiddenLayersRef.current = [];
-    const layers = map.getLayers().getArray();
-    layers.forEach((layer: unknown) => {
-      const l = layer as HideableLayer;
-      // Keep the editor overlay visible when using provided target source
-      let isTargetOverlay = false;
-      try {
-        if (resultSourceRef.current && layer instanceof VectorLayer) {
-          const src = (layer as VectorLayer<VectorSource>).getSource?.();
-          isTargetOverlay = src === resultSourceRef.current;
-        }
-      } catch (e) {
-        // ignore comparison errors
-      }
-
-      const shouldHide = layer !== ortho && layer !== resultLayerRef.current && !isTargetOverlay;
-      if (shouldHide && typeof l.setVisible === "function") {
-        hiddenLayersRef.current.push({ layer: l, prevVisible: l.getVisible() });
-        l.setVisible(false);
-      }
-    });
-    map.renderSync();
-
     // Create an invisible target vector layer to host the draw interaction geometry (not added to map)
     const draw = new Draw({
       source: new VectorSource(),
@@ -219,6 +190,34 @@ export const useAISegmentation = ({
         setIsProcessing(true);
         setError(null);
         removeTempUI();
+        // During processing: disable all map interactions
+        map.getInteractions().forEach((i) => i.setActive(false));
+        disabledInteractionsRef.current = true;
+
+        // Hide all non-ortho layers to avoid CORS taint. Keep our result/overlay visible.
+        const ortho = getOrthoLayer();
+        hiddenLayersRef.current = [];
+        const layers = map.getLayers().getArray();
+        layers.forEach((layer: unknown) => {
+          const l = layer as HideableLayer;
+          // Keep the editor overlay visible when using provided target source
+          let isTargetOverlay = false;
+          try {
+            if (resultSourceRef.current && layer instanceof VectorLayer) {
+              const src = (layer as VectorLayer<VectorSource>).getSource?.();
+              isTargetOverlay = src === resultSourceRef.current;
+            }
+          } catch (e) {
+            // ignore comparison errors
+          }
+
+          const shouldHide = layer !== ortho && layer !== resultLayerRef.current && !isTargetOverlay;
+          if (shouldHide && typeof l.setVisible === "function") {
+            hiddenLayersRef.current.push({ layer: l, prevVisible: l.getVisible() });
+            l.setVisible(false);
+          }
+        });
+        map.renderSync();
 
         // Get extent in map coordinates from the drawn polygon
         const geometry = evt.feature.getGeometry();

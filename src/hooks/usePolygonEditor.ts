@@ -35,6 +35,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
   const drawRef = useRef<Draw | null>(null);
   const hoveredFeatureRef = useRef<Feature<Geometry> | null>(null);
   const pointerMoveListenerRef = useRef<((evt: MapBrowserEvent<UIEvent>) => void) | null>(null);
+  const clickListenerRef = useRef<((evt: MapBrowserEvent<UIEvent>) => void) | null>(null);
 
   const ensureOverlay = useCallback(() => {
     if (!mapRef.current) return;
@@ -160,6 +161,45 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     mapRef.current.on("pointermove", handlePointerMove);
     pointerMoveListenerRef.current = handlePointerMove;
 
+    // Click outside to clear selection (keeps toolbar in sync)
+    const handleMapClick = (evt: MapBrowserEvent<UIEvent>) => {
+      if (!mapRef.current || !overlayLayerRef.current || !selectRef.current) return;
+      // If drawing, ignore (draw handles clicks)
+      if (drawRef.current) return;
+
+      let hitOverlay = false;
+      mapRef.current.forEachFeatureAtPixel(
+        evt.pixel,
+        (_f, layer) => {
+          if (layer === overlayLayerRef.current) {
+            hitOverlay = true;
+            return true;
+          }
+          return false;
+        },
+        { hitTolerance: 4 },
+      );
+
+      if (!hitOverlay) {
+        const coll = selectRef.current.getFeatures();
+        if (coll.getLength() > 0) {
+          coll.clear();
+          setSelection([]);
+          if (modifyRef.current) modifyRef.current.setActive(false);
+          if (hoveredFeatureRef.current) {
+            try {
+              hoveredFeatureRef.current.setStyle(undefined);
+            } catch (e) {
+              // ignore
+            }
+            hoveredFeatureRef.current = null;
+          }
+        }
+      }
+    };
+    mapRef.current.on("click", handleMapClick);
+    clickListenerRef.current = handleMapClick;
+
     // Draw interaction created lazily on toggle
     setIsEditing(true);
   }, [ensureOverlay, isEditing, mapRef]);
@@ -190,6 +230,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     if (pointerMoveListenerRef.current && mapRef.current) {
       mapRef.current.un("pointermove", pointerMoveListenerRef.current);
       pointerMoveListenerRef.current = null;
+    }
+    if (clickListenerRef.current && mapRef.current) {
+      mapRef.current.un("click", clickListenerRef.current);
+      clickListenerRef.current = null;
     }
     if (hoveredFeatureRef.current) {
       try {
@@ -242,6 +286,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const overlay = overlayLayerRef.current;
     if (!overlay) return;
     const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
+    // Remove edited ids from hidden set stored on overlay layer for unmasking
+    try {
+      const layerAny = overlay as unknown as { __hiddenIds?: Set<string | number> };
+      if (layerAny.__hiddenIds) layerAny.__hiddenIds.clear();
+    } catch (e) {
+      // ignore
+    }
     source?.clear();
     if (selectRef.current) selectRef.current.getFeatures().clear();
     setSelection([]);
@@ -255,6 +306,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       if (pointerMoveListenerRef.current) {
         map.un("pointermove", pointerMoveListenerRef.current);
         pointerMoveListenerRef.current = null;
+      }
+      if (clickListenerRef.current) {
+        map.un("click", clickListenerRef.current);
+        clickListenerRef.current = null;
       }
       if (drawRef.current) map.removeInteraction(drawRef.current);
       if (modifyRef.current) map.removeInteraction(modifyRef.current);
