@@ -366,8 +366,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     <div className="text-start">
                       <p className="ant-upload-text mb-0">Click or drag file to this area</p>
                       <p className="ant-upload-hint mb-0">
-                        GeoTIFF (.tif, .tiff) max 16GB or ZIP with raw drone images (.zip) max 20GB, ODM processing,
-                        (recom. overlap 85% vs. 75%)
+                        GeoTIFF (.tif, .tiff) max 16GB or ZIP with raw drone images (.zip) max 20GB, orthomosaic
+                        processing, (recom. overlap 85% vs. 75%)
                       </p>
                     </div>
                   </div>

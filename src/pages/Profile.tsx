@@ -33,7 +33,7 @@ interface DatasetType {
 
 enum ActiveTab {
   MyDatasets = "My Datasets",
-  Publications = "Published datasets",
+  Publications = "Published Datasets",
   MyIssues = "My Issues",
 }
 
@@ -123,7 +123,8 @@ export default function ProfilePage() {
                       20GB)
                     </li>
                     <li>
-                      🔧 <strong>Raw Images:</strong> ODM processing with 85%-front, 75%-side overlap
+                      🔧 <strong>Raw Images:</strong> For orthomosaic generation we recommend {">"}85%-front and {">"}
+                      70%-side overlap{" "}
                     </li>
                     <li>
                       📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;10cm resolution, any reference system
@@ -145,7 +146,7 @@ export default function ProfilePage() {
         <div className="w-full">
           <div className="mb-4 flex justify-between">
             <Segmented
-              options={["My Datasets", "Published datasets", "My Issues"]}
+              options={["My Datasets", "Published Datasets", "My Issues"]}
               size="large"
               value={activeTab}
               onChange={(value) => {
