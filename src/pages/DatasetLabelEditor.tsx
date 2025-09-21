@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Space, message } from "antd";
+import { Button, Space, message, Radio } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -352,16 +353,17 @@ export default function DatasetLabelEditor() {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between p-2">
-        <div className="text-sm font-medium">Label Editor — Dataset #{dataset.id}</div>
-        <Button onClick={() => navigate(-1)} size="small">
-          Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="large" shape="circle" onClick={() => navigate(-1)} icon={<ArrowLeftOutlined />} />
+          <div className="text-lg font-medium">Label Editor — Dataset {dataset.id}</div>
+        </div>
+        <div />
       </div>
       <div className="relative flex-1">
         <div ref={mapContainerRef} className="absolute inset-0" />
         {/* Top-left compact toolbar */}
         {editor.isEditing ? (
-          <div className="pointer-events-auto absolute left-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
+          <div className="pointer-events-auto absolute right-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
             <Space size="small" wrap>
               {/* Draw controls */}
               {!editor.isDrawing && (
@@ -414,33 +416,23 @@ export default function DatasetLabelEditor() {
             </Space>
           </div>
         ) : (
-          <div className="pointer-events-auto absolute left-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
+          <div className="pointer-events-auto absolute right-2 top-2 z-10 rounded bg-white/90 p-1 shadow">
             <Button type="primary" onClick={editor.startEditing} size="small">
               Start Editing
             </Button>
           </div>
         )}
 
-        {/* Layer selector (top-left under main toolbar) */}
-        <div className="pointer-events-auto absolute left-2 top-14 z-10 rounded bg-white/90 p-1 shadow">
-          <Space size="small">
-            <Button
-              size="small"
-              type={activeLayer === "deadwood" ? "primary" : "default"}
-              onClick={() => setActiveLayer("deadwood")}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              Deadwood
-            </Button>
-            <Button
-              size="small"
-              type={activeLayer === "forest_cover" ? "primary" : "default"}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setActiveLayer("forest_cover")}
-            >
-              Forest cover
-            </Button>
-          </Space>
+        {/* Layer selector (top-left like in DatasetDetailsMap) */}
+        <div className="pointer-events-auto absolute left-2 top-4 z-10 rounded bg-white/90 p-1 shadow">
+          <Radio.Group
+            value={activeLayer}
+            onChange={(e) => setActiveLayer(e.target.value as "deadwood" | "forest_cover")}
+            size="small"
+          >
+            <Radio.Button value="deadwood">Deadwood</Radio.Button>
+            <Radio.Button value="forest_cover">Forest cover</Radio.Button>
+          </Radio.Group>
         </div>
       </div>
     </div>
