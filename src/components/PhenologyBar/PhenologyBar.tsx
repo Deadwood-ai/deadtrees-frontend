@@ -105,7 +105,7 @@ export default function PhenologyBar({
         title={tooltipContent}
         open={showTooltips && hoveredDay !== null}
         placement="top"
-        overlayStyle={{ pointerEvents: "none" }}
+        styles={{ root: { pointerEvents: "none" } }}
       >
         <div className="relative px-2">
           {/* Main phenology bar */}

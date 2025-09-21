@@ -64,7 +64,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     if (!mapRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
       // Determine whether to show prediction layers based on audit quality fields from public view
       const allowDeadwoodPredictions = (() => {
-        const q: unknown = (data as any).deadwood_quality;
+        const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
         if (q === undefined || q === null) return true; // no audit info → allow
         if (typeof q === "boolean") return q;
         if (typeof q === "string") return q !== "bad";
@@ -72,7 +72,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
       })();
 
       const allowForestCoverPredictions = (() => {
-        const q: unknown = (data as any).forest_cover_quality;
+        const q: IDataset["forest_cover_quality"] | undefined = (data as IDataset).forest_cover_quality ?? undefined;
         if (q === undefined || q === null) return true;
         if (typeof q === "boolean") return q;
         if (typeof q === "string") return q !== "bad";
@@ -183,7 +183,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               zoom: viewport.zoom !== 2 ? viewport.zoom : undefined,
               extent: viewOptions.extent,
               minZoom: 14,
-              maxZoom: 22,
+              maxZoom: 23,
               projection: "EPSG:3857",
               constrainOnlyCenter: true,
             });
@@ -491,8 +491,10 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         style={{
           width: "100%",
           height: "100%",
+          position: "relative",
         }}
         ref={mapContainer}
+        data-rr-ignore
       >
         <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons
@@ -508,6 +510,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             }}
           />
         </div>
+
         <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
             deadwoodOpacity={deadwoodOpacity}
@@ -521,7 +524,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             showLegend={
               !!deadwood.data &&
               (() => {
-                const q: unknown = (data as any).deadwood_quality;
+                const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
                 if (q === undefined || q === null) return true;
                 if (typeof q === "boolean") return q;
                 if (typeof q === "string") return q !== "bad";
@@ -532,7 +535,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               !!forestCover.data &&
               !!data.is_forest_cover_done &&
               (() => {
-                const q: unknown = (data as any).forest_cover_quality;
+                const q: IDataset["forest_cover_quality"] | undefined =
+                  (data as IDataset).forest_cover_quality ?? undefined;
                 if (q === undefined || q === null) return true;
                 if (typeof q === "boolean") return q;
                 if (typeof q === "string") return q !== "bad";
