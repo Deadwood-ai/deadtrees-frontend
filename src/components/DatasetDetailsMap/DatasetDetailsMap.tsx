@@ -19,8 +19,6 @@ import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { createForestCoverVectorLayer, createAOIVectorLayer, createAOIMaskLayer } from "./createVectorLayer";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
-import { useAISegmentation } from "../../hooks/useAISegmentation";
-import AISegmentationControl from "../AISegmentation/AISegmentationControl";
 
 const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   // Move hooks before any conditional returns to fix the React Hook errors
@@ -60,12 +58,6 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     aoiVector?: VectorLayer<VectorSource>;
     aoiMask?: VectorLayer<VectorSource>;
   }>({});
-
-  // AI Segmentation hook bound to this map and the ortho COG layer
-  const ai = useAISegmentation({
-    mapRef,
-    getOrthoLayer: () => layerRefs.current.orthoCog,
-  });
 
   // Main map initialization effect
   useEffect(() => {
@@ -518,16 +510,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
             }}
           />
         </div>
-        <div className="absolute left-2 top-16 z-20">
-          <AISegmentationControl
-            active={ai.isActive}
-            processing={ai.isProcessing}
-            canUse={ai.canUse}
-            onToggle={() => (ai.isActive ? ai.disable() : ai.enable())}
-            onClear={ai.clear}
-            error={ai.error}
-          />
-        </div>
+
         <div className="absolute bottom-4 right-6 z-50 ">
           <DeadwoodCardDetails
             deadwoodOpacity={deadwoodOpacity}
