@@ -284,6 +284,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         mapRef.current.addInteraction(draw);
         drawRef.current = draw;
         setIsDrawing(true);
+        // Auto-exit draw mode after polygon completion
+        draw.once("drawend", () => {
+          if (!mapRef.current || !drawRef.current) return;
+          mapRef.current.removeInteraction(drawRef.current);
+          drawRef.current = null;
+          setIsDrawing(false);
+        });
       } else {
         if (!drawRef.current) return;
         mapRef.current.removeInteraction(drawRef.current);
