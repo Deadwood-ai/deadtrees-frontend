@@ -259,33 +259,18 @@ export default function DatasetLabelEditor() {
     };
   }, [editor, activeLayer, dataset, hiddenIds]);
 
-  // Listen to overlay removals/clears to unhide server features that were checked out
+  // Listen to overlay clears to unhide all server features that were masked
+  // Note: Do NOT unhide on single feature removals; deletions/merges should keep server features hidden for the session
   useEffect(() => {
     const overlay = editor.getOverlayLayer();
     const source = overlay?.getSource();
     if (!source) return;
-    const handleRemove = (evt: unknown) => {
-      const e = evt as { feature?: Feature<Geometry> };
-      const f = e && e.feature;
-      const get = f && (f as Feature<Geometry>).get ? (f as Feature<Geometry>).get.bind(f) : null;
-      const idVal = get ? get("id") : undefined;
-      if (idVal !== undefined) {
-        setHiddenIds((prev) => {
-          if (!prev.has(idVal)) return prev;
-          const next = new Set(prev);
-          next.delete(idVal);
-          return next;
-        });
-      }
-    };
     const handleClear = () => {
       setHiddenIds(new Set());
     };
     // OL Source event names are strings; use 'any' cast for typing gap
-    (source as unknown as { on: (n: string, h: (e: unknown) => void) => void }).on("removefeature", handleRemove);
     (source as unknown as { on: (n: string, h: () => void) => void }).on("clear", handleClear);
     return () => {
-      (source as unknown as { un: (n: string, h: (e: unknown) => void) => void }).un("removefeature", handleRemove);
       (source as unknown as { un: (n: string, h: () => void) => void }).un("clear", handleClear);
     };
   }, [editor]);
