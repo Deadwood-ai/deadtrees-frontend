@@ -27,11 +27,9 @@ const SUPABASE_URL_PROD = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY_DEV = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_ANON_KEY_PROD = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// AI Segmentation API (proxy in dev to avoid CORS)
-const SAM_API_URL_DEV = "/api/sam";
-const SAM_API_URL_PROD = "https://geosense--sam-api-fastapi-app.modal.run";
-// Important: keep SAM proxy tied to actual dev server, not VITE_MODE override
-const SAM_API_URL = import.meta.env.DEV ? SAM_API_URL_DEV : SAM_API_URL_PROD;
+// AI Segmentation API — use the same remote base in dev and prod (no dev-only path)
+const SAM_API_URL =
+  (import.meta.env.VITE_SAM_API_URL as string | undefined) || "https://geosense--sam-api-fastapi-app.modal.run";
 
 export const Settings = {
   API_URL: DEV ? API_URL_DEV : API_URL_PROD,
