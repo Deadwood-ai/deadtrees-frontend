@@ -141,6 +141,23 @@ const DataTable: React.FC<DataTableProps> = ({
     );
   };
 
+  // Dataset is viewable on the map as soon as a COG exists and there is no error
+  const isDatasetViewable = (record: Dataset): boolean => {
+    return !!(!record.has_error && record.is_cog_done);
+  };
+
+  // Dataset is eligible for publishing when processing artifacts and metadata are ready (predictions not required)
+  const isDatasetPublishEligible = (record: Dataset): boolean => {
+    return !!(
+      !record.has_error &&
+      record.is_upload_done &&
+      record.is_ortho_done &&
+      record.is_cog_done &&
+      record.is_thumbnail_done &&
+      record.is_metadata_done
+    );
+  };
+
   const handleAddToSelection = (record: Dataset) => {
     const newKeys = [...selectedRowKeys, record.id];
     setSelectedRowKeys(newKeys);
@@ -173,6 +190,8 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
     const isComplete = isDatasetComplete(record);
+    const canView = isDatasetViewable(record);
+    const canPublish = isDatasetPublishEligible(record);
     const isSelected = selectedRowKeys.includes(record.id);
     const isPublished = !!record.freidata_doi || !!record.citation_doi;
 
@@ -187,7 +206,7 @@ const DataTable: React.FC<DataTableProps> = ({
           key: "publish",
           label: "Quick Publish",
           icon: <PlusOutlined />,
-          disabled: !isComplete || isPublished,
+          disabled: !canPublish || isPublished,
           onClick: () => handleAddToSelection(record),
         };
 
@@ -196,7 +215,7 @@ const DataTable: React.FC<DataTableProps> = ({
         key: "view",
         label: "View Map",
         icon: <EnvironmentOutlined />,
-        disabled: !isComplete,
+        disabled: !canView,
         onClick: async () => {
           try {
             await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
@@ -384,6 +403,7 @@ const DataTable: React.FC<DataTableProps> = ({
         // Dataset has no DOI, show add/remove button based on selection state
         const isSelected = selectedRowKeys.includes(record.id);
         const isComplete = isDatasetComplete(record);
+        const canPublish = isDatasetPublishEligible(record);
 
         if (isSelected) {
           // Show remove button for selected datasets
@@ -411,7 +431,7 @@ const DataTable: React.FC<DataTableProps> = ({
                 e.stopPropagation();
                 handleAddToSelection(record);
               }}
-              disabled={!isComplete}
+              disabled={!canPublish}
             >
               request DOI
             </Button>
