@@ -46,7 +46,7 @@ const Stats = () => {
   const { data } = useData();
 
   const stats = useMemo(() => {
-    if (!data) return { orthophotos: 0, area: 0, countries: new Set(), fileSize: 0 };
+    if (!data) return { orthophotos: 0, area: 0, countries: 0, fileSize: 0 };
 
     // Filter data with required fields
     const validData = data.filter((item) => item.is_thumbnail_done && item.is_cog_done && !item.has_error);
