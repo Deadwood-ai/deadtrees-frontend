@@ -15,7 +15,14 @@ import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
 
 const { Title } = Typography;
 
-type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded" | "flagged" | "major-issues";
+type AuditFilter =
+  | "needs-audit"
+  | "audited"
+  | "needs-tiles"
+  | "training-ready"
+  | "fixable-issues"
+  | "excluded"
+  | "flagged";
 
 // Month constants for filtering
 const MONTHS = [
@@ -86,14 +93,14 @@ export default function DatasetAudit() {
       filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
     }
 
-    // Filter by audit status and disposition
     if (auditFilter === "needs-audit") {
       filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
-    } else if (auditFilter === "ready") {
-      filtered = filtered.filter((dataset) => {
-        const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && audit && audit.final_assessment === "no_issues";
-      });
+    } else if (auditFilter === "audited") {
+      filtered = filtered.filter((dataset) => dataset.is_audited);
+    } else if (auditFilter === "needs-tiles") {
+      filtered = filtered.filter((dataset) => dataset.is_audited && !dataset.has_ml_tiles);
+    } else if (auditFilter === "training-ready") {
+      filtered = filtered.filter((dataset) => dataset.has_ml_tiles);
     } else if (auditFilter === "fixable-issues") {
       filtered = filtered.filter((dataset) => {
         const audit = auditMap.get(dataset.id);
@@ -135,7 +142,7 @@ export default function DatasetAudit() {
     }
 
     return filtered;
-  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg]);
+  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg, hasAboveMinId]);
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
@@ -144,14 +151,23 @@ export default function DatasetAudit() {
     return base.filter((d) => !d.is_audited && isProcessingComplete(d)).length;
   }, [datasets, hasAboveMinId]);
 
-  const readyCount = useMemo(() => {
-    if (!datasets || !audits) return 0;
+  const auditedCount = useMemo(() => {
+    if (!datasets) return 0;
     const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => {
-      const audit = auditMap.get(d.id);
-      return d.is_audited && audit && audit.final_assessment === "no_issues";
-    }).length;
-  }, [datasets, audits, auditMap, hasAboveMinId]);
+    return base.filter((d) => d.is_audited).length;
+  }, [datasets, hasAboveMinId]);
+
+  const needsTilesCount = useMemo(() => {
+    if (!datasets) return 0;
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => d.is_audited && !d.has_ml_tiles).length;
+  }, [datasets, hasAboveMinId]);
+
+  const trainingReadyCount = useMemo(() => {
+    if (!datasets) return 0;
+    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+    return base.filter((d) => d.has_ml_tiles).length;
+  }, [datasets, hasAboveMinId]);
 
   const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
@@ -305,69 +321,33 @@ export default function DatasetAudit() {
     },
   ];
 
-  // Add Major Issues column when viewing major issues
-  const columns =
-    auditFilter === "major-issues"
-      ? [
-          ...baseColumns.slice(0, -1), // All columns except Actions
-          {
-            title: "Major Issues",
-            key: "major_issues",
-            render: (_: unknown, record: IDataset) => {
-              const audit = auditMap.get(record.id);
-              if (!audit) return <Tag color="default">No audit data</Tag>;
-
-              return audit.has_major_issue ? <Tag color="red">🚨 Yes</Tag> : <Tag color="green">No</Tag>;
-            },
-            width: 120,
-          },
-          baseColumns[baseColumns.length - 1], // Actions column
-        ]
-      : auditFilter === "flagged"
-        ? [
-            ...baseColumns.slice(0, -1),
-            {
-              title: "Flag Count",
-              key: "flag_count",
-              render: (_: unknown, record: IDataset) => {
-                const agg = flaggedMap.get(record.id);
-                if (!agg) return 0;
-                return (agg.open_count || 0) + (agg.acknowledged_count || 0);
-              },
-              width: 120,
-            },
-            {
-              title: "Latest Flag Status",
-              key: "latest_flag_status",
-              render: (_: unknown, record: IDataset) => {
-                const agg = flaggedMap.get(record.id);
-                if (!agg) return <Tag>None</Tag>;
-                const status = agg.latest_status;
-                const color = status === "open" ? "red" : status === "acknowledged" ? "gold" : "green";
-                return <Tag color={color}>{status.charAt(0).toUpperCase() + status.slice(1)}</Tag>;
-              },
-              width: 160,
-            },
-            // Removed Latest Note column per requirement
-            baseColumns[baseColumns.length - 1],
-          ]
-        : auditFilter === "ready"
-          ? [
-              ...baseColumns,
-              {
-                title: "Edit Labels",
-                key: "edit_labels",
-                render: (_: unknown, record: IDataset) => (
-                  <Tooltip title="Open label editor for this dataset">
-                    <Button size="small" onClick={() => navigate(`/dataset-label/${record.id}`)}>
-                      Edit Labels
-                    </Button>
-                  </Tooltip>
-                ),
-                width: 130,
-              },
-            ]
-          : baseColumns;
+  const columns = [
+    ...baseColumns,
+    {
+      title: "ML Tiles",
+      key: "ml_tiles",
+      render: (_: unknown, record: IDataset) => (
+        <Tooltip title="Open ML Tile editor for this dataset">
+          <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/ml-tiles`)}>
+            {record.has_ml_tiles ? "Continue Tiles" : "Generate ML Tiles"}
+          </Button>
+        </Tooltip>
+      ),
+      width: 150,
+    },
+    {
+      title: "Edit Labels",
+      key: "edit_labels",
+      render: (_: unknown, record: IDataset) => (
+        <Tooltip title="Open label editor for this dataset">
+          <Button size="small" onClick={() => navigate(`/dataset-label/${record.id}`)}>
+            Edit Labels
+          </Button>
+        </Tooltip>
+      ),
+      width: 130,
+    },
+  ];
 
   return (
     <div className="p-6">
@@ -389,22 +369,12 @@ export default function DatasetAudit() {
                 value={auditFilter}
                 onChange={(value) => setAuditFilter(value as AuditFilter)}
                 options={[
-                  {
-                    label: `Needs Audit (${needsAuditCount})`,
-                    value: "needs-audit",
-                  },
-                  {
-                    label: `Ready (${readyCount})`,
-                    value: "ready",
-                  },
-                  {
-                    label: `Fixable (${fixableIssuesCount})`,
-                    value: "fixable-issues",
-                  },
-                  {
-                    label: `Excluded (${excludedCount})`,
-                    value: "excluded",
-                  },
+                  { label: `Needs Audit (${needsAuditCount})`, value: "needs-audit" },
+                  { label: `Audited (${auditedCount})`, value: "audited" },
+                  { label: `Tiles Pending (${needsTilesCount})`, value: "needs-tiles" },
+                  { label: `Training Ready (${trainingReadyCount})`, value: "training-ready" },
+                  { label: `Fixable (${fixableIssuesCount})`, value: "fixable-issues" },
+                  { label: `Excluded (${excludedCount})`, value: "excluded" },
                   {
                     label: (
                       <span>

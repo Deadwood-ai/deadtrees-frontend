@@ -78,3 +78,19 @@ export function intersects(a: Geometry, b: Geometry): boolean {
   const inter = fn(...A, ...B);
   return Array.isArray(inter) && inter.length > 0;
 }
+
+// Returns intersection geometry (Polygon or MultiPolygon) in OL projection units, or null if no overlap
+export function intersectionGeometry(a: Geometry, b: Geometry): Geometry | null {
+  const A = olToPC(a);
+  const B = olToPC(b);
+  if (!A || !B) return null;
+  const any = pc as unknown as {
+    intersection?: (...polys: PCPolygon[]) => PCMultiPolygon;
+    default?: { intersection?: (...polys: PCPolygon[]) => PCMultiPolygon };
+  };
+  const fn = any.intersection || any.default?.intersection;
+  if (!fn) return null;
+  const inter = fn(...A, ...B);
+  if (!inter || inter.length === 0) return null;
+  return pcToOL(inter);
+}

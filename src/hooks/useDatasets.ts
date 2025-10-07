@@ -3,6 +3,7 @@ import { fetchCollaborators } from "../utils/dataFetching";
 import { useAuth } from "./useAuthProvider";
 import { supabase } from "./useSupabase";
 import { Settings } from "../config";
+import { IDataset } from "../types/dataset";
 
 // Base datasets hook - includes ALL datasets (for admin/audit use)
 export function useDatasets() {
@@ -29,6 +30,20 @@ export function usePublicDatasets() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+  });
+}
+
+// Fetch a single dataset by id; minimal fields are enough for Tiles page
+export function useDatasetById(datasetId: number | undefined) {
+  return useQuery({
+    queryKey: ["dataset-by-id", datasetId],
+    enabled: !!datasetId,
+    queryFn: async () => {
+      if (!datasetId) return null;
+      const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").eq("id", datasetId).single();
+      if (error) throw error;
+      return data as IDataset;
+    },
   });
 }
 

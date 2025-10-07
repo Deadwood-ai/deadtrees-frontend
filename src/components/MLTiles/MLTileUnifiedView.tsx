@@ -1,0 +1,363 @@
+import { useState, useCallback, useMemo } from "react";
+import { IDataset } from "../../types/dataset";
+import { IMLTile, TileResolution } from "../../types/mlTiles";
+import {
+  useMLTiles,
+  useCreateMLTile,
+  useUpdateTileStatus,
+  useDeleteMLTile,
+  useTileProgress,
+} from "../../hooks/useMLTiles";
+import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { message, Button, Statistic, Progress, Space } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, centroid } from "@turf/turf";
+import GeoJSON from "ol/format/GeoJSON";
+import MLTileMap from "./MLTileMap";
+import MLTileDetailSidebar from "./MLTileDetailSidebar";
+
+interface Props {
+  dataset: IDataset;
+  onUnsavedChanges: (hasChanges: boolean) => void;
+}
+
+export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) {
+  const [selectedResolution, setSelectedResolution] = useState<TileResolution>(20);
+  const [selectedTileId, setSelectedTileId] = useState<number | null>(null);
+
+  const { data: allTiles = [], refetch: refetchTiles } = useMLTiles(dataset.id);
+  const { data: aoiData } = useDatasetAOI(dataset.id);
+  const { mutateAsync: createTile } = useCreateMLTile();
+  const { mutateAsync: updateStatus } = useUpdateTileStatus();
+  const { mutateAsync: deleteTile } = useDeleteMLTile();
+  const { data: progress } = useTileProgress(dataset.id);
+
+  const geoJson = useMemo(() => new GeoJSON(), []);
+
+  // Get base tiles (20cm) and calculate AOI centroid
+  const baseTiles = useMemo(() => allTiles.filter((t) => t.resolution_cm === 20), [allTiles]);
+
+  const aoiCentroid = useMemo(() => {
+    if (!aoiData?.geometry) return null;
+    try {
+      const aoiGeometry = geoJson.readGeometry(aoiData.geometry, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      });
+      const aoiGeoJSON = geoJson.writeGeometryObject(aoiGeometry) as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+      const turfGeom =
+        aoiGeoJSON.type === "Polygon"
+          ? turfPolygon(aoiGeoJSON.coordinates as GeoJSON.Position[][])
+          : turfMultiPolygon(aoiGeoJSON.coordinates as GeoJSON.Position[][][]);
+      return centroid(turfGeom).geometry.coordinates as [number, number];
+    } catch (error) {
+      console.error("Failed to calculate AOI centroid:", error);
+      return null;
+    }
+  }, [aoiData?.geometry, geoJson]);
+
+  // Filter tiles by selected resolution
+  const tilesForResolution = useMemo(
+    () => allTiles.filter((t) => t.resolution_cm === selectedResolution),
+    [allTiles, selectedResolution],
+  );
+
+  // Get the selected tile
+  const selectedTile = useMemo(() => allTiles.find((t) => t.id === selectedTileId) || null, [allTiles, selectedTileId]);
+
+  // Get base tile for selected tile
+  const selectedBaseTile = useMemo(() => {
+    if (!selectedTile) return null;
+    if (selectedTile.resolution_cm === 20) return selectedTile;
+    // Find parent base tile by parsing tile_index
+    const baseIndex = selectedTile.tile_index.split("_")[0] + "_" + selectedTile.tile_index.split("_")[1];
+    return baseTiles.find((t) => t.tile_index === baseIndex) || null;
+  }, [selectedTile, baseTiles]);
+
+  // Calculate overall progress
+  const overallProgress = useMemo(() => {
+    const total10 = progress?.total_10cm || 0;
+    const total5 = progress?.total_5cm || 0;
+    const good10 = progress?.good_10cm || 0;
+    const good5 = progress?.good_5cm || 0;
+    const totalTiles = total10 + total5;
+    const completedTiles = good10 + good5;
+    return totalTiles > 0 ? Math.round((completedTiles / totalTiles) * 100) : 0;
+  }, [progress]);
+
+  // Recursively generate nested tiles
+  const generateNestedTilesRecursive = useCallback(
+    async (parentTile: IMLTile) => {
+      const parentGeom = parentTile.geometry;
+      const parentCoords = parentGeom.coordinates[0];
+      const [minx, miny] = parentCoords[0];
+      const [maxx, maxy] = parentCoords[2];
+      const centerX = (minx + maxx) / 2;
+      const centerY = (miny + maxy) / 2;
+      const halfWidth = (maxx - minx) / 2;
+      const halfHeight = (maxy - miny) / 2;
+
+      const childResolution = parentTile.resolution_cm === 20 ? 10 : 5;
+      const positions = [
+        [centerX - halfWidth / 2, centerY - halfHeight / 2],
+        [centerX + halfWidth / 2, centerY - halfHeight / 2],
+        [centerX - halfWidth / 2, centerY + halfHeight / 2],
+        [centerX + halfWidth / 2, centerY + halfHeight / 2],
+      ];
+
+      const childTiles: IMLTile[] = [];
+
+      for (let i = 0; i < 4; i++) {
+        const [cx, cy] = positions[i];
+        const childGeometry: GeoJSON.Polygon = {
+          type: "Polygon",
+          coordinates: [
+            [
+              [cx - halfWidth / 2, cy - halfHeight / 2],
+              [cx + halfWidth / 2, cy - halfHeight / 2],
+              [cx + halfWidth / 2, cy + halfHeight / 2],
+              [cx - halfWidth / 2, cy + halfHeight / 2],
+              [cx - halfWidth / 2, cy - halfHeight / 2],
+            ],
+          ],
+        };
+
+        const childTile = await createTile({
+          dataset_id: dataset.id,
+          resolution_cm: childResolution,
+          geometry: childGeometry,
+          parent_tile_id: parentTile.id,
+          status: "pending",
+          tile_index: `${parentTile.tile_index}_${i}`,
+          bbox_minx: childGeometry.coordinates[0][0][0],
+          bbox_miny: childGeometry.coordinates[0][0][1],
+          bbox_maxx: childGeometry.coordinates[0][2][0],
+          bbox_maxy: childGeometry.coordinates[0][2][1],
+          aoi_coverage_percent: null,
+          deadwood_prediction_coverage_percent: null,
+          forest_cover_prediction_coverage_percent: null,
+        });
+
+        childTiles.push(childTile as IMLTile);
+      }
+
+      // If we just created 10cm tiles, recursively create 5cm tiles
+      if (childResolution === 10) {
+        for (const child of childTiles) {
+          await generateNestedTilesRecursive(child);
+        }
+      }
+    },
+    [createTile, dataset.id],
+  );
+
+  // Handle adding a new base tile (without auto-generating children)
+  const handleAddBaseTile = useCallback(async () => {
+    if (!aoiCentroid) {
+      message.warning("AOI required before placing base tiles.");
+      return;
+    }
+
+    const targetSizeMeters = 204.8;
+    const tileGeometry: GeoJSON.Polygon = {
+      type: "Polygon",
+      coordinates: [
+        [
+          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
+          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
+          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
+          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
+          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
+        ],
+      ],
+    };
+
+    try {
+      // Create base tile in pending state (user will position it, then generate children)
+      const newTile = await createTile({
+        dataset_id: dataset.id,
+        resolution_cm: 20,
+        geometry: tileGeometry,
+        parent_tile_id: null,
+        status: "pending",
+        tile_index: `20_${Date.now()}`,
+        bbox_minx: tileGeometry.coordinates[0][0][0],
+        bbox_miny: tileGeometry.coordinates[0][0][1],
+        bbox_maxx: tileGeometry.coordinates[0][2][0],
+        bbox_maxy: tileGeometry.coordinates[0][2][1],
+        aoi_coverage_percent: 100,
+        deadwood_prediction_coverage_percent: null,
+        forest_cover_prediction_coverage_percent: null,
+      });
+
+      // Explicitly refetch to ensure UI updates immediately
+      await refetchTiles();
+
+      // Auto-select the newly created tile
+      if (newTile && newTile.id) {
+        setSelectedTileId(newTile.id);
+        setSelectedResolution(20);
+      }
+
+      onUnsavedChanges(true);
+      message.success("Base tile created. Drag it to position, then select it to generate sub-tiles.");
+    } catch (error) {
+      console.error(error);
+      message.error("Failed to create base tile");
+    }
+  }, [aoiCentroid, dataset.id, createTile, onUnsavedChanges, refetchTiles]);
+
+  // Handle tile selection
+  const handleTileSelected = useCallback((tile: IMLTile | null) => {
+    if (tile) {
+      setSelectedTileId(tile.id);
+      setSelectedResolution(tile.resolution_cm);
+    } else {
+      setSelectedTileId(null);
+    }
+  }, []);
+
+  // Handle generating sub-tiles for a base tile
+  const handleGenerateSubTiles = useCallback(
+    async (baseTile: IMLTile) => {
+      try {
+        message.loading({ content: "Generating nested tiles...", key: "generate" });
+        await generateNestedTilesRecursive(baseTile);
+        // Mark base tile as good
+        await updateStatus({ tileId: baseTile.id, status: "good" });
+        onUnsavedChanges(true);
+        message.success({ content: "All nested tiles generated successfully!", key: "generate" });
+
+        // Switch to 10cm resolution
+        setSelectedResolution(10);
+
+        // Small delay to allow React Query to update the tiles list
+        setTimeout(() => {
+          // Auto-select first 10cm tile to start checking
+          const firstChild = allTiles.find(
+            (t) => t.parent_tile_id === baseTile.id && t.resolution_cm === 10 && t.status === "pending",
+          );
+          if (firstChild) {
+            setSelectedTileId(firstChild.id);
+          }
+        }, 100);
+      } catch (error) {
+        console.error(error);
+        message.error({ content: "Failed to generate tiles", key: "generate" });
+      }
+    },
+    [generateNestedTilesRecursive, updateStatus, onUnsavedChanges, allTiles],
+  );
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      {/* Top Summary Bar */}
+      <div className="border-b bg-gray-50 p-4">
+        <Space size="large">
+          <Statistic title="Base Tiles (20cm)" value={baseTiles.length} />
+          <Statistic title="10cm Good" value={progress?.good_10cm || 0} suffix={`/ ${progress?.total_10cm || 0}`} />
+          <Statistic title="5cm Good" value={progress?.good_5cm || 0} suffix={`/ ${progress?.total_5cm || 0}`} />
+          <div>
+            <div className="mb-1 text-sm text-gray-500">Overall Progress</div>
+            <Progress percent={overallProgress} style={{ width: 200 }} />
+          </div>
+        </Space>
+      </div>
+
+      {/* Main Content: Map + Sidebar */}
+      <div className="flex min-h-0 flex-1">
+        {/* Map */}
+        <div className="relative flex-1">
+          <MLTileMap
+            datasetId={dataset.id}
+            cogPath={dataset.cog_path}
+            resolution={selectedResolution}
+            tiles={tilesForResolution}
+            onTileSelected={handleTileSelected}
+            enableTranslation={true}
+            focusTileId={selectedTileId}
+          />
+
+          {/* Add Base Tile Button (overlay) - only show when no tiles exist and no tile is selected */}
+          {baseTiles.length === 0 && !selectedTile && (
+            <div className="pointer-events-none absolute left-4 top-4 z-10">
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={handleAddBaseTile}
+                className="pointer-events-auto"
+              >
+                Add Base Tile
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar (only visible when a tile is selected) */}
+        {selectedTile && selectedBaseTile && (
+          <MLTileDetailSidebar
+            baseTile={selectedBaseTile}
+            selectedTile={selectedTile}
+            selectedResolution={selectedResolution}
+            allTiles={allTiles}
+            onResolutionChange={setSelectedResolution}
+            onTileSelect={setSelectedTileId}
+            onStatusUpdate={async (tileId: number, status: "good" | "bad" | "pending") => {
+              await updateStatus({ tileId, status });
+              onUnsavedChanges(true);
+            }}
+            onDelete={async (tileId: number) => {
+              // Find the tile being deleted
+              const tileToDelete = allTiles.find((t) => t.id === tileId);
+              if (!tileToDelete) return;
+
+              // Always delete the entire base tile family
+              // First, find the base tile (20cm)
+              let baseTile: IMLTile;
+              if (tileToDelete.resolution_cm === 20) {
+                baseTile = tileToDelete;
+              } else {
+                // Walk up the parent chain to find the base tile
+                let current = tileToDelete;
+                while (current.parent_tile_id) {
+                  const parent = allTiles.find((t) => t.id === current.parent_tile_id);
+                  if (!parent) break;
+                  current = parent;
+                }
+                baseTile = current;
+              }
+
+              // Find all descendants of the base tile
+              const tilesToDelete: IMLTile[] = [baseTile];
+
+              // Find all direct children (10cm tiles)
+              const children10cm = allTiles.filter((t) => t.parent_tile_id === baseTile.id);
+              tilesToDelete.push(...children10cm);
+
+              // Find all grandchildren (5cm tiles)
+              for (const child of children10cm) {
+                const children5cm = allTiles.filter((t) => t.parent_tile_id === child.id);
+                tilesToDelete.push(...children5cm);
+              }
+
+              // Delete all tiles in the family
+              message.loading({
+                content: `Deleting base tile and ${tilesToDelete.length - 1} sub-tiles...`,
+                key: "delete",
+              });
+              for (const tile of tilesToDelete) {
+                await deleteTile({ tileId: tile.id, datasetId: dataset.id });
+              }
+              message.success({ content: "All tiles deleted successfully!", key: "delete" });
+
+              setSelectedTileId(null);
+              onUnsavedChanges(true);
+            }}
+            onGenerateSubTiles={handleGenerateSubTiles}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
