@@ -68,7 +68,7 @@ export function useTileSessionLock(datasetId: number | undefined) {
       };
     },
     enabled: !!datasetId,
-    refetchInterval: 10000, // Check every 10s
+    // No polling - we only check once on mount
   });
 }
 

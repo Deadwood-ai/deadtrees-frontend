@@ -22,16 +22,22 @@ export default function DatasetMLTiles() {
 
   // Acquire lock once on mount; clear on unmount
   const lockAcquiredRef = useRef(false);
+  const lockCheckedRef = useRef(false);
+
+  // Check lock ownership once on mount
   useEffect(() => {
-    if (!dataset?.id || !user?.id) return;
+    if (!dataset?.id || !user?.id || !sessionLock || lockCheckedRef.current) return;
+
+    lockCheckedRef.current = true;
 
     // If another user holds the lock, navigate away
-    if (sessionLock?.is_locked && sessionLock.locked_by && sessionLock.locked_by !== user.id) {
+    if (sessionLock.is_locked && sessionLock.locked_by && sessionLock.locked_by !== user.id) {
       message.error("Another user is currently editing tiles for this dataset");
       navigate("/dataset-audit");
       return;
     }
 
+    // Acquire lock if not already acquired
     if (!lockAcquiredRef.current) {
       setLock(dataset.id)
         .then(() => {
@@ -43,14 +49,17 @@ export default function DatasetMLTiles() {
           navigate("/dataset-audit");
         });
     }
+  }, [dataset?.id, user?.id, sessionLock, setLock, navigate]);
 
+  // Clear lock on unmount
+  useEffect(() => {
     return () => {
-      if (lockAcquiredRef.current) {
+      if (lockAcquiredRef.current && dataset?.id) {
         clearLock(dataset.id);
         lockAcquiredRef.current = false;
       }
     };
-  }, [dataset?.id, user?.id, sessionLock?.is_locked, sessionLock?.locked_by, setLock, clearLock, navigate]);
+  }, [dataset?.id, clearLock]);
 
   // Handle navigation away with unsaved changes
   useEffect(() => {

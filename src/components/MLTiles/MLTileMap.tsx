@@ -393,32 +393,12 @@ export default function MLTileMap({
       const extent = geometry.getExtent();
       const view = mapRef.current.getView();
 
-      // Calculate center and zoom level manually for smoother animation
-      const centerX = (extent[0] + extent[2]) / 2;
-      const centerY = (extent[1] + extent[3]) / 2;
-
-      // Zoom to center with smooth animation
-      view.animate({
-        center: [centerX, centerY],
+      // Use fit with padding for smooth animation
+      view.fit(extent, {
+        padding: [80, 80, 80, 80],
+        maxZoom: 19,
         duration: 400,
-        easing: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t), // easeInOutQuad
       });
-
-      // Calculate appropriate zoom level
-      const size = mapRef.current.getSize();
-      if (size) {
-        const width = extent[2] - extent[0];
-        const height = extent[3] - extent[1];
-        const paddingFactor = 0.7; // Show tile at 70% of viewport
-        const resolution = Math.max(width / (size[0] * paddingFactor), height / (size[1] * paddingFactor));
-        const zoom = Math.min(19, view.getZoomForResolution(resolution) || 18);
-
-        view.animate({
-          zoom: zoom,
-          duration: 400,
-          easing: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-        });
-      }
     } catch (error) {
       console.error("Failed to zoom to tile:", error);
     }

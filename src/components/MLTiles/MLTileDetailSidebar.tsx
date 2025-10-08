@@ -177,15 +177,20 @@ export default function MLTileDetailSidebar({
     async (status: TileStatus | null) => {
       const currentStatus = selectedTile.status;
       const newStatus = status === currentStatus ? "pending" : status;
+      const tileIdToUpdate = selectedTile.id; // Capture ID before navigation
 
-      if (newStatus) {
-        await onStatusUpdate(selectedTile.id, newStatus);
-      }
-
-      // Auto-advance to next pending tile
+      // Auto-advance to next pending tile BEFORE updating status
+      // This allows the animation to start before the refetch happens
       const next = findNextPendingTile();
       if (next) {
         onTileSelect(next.id);
+      }
+
+      // Update status after a small delay to let the animation complete smoothly
+      if (newStatus) {
+        setTimeout(() => {
+          onStatusUpdate(tileIdToUpdate, newStatus);
+        }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
       }
     },
     [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect],
