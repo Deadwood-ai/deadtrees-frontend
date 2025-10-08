@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useMemo } from "react";
 import { View } from "ol";
 
 // Navigation source type
@@ -32,18 +32,18 @@ export const DatasetDetailsMapProvider = (props: { children: React.ReactNode }) 
   });
   const [navigatedFrom, setNavigationSource] = useState<NavigationSource>(null);
 
-  return (
-    <DatasetDetailsMapContext.Provider
-      value={{
-        viewport,
-        navigatedFrom,
-        setViewport,
-        setNavigationSource,
-      }}
-    >
-      {props.children}
-    </DatasetDetailsMapContext.Provider>
+  // Memoize the context value to prevent unnecessary rerenders
+  const contextValue = useMemo(
+    () => ({
+      viewport,
+      navigatedFrom,
+      setViewport,
+      setNavigationSource,
+    }),
+    [viewport, navigatedFrom],
   );
+
+  return <DatasetDetailsMapContext.Provider value={contextValue}>{props.children}</DatasetDetailsMapContext.Provider>;
 };
 
 export const useDatasetDetailsMap = () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
@@ -45,6 +45,9 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
 
   // Fetch AOI data for the current dataset
   const { data: aoiData, isLoading: isAOILoading } = useDatasetAOI(data?.id);
+
+  // Stabilize AOI geometry to prevent unnecessary rerenders
+  const aoiGeometry = useMemo(() => aoiData?.geometry, [aoiData?.id]);
 
   // Store layer references for cleanup
   const layerRefs = useRef<{
@@ -124,13 +127,13 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
           : undefined;
 
       // Create AOI layer if AOI data exists
-      const aoiVectorLayer = aoiData?.geometry
-        ? createAOIVectorLayer(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
+      const aoiVectorLayer = aoiGeometry
+        ? createAOIVectorLayer(aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
         : undefined;
 
       // Create AOI mask layer if AOI data exists - grays out areas outside AOI
-      const aoiMaskLayer = aoiData?.geometry
-        ? createAOIMaskLayer(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
+      const aoiMaskLayer = aoiGeometry
+        ? createAOIMaskLayer(aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
         : undefined;
 
       // Create selection layer for hover effect (only if deadwood layer exists)
@@ -383,7 +386,19 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         mapRef.current = null;
       }
     };
-  }, [data, isLoadingLabels, isAOILoading, deadwood.data, forestCover.data, aoiData]);
+  }, [
+    data?.id,
+    data?.file_name,
+    data?.cog_path,
+    data?.deadwood_quality,
+    data?.forest_cover_quality,
+    data?.is_forest_cover_done,
+    isLoadingLabels,
+    isAOILoading,
+    deadwood.data?.id,
+    forestCover.data?.id,
+    aoiGeometry,
+  ]);
 
   // update deadwood layer opacity
   useEffect(() => {

@@ -212,6 +212,19 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
     }
   }, []);
 
+  // Memoize the callback that receives the tile geometry getter
+  const handleGetTileGeometry = useCallback((getter: (tileId: number) => GeoJSON.Polygon | null) => {
+    setGetTileGeometryFromMap(() => getter);
+  }, []);
+
+  // Memoize the callback that receives layer toggle functions
+  const handleGetLayerToggles = useCallback(
+    (toggles: { toggleAOI: () => void; toggleDeadwood: () => void; toggleForestCover: () => void }) => {
+      setLayerToggles(toggles);
+    },
+    [],
+  );
+
   // Handle generating sub-tiles for a base tile
   const handleGenerateSubTiles = useCallback(
     async (baseTile: IMLTile, currentGeometry?: GeoJSON.Polygon) => {
@@ -321,8 +334,8 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
             onTileSelected={handleTileSelected}
             enableTranslation={true}
             focusTileId={selectedTileId}
-            onGetTileGeometry={(getter) => setGetTileGeometryFromMap(() => getter)}
-            onGetLayerToggles={(toggles) => setLayerToggles(toggles)}
+            onGetTileGeometry={handleGetTileGeometry}
+            onGetLayerToggles={handleGetLayerToggles}
           />
 
           {/* Add Base Tile Button (overlay) - show when no tile is selected and not completed */}
