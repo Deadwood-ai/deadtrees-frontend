@@ -321,20 +321,24 @@ export default function DatasetAudit() {
     },
   ];
 
+  // Conditionally include ML Tiles column only for needs-tiles and training-ready tabs
+  const mlTilesColumn = {
+    title: "ML Tiles",
+    key: "ml_tiles",
+    render: (_: unknown, record: IDataset) => (
+      <Tooltip title="Open ML Tile editor for this dataset">
+        <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/ml-tiles`)}>
+          {record.has_ml_tiles ? "Continue Tiles" : "Generate ML Tiles"}
+        </Button>
+      </Tooltip>
+    ),
+    width: 150,
+  };
+
   const columns = [
     ...baseColumns,
-    {
-      title: "ML Tiles",
-      key: "ml_tiles",
-      render: (_: unknown, record: IDataset) => (
-        <Tooltip title="Open ML Tile editor for this dataset">
-          <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/ml-tiles`)}>
-            {record.has_ml_tiles ? "Continue Tiles" : "Generate ML Tiles"}
-          </Button>
-        </Tooltip>
-      ),
-      width: 150,
-    },
+    // Only show ML Tiles column in "needs-tiles" and "training-ready" tabs
+    ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [mlTilesColumn] : []),
     {
       title: "Edit Labels",
       key: "edit_labels",
