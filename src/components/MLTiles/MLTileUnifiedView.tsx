@@ -87,10 +87,9 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
         [centerX + halfWidth / 2, centerY + halfHeight / 2],
       ];
 
-      const childTiles: IMLTile[] = [];
-
-      for (let i = 0; i < 4; i++) {
-        const [cx, cy] = positions[i];
+      // Create all 4 child tiles in parallel for better performance
+      const tileCreationPromises = positions.map((position, i) => {
+        const [cx, cy] = position;
         const childGeometry: GeoJSON.Polygon = {
           type: "Polygon",
           coordinates: [
@@ -104,7 +103,7 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
           ],
         };
 
-        const childTile = await createTile({
+        return createTile({
           dataset_id: dataset.id,
           resolution_cm: childResolution,
           geometry: childGeometry,
@@ -119,15 +118,13 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
           deadwood_prediction_coverage_percent: null,
           forest_cover_prediction_coverage_percent: null,
         });
+      });
 
-        childTiles.push(childTile as IMLTile);
-      }
+      const childTiles = await Promise.all(tileCreationPromises);
 
-      // If we just created 10cm tiles, recursively create 5cm tiles
+      // If we just created 10cm tiles, recursively create 5cm tiles in parallel
       if (childResolution === 10) {
-        for (const child of childTiles) {
-          await generateNestedTilesRecursive(child);
-        }
+        await Promise.all(childTiles.map((child) => generateNestedTilesRecursive(child as IMLTile)));
       }
     },
     [createTile, dataset.id],
@@ -310,14 +307,12 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
                 tilesToDelete.push(...children5cm);
               }
 
-              // Delete all tiles in the family
+              // Delete all tiles in the family in parallel for better performance
               message.loading({
                 content: `Deleting base tile and ${tilesToDelete.length - 1} sub-tiles...`,
                 key: "delete",
               });
-              for (const tile of tilesToDelete) {
-                await deleteTile({ tileId: tile.id, datasetId: dataset.id });
-              }
+              await Promise.all(tilesToDelete.map((tile) => deleteTile({ tileId: tile.id, datasetId: dataset.id })));
               message.success({ content: "All tiles deleted successfully!", key: "delete" });
 
               setSelectedTileId(null);
