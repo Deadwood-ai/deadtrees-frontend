@@ -15,7 +15,7 @@ interface Props {
   selectedResolution: TileResolution;
   allTiles: IMLTile[];
   onResolutionChange: (resolution: TileResolution) => void;
-  onTileSelect: (tileId: number) => void;
+  onTileSelect: (tileId: number | null) => void;
   onStatusUpdate: (tileId: number, status: TileStatus) => Promise<void>;
   onDelete: (tileId: number) => Promise<void>;
   onGenerateSubTiles?: (baseTile: IMLTile) => Promise<void>;
@@ -224,6 +224,13 @@ export default function MLTileDetailSidebar({
         const next = findNextPendingTile();
         if (next) {
           onTileSelect(next.id);
+        } else {
+          // No more pending tiles - all complete! Zoom to base tile then deselect
+          onTileSelect(baseTile.id);
+          // After brief delay, deselect to show the completed base tile
+          setTimeout(() => {
+            onTileSelect(null);
+          }, 800); // Give time to zoom to base tile before deselecting
         }
 
         // Clear the delaying flag after navigation
@@ -240,7 +247,7 @@ export default function MLTileDetailSidebar({
         });
       }, 200); // 200ms delay to show button state change
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile],
   );
 
   // Handle clear rating (no auto-advance)
@@ -282,6 +289,13 @@ export default function MLTileDetailSidebar({
       const next = findNextPendingTile();
       if (next) {
         onTileSelect(next.id);
+      } else {
+        // No more pending tiles - all complete! Zoom to base tile then deselect
+        onTileSelect(baseTile.id);
+        // After brief delay, deselect to show the completed base tile
+        setTimeout(() => {
+          onTileSelect(null);
+        }, 800); // Give time to zoom to base tile before deselecting
       }
 
       // Update status after a small delay to let the animation complete smoothly
@@ -289,7 +303,7 @@ export default function MLTileDetailSidebar({
         onStatusUpdate(tileIdToUpdate, status);
       }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile],
   );
 
   // Check if all tiles are completed

@@ -10,6 +10,7 @@ import {
   useTileProgress,
   useMLTiles,
   useCompleteTileGeneration,
+  useReopenTileGeneration,
 } from "../hooks/useMLTiles";
 import { useAuth } from "../hooks/useAuthProvider";
 import MLTileUnifiedView from "../components/MLTiles/MLTileUnifiedView";
@@ -27,6 +28,7 @@ export default function DatasetMLTiles() {
   const { data: progress } = useTileProgress(dataset?.id);
   const { data: allTiles = [] } = useMLTiles(dataset?.id);
   const { mutateAsync: completeTileGeneration } = useCompleteTileGeneration();
+  const { mutateAsync: reopenTileGeneration } = useReopenTileGeneration();
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -183,6 +185,26 @@ export default function DatasetMLTiles() {
     });
   };
 
+  const handleReopenForEditing = async () => {
+    if (!dataset?.id) return;
+
+    try {
+      message.loading({ content: "Reopening dataset for editing...", key: "reopen" });
+      await reopenTileGeneration(dataset.id);
+      message.success({
+        content: "Dataset reopened for editing!",
+        key: "reopen",
+        duration: 2,
+      });
+    } catch (error) {
+      console.error("Failed to reopen dataset:", error);
+      message.error({
+        content: "Failed to reopen dataset. Please try again.",
+        key: "reopen",
+      });
+    }
+  };
+
   if (!dataset) {
     return <div className="p-6">Loading dataset...</div>;
   }
@@ -232,13 +254,7 @@ export default function DatasetMLTiles() {
 
             {/* Complete & Exit Button - only show when all tiles are marked */}
             {allTilesMarked && (
-              <Button
-                type="primary"
-                size="large"
-                icon={<CheckCircleOutlined />}
-                onClick={handleCompleteAndExit}
-                className="bg-green-600 hover:bg-green-700"
-              >
+              <Button type="primary" size="large" icon={<CheckCircleOutlined />} onClick={handleCompleteAndExit}>
                 Complete & Exit
               </Button>
             )}
@@ -246,7 +262,12 @@ export default function DatasetMLTiles() {
         )}
       </div>
 
-      <MLTileUnifiedView dataset={dataset} onUnsavedChanges={setHasUnsavedChanges} />
+      <MLTileUnifiedView
+        dataset={dataset}
+        onUnsavedChanges={setHasUnsavedChanges}
+        isCompleted={dataset.has_ml_tiles === true}
+        onReopenForEditing={handleReopenForEditing}
+      />
     </div>
   );
 }

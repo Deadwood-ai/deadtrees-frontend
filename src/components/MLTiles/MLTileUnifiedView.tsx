@@ -3,8 +3,8 @@ import { IDataset } from "../../types/dataset";
 import { IMLTile, TileResolution } from "../../types/mlTiles";
 import { useMLTiles, useCreateMLTile, useUpdateTileStatus, useDeleteMLTile } from "../../hooks/useMLTiles";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
-import { message, Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { message, Button, Alert, Modal } from "antd";
+import { PlusOutlined, LockOutlined, EditOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, centroid } from "@turf/turf";
 import GeoJSON from "ol/format/GeoJSON";
 import MLTileMap from "./MLTileMap";
@@ -13,11 +13,16 @@ import MLTileDetailSidebar from "./MLTileDetailSidebar";
 interface Props {
   dataset: IDataset;
   onUnsavedChanges: (hasChanges: boolean) => void;
+  isCompleted: boolean;
+  onReopenForEditing: () => void;
 }
 
-export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) {
+export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isCompleted, onReopenForEditing }: Props) {
   const [selectedResolution, setSelectedResolution] = useState<TileResolution>(20);
   const [selectedTileId, setSelectedTileId] = useState<number | null>(null);
+  const [getTileGeometryFromMap, setGetTileGeometryFromMap] = useState<
+    ((tileId: number) => GeoJSON.Polygon | null) | null
+  >(null);
 
   const { data: allTiles = [], refetch: refetchTiles } = useMLTiles(dataset.id);
   const { data: aoiData } = useDatasetAOI(dataset.id);
@@ -49,11 +54,17 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
     }
   }, [aoiData?.geometry, geoJson]);
 
-  // Filter tiles by selected resolution
-  const tilesForResolution = useMemo(
-    () => allTiles.filter((t) => t.resolution_cm === selectedResolution),
-    [allTiles, selectedResolution],
-  );
+  // Filter tiles for map display
+  // Always show base tiles (20cm) + tiles at selected resolution
+  const tilesForResolution = useMemo(() => {
+    if (selectedResolution === 20) {
+      // If viewing 20cm, only show 20cm tiles
+      return allTiles.filter((t) => t.resolution_cm === 20);
+    } else {
+      // If viewing 10cm or 5cm, show base tiles (20cm) + the selected resolution
+      return allTiles.filter((t) => t.resolution_cm === 20 || t.resolution_cm === selectedResolution);
+    }
+  }, [allTiles, selectedResolution]);
 
   // Get the selected tile
   const selectedTile = useMemo(() => allTiles.find((t) => t.id === selectedTileId) || null, [allTiles, selectedTileId]);
@@ -198,10 +209,25 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
 
   // Handle generating sub-tiles for a base tile
   const handleGenerateSubTiles = useCallback(
-    async (baseTile: IMLTile) => {
+    async (baseTile: IMLTile, currentGeometry?: GeoJSON.Polygon) => {
       try {
         message.loading({ content: "Generating nested tiles...", key: "generate" });
-        await generateNestedTilesRecursive(baseTile);
+
+        // Get current geometry from map if available, otherwise use provided or baseTile geometry
+        // This ensures we use the MOVED position if the user translated the tile
+        let geometryToUse = currentGeometry || baseTile.geometry;
+
+        if (!currentGeometry && getTileGeometryFromMap) {
+          const mapGeometry = getTileGeometryFromMap(baseTile.id);
+          if (mapGeometry) {
+            geometryToUse = mapGeometry;
+          }
+        }
+
+        const tileToGenerate =
+          geometryToUse !== baseTile.geometry ? { ...baseTile, geometry: geometryToUse } : baseTile;
+
+        await generateNestedTilesRecursive(tileToGenerate);
         // Mark base tile as good
         await updateStatus({ tileId: baseTile.id, status: "good" });
         onUnsavedChanges(true);
@@ -225,11 +251,30 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
         message.error({ content: "Failed to generate tiles", key: "generate" });
       }
     },
-    [generateNestedTilesRecursive, updateStatus, onUnsavedChanges, allTiles],
+    [generateNestedTilesRecursive, updateStatus, onUnsavedChanges, allTiles, getTileGeometryFromMap],
   );
 
   return (
     <div className="flex h-full w-full flex-col">
+      {/* Completion Status Banner */}
+      {isCompleted && (
+        <Alert
+          message="Dataset Marked as Complete"
+          description={
+            <div className="flex items-center justify-between">
+              <span>This dataset has been marked as ML tiles complete. To make changes, reopen it for editing.</span>
+              <Button icon={<EditOutlined />} onClick={onReopenForEditing} size="small">
+                Reopen for Editing
+              </Button>
+            </div>
+          }
+          type="success"
+          icon={<LockOutlined />}
+          showIcon
+          className="m-4"
+        />
+      )}
+
       {/* Main Content: Map + Sidebar */}
       <div className="flex min-h-0 flex-1">
         {/* Map */}
@@ -242,18 +287,13 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
             onTileSelected={handleTileSelected}
             enableTranslation={true}
             focusTileId={selectedTileId}
+            onGetTileGeometry={(getter) => setGetTileGeometryFromMap(() => getter)}
           />
 
-          {/* Add Base Tile Button (overlay) - show when no tile is selected to allow adding multiple base tiles */}
-          {!selectedTile && (
+          {/* Add Base Tile Button (overlay) - show when no tile is selected and not completed */}
+          {!selectedTile && !isCompleted && (
             <div className="pointer-events-none absolute left-4 top-4 z-10">
-              <Button
-                type="primary"
-                size="large"
-                icon={<PlusOutlined />}
-                onClick={handleAddBaseTile}
-                className="pointer-events-auto shadow-lg"
-              >
+              <Button icon={<PlusOutlined />} onClick={handleAddBaseTile} className="pointer-events-auto shadow-lg">
                 Add Base Tile
               </Button>
             </div>
@@ -307,16 +347,44 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
                 tilesToDelete.push(...children5cm);
               }
 
-              // Delete all tiles in the family in parallel for better performance
-              message.loading({
-                content: `Deleting base tile and ${tilesToDelete.length - 1} sub-tiles...`,
-                key: "delete",
-              });
-              await Promise.all(tilesToDelete.map((tile) => deleteTile({ tileId: tile.id, datasetId: dataset.id })));
-              message.success({ content: "All tiles deleted successfully!", key: "delete" });
+              // Show confirmation modal with completion warning if applicable
+              const completionWarning = isCompleted
+                ? "\n\n⚠️ Warning: Deleting tiles will automatically reset this dataset's completion status. You'll need to mark it as complete again after making changes."
+                : "";
 
-              setSelectedTileId(null);
-              onUnsavedChanges(true);
+              Modal.confirm({
+                title: "Delete Entire Base Tile?",
+                icon: <ExclamationCircleOutlined />,
+                content: `This will delete the base tile and all ${tilesToDelete.length - 1} sub-tiles.${completionWarning}`,
+                okText: "Delete All",
+                okType: "danger",
+                cancelText: "Cancel",
+                onOk: async () => {
+                  // Delete all tiles in the family in parallel for better performance
+                  message.loading({
+                    content: `Deleting base tile and ${tilesToDelete.length - 1} sub-tiles...`,
+                    key: "delete",
+                  });
+
+                  await Promise.all(
+                    tilesToDelete.map((tile) => deleteTile({ tileId: tile.id, datasetId: dataset.id })),
+                  );
+
+                  // If dataset was marked as complete, automatically reset it
+                  if (isCompleted) {
+                    await onReopenForEditing();
+                    message.success({
+                      content: "Tiles deleted and dataset reopened for editing",
+                      key: "delete",
+                    });
+                  } else {
+                    message.success({ content: "All tiles deleted successfully!", key: "delete" });
+                  }
+
+                  setSelectedTileId(null);
+                  onUnsavedChanges(true);
+                },
+              });
             }}
             onGenerateSubTiles={handleGenerateSubTiles}
           />

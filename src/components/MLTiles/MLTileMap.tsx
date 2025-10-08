@@ -37,6 +37,7 @@ interface Props {
   onTileSelected?: (tile: IMLTile | null) => void;
   focusTileId?: number | null;
   enableTranslation?: boolean;
+  onGetTileGeometry?: (getter: (tileId: number) => GeoJSON.Polygon | null) => void;
 }
 
 const TARGET_TILE_SIZE_M: Record<TileResolution, number> = {
@@ -53,6 +54,7 @@ export default function MLTileMap({
   onTileSelected,
   focusTileId,
   enableTranslation = false,
+  onGetTileGeometry,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -311,6 +313,29 @@ export default function MLTileMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only initialize map once on mount
+
+  // Expose function to get current tile geometry from map
+  useEffect(() => {
+    if (!onGetTileGeometry) return;
+
+    const getTileGeometry = (tileId: number): GeoJSON.Polygon | null => {
+      const layer = tileLayerRef.current;
+      if (!layer) return null;
+      const src = layer.getSource();
+      if (!src) return null;
+
+      const feature = src.getFeatures().find((f) => f.get("tileId") === tileId);
+      if (!feature) return null;
+
+      const geom = feature.getGeometry();
+      if (!geom) return null;
+
+      return geoJsonFormatter.writeGeometryObject(geom) as GeoJSON.Polygon;
+    };
+
+    // Call the parent's callback with our getter function
+    onGetTileGeometry(getTileGeometry);
+  }, [onGetTileGeometry, geoJsonFormatter]);
 
   // Render features when tiles change
   useEffect(() => {

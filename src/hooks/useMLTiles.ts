@@ -402,3 +402,35 @@ export function useCompleteTileGeneration() {
     },
   });
 }
+
+// Reopen dataset for editing (clears completion flag)
+export function useReopenTileGeneration() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (datasetId: number) => {
+      const { data, error } = await supabase
+        .from("v2_statuses")
+        .update({
+          has_ml_tiles: false,
+          ml_tiles_completed_at: null,
+        })
+        .eq("dataset_id", datasetId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (_data, datasetId) => {
+      // Invalidate all dataset-related queries
+      await queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      await queryClient.invalidateQueries({ queryKey: ["dataset-by-id", datasetId] });
+      await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
+
+      // Force refetch to ensure fresh data
+      await queryClient.refetchQueries({ queryKey: ["datasets"] });
+    },
+  });
+}
