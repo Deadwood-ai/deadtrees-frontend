@@ -57,7 +57,7 @@ export default function MLTileDetailSidebar({
     [baseTileFamily, selectedResolution],
   );
 
-  // Sort tiles spatially: top to bottom (descending Y), then left to right (ascending X)
+  // Sort tiles spatially: top to bottom (ascending Y), then left to right (ascending X)
   const sortedTiles = useMemo(() => {
     return [...tilesForResolution].sort((a, b) => {
       // Get center coordinates
@@ -69,8 +69,8 @@ export default function MLTileDetailSidebar({
       const bCenterY = (bCoords[0][1] + bCoords[2][1]) / 2;
       const bCenterX = (bCoords[0][0] + bCoords[2][0]) / 2;
 
-      // Sort by Y (descending - northernmost first)
-      const yDiff = bCenterY - aCenterY;
+      // Sort by Y (ascending - southernmost first, which is top-left on screen)
+      const yDiff = aCenterY - bCenterY;
       if (Math.abs(yDiff) > 1) return yDiff > 0 ? -1 : 1;
 
       // Then by X (ascending - westernmost first)
@@ -139,7 +139,7 @@ export default function MLTileDetailSidebar({
         const bCenterY = (bCoords[0][1] + bCoords[2][1]) / 2;
         const bCenterX = (bCoords[0][0] + bCoords[2][0]) / 2;
 
-        const yDiff = bCenterY - aCenterY;
+        const yDiff = aCenterY - bCenterY;
         if (Math.abs(yDiff) > 1) return yDiff > 0 ? -1 : 1;
         return aCenterX - bCenterX;
       });
@@ -200,32 +200,18 @@ export default function MLTileDetailSidebar({
   const displayStatus = useMemo(() => {
     const optimistic = optimisticStatuses.get(selectedTile.id);
     const actual = selectedTile.status || "pending";
-    const result = optimistic || actual;
-    console.log("[Rating] displayStatus calculated:", {
-      tileId: selectedTile.id,
-      optimistic,
-      actual,
-      result,
-      mapSize: optimisticStatuses.size,
-    });
-    return result;
+    return optimistic || actual;
   }, [optimisticStatuses, selectedTile.id, selectedTile.status]);
 
   // Handle status change from radio button (instant with auto-advance after brief delay)
   const handleRadioStatusChange = useCallback(
     async (status: TileStatus) => {
       const tileIdToUpdate = selectedTile.id;
-      console.log("[Rating] Button clicked:", {
-        tileId: tileIdToUpdate,
-        newStatus: status,
-        currentStatus: selectedTile.status,
-      });
 
       // Set optimistic status immediately for instant UI feedback
       setOptimisticStatuses((prev) => {
         const next = new Map(prev);
         next.set(tileIdToUpdate, status);
-        console.log("[Rating] Optimistic status set:", { tileId: tileIdToUpdate, status, mapSize: next.size });
         return next;
       });
 
