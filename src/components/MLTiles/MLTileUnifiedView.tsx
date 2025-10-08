@@ -247,8 +247,8 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
             focusTileId={selectedTileId}
           />
 
-          {/* Add Base Tile Button (overlay) - only show when no tiles exist and no tile is selected */}
-          {baseTiles.length === 0 && !selectedTile && (
+          {/* Add Base Tile Button (overlay) - show when no tile is selected to allow adding multiple base tiles */}
+          {!selectedTile && (
             <div className="pointer-events-none absolute left-4 top-4 z-10">
               <Button
                 type="primary"
