@@ -19,6 +19,11 @@ interface Props {
   onStatusUpdate: (tileId: number, status: TileStatus) => Promise<void>;
   onDelete: (tileId: number) => Promise<void>;
   onGenerateSubTiles?: (baseTile: IMLTile) => Promise<void>;
+  layerToggles?: {
+    toggleAOI: () => void;
+    toggleDeadwood: () => void;
+    toggleForestCover: () => void;
+  } | null;
 }
 
 export default function MLTileDetailSidebar({
@@ -31,6 +36,7 @@ export default function MLTileDetailSidebar({
   onStatusUpdate,
   onDelete,
   onGenerateSubTiles,
+  layerToggles,
 }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Map<number, TileStatus>>(new Map());
@@ -345,23 +351,33 @@ export default function MLTileDetailSidebar({
       }
 
       switch (e.key.toLowerCase()) {
-        case "g":
+        case " ": // Space key for Good
           e.preventDefault();
           handleStatusChangeWithAdvance("good");
           break;
-        case "b":
+        case "f": // F key for Bad
           e.preventDefault();
           handleStatusChangeWithAdvance("bad");
           break;
-        case "p":
+        case "j": // J key to toggle AOI layer
           e.preventDefault();
-          handleStatusChangeWithAdvance("pending");
+          layerToggles?.toggleAOI();
+          break;
+        case "k": // K key to toggle Deadwood layer
+          e.preventDefault();
+          layerToggles?.toggleDeadwood();
+          break;
+        case "l": // L key to toggle Forest Cover layer
+          e.preventDefault();
+          layerToggles?.toggleForestCover();
           break;
         case "arrowright":
+        case "arrowdown":
           e.preventDefault();
           handleNext();
           break;
         case "arrowleft":
+        case "arrowup":
           e.preventDefault();
           handlePrevious();
           break;
@@ -370,7 +386,7 @@ export default function MLTileDetailSidebar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrevious, handleStatusChangeWithAdvance]);
+  }, [handleNext, handlePrevious, handleStatusChangeWithAdvance, layerToggles]);
 
   return (
     <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-gray-50">
@@ -456,10 +472,10 @@ export default function MLTileDetailSidebar({
               className="w-full"
             >
               <Radio.Button value="good" className="w-1/2 text-center">
-                Good (G)
+                Good (Space)
               </Radio.Button>
               <Radio.Button value="bad" className="w-1/2 text-center">
-                Bad (B)
+                Bad (F)
               </Radio.Button>
             </Radio.Group>
             {displayStatus !== "pending" && !isDelayingNavigation && (

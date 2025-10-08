@@ -38,6 +38,11 @@ interface Props {
   focusTileId?: number | null;
   enableTranslation?: boolean;
   onGetTileGeometry?: (getter: (tileId: number) => GeoJSON.Polygon | null) => void;
+  onGetLayerToggles?: (toggles: {
+    toggleAOI: () => void;
+    toggleDeadwood: () => void;
+    toggleForestCover: () => void;
+  }) => void;
 }
 
 const TARGET_TILE_SIZE_M: Record<TileResolution, number> = {
@@ -55,6 +60,7 @@ export default function MLTileMap({
   focusTileId,
   enableTranslation = false,
   onGetTileGeometry,
+  onGetLayerToggles,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -360,6 +366,21 @@ export default function MLTileMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - the getter uses refs so it always accesses latest state
 
+  // Expose layer toggle functions (run once on mount)
+  useEffect(() => {
+    if (!onGetLayerToggles) return;
+
+    const toggles = {
+      toggleAOI: () => setShowAOI((prev) => !prev),
+      toggleDeadwood: () => setShowDeadwood((prev) => !prev),
+      toggleForestCover: () => setShowForestCover((prev) => !prev),
+    };
+
+    // Call the parent's callback with toggle functions once
+    onGetLayerToggles(toggles);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - uses state setters which are stable
+
   // Render features when tiles change
   useEffect(() => {
     const layer = tileLayerRef.current;
@@ -615,17 +636,17 @@ export default function MLTileMap({
         <Space direction="vertical" size="small">
           {aoiData?.geometry && (
             <Checkbox checked={showAOI} onChange={(e) => setShowAOI(e.target.checked)}>
-              AOI
+              AOI <span className="text-xs text-gray-500">(J)</span>
             </Checkbox>
           )}
           {deadwood.data?.id && (
             <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
-              Deadwood
+              Deadwood <span className="text-xs text-gray-500">(K)</span>
             </Checkbox>
           )}
           {forestCover.data?.id && (
             <Checkbox checked={showForestCover} onChange={(e) => setShowForestCover(e.target.checked)}>
-              Forest Cover
+              Forest Cover <span className="text-xs text-gray-500">(L)</span>
             </Checkbox>
           )}
         </Space>

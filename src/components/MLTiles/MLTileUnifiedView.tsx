@@ -23,6 +23,11 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
   const [getTileGeometryFromMap, setGetTileGeometryFromMap] = useState<
     ((tileId: number) => GeoJSON.Polygon | null) | null
   >(null);
+  const [layerToggles, setLayerToggles] = useState<{
+    toggleAOI: () => void;
+    toggleDeadwood: () => void;
+    toggleForestCover: () => void;
+  } | null>(null);
 
   const { data: allTiles = [], refetch: refetchTiles } = useMLTiles(dataset.id);
   const { data: aoiData } = useDatasetAOI(dataset.id);
@@ -288,6 +293,7 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
             enableTranslation={true}
             focusTileId={selectedTileId}
             onGetTileGeometry={(getter) => setGetTileGeometryFromMap(() => getter)}
+            onGetLayerToggles={(toggles) => setLayerToggles(toggles)}
           />
 
           {/* Add Base Tile Button (overlay) - show when no tile is selected and not completed */}
@@ -309,6 +315,7 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
             allTiles={allTiles}
             onResolutionChange={setSelectedResolution}
             onTileSelect={setSelectedTileId}
+            layerToggles={layerToggles}
             onStatusUpdate={async (tileId: number, status: "good" | "bad" | "pending") => {
               await updateStatus({ tileId, status });
               onUnsavedChanges(true);
