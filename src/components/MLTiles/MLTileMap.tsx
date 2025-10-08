@@ -542,7 +542,7 @@ export default function MLTileMap({
       <div ref={mapContainerRef} className="h-full w-full bg-gray-100" />
 
       {/* Layer visibility controls */}
-      <div className="absolute left-2 top-2 z-10 rounded bg-white/90 p-2 shadow">
+      <div className="absolute bottom-2 left-2 z-10 rounded bg-white/90 p-2 shadow">
         <Space direction="vertical" size="small">
           {aoiData?.geometry && (
             <Checkbox checked={showAOI} onChange={(e) => setShowAOI(e.target.checked)}>

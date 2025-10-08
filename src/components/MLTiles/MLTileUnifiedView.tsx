@@ -255,7 +255,7 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
                 size="large"
                 icon={<PlusOutlined />}
                 onClick={handleAddBaseTile}
-                className="pointer-events-auto"
+                className="pointer-events-auto shadow-lg"
               >
                 Add Base Tile
               </Button>

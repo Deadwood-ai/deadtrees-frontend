@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useCallback, useState, useRef } from "react";
-import { Button, Card, Progress, Radio, Space, Statistic, Typography, Alert, Tabs } from "antd";
+import { Button, Card, Progress, Radio, Space, Typography, Alert, Tabs } from "antd";
 import {
   LeftOutlined,
   RightOutlined,
@@ -316,9 +316,9 @@ export default function MLTileDetailSidebar({
   }, [handleNext, handlePrevious, handleStatusChangeWithAdvance]);
 
   return (
-    <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-white">
+    <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-gray-50">
       {/* Base Tile Summary */}
-      <Card size="small" className="border-0 border-b">
+      <Card size="small" className="border-0 border-b border-t p-2">
         <div className="mb-3">
           <Typography.Text strong>Base Tile: {baseTile.tile_index}</Typography.Text>
           {isComplete && (
@@ -330,19 +330,23 @@ export default function MLTileDetailSidebar({
         </div>
         {hasSubTiles && (
           <Space direction="vertical" size="small" className="w-full">
-            <div className="flex justify-between">
-              <Statistic
-                title="10cm Completed"
-                value={baseTileProgress.completed10}
-                suffix={`/ ${baseTileProgress.total10}`}
-                valueStyle={{ fontSize: 16 }}
-              />
-              <Statistic
-                title="5cm Completed"
-                value={baseTileProgress.completed5}
-                suffix={`/ ${baseTileProgress.total5}`}
-                valueStyle={{ fontSize: 16 }}
-              />
+            <div className="flex justify-between gap-4">
+              <div>
+                <div className="mb-1 text-xs text-gray-500">10cm Tiles</div>
+                <div className="text-base">
+                  <span className="font-semibold">{baseTileProgress.completed10}</span>{" "}
+                  <span className="text-gray-400">/</span>{" "}
+                  <span className="text-gray-500">{baseTileProgress.total10}</span>
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-gray-500">5cm Tiles</div>
+                <div className="text-base">
+                  <span className="font-semibold">{baseTileProgress.completed5}</span>{" "}
+                  <span className="text-gray-400">/</span>{" "}
+                  <span className="text-gray-500">{baseTileProgress.total5}</span>
+                </div>
+              </div>
             </div>
             <div>
               <div className="mb-1 text-xs text-gray-500">Progress</div>
@@ -445,6 +449,7 @@ export default function MLTileDetailSidebar({
             <Button
               type="primary"
               block
+              size="large"
               icon={<ThunderboltOutlined />}
               onClick={handleGenerateSubTiles}
               loading={isGenerating}

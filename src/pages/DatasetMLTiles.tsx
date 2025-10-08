@@ -8,6 +8,7 @@ import {
   useSetTileSessionLock,
   useClearTileSessionLock,
   useTileProgress,
+  useMLTiles,
 } from "../hooks/useMLTiles";
 import { useAuth } from "../hooks/useAuthProvider";
 import MLTileUnifiedView from "../components/MLTiles/MLTileUnifiedView";
@@ -23,8 +24,12 @@ export default function DatasetMLTiles() {
   const { mutateAsync: setLock } = useSetTileSessionLock();
   const { mutateAsync: clearLock } = useClearTileSessionLock();
   const { data: progress } = useTileProgress(dataset?.id);
+  const { data: allTiles = [] } = useMLTiles(dataset?.id);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Count 20cm base tiles
+  const baseTilesCount = useMemo(() => allTiles.filter((t) => t.resolution_cm === 20).length, [allTiles]);
 
   // Calculate overall progress (percent marked = good + bad)
   const overallProgress = useMemo(() => {
@@ -131,8 +136,26 @@ export default function DatasetMLTiles() {
         </div>
 
         {/* Compact Progress Summary */}
-        {progress && (progress.total_10cm > 0 || progress.total_5cm > 0) && (
+        {progress && (progress.total_10cm > 0 || progress.total_5cm > 0 || baseTilesCount > 0) && (
           <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Tiles</div>
+              <div className="flex gap-2 text-xs">
+                <span>
+                  <span className="font-semibold">{baseTilesCount}</span> <span className="text-gray-500">20cm</span>
+                </span>
+                <span className="text-gray-300">|</span>
+                <span>
+                  <span className="font-semibold">{progress?.total_10cm || 0}</span>{" "}
+                  <span className="text-gray-500">10cm</span>
+                </span>
+                <span className="text-gray-300">|</span>
+                <span>
+                  <span className="font-semibold">{progress?.total_5cm || 0}</span>{" "}
+                  <span className="text-gray-500">5cm</span>
+                </span>
+              </div>
+            </div>
             <div className="text-right">
               <div className="text-xs text-gray-500">Progress</div>
               <div className="text-sm font-semibold">{overallProgress}% Marked</div>
