@@ -19,11 +19,6 @@ interface Props {
   onStatusUpdate: (tileId: number, status: TileStatus) => Promise<void>;
   onDelete: (tileId: number) => Promise<void>;
   onGenerateSubTiles?: (baseTile: IMLTile) => Promise<void>;
-  layerToggles?: {
-    toggleAOI: () => void;
-    toggleDeadwood: () => void;
-    toggleForestCover: () => void;
-  } | null;
 }
 
 export default function MLTileDetailSidebar({
@@ -36,7 +31,6 @@ export default function MLTileDetailSidebar({
   onStatusUpdate,
   onDelete,
   onGenerateSubTiles,
-  layerToggles,
 }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Map<number, TileStatus>>(new Map());
@@ -359,18 +353,6 @@ export default function MLTileDetailSidebar({
           e.preventDefault();
           handleStatusChangeWithAdvance("bad");
           break;
-        case "j": // J key to toggle AOI layer
-          e.preventDefault();
-          layerToggles?.toggleAOI();
-          break;
-        case "k": // K key to toggle Deadwood layer
-          e.preventDefault();
-          layerToggles?.toggleDeadwood();
-          break;
-        case "l": // L key to toggle Forest Cover layer
-          e.preventDefault();
-          layerToggles?.toggleForestCover();
-          break;
         case "arrowright":
         case "arrowdown":
           e.preventDefault();
@@ -386,7 +368,7 @@ export default function MLTileDetailSidebar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrevious, handleStatusChangeWithAdvance, layerToggles]);
+  }, [handleNext, handlePrevious, handleStatusChangeWithAdvance]);
 
   return (
     <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-gray-50">

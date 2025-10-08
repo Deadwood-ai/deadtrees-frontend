@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { IDataset } from "../../types/dataset";
 import { IMLTile, TileResolution } from "../../types/mlTiles";
 import { useMLTiles, useCreateMLTile, useUpdateTileStatus, useDeleteMLTile } from "../../hooks/useMLTiles";
@@ -259,6 +259,35 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
     [generateNestedTilesRecursive, updateStatus, onUnsavedChanges, allTiles, getTileGeometryFromMap],
   );
 
+  // Global keyboard shortcuts for layer toggles (work even without tile selection)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Only handle layer toggle keys
+      switch (e.key.toLowerCase()) {
+        case "j":
+          e.preventDefault();
+          layerToggles?.toggleAOI();
+          break;
+        case "k":
+          e.preventDefault();
+          layerToggles?.toggleDeadwood();
+          break;
+        case "l":
+          e.preventDefault();
+          layerToggles?.toggleForestCover();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [layerToggles]);
+
   return (
     <div className="flex h-full w-full flex-col">
       {/* Completion Status Banner */}
@@ -315,7 +344,6 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges, isComplet
             allTiles={allTiles}
             onResolutionChange={setSelectedResolution}
             onTileSelect={setSelectedTileId}
-            layerToggles={layerToggles}
             onStatusUpdate={async (tileId: number, status: "good" | "bad" | "pending") => {
               await updateStatus({ tileId, status });
               onUnsavedChanges(true);
