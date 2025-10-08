@@ -82,10 +82,21 @@ export default function MLTileDetailSidebar({
   const currentIndex = sortedTiles.findIndex((t) => t.id === selectedTile.id);
 
   // Auto-select first tile if none is selected (e.g., after generating sub-tiles)
+  // BUT don't auto-select if all tiles are already completed
   useEffect(() => {
     if (currentIndex === -1 && sortedTiles.length > 0) {
-      // No tile is selected but we have tiles - select the first one
-      onTileSelect(sortedTiles[0].id);
+      // Check if there are any pending tiles (considering optimistic statuses)
+      const hasPendingTiles = sortedTiles.some((t) => {
+        const optimisticStatus = optimisticStatusesRef.current.get(t.id);
+        const effectiveStatus = optimisticStatus || t.status || "pending";
+        return effectiveStatus === "pending";
+      });
+
+      // Only auto-select if there are pending tiles
+      // This prevents re-selecting when user has completed all tiles
+      if (hasPendingTiles) {
+        onTileSelect(sortedTiles[0].id);
+      }
     }
   }, [currentIndex, sortedTiles, onTileSelect]);
 
@@ -118,11 +129,12 @@ export default function MLTileDetailSidebar({
     const nextInResolution = sortedTiles.find((t, idx) => idx > currentIndex && getEffectiveStatus(t) === "pending");
     if (nextInResolution) return nextInResolution;
 
-    // Second priority: look for ANY pending tiles in current resolution (wrap around to beginning)
-    const anyPendingInCurrentRes = sortedTiles.find((t) => getEffectiveStatus(t) === "pending");
-    if (anyPendingInCurrentRes) return anyPendingInCurrentRes;
+    // Second priority: wrap around within current resolution to complete all tiles
+    // Look for ANY pending tiles from the beginning (before current index)
+    const wrapAroundInCurrentRes = sortedTiles.find((t) => getEffectiveStatus(t) === "pending");
+    if (wrapAroundInCurrentRes) return wrapAroundInCurrentRes;
 
-    // Third priority: move to next resolution and find first pending tile
+    // Third priority: current resolution is 100% complete, move to next resolution
     const resolutions: TileResolution[] = [20, 10, 5];
     const currentResIdx = resolutions.indexOf(selectedResolution);
     for (let i = currentResIdx + 1; i < resolutions.length; i++) {
@@ -151,6 +163,7 @@ export default function MLTileDetailSidebar({
       }
     }
 
+    // No pending tiles found in any resolution - all complete!
     return null;
   }, [sortedTiles, currentIndex, selectedResolution, baseTileFamily, onResolutionChange]);
 
@@ -226,12 +239,8 @@ export default function MLTileDetailSidebar({
         if (next) {
           onTileSelect(next.id);
         } else {
-          // No more pending tiles - all complete! Zoom to base tile then deselect
-          onTileSelect(baseTile.id);
-          // After brief delay, deselect to show the completed base tile
-          setTimeout(() => {
-            onTileSelect(null);
-          }, 800); // Give time to zoom to base tile before deselecting
+          // No more pending tiles - all complete! Just deselect immediately
+          onTileSelect(null);
         }
 
         // Clear the delaying flag after navigation
@@ -250,7 +259,7 @@ export default function MLTileDetailSidebar({
         });
       }, 200); // 200ms delay to show button state change
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile, optimisticStatuses],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, optimisticStatuses],
   );
 
   // Handle clear rating (no auto-advance)
@@ -290,31 +299,39 @@ export default function MLTileDetailSidebar({
     async (status: TileStatus) => {
       const tileIdToUpdate = selectedTile.id; // Capture ID before navigation
 
-      // Set optimistic status BEFORE finding next tile so it knows this one is marked
+      // Set optimistic status immediately for instant UI feedback
       const updatedStatuses = new Map(optimisticStatuses);
       updatedStatuses.set(tileIdToUpdate, status);
+      setOptimisticStatuses(updatedStatuses);
+
+      // CRITICAL: Update the ref synchronously so findNextPendingTile sees the change
       optimisticStatusesRef.current = updatedStatuses;
 
-      // Auto-advance to next pending tile BEFORE updating status
-      // This allows the animation to start before the refetch happens
-      const next = findNextPendingTile();
-      if (next) {
-        onTileSelect(next.id);
-      } else {
-        // No more pending tiles - all complete! Zoom to base tile then deselect
-        onTileSelect(baseTile.id);
-        // After brief delay, deselect to show the completed base tile
-        setTimeout(() => {
-          onTileSelect(null);
-        }, 800); // Give time to zoom to base tile before deselecting
-      }
-
-      // Update status after a small delay to let the animation complete smoothly
+      // Wait briefly to show visual feedback, then advance
       setTimeout(() => {
-        onStatusUpdate(tileIdToUpdate, status);
-      }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
+        // Auto-advance to next pending tile
+        const next = findNextPendingTile();
+        if (next) {
+          onTileSelect(next.id);
+        } else {
+          // No more pending tiles - all complete! Just deselect immediately
+          onTileSelect(null);
+        }
+
+        // Update status in background after navigating
+        onStatusUpdate(tileIdToUpdate, status).then(() => {
+          // Clear optimistic status after DB update completes
+          setOptimisticStatuses((prev) => {
+            const next = new Map(prev);
+            next.delete(tileIdToUpdate);
+            return next;
+          });
+          // Also clear from ref
+          optimisticStatusesRef.current.delete(tileIdToUpdate);
+        });
+      }, 250); // Visual feedback delay - show button selection before navigating
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile, optimisticStatuses],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, optimisticStatuses],
   );
 
   // Check if all tiles are completed
