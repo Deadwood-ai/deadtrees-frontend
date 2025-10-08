@@ -314,7 +314,7 @@ export default function MLTileMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only initialize map once on mount
 
-  // Expose function to get current tile geometry from map
+  // Expose function to get current tile geometry from map (run once on mount)
   useEffect(() => {
     if (!onGetTileGeometry) return;
 
@@ -330,12 +330,15 @@ export default function MLTileMap({
       const geom = feature.getGeometry();
       if (!geom) return null;
 
-      return geoJsonFormatter.writeGeometryObject(geom) as GeoJSON.Polygon;
+      // Create formatter on demand to avoid closure issues
+      const formatter = new GeoJSON();
+      return formatter.writeGeometryObject(geom) as GeoJSON.Polygon;
     };
 
-    // Call the parent's callback with our getter function
+    // Call the parent's callback with our getter function once
     onGetTileGeometry(getTileGeometry);
-  }, [onGetTileGeometry, geoJsonFormatter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - the getter uses refs so it always accesses latest state
 
   // Render features when tiles change
   useEffect(() => {
@@ -495,7 +498,26 @@ export default function MLTileMap({
 
   // Zoom to specific tile and sync selection when focusTileId changes
   useEffect(() => {
-    if (!mapRef.current || !focusTileId) return;
+    if (!mapRef.current) return;
+
+    const select = selectRef.current;
+    const layer = tileLayerRef.current;
+
+    // If focusTileId is null, clear selection
+    if (!focusTileId) {
+      if (select) {
+        select.getFeatures().clear();
+      }
+      if (layer) {
+        const src = layer.getSource();
+        if (src) {
+          // Clear isSelected property on all features
+          src.getFeatures().forEach((f) => f.set("isSelected", false));
+        }
+      }
+      previousFocusTileIdRef.current = null;
+      return;
+    }
 
     // Only zoom if focusTileId actually changed
     if (previousFocusTileIdRef.current === focusTileId) return;
@@ -508,8 +530,6 @@ export default function MLTileMap({
     if (!tile) return;
 
     // Sync the OpenLayers Select interaction with focusTileId
-    const select = selectRef.current;
-    const layer = tileLayerRef.current;
     if (select && layer) {
       const src = layer.getSource();
       if (src) {

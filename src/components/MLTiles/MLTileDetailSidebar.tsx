@@ -209,11 +209,12 @@ export default function MLTileDetailSidebar({
       const tileIdToUpdate = selectedTile.id;
 
       // Set optimistic status immediately for instant UI feedback
-      setOptimisticStatuses((prev) => {
-        const next = new Map(prev);
-        next.set(tileIdToUpdate, status);
-        return next;
-      });
+      const updatedStatuses = new Map(optimisticStatuses);
+      updatedStatuses.set(tileIdToUpdate, status);
+      setOptimisticStatuses(updatedStatuses);
+
+      // CRITICAL: Update the ref synchronously so findNextPendingTile sees the change
+      optimisticStatusesRef.current = updatedStatuses;
 
       // Mark that we're delaying navigation to hide the clear button
       setIsDelayingNavigation(true);
@@ -244,10 +245,12 @@ export default function MLTileDetailSidebar({
             next.delete(tileIdToUpdate);
             return next;
           });
+          // Also clear from ref
+          optimisticStatusesRef.current.delete(tileIdToUpdate);
         });
       }, 200); // 200ms delay to show button state change
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile, optimisticStatuses],
   );
 
   // Handle clear rating (no auto-advance)
@@ -255,11 +258,12 @@ export default function MLTileDetailSidebar({
     const tileIdToUpdate = selectedTile.id;
 
     // Set optimistic status to pending immediately
-    setOptimisticStatuses((prev) => {
-      const next = new Map(prev);
-      next.set(tileIdToUpdate, "pending");
-      return next;
-    });
+    const updatedStatuses = new Map(optimisticStatuses);
+    updatedStatuses.set(tileIdToUpdate, "pending");
+    setOptimisticStatuses(updatedStatuses);
+
+    // Update ref synchronously
+    optimisticStatusesRef.current = updatedStatuses;
 
     // Mark that we're in a transition state
     setIsDelayingNavigation(true);
@@ -275,14 +279,21 @@ export default function MLTileDetailSidebar({
           next.delete(tileIdToUpdate);
           return next;
         });
+        // Also clear from ref
+        optimisticStatusesRef.current.delete(tileIdToUpdate);
       }, 100);
     });
-  }, [selectedTile, onStatusUpdate]);
+  }, [selectedTile, onStatusUpdate, optimisticStatuses]);
 
   // Handle status change with auto-advance (for keyboard shortcuts)
   const handleStatusChangeWithAdvance = useCallback(
     async (status: TileStatus) => {
       const tileIdToUpdate = selectedTile.id; // Capture ID before navigation
+
+      // Set optimistic status BEFORE finding next tile so it knows this one is marked
+      const updatedStatuses = new Map(optimisticStatuses);
+      updatedStatuses.set(tileIdToUpdate, status);
+      optimisticStatusesRef.current = updatedStatuses;
 
       // Auto-advance to next pending tile BEFORE updating status
       // This allows the animation to start before the refetch happens
@@ -303,7 +314,7 @@ export default function MLTileDetailSidebar({
         onStatusUpdate(tileIdToUpdate, status);
       }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
     },
-    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile],
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect, baseTile, optimisticStatuses],
   );
 
   // Check if all tiles are completed
