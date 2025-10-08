@@ -560,8 +560,8 @@ export default function MLTileMap({
 
       // Use fit with padding for smooth animation
       view.fit(extent, {
-        padding: [80, 80, 80, 80],
-        maxZoom: 19,
+        padding: [30, 30, 30, 30], // Reduced padding for closer zoom
+        maxZoom: 22, // Increased max zoom level for smaller tiles
         duration: 400,
       });
 
