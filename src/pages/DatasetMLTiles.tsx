@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, message, Modal, Progress } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useDatasetById } from "../hooks/useDatasets";
 import {
   useTileSessionLock,
@@ -9,6 +9,7 @@ import {
   useClearTileSessionLock,
   useTileProgress,
   useMLTiles,
+  useCompleteTileGeneration,
 } from "../hooks/useMLTiles";
 import { useAuth } from "../hooks/useAuthProvider";
 import MLTileUnifiedView from "../components/MLTiles/MLTileUnifiedView";
@@ -25,6 +26,7 @@ export default function DatasetMLTiles() {
   const { mutateAsync: clearLock } = useClearTileSessionLock();
   const { data: progress } = useTileProgress(dataset?.id);
   const { data: allTiles = [] } = useMLTiles(dataset?.id);
+  const { mutateAsync: completeTileGeneration } = useCompleteTileGeneration();
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -42,6 +44,14 @@ export default function DatasetMLTiles() {
     const totalTiles = total10 + total5;
     const completedTiles = good10 + good5 + bad10 + bad5;
     return totalTiles > 0 ? Math.round((completedTiles / totalTiles) * 100) : 0;
+  }, [progress]);
+
+  // Check if all tiles are marked (no pending tiles) and we have tiles
+  const allTilesMarked = useMemo(() => {
+    if (!progress) return false;
+    const hasTiles = progress.total_10cm > 0 || progress.total_5cm > 0;
+    const noPending = progress.pending_10cm === 0 && progress.pending_5cm === 0;
+    return hasTiles && noPending;
   }, [progress]);
 
   // Acquire lock once on mount; clear on unmount
@@ -120,6 +130,59 @@ export default function DatasetMLTiles() {
     }
   };
 
+  const handleCompleteAndExit = () => {
+    Modal.confirm({
+      title: "Complete ML Tile QA",
+      content: (
+        <div>
+          <p>Mark this dataset as complete? This will:</p>
+          <ul className="ml-4 mt-2 list-disc">
+            <li>End your QA session</li>
+            <li>Mark the dataset as having ML tiles completed</li>
+            <li>Release the session lock for other users</li>
+          </ul>
+          <p className="mt-2 font-semibold">
+            Progress: {(progress?.good_10cm || 0) + (progress?.good_5cm || 0)} good,{" "}
+            {(progress?.bad_10cm || 0) + (progress?.bad_5cm || 0)} bad tiles marked
+          </p>
+        </div>
+      ),
+      okText: "Complete & Exit",
+      cancelText: "Cancel",
+      okType: "primary",
+      icon: <CheckCircleOutlined className="text-green-600" />,
+      onOk: async () => {
+        if (!dataset?.id) return;
+
+        try {
+          message.loading({ content: "Completing ML tile QA...", key: "complete" });
+
+          // Mark as complete in database
+          await completeTileGeneration(dataset.id);
+
+          // Clear the lock
+          await clearLock(dataset.id);
+          lockAcquiredRef.current = false;
+
+          message.success({
+            content: "ML tile QA completed successfully!",
+            key: "complete",
+            duration: 3,
+          });
+
+          // Navigate back to dataset list
+          navigate("/dataset-audit");
+        } catch (error) {
+          console.error("Failed to complete tile generation:", error);
+          message.error({
+            content: "Failed to complete ML tile QA. Please try again.",
+            key: "complete",
+          });
+        }
+      },
+    });
+  };
+
   if (!dataset) {
     return <div className="p-6">Loading dataset...</div>;
   }
@@ -166,6 +229,19 @@ export default function DatasetMLTiles() {
               size={48}
               strokeColor={{ "0%": "#108ee9", "100%": "#87d068" }}
             />
+
+            {/* Complete & Exit Button - only show when all tiles are marked */}
+            {allTilesMarked && (
+              <Button
+                type="primary"
+                size="large"
+                icon={<CheckCircleOutlined />}
+                onClick={handleCompleteAndExit}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Complete & Exit
+              </Button>
+            )}
           </div>
         )}
       </div>

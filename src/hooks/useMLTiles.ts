@@ -389,9 +389,16 @@ export function useCompleteTileGeneration() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_data, datasetId) => {
-      queryClient.invalidateQueries({ queryKey: ["datasets"] });
-      queryClient.invalidateQueries({ queryKey: ["tile-session-lock", datasetId] });
+    onSuccess: async (_data, datasetId) => {
+      // Invalidate all dataset-related queries to ensure UI updates
+      await queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      await queryClient.invalidateQueries({ queryKey: ["dataset-by-id", datasetId] });
+      await queryClient.invalidateQueries({ queryKey: ["tile-session-lock", datasetId] });
+      await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
+
+      // Force refetch to ensure fresh data
+      await queryClient.refetchQueries({ queryKey: ["datasets"] });
     },
   });
 }

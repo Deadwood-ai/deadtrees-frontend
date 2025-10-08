@@ -90,6 +90,8 @@ export interface IDataset {
   has_deadwood_prediction: boolean;
   ortho_upload_runtime?: number | null;
   freidata_doi?: string | null;
+  has_ml_tiles: boolean | null;
+  ml_tiles_completed_at?: string | null;
 
   // Audit status fields (from database view)
   final_assessment: "ready" | "fixable_issues" | "no_issues" | "exclude_completely" | null;
