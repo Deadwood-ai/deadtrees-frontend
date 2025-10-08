@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useCallback, useState } from "react";
-import { Button, Card, Progress, Radio, Space, Statistic, Typography, Alert } from "antd";
+import { Button, Card, Progress, Radio, Space, Statistic, Typography, Alert, Tabs } from "antd";
 import {
   LeftOutlined,
   RightOutlined,
@@ -33,6 +33,8 @@ export default function MLTileDetailSidebar({
   onGenerateSubTiles,
 }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Map<number, TileStatus>>(new Map());
+  const [isDelayingNavigation, setIsDelayingNavigation] = useState(false);
   // Get all tiles for the selected base tile
   const baseTileFamily = useMemo(() => {
     const baseIndex = baseTile.tile_index;
@@ -172,11 +174,81 @@ export default function MLTileDetailSidebar({
     }
   }, [baseTile, onGenerateSubTiles]);
 
-  // Handle status change with auto-advance
-  const handleStatusChange = useCallback(
-    async (status: TileStatus | null) => {
-      const currentStatus = selectedTile.status;
-      const newStatus = status === currentStatus ? "pending" : status;
+  // Get the current display status (optimistic if available, otherwise actual)
+  const displayStatus = optimisticStatuses.get(selectedTile.id) || selectedTile.status || "pending";
+
+  // Handle status change from radio button (instant with auto-advance after brief delay)
+  const handleRadioStatusChange = useCallback(
+    async (status: TileStatus) => {
+      const tileIdToUpdate = selectedTile.id;
+
+      // Set optimistic status immediately for instant UI feedback
+      setOptimisticStatuses((prev) => {
+        const next = new Map(prev);
+        next.set(tileIdToUpdate, status);
+        return next;
+      });
+
+      // Mark that we're delaying navigation to hide the clear button
+      setIsDelayingNavigation(true);
+
+      // Wait briefly to show visual feedback, then advance and update
+      setTimeout(() => {
+        // Auto-advance to next pending tile
+        const next = findNextPendingTile();
+        if (next) {
+          onTileSelect(next.id);
+        }
+
+        // Clear the delaying flag after navigation
+        setIsDelayingNavigation(false);
+
+        // Update status in background after navigating
+        onStatusUpdate(tileIdToUpdate, status).then(() => {
+          // Clear optimistic status after DB update completes
+          setOptimisticStatuses((prev) => {
+            const next = new Map(prev);
+            next.delete(tileIdToUpdate);
+            return next;
+          });
+        });
+      }, 200); // 200ms delay to show button state change
+    },
+    [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect],
+  );
+
+  // Handle clear rating (no auto-advance)
+  const handleClearRating = useCallback(async () => {
+    const tileIdToUpdate = selectedTile.id;
+
+    // Set optimistic status to pending immediately
+    setOptimisticStatuses((prev) => {
+      const next = new Map(prev);
+      next.set(tileIdToUpdate, "pending");
+      return next;
+    });
+
+    // Mark that we're in a transition state
+    setIsDelayingNavigation(true);
+
+    // Update status immediately in background
+    onStatusUpdate(tileIdToUpdate, "pending").then(() => {
+      // Wait a bit after DB update before clearing optimistic status
+      // This ensures the refetch has completed and we have the new data
+      setTimeout(() => {
+        setIsDelayingNavigation(false);
+        setOptimisticStatuses((prev) => {
+          const next = new Map(prev);
+          next.delete(tileIdToUpdate);
+          return next;
+        });
+      }, 100);
+    });
+  }, [selectedTile, onStatusUpdate]);
+
+  // Handle status change with auto-advance (for keyboard shortcuts)
+  const handleStatusChangeWithAdvance = useCallback(
+    async (status: TileStatus) => {
       const tileIdToUpdate = selectedTile.id; // Capture ID before navigation
 
       // Auto-advance to next pending tile BEFORE updating status
@@ -187,11 +259,9 @@ export default function MLTileDetailSidebar({
       }
 
       // Update status after a small delay to let the animation complete smoothly
-      if (newStatus) {
-        setTimeout(() => {
-          onStatusUpdate(tileIdToUpdate, newStatus);
-        }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
-      }
+      setTimeout(() => {
+        onStatusUpdate(tileIdToUpdate, status);
+      }, 500); // Delay to allow animation to complete (400ms duration + 100ms buffer)
     },
     [selectedTile, findNextPendingTile, onStatusUpdate, onTileSelect],
   );
@@ -209,15 +279,15 @@ export default function MLTileDetailSidebar({
       switch (e.key.toLowerCase()) {
         case "g":
           e.preventDefault();
-          handleStatusChange("good");
+          handleStatusChangeWithAdvance("good");
           break;
         case "b":
           e.preventDefault();
-          handleStatusChange("bad");
+          handleStatusChangeWithAdvance("bad");
           break;
         case "p":
           e.preventDefault();
-          handleStatusChange(null);
+          handleStatusChangeWithAdvance("pending");
           break;
         case "arrowright":
           e.preventDefault();
@@ -232,10 +302,10 @@ export default function MLTileDetailSidebar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrevious, handleStatusChange]);
+  }, [handleNext, handlePrevious, handleStatusChangeWithAdvance]);
 
   return (
-    <div className="flex w-96 flex-shrink-0 flex-col border-l bg-white">
+    <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-white">
       {/* Base Tile Summary */}
       <Card size="small" className="border-0 border-b">
         <div className="mb-3">
@@ -273,80 +343,71 @@ export default function MLTileDetailSidebar({
 
       {/* Resolution Selector - only show if sub-tiles exist */}
       {hasSubTiles && (
-        <div className="border-b p-4">
-          <div className="mb-2 text-sm font-medium text-gray-700">Resolution</div>
-          <Radio.Group
-            value={selectedResolution}
-            onChange={(e) => onResolutionChange(e.target.value)}
-            buttonStyle="solid"
-            className="w-full"
-          >
-            {baseTile.status === "pending" && (
-              <Radio.Button value={20} className="w-1/3 text-center">
-                20cm
-              </Radio.Button>
-            )}
-            <Radio.Button
-              value={10}
-              className={baseTile.status === "pending" ? "w-1/3 text-center" : "w-1/2 text-center"}
-            >
-              10cm
-            </Radio.Button>
-            <Radio.Button
-              value={5}
-              className={baseTile.status === "pending" ? "w-1/3 text-center" : "w-1/2 text-center"}
-            >
-              5cm
-            </Radio.Button>
-          </Radio.Group>
-        </div>
+        <Tabs
+          activeKey={selectedResolution.toString()}
+          onChange={(key) => onResolutionChange(Number(key) as TileResolution)}
+          items={[
+            ...(baseTile.status === "pending"
+              ? [
+                  {
+                    key: "20",
+                    label: "20cm",
+                  },
+                ]
+              : []),
+            {
+              key: "10",
+              label: "10cm",
+            },
+            {
+              key: "5",
+              label: "5cm",
+            },
+          ]}
+          size="large"
+          centered
+        />
       )}
 
       {/* Action Buttons - only show if sub-tiles exist */}
       {hasSubTiles && (
-        <>
-          {/* Row 1: Good and Bad Buttons */}
+        <div className="flex-1">
+          {/* Row 1: Rating Radio Group */}
           <div className="border-b p-4">
             <div className="mb-2 text-sm text-gray-600">Rate this tile:</div>
-            <div className="flex w-full gap-2">
-              <Button
-                size="large"
-                type={selectedTile.status === "good" ? "primary" : "default"}
-                onClick={() => handleStatusChange(selectedTile.status === "good" ? null : "good")}
-                className="h-12 flex-1"
-              >
+            <Radio.Group
+              value={displayStatus === "pending" ? undefined : displayStatus}
+              onChange={(e) => handleRadioStatusChange(e.target.value as TileStatus)}
+              buttonStyle="solid"
+              size="large"
+              className="w-full"
+            >
+              <Radio.Button value="good" className="w-1/2 text-center">
                 Good (G)
-              </Button>
-              <Button
-                size="large"
-                type={selectedTile.status === "bad" ? "primary" : "default"}
-                onClick={() => handleStatusChange(selectedTile.status === "bad" ? null : "bad")}
-                className="h-12 flex-1"
-              >
+              </Radio.Button>
+              <Radio.Button value="bad" className="w-1/2 text-center">
                 Bad (B)
+              </Radio.Button>
+            </Radio.Group>
+            {displayStatus !== "pending" && !isDelayingNavigation && (
+              <Button block onClick={handleClearRating} className="mt-3">
+                Clear Rating
               </Button>
-            </div>
+            )}
           </div>
 
           {/* Row 2: Navigation Buttons */}
           <div className="flex-1 border-b p-4">
             <div className="flex w-full items-center justify-center gap-2">
-              <Button
-                size="large"
-                icon={<LeftOutlined />}
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-                className="h-12"
-              />
-              <Button size="large" onClick={handleJumpToNextPending} className="h-12 flex-1">
+              <Button icon={<LeftOutlined />} onClick={handlePrevious} disabled={currentIndex === 0} className="px-4" />
+              <Button onClick={handleJumpToNextPending} className="flex-1 px-4">
                 Go to Next Pending
               </Button>
               <Button
-                size="large"
                 icon={<RightOutlined />}
                 onClick={handleNext}
                 disabled={currentIndex === sortedTiles.length - 1}
-                className="h-12"
+                className="px-4"
               />
             </div>
 
@@ -357,7 +418,7 @@ export default function MLTileDetailSidebar({
               </Typography.Text>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Initial Base Tile: Generate Sub-tiles */}
@@ -372,12 +433,10 @@ export default function MLTileDetailSidebar({
             />
             <Button
               type="primary"
-              size="large"
               block
               icon={<ThunderboltOutlined />}
               onClick={handleGenerateSubTiles}
               loading={isGenerating}
-              className="h-12"
             >
               Generate Sub-tiles
             </Button>
@@ -386,7 +445,7 @@ export default function MLTileDetailSidebar({
       )}
 
       {/* Delete Button - always at bottom */}
-      <div className="border-t p-4">
+      <div className="mt-auto border-t p-4">
         <Button danger block icon={<DeleteOutlined />} onClick={() => onDelete(selectedTile.id)}>
           Delete Tile
         </Button>

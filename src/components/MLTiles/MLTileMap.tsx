@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { Map, View } from "ol";
 import TileLayer from "ol/layer/Tile";
 import { XYZ } from "ol/source";
@@ -6,6 +6,7 @@ import TileLayerWebGL from "ol/layer/WebGLTile";
 import { GeoTIFF } from "ol/source";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import VectorTileLayer from "ol/layer/VectorTile";
 import type Layer from "ol/layer/Layer";
 import { Style, Stroke, Fill } from "ol/style";
 import Feature from "ol/Feature";
@@ -16,9 +17,16 @@ import { click } from "ol/events/condition";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, intersect, area } from "@turf/turf";
 import { useUpdateTileGeometry } from "../../hooks/useMLTiles";
 import "ol/ol.css";
-import { message } from "antd";
+import { message, Checkbox, Space } from "antd";
 import { IMLTile, TileResolution } from "../../types/mlTiles";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
+import {
+  createDeadwoodVectorLayer,
+  createForestCoverVectorLayer,
+  createAOIVectorLayer,
+  createAOIMaskLayer,
+} from "../DatasetDetailsMap/createVectorLayer";
 import { Settings } from "../../config";
 
 interface Props {
@@ -48,15 +56,30 @@ export default function MLTileMap({
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+
+  // Layer visibility state
+  const [showAOI, setShowAOI] = useState(true);
+  const [showDeadwood, setShowDeadwood] = useState(true);
+  const [showForestCover, setShowForestCover] = useState(true);
   const tileLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
   const aoiLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const aoiMaskLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const deadwoodLayerRef = useRef<VectorTileLayer | null>(null);
+  const forestCoverLayerRef = useRef<VectorTileLayer | null>(null);
   const translateRef = useRef<Translate | null>(null);
   const selectRef = useRef<Select | null>(null);
   const hasInitialFitRef = useRef<boolean>(false);
   const tilesRef = useRef<IMLTile[] | undefined>(tiles);
+  const previousFocusTileIdRef = useRef<number | null>(null);
   const { mutate: updateTileGeometry } = useUpdateTileGeometry();
   const { data: aoiData } = useDatasetAOI(datasetId);
+
+  // Fetch label types for predictions
+  const { deadwood, forestCover } = useDatasetLabelTypes({
+    datasetId,
+    enabled: !!datasetId,
+  });
 
   // Keep tilesRef in sync with tiles prop
   useEffect(() => {
@@ -122,12 +145,14 @@ export default function MLTileMap({
   );
 
   // Initialize OL map and vector layers
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const basemap = new TileLayer({
-      source: new XYZ({ url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" }),
+      source: new XYZ({
+        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        maxZoom: 19, // OSM only provides tiles up to zoom 19
+      }),
     });
 
     const vector = new VectorLayer({
@@ -161,18 +186,14 @@ export default function MLTileMap({
       },
     });
 
-    const aoiLayer = new VectorLayer({
-      source: new VectorSource(),
-      style: new Style({
-        fill: new Fill({ color: "rgba(0,0,0,0.05)" }),
-        stroke: new Stroke({ color: "#444", width: 1 }),
-      }),
+    const view = new View({
+      center: [0, 0],
+      zoom: 2,
+      maxZoom: 22, // Allow zooming to tile level, but basemap stops at 19
+      projection: "EPSG:3857",
     });
-    aoiLayerRef.current = aoiLayer;
 
-    const view = new View({ center: [0, 0], zoom: 2, projection: "EPSG:3857" });
-
-    const layers: (TileLayer<XYZ> | TileLayerWebGL | VectorLayer<VectorSource>)[] = [basemap];
+    const layers: (TileLayer<XYZ> | TileLayerWebGL | VectorLayer<VectorSource> | VectorTileLayer)[] = [basemap];
     if (cogPath) {
       const ortho = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -192,7 +213,11 @@ export default function MLTileMap({
       orthoLayerRef.current = ortho;
       layers.push(ortho);
     }
-    layers.push(aoiLayer, vector);
+
+    // AOI and prediction layers will be added dynamically via separate useEffect
+
+    vector.setZIndex(100); // ML tiles on top of everything
+    layers.push(vector);
 
     const map = new Map({
       target: mapContainerRef.current,
@@ -279,44 +304,55 @@ export default function MLTileMap({
       tileLayerRef.current = null;
       translateRef.current = null;
       selectRef.current = null;
+      aoiLayerRef.current = null;
+      aoiMaskLayerRef.current = null;
+      deadwoodLayerRef.current = null;
+      forestCoverLayerRef.current = null;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only initialize map once on mount
 
   // Render features when tiles change
   useEffect(() => {
     const layer = tileLayerRef.current;
     const map = mapRef.current;
-    const select = selectRef.current;
     if (!layer || !map) return;
     const src = layer.getSource();
     if (!src) return;
 
-    src.clear();
+    // Get existing features
+    const existingFeatures = src.getFeatures();
+    const newIds = new Set((tiles || []).map((t) => t.id));
 
-    // Re-add all features
-    const newFeatures: Feature[] = [];
-    (tiles || []).forEach((t) => {
-      const feature = new Feature({
-        geometry: geoJsonFormatter.readGeometry(t.geometry, {
-          dataProjection: "EPSG:3857",
-          featureProjection: "EPSG:3857",
-        }) as Polygon,
-      });
-      feature.set("tileId", t.id);
-      feature.set("status", t.status);
-      feature.set("isSelected", t.id === focusTileId);
-      src.addFeature(feature);
-      newFeatures.push(feature);
+    // Remove features that no longer exist
+    existingFeatures.forEach((f) => {
+      const tileId = f.get("tileId");
+      if (!newIds.has(tileId)) {
+        src.removeFeature(f);
+      }
     });
 
-    // Sync selection with focusTileId if it exists
-    if (select && focusTileId) {
-      const featureToSelect = newFeatures.find((f) => f.get("tileId") === focusTileId);
-      if (featureToSelect) {
-        select.getFeatures().clear();
-        select.getFeatures().push(featureToSelect);
+    // Update existing features and add new ones
+    (tiles || []).forEach((t) => {
+      const existingFeature = existingFeatures.find((f) => f.get("tileId") === t.id);
+
+      if (existingFeature) {
+        // Update existing feature properties
+        existingFeature.set("status", t.status);
+        // Geometry shouldn't change, but status might
+      } else {
+        // Add new feature
+        const feature = new Feature({
+          geometry: geoJsonFormatter.readGeometry(t.geometry, {
+            dataProjection: "EPSG:3857",
+            featureProjection: "EPSG:3857",
+          }) as Polygon,
+        });
+        feature.set("tileId", t.id);
+        feature.set("status", t.status);
+        src.addFeature(feature);
       }
-    }
+    });
 
     // Only auto-fit on first load if tiles exist and we haven't done initial fit yet
     if (tiles && tiles.length > 0 && !hasInitialFitRef.current) {
@@ -324,40 +360,124 @@ export default function MLTileMap({
       map.getView().fit(extent, { padding: [50, 50, 50, 50], maxZoom: 18, duration: 500 });
       hasInitialFitRef.current = true;
     }
-  }, [tiles, geoJsonFormatter, focusTileId]);
+  }, [tiles, geoJsonFormatter]);
 
-  // Render AOI and fit view
+  // Add/update prediction layers when label IDs change
   useEffect(() => {
     if (!mapRef.current) return;
     const map = mapRef.current;
-    const aoiLayer = aoiLayerRef.current;
-    if (!aoiLayer) return;
-    const src = aoiLayer.getSource();
-    if (!src) return;
-    src.clear();
-    if (aoiGeometry) {
-      const feature = new Feature({ geometry: aoiGeometry });
-      src.addFeature(feature);
-      const extent = aoiGeometry.getExtent();
-      map.getView().fit(extent, { padding: [20, 20, 20, 20], maxZoom: 19, duration: 200 });
+
+    // Remove existing prediction layers
+    if (forestCoverLayerRef.current) {
+      map.removeLayer(forestCoverLayerRef.current);
+      forestCoverLayerRef.current = null;
     }
-    if (orthoLayerRef.current) {
-      const source = orthoLayerRef.current.getSource();
-      source
-        ?.getView()
-        .then((vo) => {
-          const viewOptions = vo as { extent?: [number, number, number, number] };
-          if (viewOptions?.extent) {
-            map.getView().fit(viewOptions.extent, { padding: [20, 20, 20, 20], maxZoom: 19, duration: 200 });
-          }
-        })
-        .catch(() => {});
+    if (deadwoodLayerRef.current) {
+      map.removeLayer(deadwoodLayerRef.current);
+      deadwoodLayerRef.current = null;
     }
-  }, [aoiGeometry, cogPath]);
+
+    // Add forest cover prediction layer if available (z-index 12)
+    if (forestCover.data?.id) {
+      const forestCoverLayer = createForestCoverVectorLayer(forestCover.data.id);
+      if (forestCoverLayer) {
+        forestCoverLayer.setZIndex(12); // Above AOI layers
+        forestCoverLayerRef.current = forestCoverLayer;
+        map.addLayer(forestCoverLayer);
+        // Visibility will be set by the separate toggle effect
+      }
+    }
+
+    // Add deadwood prediction layer if available (z-index 13)
+    if (deadwood.data?.id) {
+      const deadwoodLayer = createDeadwoodVectorLayer(deadwood.data.id);
+      if (deadwoodLayer) {
+        deadwoodLayer.setZIndex(13); // Above forest cover
+        deadwoodLayerRef.current = deadwoodLayer;
+        map.addLayer(deadwoodLayer);
+        // Visibility will be set by the separate toggle effect
+      }
+    }
+  }, [deadwood.data?.id, forestCover.data?.id]);
+
+  // Toggle deadwood prediction layer visibility
+  useEffect(() => {
+    if (deadwoodLayerRef.current) {
+      deadwoodLayerRef.current.setVisible(showDeadwood);
+    }
+  }, [showDeadwood]);
+
+  // Toggle forest cover prediction layer visibility
+  useEffect(() => {
+    if (forestCoverLayerRef.current) {
+      forestCoverLayerRef.current.setVisible(showForestCover);
+    }
+  }, [showForestCover]);
+
+  // Add/update AOI layers when geometry becomes available
+  useEffect(() => {
+    if (!mapRef.current || !aoiData?.geometry) return;
+    const map = mapRef.current;
+
+    // Remove existing AOI layers if they exist
+    if (aoiLayerRef.current) {
+      map.removeLayer(aoiLayerRef.current);
+      aoiLayerRef.current = null;
+    }
+    if (aoiMaskLayerRef.current) {
+      map.removeLayer(aoiMaskLayerRef.current);
+      aoiMaskLayerRef.current = null;
+    }
+
+    // Use the original geometry from aoiData (in EPSG:4326)
+    // The helper functions handle the coordinate transformation internally
+    const aoiGeoJSON = aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+
+    // Create and add mask layer (grays out areas outside AOI)
+    const aoiMaskLayer = createAOIMaskLayer(aoiGeoJSON);
+    if (aoiMaskLayer) {
+      aoiMaskLayerRef.current = aoiMaskLayer;
+      aoiMaskLayer.setVisible(showAOI);
+      aoiMaskLayer.setZIndex(10); // Lowest prediction layer
+      map.addLayer(aoiMaskLayer);
+    }
+
+    // Create and add AOI boundary layer
+    const aoiLayer = createAOIVectorLayer(aoiGeoJSON);
+    if (aoiLayer) {
+      aoiLayerRef.current = aoiLayer;
+      aoiLayer.setVisible(showAOI);
+      aoiLayer.setZIndex(11); // Just above mask
+      map.addLayer(aoiLayer);
+    }
+  }, [aoiData?.geometry, showAOI]);
+
+  // Fit view to ortho extent
+  useEffect(() => {
+    if (!mapRef.current || !orthoLayerRef.current) return;
+    const map = mapRef.current;
+    const source = orthoLayerRef.current.getSource();
+    source
+      ?.getView()
+      .then((vo) => {
+        const viewOptions = vo as { extent?: [number, number, number, number] };
+        if (viewOptions?.extent) {
+          map.getView().fit(viewOptions.extent, { padding: [20, 20, 20, 20], maxZoom: 19, duration: 200 });
+        }
+      })
+      .catch(() => {});
+  }, [cogPath]);
 
   // Zoom to specific tile and sync selection when focusTileId changes
   useEffect(() => {
-    if (!mapRef.current || !focusTileId || !tiles) return;
+    if (!mapRef.current || !focusTileId) return;
+
+    // Only zoom if focusTileId actually changed
+    if (previousFocusTileIdRef.current === focusTileId) return;
+
+    // Use tilesRef to get current tiles without triggering on tiles changes
+    const tiles = tilesRef.current;
+    if (!tiles) return;
 
     const tile = tiles.find((t) => t.id === focusTileId);
     if (!tile) return;
@@ -399,14 +519,48 @@ export default function MLTileMap({
         maxZoom: 19,
         duration: 400,
       });
+
+      // Update the previous focus tile ID after zooming
+      previousFocusTileIdRef.current = focusTileId;
     } catch (error) {
       console.error("Failed to zoom to tile:", error);
     }
-  }, [focusTileId, tiles, geoJsonFormatter]);
+  }, [focusTileId, geoJsonFormatter]);
+
+  // Toggle AOI layer visibility (both boundary and mask)
+  useEffect(() => {
+    if (aoiLayerRef.current) {
+      aoiLayerRef.current.setVisible(showAOI);
+    }
+    if (aoiMaskLayerRef.current) {
+      aoiMaskLayerRef.current.setVisible(showAOI);
+    }
+  }, [showAOI]);
 
   return (
     <div className="relative h-full w-full">
       <div ref={mapContainerRef} className="h-full w-full bg-gray-100" />
+
+      {/* Layer visibility controls */}
+      <div className="absolute left-2 top-2 z-10 rounded bg-white/90 p-2 shadow">
+        <Space direction="vertical" size="small">
+          {aoiData?.geometry && (
+            <Checkbox checked={showAOI} onChange={(e) => setShowAOI(e.target.checked)}>
+              AOI
+            </Checkbox>
+          )}
+          {deadwood.data?.id && (
+            <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
+              Deadwood
+            </Checkbox>
+          )}
+          {forestCover.data?.id && (
+            <Checkbox checked={showForestCover} onChange={(e) => setShowForestCover(e.target.checked)}>
+              Forest Cover
+            </Checkbox>
+          )}
+        </Space>
+      </div>
     </div>
   );
 }
