@@ -8,7 +8,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import VectorTileLayer from "ol/layer/VectorTile";
 import type Layer from "ol/layer/Layer";
-import { Style, Stroke, Fill } from "ol/style";
+import { Style, Stroke } from "ol/style";
 import Feature from "ol/Feature";
 import { Polygon } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
@@ -162,27 +162,22 @@ export default function MLTileMap({
       style: (feature) => {
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let fillColor = "rgba(156,163,175,0.15)"; // gray for pending
-        let strokeColor = "#9ca3af"; // gray
-        let strokeWidth = 2;
+        let strokeColor = "#9ca3af"; // gray for pending
+        let strokeWidth = 3; // Thicker borders for better visibility
 
         if (status === "good") {
-          fillColor = "rgba(34,197,94,0.15)"; // green
-          strokeColor = "#22c55e";
+          strokeColor = "#22c55e"; // green
         } else if (status === "bad") {
-          fillColor = "rgba(239,68,68,0.15)"; // red
-          strokeColor = "#ef4444";
+          strokeColor = "#ef4444"; // red
         }
 
-        // Highlight selected tile
+        // Highlight selected tile with thicker blue border
         if (isSelected) {
           strokeColor = "#1890ff"; // blue
-          strokeWidth = 4;
-          fillColor = fillColor.replace("0.15", "0.25"); // slightly more opaque
+          strokeWidth = 5; // Extra thick for selected tile
         }
 
         return new Style({
-          fill: new Fill({ color: fillColor }),
           stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
         });
       },
@@ -234,7 +229,32 @@ export default function MLTileMap({
     const ro = new ResizeObserver(() => map.updateSize());
     ro.observe(mapContainerRef.current);
 
-    const select = new Select({ condition: click, layers: [vector] as Layer[] });
+    const select = new Select({
+      condition: click,
+      layers: [vector] as Layer[],
+      style: (feature) => {
+        // Use the same style as the vector layer (no fill, just stroke)
+        const status = feature.get("status") as string;
+        const isSelected = feature.get("isSelected") as boolean;
+        let strokeColor = "#9ca3af";
+        let strokeWidth = 3;
+
+        if (status === "good") {
+          strokeColor = "#22c55e";
+        } else if (status === "bad") {
+          strokeColor = "#ef4444";
+        }
+
+        if (isSelected) {
+          strokeColor = "#1890ff";
+          strokeWidth = 5;
+        }
+
+        return new Style({
+          stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+        });
+      },
+    });
     map.addInteraction(select);
     select.on("select", (e) => {
       const f = e.selected?.[0] as Feature<Polygon> | undefined;
@@ -390,6 +410,10 @@ export default function MLTileMap({
     }
   }, [tiles, geoJsonFormatter]);
 
+  // Memoize the label IDs to only trigger layer recreation when IDs actually change
+  const forestCoverId = useMemo(() => forestCover.data?.id, [forestCover.data?.id]);
+  const deadwoodId = useMemo(() => deadwood.data?.id, [deadwood.data?.id]);
+
   // Add/update prediction layers when label IDs change
   useEffect(() => {
     if (!mapRef.current) return;
@@ -406,8 +430,8 @@ export default function MLTileMap({
     }
 
     // Add forest cover prediction layer if available (z-index 12)
-    if (forestCover.data?.id) {
-      const forestCoverLayer = createForestCoverVectorLayer(forestCover.data.id);
+    if (forestCoverId) {
+      const forestCoverLayer = createForestCoverVectorLayer(forestCoverId);
       if (forestCoverLayer) {
         forestCoverLayer.setZIndex(12); // Above AOI layers
         forestCoverLayerRef.current = forestCoverLayer;
@@ -417,8 +441,8 @@ export default function MLTileMap({
     }
 
     // Add deadwood prediction layer if available (z-index 13)
-    if (deadwood.data?.id) {
-      const deadwoodLayer = createDeadwoodVectorLayer(deadwood.data.id);
+    if (deadwoodId) {
+      const deadwoodLayer = createDeadwoodVectorLayer(deadwoodId);
       if (deadwoodLayer) {
         deadwoodLayer.setZIndex(13); // Above forest cover
         deadwoodLayerRef.current = deadwoodLayer;
@@ -426,7 +450,7 @@ export default function MLTileMap({
         // Visibility will be set by the separate toggle effect
       }
     }
-  }, [deadwood.data?.id, forestCover.data?.id]);
+  }, [forestCoverId, deadwoodId]);
 
   // Toggle deadwood prediction layer visibility
   useEffect(() => {
