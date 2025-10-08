@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback, useState } from "react";
+import { useMemo, useEffect, useCallback, useState, useRef } from "react";
 import { Button, Card, Progress, Radio, Space, Statistic, Typography, Alert, Tabs } from "antd";
 import {
   LeftOutlined,
@@ -35,6 +35,13 @@ export default function MLTileDetailSidebar({
   const [isGenerating, setIsGenerating] = useState(false);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Map<number, TileStatus>>(new Map());
   const [isDelayingNavigation, setIsDelayingNavigation] = useState(false);
+
+  // Ref to always access the latest optimistic statuses (fixes stale closure in setTimeout)
+  const optimisticStatusesRef = useRef(optimisticStatuses);
+  useEffect(() => {
+    optimisticStatusesRef.current = optimisticStatuses;
+  }, [optimisticStatuses]);
+
   // Get all tiles for the selected base tile
   const baseTileFamily = useMemo(() => {
     const baseIndex = baseTile.tile_index;
@@ -86,16 +93,14 @@ export default function MLTileDetailSidebar({
   const baseTileProgress = useMemo(() => {
     const tiles10 = baseTileFamily.filter((t) => t.resolution_cm === 10);
     const tiles5 = baseTileFamily.filter((t) => t.resolution_cm === 5);
-    const good10 = tiles10.filter((t) => t.status === "good").length;
-    const good5 = tiles5.filter((t) => t.status === "good").length;
-    const bad10 = tiles10.filter((t) => t.status === "bad").length;
-    const bad5 = tiles5.filter((t) => t.status === "bad").length;
+    const completed10 = tiles10.filter((t) => t.status === "good" || t.status === "bad").length;
+    const completed5 = tiles5.filter((t) => t.status === "good" || t.status === "bad").length;
     const total = tiles10.length + tiles5.length;
-    const completed = good10 + good5 + bad10 + bad5;
+    const completed = completed10 + completed5;
     return {
-      good10,
+      completed10,
       total10: tiles10.length,
-      good5,
+      completed5,
       total5: tiles5.length,
       percent: total > 0 ? Math.round((completed / total) * 100) : 0,
     };
@@ -103,12 +108,18 @@ export default function MLTileDetailSidebar({
 
   // Find next pending tile
   const findNextPendingTile = useCallback(() => {
+    // Helper to get effective status (optimistic or actual)
+    // Use ref to always get the latest optimistic statuses
+    const getEffectiveStatus = (tile: IMLTile) => {
+      return optimisticStatusesRef.current.get(tile.id) || tile.status || "pending";
+    };
+
     // First priority: look for pending tiles in current resolution after current index
-    const nextInResolution = sortedTiles.find((t, idx) => idx > currentIndex && t.status === "pending");
+    const nextInResolution = sortedTiles.find((t, idx) => idx > currentIndex && getEffectiveStatus(t) === "pending");
     if (nextInResolution) return nextInResolution;
 
     // Second priority: look for ANY pending tiles in current resolution (wrap around to beginning)
-    const anyPendingInCurrentRes = sortedTiles.find((t) => t.status === "pending");
+    const anyPendingInCurrentRes = sortedTiles.find((t) => getEffectiveStatus(t) === "pending");
     if (anyPendingInCurrentRes) return anyPendingInCurrentRes;
 
     // Third priority: move to next resolution and find first pending tile
@@ -133,7 +144,7 @@ export default function MLTileDetailSidebar({
         return aCenterX - bCenterX;
       });
 
-      const pendingInNextRes = sortedNextRes.find((t) => t.status === "pending");
+      const pendingInNextRes = sortedNextRes.find((t) => getEffectiveStatus(t) === "pending");
       if (pendingInNextRes) {
         onResolutionChange(nextRes);
         return pendingInNextRes;
@@ -321,14 +332,14 @@ export default function MLTileDetailSidebar({
           <Space direction="vertical" size="small" className="w-full">
             <div className="flex justify-between">
               <Statistic
-                title="10cm Good"
-                value={baseTileProgress.good10}
+                title="10cm Completed"
+                value={baseTileProgress.completed10}
                 suffix={`/ ${baseTileProgress.total10}`}
                 valueStyle={{ fontSize: 16 }}
               />
               <Statistic
-                title="5cm Good"
-                value={baseTileProgress.good5}
+                title="5cm Completed"
+                value={baseTileProgress.completed5}
                 suffix={`/ ${baseTileProgress.total5}`}
                 valueStyle={{ fontSize: 16 }}
               />

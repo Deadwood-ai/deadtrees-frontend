@@ -1,15 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { IDataset } from "../../types/dataset";
 import { IMLTile, TileResolution } from "../../types/mlTiles";
-import {
-  useMLTiles,
-  useCreateMLTile,
-  useUpdateTileStatus,
-  useDeleteMLTile,
-  useTileProgress,
-} from "../../hooks/useMLTiles";
+import { useMLTiles, useCreateMLTile, useUpdateTileStatus, useDeleteMLTile } from "../../hooks/useMLTiles";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
-import { message, Button, Statistic, Progress, Space } from "antd";
+import { message, Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, centroid } from "@turf/turf";
 import GeoJSON from "ol/format/GeoJSON";
@@ -30,7 +24,6 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
   const { mutateAsync: createTile } = useCreateMLTile();
   const { mutateAsync: updateStatus } = useUpdateTileStatus();
   const { mutateAsync: deleteTile } = useDeleteMLTile();
-  const { data: progress } = useTileProgress(dataset.id);
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
@@ -73,17 +66,6 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
     const baseIndex = selectedTile.tile_index.split("_")[0] + "_" + selectedTile.tile_index.split("_")[1];
     return baseTiles.find((t) => t.tile_index === baseIndex) || null;
   }, [selectedTile, baseTiles]);
-
-  // Calculate overall progress
-  const overallProgress = useMemo(() => {
-    const total10 = progress?.total_10cm || 0;
-    const total5 = progress?.total_5cm || 0;
-    const good10 = progress?.good_10cm || 0;
-    const good5 = progress?.good_5cm || 0;
-    const totalTiles = total10 + total5;
-    const completedTiles = good10 + good5;
-    return totalTiles > 0 ? Math.round((completedTiles / totalTiles) * 100) : 0;
-  }, [progress]);
 
   // Recursively generate nested tiles
   const generateNestedTilesRecursive = useCallback(
@@ -251,19 +233,6 @@ export default function MLTileUnifiedView({ dataset, onUnsavedChanges }: Props) 
 
   return (
     <div className="flex h-full w-full flex-col">
-      {/* Top Summary Bar */}
-      <div className="border-b bg-gray-50 p-4">
-        <Space size="large">
-          <Statistic title="Base Tiles (20cm)" value={baseTiles.length} />
-          <Statistic title="10cm Good" value={progress?.good_10cm || 0} suffix={`/ ${progress?.total_10cm || 0}`} />
-          <Statistic title="5cm Good" value={progress?.good_5cm || 0} suffix={`/ ${progress?.total_5cm || 0}`} />
-          <div>
-            <div className="mb-1 text-sm text-gray-500">Overall Progress</div>
-            <Progress percent={overallProgress} style={{ width: 200 }} />
-          </div>
-        </Space>
-      </div>
-
       {/* Main Content: Map + Sidebar */}
       <div className="flex min-h-0 flex-1">
         {/* Map */}

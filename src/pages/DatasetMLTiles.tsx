@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, message, Modal } from "antd";
+import { Button, message, Modal, Progress } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useDatasetById } from "../hooks/useDatasets";
-import { useTileSessionLock, useSetTileSessionLock, useClearTileSessionLock } from "../hooks/useMLTiles";
+import {
+  useTileSessionLock,
+  useSetTileSessionLock,
+  useClearTileSessionLock,
+  useTileProgress,
+} from "../hooks/useMLTiles";
 import { useAuth } from "../hooks/useAuthProvider";
 import MLTileUnifiedView from "../components/MLTiles/MLTileUnifiedView";
 
@@ -17,8 +22,22 @@ export default function DatasetMLTiles() {
   const { data: sessionLock } = useTileSessionLock(dataset?.id);
   const { mutateAsync: setLock } = useSetTileSessionLock();
   const { mutateAsync: clearLock } = useClearTileSessionLock();
+  const { data: progress } = useTileProgress(dataset?.id);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Calculate overall progress (percent marked = good + bad)
+  const overallProgress = useMemo(() => {
+    const total10 = progress?.total_10cm || 0;
+    const total5 = progress?.total_5cm || 0;
+    const good10 = progress?.good_10cm || 0;
+    const good5 = progress?.good_5cm || 0;
+    const bad10 = progress?.bad_10cm || 0;
+    const bad5 = progress?.bad_5cm || 0;
+    const totalTiles = total10 + total5;
+    const completedTiles = good10 + good5 + bad10 + bad5;
+    return totalTiles > 0 ? Math.round((completedTiles / totalTiles) * 100) : 0;
+  }, [progress]);
 
   // Acquire lock once on mount; clear on unmount
   const lockAcquiredRef = useRef(false);
@@ -110,6 +129,22 @@ export default function DatasetMLTiles() {
             <div className="text-sm text-gray-500">Dataset {dataset.id}</div>
           </div>
         </div>
+
+        {/* Compact Progress Summary */}
+        {progress && (progress.total_10cm > 0 || progress.total_5cm > 0) && (
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-xs text-gray-500">Progress</div>
+              <div className="text-sm font-semibold">{overallProgress}% Marked</div>
+            </div>
+            <Progress
+              type="circle"
+              percent={overallProgress}
+              size={48}
+              strokeColor={{ "0%": "#108ee9", "100%": "#87d068" }}
+            />
+          </div>
+        )}
       </div>
 
       <MLTileUnifiedView dataset={dataset} onUnsavedChanges={setHasUnsavedChanges} />
