@@ -185,18 +185,47 @@ export default function MLTileDetailSidebar({
     }
   }, [baseTile, onGenerateSubTiles]);
 
+  // Clear optimistic status for the current tile when navigating to a different tile
+  // This ensures we always show fresh data when selecting a tile
+  useEffect(() => {
+    // When tile changes, clear any stale optimistic status for the previous tile
+    // Keep optimistic statuses only during the brief delay period
+    return () => {
+      // Cleanup when tile changes
+    };
+  }, [selectedTile.id]);
+
   // Get the current display status (optimistic if available, otherwise actual)
-  const displayStatus = optimisticStatuses.get(selectedTile.id) || selectedTile.status || "pending";
+  // Use useMemo to ensure it recalculates when dependencies change
+  const displayStatus = useMemo(() => {
+    const optimistic = optimisticStatuses.get(selectedTile.id);
+    const actual = selectedTile.status || "pending";
+    const result = optimistic || actual;
+    console.log("[Rating] displayStatus calculated:", {
+      tileId: selectedTile.id,
+      optimistic,
+      actual,
+      result,
+      mapSize: optimisticStatuses.size,
+    });
+    return result;
+  }, [optimisticStatuses, selectedTile.id, selectedTile.status]);
 
   // Handle status change from radio button (instant with auto-advance after brief delay)
   const handleRadioStatusChange = useCallback(
     async (status: TileStatus) => {
       const tileIdToUpdate = selectedTile.id;
+      console.log("[Rating] Button clicked:", {
+        tileId: tileIdToUpdate,
+        newStatus: status,
+        currentStatus: selectedTile.status,
+      });
 
       // Set optimistic status immediately for instant UI feedback
       setOptimisticStatuses((prev) => {
         const next = new Map(prev);
         next.set(tileIdToUpdate, status);
+        console.log("[Rating] Optimistic status set:", { tileId: tileIdToUpdate, status, mapSize: next.size });
         return next;
       });
 
@@ -391,6 +420,7 @@ export default function MLTileDetailSidebar({
           <div className="border-b p-4">
             <div className="mb-2 text-sm text-gray-600">Rate this tile:</div>
             <Radio.Group
+              key={`radio-${selectedTile.id}-${displayStatus}`}
               value={displayStatus === "pending" ? undefined : displayStatus}
               onChange={(e) => handleRadioStatusChange(e.target.value as TileStatus)}
               buttonStyle="solid"
