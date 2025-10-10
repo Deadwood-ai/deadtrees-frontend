@@ -1,51 +1,284 @@
 ---
-description: OpenLayers Mapping Patterns use when imlementing any mapping
+description: OpenLayers patterns for geospatial mapping components
+globs:
+  - "src/components/**/*Map*.tsx"
+  - "src/components/DatasetDetailsMap/**/*.tsx"
+  - "src/components/DeadwoodMap/**/*.tsx"
 alwaysApply: false
 ---
 
 # OpenLayers Mapping Patterns
 
-## Core Approach
+## Critical Rules
 
-- Store map instances in refs, never state (prevents re-renders)
+### 1. Never Store Map in State
 
-# OpenLayers Mapping Patterns
+```tsx
+// ✅ Correct: Use ref
+const mapRef = useRef<Map | null>(null);
 
-## Core Approach
+// ❌ Wrong: Causes infinite re-renders
+const [map, setMap] = useState<Map | null>(null);
+```
 
-- Store map instances in refs, never state (prevents re-renders)
-- Always implement cleanup in useEffect returns
-- Handle coordinate transformations explicitly (EPSG:4326 ↔ EPSG:3857)
+### 2. Always Cleanup
 
-## Reference Implementations
+```tsx
+useEffect(() => {
+  const map = new Map({ target: mapRef.current /* ... */ });
 
-- **Main Map Component**: `src/components/DatasetMap/DatasetMap.tsx`
+  return () => {
+    // Dispose all layers and sources
+    map.getLayers().forEach((layer) => {
+      const source = layer.getSource();
+      if (source && "dispose" in source) {
+        (source as any).dispose();
+      }
+    });
+    map.setTarget(undefined);
+  };
+}, []);
+```
 
-  - Shows proper map initialization and cleanup
-  - Layer management with refs
-  - Event handling patterns
+### 3. Coordinate Transformations
 
-- **Details Map**: `src/components/DatasetDetailsMap/DatasetDetailsMap.tsx`
+```tsx
+import { fromLonLat, toLonLat } from "ol/proj";
 
-  - WebGL layers for raster data (GeoTIFF/COG)
-  - Vector tile integration
-  - Viewport synchronization
+// Always specify projections explicitly
+const mapCoords = fromLonLat([lon, lat], "EPSG:3857"); // WGS84 → Web Mercator
+const wgs84Coords = toLonLat(mapCoords, "EPSG:3857"); // Web Mercator → WGS84
+```
 
-- **Audit Map**: `src/components/DatasetAudit/DatasetAuditMap.tsx`
-  - Drawing interactions
-  - Feature modification
-  - AOI (Area of Interest) handling
+## Map Initialization
 
-## Key Patterns to Follow
+### Basic Map Setup
 
-- Use `mapRef.current` pattern from DatasetMap.tsx
-- Layer disposal pattern from DatasetDetailsMap cleanup
-- Coordinate transformation utilities in `src/utils/parseBBox.tsx`
-- Event cleanup patterns in all map components
-- Dispose layers and sources in useEffect cleanup
+```tsx
+import { useRef, useEffect } from "react";
+import Map from "ol/Map";
+import View from "ol/View";
+import TileLayer from "ol/layer/Tile";
+import OSM from "ol/source/OSM";
+import { fromLonLat } from "ol/proj";
 
-## Avoid
+export function MyMap() {
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
 
-- Storing OpenLayers objects in React state
-- Creating new map instances on every render
-- Forgetting to dispose layers and sources
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = new Map({
+      target: mapRef.current,
+      layers: [new TileLayer({ source: new OSM() })],
+      view: new View({
+        center: fromLonLat([0, 0]),
+        zoom: 2,
+      }),
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.setTarget(undefined);
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  return <div ref={mapRef} style={{ width: "100%", height: "400px" }} />;
+}
+```
+
+## Layer Management
+
+### Add/Remove Layers Dynamically
+
+```tsx
+useEffect(() => {
+  const map = mapInstanceRef.current;
+  if (!map || !geoJsonData) return;
+
+  // Create vector layer
+  const vectorSource = new VectorSource({
+    features: new GeoJSON().readFeatures(geoJsonData, {
+      featureProjection: "EPSG:3857",
+    }),
+  });
+
+  const vectorLayer = new VectorLayer({
+    source: vectorSource,
+    style: new Style({
+      /* ... */
+    }),
+  });
+
+  map.addLayer(vectorLayer);
+
+  return () => {
+    map.removeLayer(vectorLayer);
+    vectorSource.clear();
+  };
+}, [geoJsonData]);
+```
+
+### Layer Visibility Toggle
+
+```tsx
+function toggleLayer(layer: BaseLayer, visible: boolean) {
+  layer.setVisible(visible);
+}
+
+// In component
+<Checkbox onChange={(e) => toggleLayer(layerRef.current, e.target.checked)}>Show Layer</Checkbox>;
+```
+
+## GeoTIFF/COG (Raster Data)
+
+### WebGL Layer for Performance
+
+```tsx
+import WebGLTileLayer from "ol/layer/WebGLTile";
+import GeoTIFF from "ol/source/GeoTIFF";
+
+const rasterLayer = new WebGLTileLayer({
+  source: new GeoTIFF({
+    sources: [{ url: cogUrl }],
+    transition: 0, // Disable fade for faster rendering
+  }),
+  style: {
+    color: [
+      "case",
+      [">", ["band", 1], 0],
+      ["band", 1], // If band 1 > 0, show it
+      [0, 0, 0, 0], // Else transparent
+    ],
+  },
+});
+```
+
+## Vector Tiles (PostGIS)
+
+### MVT Layer
+
+```tsx
+import VectorTileLayer from "ol/layer/VectorTile";
+import VectorTileSource from "ol/source/VectorTile";
+import MVT from "ol/format/MVT";
+
+const vectorTileLayer = new VectorTileLayer({
+  source: new VectorTileSource({
+    format: new MVT(),
+    url: "https://your-postgis-server/tiles/{z}/{x}/{y}.pbf",
+  }),
+  style: (feature) => {
+    return new Style({
+      stroke: new Stroke({ color: "blue", width: 2 }),
+      fill: new Fill({ color: "rgba(0, 0, 255, 0.1)" }),
+    });
+  },
+});
+```
+
+## Interactions
+
+### Click Events
+
+```tsx
+useEffect(() => {
+  const map = mapInstanceRef.current;
+  if (!map) return;
+
+  const handleClick = (event: MapBrowserEvent<any>) => {
+    map.forEachFeatureAtPixel(event.pixel, (feature) => {
+      console.log("Clicked feature:", feature.get("name"));
+      return true; // Stop after first feature
+    });
+  };
+
+  map.on("click", handleClick);
+
+  return () => {
+    map.un("click", handleClick);
+  };
+}, []);
+```
+
+### Drawing (AOI Selection)
+
+```tsx
+import Draw from "ol/interaction/Draw";
+import { Vector as VectorSource } from "ol/source";
+
+const drawSource = new VectorSource();
+const drawInteraction = new Draw({
+  source: drawSource,
+  type: "Polygon",
+});
+
+drawInteraction.on("drawend", (event) => {
+  const geometry = event.feature.getGeometry();
+  // Transform to WGS84 for storage
+  const wgs84Geometry = geometry.clone().transform("EPSG:3857", "EPSG:4326");
+  console.log("AOI:", new GeoJSON().writeGeometry(wgs84Geometry));
+});
+
+map.addInteraction(drawInteraction);
+
+// Cleanup
+return () => {
+  map.removeInteraction(drawInteraction);
+};
+```
+
+## Performance Optimization
+
+### Declutter Labels
+
+```tsx
+const vectorLayer = new VectorLayer({
+  source: vectorSource,
+  declutter: true, // Prevent label overlap
+});
+```
+
+### Limit Resolution
+
+```tsx
+const layer = new TileLayer({
+  source: new OSM(),
+  minZoom: 5,
+  maxZoom: 18,
+});
+```
+
+### Update on Viewport Change
+
+```tsx
+useEffect(() => {
+  const map = mapInstanceRef.current;
+  if (!map) return;
+
+  const handleMoveEnd = () => {
+    const view = map.getView();
+    const center = toLonLat(view.getCenter()!);
+    const zoom = view.getZoom()!;
+
+    // Update state or fetch data based on viewport
+    onViewportChange({ center, zoom });
+  };
+
+  map.on("moveend", handleMoveEnd);
+
+  return () => {
+    map.un("moveend", handleMoveEnd);
+  };
+}, [onViewportChange]);
+```
+
+## Reference Components
+
+- **Basic map**: `src/components/DatasetMap/DatasetMap.tsx`
+- **WebGL/COG**: `src/components/DatasetDetailsMap/DatasetDetailsMap.tsx`
+- **Drawing/editing**: `src/components/DatasetAudit/DatasetAuditMap.tsx`
+- **Utilities**: `src/utils/parseBBox.tsx`
