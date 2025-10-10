@@ -41,6 +41,7 @@ interface Props {
   enableTranslation?: boolean;
   onGetPatchGeometry?: (getter: (patchId: number) => GeoJSON.Polygon | null) => void;
   onGetMapRef?: (map: Map | null) => void; // Callback to pass map reference to parent
+  onGetOrthoLayer?: (getter: () => TileLayerWebGL | undefined) => void; // Callback to get ortho layer for AI
   layerSelection: LayerSelection;
   selectedPatchId?: number | null;
   selectedBasePatch?: IReferencePatch | null; // For checking reference data existence
@@ -63,6 +64,7 @@ export default function ReferencePatchMap({
   enableTranslation = false,
   onGetPatchGeometry,
   onGetMapRef,
+  onGetOrthoLayer,
   layerSelection,
   selectedPatchId,
   selectedBasePatch,
@@ -389,6 +391,19 @@ export default function ReferencePatchMap({
 
     // Call the parent's callback with our getter function once
     onGetPatchGeometry(getPatchGeometry);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - the getter uses refs so it always accesses latest state
+
+  // Expose function to get ortho layer for AI segmentation (run once on mount)
+  useEffect(() => {
+    if (!onGetOrthoLayer) return;
+
+    const getOrthoLayerFunc = (): TileLayerWebGL | undefined => {
+      return orthoLayerRef.current || undefined;
+    };
+
+    // Call the parent's callback with our getter function once
+    onGetOrthoLayer(getOrthoLayerFunc);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - the getter uses refs so it always accesses latest state
 

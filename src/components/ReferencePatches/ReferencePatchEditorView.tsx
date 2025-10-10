@@ -48,7 +48,7 @@ export default function ReferencePatchEditorView({
 
   // Ref for OpenLayers map
   const mapRef = useRef<OLMap | null>(null);
-  const [getOrthoLayer] = useState<(() => TileLayerWebGL | undefined) | null>(null);
+  const [getOrthoLayer, setGetOrthoLayer] = useState<(() => TileLayerWebGL | undefined) | null>(null);
 
   const { data: allPatches = [], refetch: refetchPatches } = useReferencePatches(dataset.id);
   const { data: aoiData } = useDatasetAOI(dataset.id);
@@ -499,6 +499,11 @@ export default function ReferencePatchEditorView({
     console.log("Map reference received:", map);
   }, []);
 
+  // Callback to receive ortho layer getter from child component
+  const handleGetOrthoLayer = useCallback((getter: () => TileLayerWebGL | undefined) => {
+    setGetOrthoLayer(() => getter);
+  }, []);
+
   // Helper: Auto-copy model predictions to create initial reference data
   const autoCopyPredictionsAsReference = useCallback(
     async (basePatch: IReferencePatch) => {
@@ -700,6 +705,7 @@ export default function ReferencePatchEditorView({
             focusPatchId={selectedPatchId}
             onGetPatchGeometry={handleGetPatchGeometry}
             onGetMapRef={handleGetMapRef}
+            onGetOrthoLayer={handleGetOrthoLayer}
             layerSelection={layerSelection}
             selectedPatchId={selectedPatchId}
             selectedBasePatch={selectedBasePatch}
