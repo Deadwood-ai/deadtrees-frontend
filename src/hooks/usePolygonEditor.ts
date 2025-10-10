@@ -73,16 +73,22 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
   }, [mapRef]);
 
   const startEditing = useCallback(() => {
-    if (!mapRef.current || isEditing) return;
+    console.log("[usePolygonEditor] startEditing called, mapRef.current:", !!mapRef.current, "isEditing:", isEditing);
+    if (!mapRef.current || isEditing) {
+      console.log("[usePolygonEditor] Returning early from startEditing");
+      return;
+    }
 
+    console.log("[usePolygonEditor] Ensuring overlay...");
     ensureOverlay();
     const overlay = overlayLayerRef.current!;
+    console.log("[usePolygonEditor] Overlay layer:", !!overlay);
 
     // Select interaction limited to overlay layer
-    // Selected style: green highlight
+    // Selected style: blue highlight
     const selectedStyle = new Style({
-      fill: new Fill({ color: "rgba(34,197,94,0.15)" }), // green-500 @ 15%
-      stroke: new Stroke({ color: "#22c55e", width: 3 }), // green-500
+      fill: new Fill({ color: "rgba(59,130,246,0.20)" }), // blue-500 @ 20%
+      stroke: new Stroke({ color: "#2563eb", width: 3 }), // blue-600 (darker blue)
     });
 
     // Enable multi-selection by toggling on click
@@ -128,10 +134,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     });
 
     // Hover highlight handler
-    // Hover style: deeper blue
+    // Hover style: darker blue (slightly darker than base)
     const hoverStyle = new Style({
-      fill: new Fill({ color: "rgba(29,78,216,0.12)" }), // blue-700 @ 12%
-      stroke: new Stroke({ color: "#1d4ed8", width: 3 }), // blue-700
+      fill: new Fill({ color: "rgba(37,99,235,0.15)" }), // blue-600 @ 15%
+      stroke: new Stroke({ color: "#1e40af", width: 2.5 }), // blue-800 (darker border)
     });
     const handlePointerMove = (evt: MapBrowserEvent<UIEvent>) => {
       if (!mapRef.current || !overlayLayerRef.current) return;
@@ -222,6 +228,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     // Draw interaction created lazily on toggle
     setIsEditing(true);
+    console.log("[usePolygonEditor] startEditing completed, interactions added");
   }, [ensureOverlay, isEditing, mapRef]);
 
   const stopEditing = useCallback(() => {
@@ -272,18 +279,28 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
   const toggleDraw = useCallback(
     (on?: boolean) => {
-      if (!mapRef.current) return;
+      console.log("[usePolygonEditor] toggleDraw called, mapRef.current:", !!mapRef.current, "isDrawing:", isDrawing);
+      if (!mapRef.current) {
+        console.log("[usePolygonEditor] No map ref, returning");
+        return;
+      }
       ensureOverlay();
 
       const shouldEnable = typeof on === "boolean" ? on : !isDrawing;
+      console.log("[usePolygonEditor] shouldEnable:", shouldEnable);
       if (shouldEnable) {
-        if (drawRef.current) return;
+        if (drawRef.current) {
+          console.log("[usePolygonEditor] Draw already active, returning");
+          return;
+        }
         const overlay = overlayLayerRef.current!;
         const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
+        console.log("[usePolygonEditor] Creating draw interaction, overlay:", !!overlay, "source:", !!source);
         const draw = new Draw({ source: (source as unknown as VectorSource)!, type: "Polygon" });
         mapRef.current.addInteraction(draw);
         drawRef.current = draw;
         setIsDrawing(true);
+        console.log("[usePolygonEditor] Draw interaction added to map");
         // Auto-exit draw mode after polygon completion
         draw.once("drawend", () => {
           if (!mapRef.current || !drawRef.current) return;
@@ -296,6 +313,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         mapRef.current.removeInteraction(drawRef.current);
         drawRef.current = null;
         setIsDrawing(false);
+        console.log("[usePolygonEditor] Draw interaction removed from map");
       }
     },
     [ensureOverlay, isDrawing, mapRef],

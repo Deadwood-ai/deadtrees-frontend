@@ -8,7 +8,7 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import VectorTileLayer from "ol/layer/VectorTile";
 import type Layer from "ol/layer/Layer";
-import { Style, Stroke } from "ol/style";
+import { Style, Stroke, Fill } from "ol/style";
 import Feature from "ol/Feature";
 import { Polygon } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
@@ -40,9 +40,11 @@ interface Props {
   focusPatchId?: number | null;
   enableTranslation?: boolean;
   onGetPatchGeometry?: (getter: (patchId: number) => GeoJSON.Polygon | null) => void;
+  onGetMapRef?: (map: Map | null) => void; // Callback to pass map reference to parent
   layerSelection: LayerSelection;
   selectedPatchId?: number | null;
   selectedBasePatch?: IReferencePatch | null; // For checking reference data existence
+  isEditingMode?: boolean; // Disable patch selection when editing geometries
 }
 
 const TARGET_PATCH_SIZE_M: Record<PatchResolution, number> = {
@@ -60,9 +62,11 @@ export default function ReferencePatchMap({
   focusPatchId,
   enableTranslation = false,
   onGetPatchGeometry,
+  onGetMapRef,
   layerSelection,
   selectedPatchId,
   selectedBasePatch,
+  isEditingMode = false,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -324,6 +328,9 @@ export default function ReferencePatchMap({
     patchLayerRef.current = vector;
     translateRef.current = translate;
 
+    // Pass map reference to parent
+    onGetMapRef?.(map);
+
     return () => {
       map.setTarget(undefined);
       window.removeEventListener("resize", handleResize);
@@ -336,9 +343,28 @@ export default function ReferencePatchMap({
       aoiMaskLayerRef.current = null;
       deadwoodLayerRef.current = null;
       forestCoverLayerRef.current = null;
+      // Notify parent that map is being destroyed
+      onGetMapRef?.(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only initialize map once on mount
+
+  // Dynamically enable/disable patch selection based on editing mode
+  useEffect(() => {
+    const map = mapRef.current;
+    const select = selectRef.current;
+    if (!map || !select) return;
+
+    if (isEditingMode) {
+      // Remove select interaction when entering editing mode
+      map.removeInteraction(select);
+      console.log("Disabled patch selection (editing mode active)");
+    } else {
+      // Re-add select interaction when exiting editing mode
+      map.addInteraction(select);
+      console.log("Enabled patch selection (editing mode inactive)");
+    }
+  }, [isEditingMode]);
 
   // Expose function to get current patch geometry from map (run once on mount)
   useEffect(() => {
@@ -570,9 +596,9 @@ export default function ReferencePatchMap({
             source,
             style: new Style({
               stroke: new Stroke({ color: "#8B4513", width: 3 }), // Brown for deadwood, thicker
-              fill: undefined, // No fill, only stroke
+              fill: new Fill({ color: "rgba(139, 69, 19, 0.15)" }), // Light brown fill
             }),
-            zIndex: 20, // Higher z-index to ensure visibility
+            zIndex: 100, // Higher z-index to ensure visibility above ortho/MVT layers
           });
 
           referenceDeadwoodLayerRef.current = layer;
@@ -623,9 +649,9 @@ export default function ReferencePatchMap({
             source,
             style: new Style({
               stroke: new Stroke({ color: "#228B22", width: 3 }), // Green for forest cover, thicker
-              fill: undefined, // No fill, only stroke
+              fill: new Fill({ color: "rgba(34, 139, 34, 0.15)" }), // Light green fill
             }),
-            zIndex: 20, // Higher z-index to ensure visibility
+            zIndex: 100, // Higher z-index to ensure visibility above ortho/MVT layers
           });
 
           referenceForestCoverLayerRef.current = layer;

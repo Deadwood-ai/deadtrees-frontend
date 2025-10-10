@@ -282,6 +282,16 @@ export default function ReferencePatchEditorView({
   const handleEditLayer = useCallback(async () => {
     if (!selectedPatchId || layerSelection === "ortho_only") return;
 
+    console.log("=== Starting Edit Mode ===");
+    console.log("Map ref:", mapRef.current);
+    console.log("Editor:", editor);
+
+    // Check if map is ready
+    if (!mapRef.current) {
+      message.error("Map is not ready yet");
+      return;
+    }
+
     // Find base patch
     const selectedPatch = allPatches.find((p) => p.id === selectedPatchId);
     if (!selectedPatch) return;
@@ -323,7 +333,12 @@ export default function ReferencePatchEditorView({
 
         if (geometries && geometries.length > 0) {
           features = geometries.map((g) => {
-            const feature = new Feature(geoJson.readGeometry(g.geometry));
+            const feature = new Feature(
+              geoJson.readGeometry(g.geometry, {
+                dataProjection: "EPSG:4326", // Database stores in WGS84
+                featureProjection: "EPSG:3857", // Map uses Web Mercator
+              }),
+            );
             feature.set("label_data", layerType);
             feature.set("patch_id", basePatch.id);
             return feature;
@@ -331,15 +346,40 @@ export default function ReferencePatchEditorView({
         }
       }
 
-      // Load features into editor overlay
-      editor.getOverlayLayer()?.getSource()?.clear();
-      if (features.length > 0) {
-        editor.getOverlayLayer()?.getSource()?.addFeatures(features);
-      }
+      console.log("Loaded features:", features.length);
 
-      // Enter editing mode
+      // Enter editing mode FIRST to initialize the overlay layer
+      console.log("Starting editor...");
       editor.startEditing();
       setEditingMode(layerType);
+
+      // NOW get the overlay layer (it's been created by startEditing)
+      const overlayLayer = editor.getOverlayLayer();
+      console.log("Overlay layer after startEditing:", overlayLayer);
+
+      if (!overlayLayer) {
+        console.error("Overlay layer not found even after startEditing!");
+        message.error("Editor not initialized properly");
+        return;
+      }
+
+      const source = overlayLayer.getSource();
+      if (!source) {
+        console.error("Overlay source not found!");
+        message.error("Editor source not initialized");
+        return;
+      }
+
+      // Clear any existing features and add the loaded ones
+      source.clear();
+      if (features.length > 0) {
+        source.addFeatures(features);
+        console.log("Added features to overlay, count:", source.getFeatures().length);
+      }
+
+      console.log("Editor isEditing:", editor.isEditing);
+      console.log("Overlay layer visible:", overlayLayer.getVisible());
+      console.log("Overlay layer z-index:", overlayLayer.getZIndex());
 
       message.info(
         `Editing ${layerType === "deadwood" ? "Deadwood" : "Forest Cover"} - ${features.length} polygons loaded`,
@@ -348,7 +388,7 @@ export default function ReferencePatchEditorView({
       console.error("Failed to load geometries for editing:", error);
       message.error("Failed to load geometries");
     }
-  }, [layerSelection, selectedPatchId, allPatches, editor, geoJson]);
+  }, [layerSelection, selectedPatchId, allPatches, editor, geoJson, mapRef]);
 
   // Handle save edits
   const handleSaveEdits = useCallback(async () => {
@@ -373,8 +413,13 @@ export default function ReferencePatchEditorView({
       // Get features from overlay
       const features = editor.getOverlayLayer()?.getSource()?.getFeatures() || [];
 
-      // Convert to GeoJSON geometries
-      const geometries = features.map((f: Feature) => geoJson.writeGeometryObject(f.getGeometry()!));
+      // Convert to GeoJSON geometries with coordinate transformation
+      const geometries = features.map((f: Feature) =>
+        geoJson.writeGeometryObject(f.getGeometry()!, {
+          dataProjection: "EPSG:4326", // Database stores in WGS84
+          featureProjection: "EPSG:3857", // Map uses Web Mercator
+        }),
+      );
 
       // Save to database
       await saveGeometries({
@@ -389,7 +434,15 @@ export default function ReferencePatchEditorView({
       editor.getOverlayLayer()?.getSource()?.clear();
       setEditingMode(null);
 
+      // Refetch patches to get updated reference label IDs
       await refetchPatches();
+
+      // Force reload of reference geometries by briefly deselecting and reselecting
+      const currentPatchId = selectedPatchId;
+      setSelectedPatchId(null);
+      setTimeout(() => {
+        setSelectedPatchId(currentPatchId);
+      }, 100);
 
       message.success(`${editingMode === "deadwood" ? "Deadwood" : "Forest Cover"} reference updated!`);
       onUnsavedChanges(true);
@@ -407,6 +460,7 @@ export default function ReferencePatchEditorView({
     dataset.id,
     refetchPatches,
     onUnsavedChanges,
+    setSelectedPatchId,
   ]);
 
   // Handle cancel editing
@@ -437,6 +491,12 @@ export default function ReferencePatchEditorView({
   // Memoize the callback that receives the patch geometry getter
   const handleGetPatchGeometry = useCallback((getter: (patchId: number) => GeoJSON.Polygon | null) => {
     setGetPatchGeometryFromMap(() => getter);
+  }, []);
+
+  // Callback to receive map reference from child component
+  const handleGetMapRef = useCallback((map: OLMap | null) => {
+    mapRef.current = map;
+    console.log("Map reference received:", map);
   }, []);
 
   // Helper: Auto-copy model predictions to create initial reference data
@@ -639,9 +699,11 @@ export default function ReferencePatchEditorView({
             enableTranslation={true}
             focusPatchId={selectedPatchId}
             onGetPatchGeometry={handleGetPatchGeometry}
+            onGetMapRef={handleGetMapRef}
             layerSelection={layerSelection}
             selectedPatchId={selectedPatchId}
             selectedBasePatch={selectedBasePatch}
+            isEditingMode={!!editingMode}
           />
 
           {/* Layer Radio Buttons (bottom-left) - hidden during editing */}
@@ -658,10 +720,22 @@ export default function ReferencePatchEditorView({
               selectionCount={editor.selection?.length || 0}
               isAIActive={ai.isActive}
               isAIProcessing={ai.isProcessing}
-              onToggleDraw={editor.toggleDraw}
+              onToggleDraw={() => {
+                console.log("Toggle draw clicked, current isDrawing:", editor.isDrawing);
+                editor.toggleDraw();
+                console.log("After toggle, isDrawing:", editor.isDrawing);
+              }}
               onCutHole={editor.cutHoleWithDrawn}
               onMerge={editor.mergeSelected}
-              onToggleAI={ai.isActive ? ai.disable : ai.enable}
+              onToggleAI={() => {
+                console.log("Toggle AI clicked, current isActive:", ai.isActive);
+                if (ai.isActive) {
+                  ai.disable();
+                } else {
+                  ai.enable();
+                }
+                console.log("After toggle, isActive:", ai.isActive);
+              }}
               onDeleteSelected={editor.deleteSelected}
               onSave={handleSaveEdits}
               onCancel={handleCancelEditing}

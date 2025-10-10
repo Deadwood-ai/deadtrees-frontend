@@ -54,9 +54,14 @@ export default function EditorToolbar({
           {/* Draw Toggle */}
           <Button
             icon={isDrawing ? <StopOutlined /> : <EditOutlined />}
-            onClick={onToggleDraw}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleDraw();
+            }}
             block
             type={isDrawing ? "primary" : "default"}
+            htmlType="button"
           >
             {isDrawing ? "Stop Drawing" : "Draw Polygon"}
           </Button>
@@ -86,11 +91,16 @@ export default function EditorToolbar({
           {/* AI Segmentation */}
           <Button
             icon={<RobotOutlined />}
-            onClick={onToggleAI}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleAI();
+            }}
             loading={isAIProcessing}
             block
             type={isAIActive ? "primary" : "default"}
             title="Draw a box to run AI segmentation"
+            htmlType="button"
           >
             {isAIActive ? "AI Active (draw box)" : "AI Segment"}
           </Button>
@@ -109,11 +119,11 @@ export default function EditorToolbar({
           <Divider style={{ margin: "8px 0" }} />
 
           {/* Save/Cancel */}
-          <Button type="primary" icon={<SaveOutlined />} onClick={onSave} block size="large">
+          <Button type="primary" icon={<SaveOutlined />} onClick={onSave} block size="large" htmlType="button">
             Save Changes
           </Button>
 
-          <Button onClick={onCancel} block>
+          <Button onClick={onCancel} block htmlType="button">
             Cancel
           </Button>
         </Space>
