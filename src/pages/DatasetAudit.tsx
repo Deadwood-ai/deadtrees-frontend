@@ -321,24 +321,24 @@ export default function DatasetAudit() {
     },
   ];
 
-  // Conditionally include ML Tiles column only for needs-tiles and training-ready tabs
-  const mlTilesColumn = {
-    title: "ML Tiles",
-    key: "ml_tiles",
+  // Conditionally include Reference Patches column only for needs-tiles and training-ready tabs
+  const referencePatchesColumn = {
+    title: "Reference Patches",
+    key: "reference_patches",
     render: (_: unknown, record: IDataset) => (
-      <Tooltip title="Open ML Tile editor for this dataset">
-        <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/ml-tiles`)}>
-          {record.has_ml_tiles ? "Continue Tiles" : "Generate ML Tiles"}
+      <Tooltip title="Open Reference Patch Editor for this dataset">
+        <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/reference-patches`)}>
+          {record.has_ml_tiles ? "Continue Patches" : "Generate Patches"}
         </Button>
       </Tooltip>
     ),
-    width: 150,
+    width: 180,
   };
 
   const columns = [
     ...baseColumns,
-    // Only show ML Tiles column in "needs-tiles" and "training-ready" tabs
-    ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [mlTilesColumn] : []),
+    // Only show Reference Patches column in "needs-tiles" and "training-ready" tabs
+    ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [referencePatchesColumn] : []),
     {
       title: "Edit Labels",
       key: "edit_labels",

@@ -1,60 +1,45 @@
-export type TileResolution = 5 | 10 | 20;
+// ============================================================================
+// DEPRECATED: This file is kept for backward compatibility.
+// Use types/referencePatches.ts for new code.
+// ============================================================================
 
-export type TileStatus = "pending" | "good" | "bad";
+import type {
+  IReferencePatch,
+  PatchResolution,
+  PatchStatus,
+  IPatchSession,
+  IPatchGenerationProgress,
+  IPatchPlacementDraft,
+  IPatchPhaseState,
+} from "./referencePatches";
 
-export interface IMLTile {
-  id: number;
-  dataset_id: number;
-  user_id: string;
-  resolution_cm: TileResolution;
-  geometry: GeoJSON.Polygon; // In EPSG:3857
-  parent_tile_id: number | null;
-  status: TileStatus;
-  tile_index: string;
+// Re-export new types with old names for backward compatibility
+export type TileResolution = PatchResolution;
+export type TileStatus = PatchStatus;
 
-  // Bounding box for export
-  bbox_minx: number;
-  bbox_miny: number;
-  bbox_maxx: number;
-  bbox_maxy: number;
+// Map patch_index back to tile_index for backward compatibility
+export type IMLTile = Omit<IReferencePatch, "patch_index"> & {
+  tile_index: string; // Maps to patch_index in DB
+};
 
-  // Coverage statistics
-  aoi_coverage_percent: number | null;
-  deadwood_prediction_coverage_percent: number | null;
-  forest_cover_prediction_coverage_percent: number | null;
+export type ITileSession = IPatchSession;
+export type ITileGenerationProgress = IPatchGenerationProgress;
+export type ITilePlacementDraft = IPatchPlacementDraft;
+export type ITilePhaseState = IPatchPhaseState;
 
-  created_at: string;
-  updated_at: string;
+// Helper to convert between formats
+export function referencePatchToMLTile(patch: IReferencePatch): IMLTile {
+  const { patch_index, ...rest } = patch;
+  return {
+    ...rest,
+    tile_index: patch_index,
+  };
 }
 
-export interface ITileSession {
-  dataset_id: number;
-  is_locked: boolean;
-  locked_by: string | null;
-  locked_at: string | null;
-}
-
-export interface ITileGenerationProgress {
-  dataset_id: number;
-  total_20cm: number;
-  completed_20cm: number;
-  total_10cm: number;
-  good_10cm: number;
-  bad_10cm: number;
-  pending_10cm: number;
-  total_5cm: number;
-  good_5cm: number;
-  bad_5cm: number;
-  pending_5cm: number;
-}
-
-export interface ITilePlacementDraft {
-  resolution_cm: TileResolution;
-  center: [number, number];
-}
-
-export interface ITilePhaseState {
-  hasPlacementTiles: boolean;
-  hasPendingQA: boolean;
-  completionPercent: number;
+export function mlTileToReferencePatch(tile: IMLTile): IReferencePatch {
+  const { tile_index, ...rest } = tile;
+  return {
+    ...rest,
+    patch_index: tile_index,
+  };
 }
