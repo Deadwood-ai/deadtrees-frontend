@@ -130,6 +130,7 @@ export default function PatchQAPhase({ dataset, onUnsavedChanges, onRequestValid
             focusPatchId={currentPatch?.id}
             layerSelection="deadwood"
             selectedPatchId={currentPatch?.id}
+            selectedBasePatch={currentPatch}
           />
           {/* Note: LayerRadioButtons not shown in QA view, using default "deadwood" */}
         </div>

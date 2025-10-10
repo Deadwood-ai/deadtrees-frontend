@@ -172,6 +172,7 @@ export default function PatchValidationPhase({ dataset }: Props) {
             focusPatchId={selectedPatch?.id}
             layerSelection="deadwood"
             selectedPatchId={selectedPatch?.id}
+            selectedBasePatch={selectedPatch}
           />
           {/* Note: LayerRadioButtons not shown in validation view, using default "deadwood" */}
         </div>

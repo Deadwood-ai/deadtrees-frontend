@@ -22,6 +22,7 @@ import { IReferencePatch, PatchResolution } from "../../types/referencePatches";
 import type { LayerSelection } from "./LayerRadioButtons";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
+import { supabase } from "../../hooks/useSupabase";
 import {
   createDeadwoodVectorLayer,
   createForestCoverVectorLayer,
@@ -40,7 +41,8 @@ interface Props {
   enableTranslation?: boolean;
   onGetPatchGeometry?: (getter: (patchId: number) => GeoJSON.Polygon | null) => void;
   layerSelection: LayerSelection;
-  selectedPatchId?: number | null; // For reference data switching
+  selectedPatchId?: number | null;
+  selectedBasePatch?: IReferencePatch | null; // For checking reference data existence
 }
 
 const TARGET_PATCH_SIZE_M: Record<PatchResolution, number> = {
@@ -60,6 +62,7 @@ export default function ReferencePatchMap({
   onGetPatchGeometry,
   layerSelection,
   selectedPatchId,
+  selectedBasePatch,
 }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -69,6 +72,8 @@ export default function ReferencePatchMap({
   const aoiMaskLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const deadwoodLayerRef = useRef<VectorTileLayer | null>(null);
   const forestCoverLayerRef = useRef<VectorTileLayer | null>(null);
+  const referenceDeadwoodLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const referenceForestCoverLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const translateRef = useRef<Translate | null>(null);
   const selectRef = useRef<Select | null>(null);
   const hasInitialFitRef = useRef<boolean>(false);
@@ -259,7 +264,8 @@ export default function ReferencePatchMap({
     select.on("select", (e) => {
       const f = e.selected?.[0] as Feature<Polygon> | undefined;
       if (!f) {
-        onPatchSelected?.(null);
+        // Don't deselect when clicking outside patches
+        // Deselection should only happen via explicit user action (X button or Esc key)
         return;
       }
       const patchId = f.get("patchId") as number | undefined;
@@ -452,19 +458,25 @@ export default function ReferencePatchMap({
     }
   }, [forestCoverId, deadwoodId]);
 
-  // Update layer visibility based on radio selection
+  // Update layer visibility based on radio selection and reference data existence
   useEffect(() => {
     if (!deadwoodLayerRef.current || !forestCoverLayerRef.current) return;
 
-    // Only apply to global predictions (when no patch selected)
-    if (selectedPatchId) {
-      // Hide global predictions when patch is selected
+    // Check if selected patch has reference data
+    const hasReferenceData =
+      selectedBasePatch &&
+      (selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id);
+
+    // If patch has reference data, hide global predictions and show reference layers instead
+    if (hasReferenceData) {
       deadwoodLayerRef.current.setVisible(false);
       forestCoverLayerRef.current.setVisible(false);
+
+      // Reference layers visibility controlled by separate effect below
       return;
     }
 
-    // Show/hide based on layer selection
+    // Show global predictions based on layer selection (no reference data yet, or no patch selected)
     switch (layerSelection) {
       case "deadwood":
         deadwoodLayerRef.current.setVisible(true);
@@ -479,7 +491,154 @@ export default function ReferencePatchMap({
         forestCoverLayerRef.current.setVisible(false);
         break;
     }
-  }, [layerSelection, selectedPatchId]);
+
+    // Hide reference layers when showing global predictions
+    if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
+    if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
+  }, [layerSelection, selectedPatchId, selectedBasePatch]);
+
+  // Load and display reference geometries when patch has reference data
+  useEffect(() => {
+    const loadReferenceGeometries = async () => {
+      const map = mapRef.current;
+      if (!map || !selectedBasePatch) {
+        console.log("Reference geometries: map or selectedBasePatch not available");
+        return;
+      }
+
+      const hasReferenceData =
+        selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id;
+
+      console.log("Loading reference geometries for patch:", selectedBasePatch.id, {
+        hasReferenceData,
+        deadwoodLabelId: selectedBasePatch.reference_deadwood_label_id,
+        forestCoverLabelId: selectedBasePatch.reference_forest_cover_label_id,
+        layerSelection,
+      });
+
+      if (!hasReferenceData) {
+        // Clean up reference layers if no reference data
+        console.log("No reference data, cleaning up layers");
+        if (referenceDeadwoodLayerRef.current) {
+          map.removeLayer(referenceDeadwoodLayerRef.current);
+          referenceDeadwoodLayerRef.current = null;
+        }
+        if (referenceForestCoverLayerRef.current) {
+          map.removeLayer(referenceForestCoverLayerRef.current);
+          referenceForestCoverLayerRef.current = null;
+        }
+        return;
+      }
+
+      // Load deadwood reference geometries
+      if (selectedBasePatch.reference_deadwood_label_id) {
+        console.log("Fetching deadwood geometries for label:", selectedBasePatch.reference_deadwood_label_id);
+        const { data: deadwoodGeoms, error } = await supabase
+          .from("reference_patch_deadwood_geometries")
+          .select("geometry")
+          .eq("label_id", selectedBasePatch.reference_deadwood_label_id);
+
+        if (error) {
+          console.error("Error fetching deadwood geometries:", error);
+        } else {
+          console.log("Fetched deadwood geometries:", deadwoodGeoms?.length || 0);
+        }
+
+        if (deadwoodGeoms && deadwoodGeoms.length > 0) {
+          // Remove old layer if exists
+          if (referenceDeadwoodLayerRef.current) {
+            map.removeLayer(referenceDeadwoodLayerRef.current);
+          }
+
+          // Create new vector source and layer
+          const source = new VectorSource();
+          const geoJsonFormatter = new GeoJSON({
+            dataProjection: "EPSG:4326", // Data is in WGS84
+            featureProjection: "EPSG:3857", // Map is in Web Mercator
+          });
+
+          deadwoodGeoms.forEach((g, idx) => {
+            try {
+              const feature = new Feature(geoJsonFormatter.readGeometry(g.geometry));
+              source.addFeature(feature);
+            } catch (e) {
+              console.error(`Failed to parse deadwood geometry ${idx}:`, e, g.geometry);
+            }
+          });
+
+          const layer = new VectorLayer({
+            source,
+            style: new Style({
+              stroke: new Stroke({ color: "#8B4513", width: 3 }), // Brown for deadwood, thicker
+              fill: undefined, // No fill, only stroke
+            }),
+            zIndex: 20, // Higher z-index to ensure visibility
+          });
+
+          referenceDeadwoodLayerRef.current = layer;
+          map.addLayer(layer);
+          const visible = layerSelection === "deadwood";
+          layer.setVisible(visible);
+          console.log("Added deadwood layer, visible:", visible, "features:", source.getFeatures().length);
+        }
+      }
+
+      // Load forest cover reference geometries
+      if (selectedBasePatch.reference_forest_cover_label_id) {
+        console.log("Fetching forest cover geometries for label:", selectedBasePatch.reference_forest_cover_label_id);
+        const { data: forestCoverGeoms, error } = await supabase
+          .from("reference_patch_forest_cover_geometries")
+          .select("geometry")
+          .eq("label_id", selectedBasePatch.reference_forest_cover_label_id);
+
+        if (error) {
+          console.error("Error fetching forest cover geometries:", error);
+        } else {
+          console.log("Fetched forest cover geometries:", forestCoverGeoms?.length || 0);
+        }
+
+        if (forestCoverGeoms && forestCoverGeoms.length > 0) {
+          // Remove old layer if exists
+          if (referenceForestCoverLayerRef.current) {
+            map.removeLayer(referenceForestCoverLayerRef.current);
+          }
+
+          // Create new vector source and layer
+          const source = new VectorSource();
+          const geoJsonFormatter = new GeoJSON({
+            dataProjection: "EPSG:4326", // Data is in WGS84
+            featureProjection: "EPSG:3857", // Map is in Web Mercator
+          });
+
+          forestCoverGeoms.forEach((g, idx) => {
+            try {
+              const feature = new Feature(geoJsonFormatter.readGeometry(g.geometry));
+              source.addFeature(feature);
+            } catch (e) {
+              console.error(`Failed to parse forest cover geometry ${idx}:`, e, g.geometry);
+            }
+          });
+
+          const layer = new VectorLayer({
+            source,
+            style: new Style({
+              stroke: new Stroke({ color: "#228B22", width: 3 }), // Green for forest cover, thicker
+              fill: undefined, // No fill, only stroke
+            }),
+            zIndex: 20, // Higher z-index to ensure visibility
+          });
+
+          referenceForestCoverLayerRef.current = layer;
+          map.addLayer(layer);
+          const visible = layerSelection === "forest_cover";
+          layer.setVisible(visible);
+          console.log("Added forest cover layer, visible:", visible, "features:", source.getFeatures().length);
+        }
+      }
+    };
+
+    loadReferenceGeometries();
+  }, [selectedBasePatch, layerSelection]);
 
   // Add/update AOI layers when geometry becomes available
   useEffect(() => {

@@ -1,20 +1,29 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { IDataset } from "../../types/dataset";
 import { IReferencePatch, PatchResolution } from "../../types/referencePatches";
+import { ILabelData } from "../../types/labels";
 import {
   useReferencePatches,
   useCreateReferencePatch,
   useUpdatePatchStatus,
   useDeleteReferencePatch,
 } from "../../hooks/useReferencePatches";
+import { useSaveReferenceGeometries } from "../../hooks/useReferenceGeometries";
+import usePolygonEditor from "../../hooks/usePolygonEditor";
+import useAISegmentation from "../../hooks/useAISegmentation";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { supabase } from "../../hooks/useSupabase";
 import { message, Button, Alert, Modal } from "antd";
 import { PlusOutlined, LockOutlined, EditOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, centroid } from "@turf/turf";
 import GeoJSON from "ol/format/GeoJSON";
+import type { Map as OLMap } from "ol";
+import Feature from "ol/Feature";
+import type TileLayerWebGL from "ol/layer/WebGLTile";
 import ReferencePatchMap from "./ReferencePatchMap";
 import PatchDetailSidebar from "./PatchDetailSidebar";
 import LayerRadioButtons, { LayerSelection } from "./LayerRadioButtons";
+import EditorToolbar from "./EditorToolbar";
 
 interface Props {
   dataset: IDataset;
@@ -35,17 +44,33 @@ export default function ReferencePatchEditorView({
     ((patchId: number) => GeoJSON.Polygon | null) | null
   >(null);
   const [layerSelection, setLayerSelection] = useState<LayerSelection>("deadwood");
+  const [editingMode, setEditingMode] = useState<ILabelData | null>(null);
+
+  // Ref for OpenLayers map
+  const mapRef = useRef<OLMap | null>(null);
+  const [getOrthoLayer] = useState<(() => TileLayerWebGL | undefined) | null>(null);
 
   const { data: allPatches = [], refetch: refetchPatches } = useReferencePatches(dataset.id);
   const { data: aoiData } = useDatasetAOI(dataset.id);
   const { mutateAsync: createPatch } = useCreateReferencePatch();
   const { mutateAsync: updateStatus } = useUpdatePatchStatus();
   const { mutateAsync: deletePatch } = useDeleteReferencePatch();
+  const { mutateAsync: saveGeometries } = useSaveReferenceGeometries();
+
+  // Initialize editor hooks (only when map is ready)
+  const editor = usePolygonEditor({ mapRef: mapRef as React.MutableRefObject<OLMap | null> });
+  const ai = useAISegmentation({
+    mapRef: mapRef as React.MutableRefObject<OLMap | null>,
+    getOrthoLayer: getOrthoLayer || (() => undefined),
+    getTargetVectorSource: () => editor.getOverlayLayer()?.getSource() || null,
+  });
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
-  // Keyboard shortcuts for layer selection (J/K/L)
+  // Keyboard shortcuts for layer selection (J/K/L) - disabled during editing
   useEffect(() => {
+    if (editingMode) return; // Don't handle shortcuts during editing
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -67,7 +92,7 @@ export default function ReferencePatchEditorView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [editingMode]);
 
   // Get base patches (20cm) and calculate AOI centroid
   const basePatches = useMemo(() => allPatches.filter((p) => p.resolution_cm === 20), [allPatches]);
@@ -254,10 +279,143 @@ export default function ReferencePatchEditorView({
   }, []);
 
   // Handle edit layer button click
-  const handleEditLayer = useCallback(() => {
-    message.info(`Entering edit mode for ${layerSelection === "deadwood" ? "Deadwood" : "Forest Cover"}...`);
-    // TODO: Implement actual editing logic in a future phase
-  }, [layerSelection]);
+  const handleEditLayer = useCallback(async () => {
+    if (!selectedPatchId || layerSelection === "ortho_only") return;
+
+    // Find base patch
+    const selectedPatch = allPatches.find((p) => p.id === selectedPatchId);
+    if (!selectedPatch) return;
+
+    let basePatch = selectedPatch;
+    if (selectedPatch.resolution_cm !== 20) {
+      // Walk up to find base patch
+      let current = selectedPatch;
+      while (current.parent_tile_id) {
+        const parent = allPatches.find((p) => p.id === current.parent_tile_id);
+        if (!parent) break;
+        current = parent;
+      }
+      basePatch = current;
+    }
+
+    const layerType: ILabelData = layerSelection === "deadwood" ? ILabelData.DEADWOOD : ILabelData.FOREST_COVER;
+
+    // Load reference geometries
+    try {
+      // Fetch geometries from database
+      const tableName =
+        layerType === "deadwood" ? "reference_patch_deadwood_geometries" : "reference_patch_forest_cover_geometries";
+
+      // Get active label for this patch
+      const { data: labelData } = await supabase
+        .from("v2_labels")
+        .select("id")
+        .eq("reference_patch_id", basePatch.id)
+        .eq("label_data", layerType)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      let features: Feature[] = [];
+
+      if (labelData) {
+        // Fetch geometries
+        const { data: geometries } = await supabase.from(tableName).select("geometry").eq("label_id", labelData.id);
+
+        if (geometries && geometries.length > 0) {
+          features = geometries.map((g) => {
+            const feature = new Feature(geoJson.readGeometry(g.geometry));
+            feature.set("label_data", layerType);
+            feature.set("patch_id", basePatch.id);
+            return feature;
+          });
+        }
+      }
+
+      // Load features into editor overlay
+      editor.getOverlayLayer()?.getSource()?.clear();
+      if (features.length > 0) {
+        editor.getOverlayLayer()?.getSource()?.addFeatures(features);
+      }
+
+      // Enter editing mode
+      editor.startEditing();
+      setEditingMode(layerType);
+
+      message.info(
+        `Editing ${layerType === "deadwood" ? "Deadwood" : "Forest Cover"} - ${features.length} polygons loaded`,
+      );
+    } catch (error) {
+      console.error("Failed to load geometries for editing:", error);
+      message.error("Failed to load geometries");
+    }
+  }, [layerSelection, selectedPatchId, allPatches, editor, geoJson]);
+
+  // Handle save edits
+  const handleSaveEdits = useCallback(async () => {
+    if (!editingMode || !selectedPatchId) return;
+
+    try {
+      // Find base patch
+      const selectedPatch = allPatches.find((p) => p.id === selectedPatchId);
+      if (!selectedPatch) return;
+
+      let basePatch = selectedPatch;
+      if (selectedPatch.resolution_cm !== 20) {
+        let current = selectedPatch;
+        while (current.parent_tile_id) {
+          const parent = allPatches.find((p) => p.id === current.parent_tile_id);
+          if (!parent) break;
+          current = parent;
+        }
+        basePatch = current;
+      }
+
+      // Get features from overlay
+      const features = editor.getOverlayLayer()?.getSource()?.getFeatures() || [];
+
+      // Convert to GeoJSON geometries
+      const geometries = features.map((f: Feature) => geoJson.writeGeometryObject(f.getGeometry()!));
+
+      // Save to database
+      await saveGeometries({
+        patchId: basePatch.id,
+        datasetId: dataset.id,
+        layerType: editingMode,
+        geometries,
+      });
+
+      // Clean up and exit editing mode
+      editor.stopEditing();
+      editor.getOverlayLayer()?.getSource()?.clear();
+      setEditingMode(null);
+
+      await refetchPatches();
+
+      message.success(`${editingMode === "deadwood" ? "Deadwood" : "Forest Cover"} reference updated!`);
+      onUnsavedChanges(true);
+    } catch (error) {
+      console.error("Failed to save edits:", error);
+      message.error("Failed to save changes");
+    }
+  }, [
+    editingMode,
+    selectedPatchId,
+    allPatches,
+    editor,
+    geoJson,
+    saveGeometries,
+    dataset.id,
+    refetchPatches,
+    onUnsavedChanges,
+  ]);
+
+  // Handle cancel editing
+  const handleCancelEditing = useCallback(() => {
+    editor.stopEditing();
+    editor.getOverlayLayer()?.getSource()?.clear();
+    setEditingMode(null);
+    message.info("Editing cancelled - no changes saved");
+  }, [editor]);
 
   // Add Esc key handler for deselection (Phase 4)
   useEffect(() => {
@@ -281,6 +439,106 @@ export default function ReferencePatchEditorView({
     setGetPatchGeometryFromMap(() => getter);
   }, []);
 
+  // Helper: Auto-copy model predictions to create initial reference data
+  const autoCopyPredictionsAsReference = useCallback(
+    async (basePatch: IReferencePatch) => {
+      try {
+        // Fetch model prediction labels for deadwood and forest_cover
+        const { data: deadwoodLabel } = await supabase
+          .from("v2_labels")
+          .select("id")
+          .eq("dataset_id", dataset.id)
+          .eq("label_data", ILabelData.DEADWOOD)
+          .eq("label_source", "model_prediction")
+          .maybeSingle();
+
+        const { data: forestCoverLabel } = await supabase
+          .from("v2_labels")
+          .select("id")
+          .eq("dataset_id", dataset.id)
+          .eq("label_data", ILabelData.FOREST_COVER)
+          .eq("label_source", "model_prediction")
+          .maybeSingle();
+
+        // Copy deadwood geometries using PostGIS spatial filtering and clipping
+        if (deadwoodLabel) {
+          console.log("Fetching deadwood geometries for label:", deadwoodLabel.id, "bbox:", {
+            minx: basePatch.bbox_minx,
+            miny: basePatch.bbox_miny,
+            maxx: basePatch.bbox_maxx,
+            maxy: basePatch.bbox_maxy,
+          });
+
+          const { data: deadwoodGeoms, error } = await supabase.rpc("get_clipped_geometries_for_patch", {
+            p_label_id: deadwoodLabel.id,
+            p_geometry_table: "v2_deadwood_geometries",
+            p_bbox_minx: basePatch.bbox_minx,
+            p_bbox_miny: basePatch.bbox_miny,
+            p_bbox_maxx: basePatch.bbox_maxx,
+            p_bbox_maxy: basePatch.bbox_maxy,
+            p_buffer_m: 2.0, // 2 meter buffer
+          });
+
+          if (error) {
+            console.error("Error clipping deadwood geometries:", error);
+            message.warning("Some deadwood geometries could not be clipped due to invalid geometry");
+          } else if (deadwoodGeoms && deadwoodGeoms.length > 0) {
+            console.log(`Successfully clipped ${deadwoodGeoms.length} deadwood geometries`);
+            await saveGeometries({
+              patchId: basePatch.id,
+              datasetId: dataset.id,
+              layerType: ILabelData.DEADWOOD,
+              geometries: deadwoodGeoms.map((g: { geometry: unknown }) => g.geometry),
+            });
+          } else {
+            console.log("No deadwood geometries found in patch area");
+          }
+        }
+
+        // Copy forest cover geometries using PostGIS spatial filtering and clipping
+        if (forestCoverLabel) {
+          console.log("Fetching forest cover geometries for label:", forestCoverLabel.id, "bbox:", {
+            minx: basePatch.bbox_minx,
+            miny: basePatch.bbox_miny,
+            maxx: basePatch.bbox_maxx,
+            maxy: basePatch.bbox_maxy,
+          });
+
+          const { data: forestCoverGeoms, error } = await supabase.rpc("get_clipped_geometries_for_patch", {
+            p_label_id: forestCoverLabel.id,
+            p_geometry_table: "v2_forest_cover_geometries",
+            p_bbox_minx: basePatch.bbox_minx,
+            p_bbox_miny: basePatch.bbox_miny,
+            p_bbox_maxx: basePatch.bbox_maxx,
+            p_bbox_maxy: basePatch.bbox_maxy,
+            p_buffer_m: 2.0, // 2 meter buffer
+          });
+
+          if (error) {
+            console.error("Error clipping forest cover geometries:", error);
+            message.warning("Some forest cover geometries could not be clipped due to invalid geometry");
+          } else if (forestCoverGeoms && forestCoverGeoms.length > 0) {
+            console.log(`Successfully clipped ${forestCoverGeoms.length} forest cover geometries`);
+            await saveGeometries({
+              patchId: basePatch.id,
+              datasetId: dataset.id,
+              layerType: ILabelData.FOREST_COVER,
+              geometries: forestCoverGeoms.map((g: { geometry: unknown }) => g.geometry),
+            });
+          } else {
+            console.log("No forest cover geometries found in patch area");
+          }
+        }
+
+        console.log("Reference data auto-copied and clipped successfully");
+      } catch (error) {
+        console.error("Failed to auto-copy predictions:", error);
+        // Don't fail the whole operation if this fails
+      }
+    },
+    [dataset.id, saveGeometries],
+  );
+
   // Handle generating sub-patches for a base patch
   const handleGenerateSubPatches = useCallback(
     async (basePatch: IReferencePatch, currentGeometry?: GeoJSON.Polygon) => {
@@ -301,14 +559,23 @@ export default function ReferencePatchEditorView({
         const patchToGenerate =
           geometryToUse !== basePatch.geometry ? { ...basePatch, geometry: geometryToUse } : basePatch;
 
+        // Step 1: Auto-copy model predictions as v1 reference data
+        await autoCopyPredictionsAsReference(patchToGenerate);
+
+        // Step 2: Generate nested patches
         await generateNestedPatchesRecursive(patchToGenerate);
-        // Mark base patch as good
+
+        // Step 3: Mark base patch as good
         await updateStatus({ patchId: basePatch.id, status: "good" });
         onUnsavedChanges(true);
-        message.success({ content: "All nested patches generated successfully!", key: "generate" });
+
+        message.success({ content: "Patches generated and reference data created!", key: "generate" });
 
         // Switch to 10cm resolution
         setSelectedResolution(10);
+
+        // Refetch patches to get updated reference label IDs
+        await refetchPatches();
 
         // Small delay to allow React Query to update the patches list
         setTimeout(() => {
@@ -325,7 +592,15 @@ export default function ReferencePatchEditorView({
         message.error({ content: "Failed to generate patches", key: "generate" });
       }
     },
-    [generateNestedPatchesRecursive, updateStatus, onUnsavedChanges, allPatches, getPatchGeometryFromMap],
+    [
+      generateNestedPatchesRecursive,
+      updateStatus,
+      onUnsavedChanges,
+      allPatches,
+      getPatchGeometryFromMap,
+      autoCopyPredictionsAsReference,
+      refetchPatches,
+    ],
   );
 
   return (
@@ -366,13 +641,36 @@ export default function ReferencePatchEditorView({
             onGetPatchGeometry={handleGetPatchGeometry}
             layerSelection={layerSelection}
             selectedPatchId={selectedPatchId}
+            selectedBasePatch={selectedBasePatch}
           />
 
-          {/* Layer Radio Buttons (bottom-left) */}
-          <LayerRadioButtons value={layerSelection} onChange={setLayerSelection} position="bottom-left" />
+          {/* Layer Radio Buttons (bottom-left) - hidden during editing */}
+          {!editingMode && (
+            <LayerRadioButtons value={layerSelection} onChange={setLayerSelection} position="bottom-left" />
+          )}
 
-          {/* Add Base Patch Button (overlay) - show when no patch is selected and not completed */}
-          {!selectedPatch && !isCompleted && (
+          {/* Editor Toolbar - shown during editing mode */}
+          {editingMode && (
+            <EditorToolbar
+              type={editingMode}
+              isDrawing={editor.isDrawing}
+              hasSelection={!!editor.selection && editor.selection.length > 0}
+              selectionCount={editor.selection?.length || 0}
+              isAIActive={ai.isActive}
+              isAIProcessing={ai.isProcessing}
+              onToggleDraw={editor.toggleDraw}
+              onCutHole={editor.cutHoleWithDrawn}
+              onMerge={editor.mergeSelected}
+              onToggleAI={ai.isActive ? ai.disable : ai.enable}
+              onDeleteSelected={editor.deleteSelected}
+              onSave={handleSaveEdits}
+              onCancel={handleCancelEditing}
+              position="top-right"
+            />
+          )}
+
+          {/* Add Base Patch Button (overlay) - show when no patch is selected and not completed and not editing */}
+          {!selectedPatch && !isCompleted && !editingMode && (
             <div className="pointer-events-none absolute left-4 top-4 z-10">
               <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="pointer-events-auto shadow-lg">
                 Add Base Patch
@@ -381,8 +679,8 @@ export default function ReferencePatchEditorView({
           )}
         </div>
 
-        {/* Sidebar (only visible when a patch is selected) */}
-        {selectedPatch && selectedBasePatch && (
+        {/* Sidebar (only visible when a patch is selected and not editing) */}
+        {selectedPatch && selectedBasePatch && !editingMode && (
           <PatchDetailSidebar
             basePatch={selectedBasePatch}
             selectedPatch={selectedPatch}
