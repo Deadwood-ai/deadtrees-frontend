@@ -9,7 +9,8 @@ import Geometry from "ol/geom/Geometry";
 import { Style, Fill, Stroke } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
 import type { FeatureLike } from "ol/Feature";
-import { union as geomUnion, difference as geomDifference, intersects as geomIntersects } from "../utils/geometry";
+import GeoJSON from "ol/format/GeoJSON";
+import { union as geomUnion, difference as geomDifference } from "../utils/geometry";
 import { message } from "antd";
 
 export interface UsePolygonEditorParams {
@@ -29,12 +30,19 @@ export interface UsePolygonEditorReturn {
   setOverlayVisible: (visible: boolean) => void;
   mergeSelected: () => void;
   cutHoleWithDrawn: () => void;
+  undo: () => void;
+  canUndo: boolean;
 }
 
 export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): UsePolygonEditorReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selection, setSelection] = useState<Feature<Geometry>[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+
+  // History stack for undo (max 20 actions)
+  const historyRef = useRef<string[]>([]); // Store GeoJSON strings of feature collections
+  const MAX_HISTORY = 20;
 
   const overlayLayerRef = useRef<VectorLayer<VectorSource<Feature<Geometry>>> | null>(null);
   const selectRef = useRef<Select | null>(null);
@@ -101,6 +109,86 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     overlayLayerRef.current = layer as unknown as VectorLayer<VectorSource<Feature<Geometry>>>;
   }, [mapRef]);
 
+  // Save current state to history before modifications
+  const saveHistory = useCallback(() => {
+    const overlay = overlayLayerRef.current;
+    if (!overlay) return;
+    const source = overlay.getSource();
+    if (!source) return;
+
+    const features = source.getFeatures();
+    const geoJsonFormatter = new GeoJSON();
+
+    // Serialize all features to GeoJSON
+    const featuresGeoJSON = features.map((f) => {
+      const geomGeoJSON = geoJsonFormatter.writeGeometryObject(f.getGeometry()!, {
+        dataProjection: "EPSG:3857",
+        featureProjection: "EPSG:3857",
+      });
+      return {
+        geometry: geomGeoJSON,
+        properties: {
+          label_data: f.get("label_data"),
+          patch_id: f.get("patch_id"),
+        },
+      };
+    });
+
+    const snapshot = JSON.stringify(featuresGeoJSON);
+
+    // Add to history (limit to MAX_HISTORY)
+    historyRef.current.push(snapshot);
+    if (historyRef.current.length > MAX_HISTORY) {
+      historyRef.current.shift(); // Remove oldest
+    }
+
+    setCanUndo(true);
+  }, [MAX_HISTORY]);
+
+  // Undo last operation
+  const undo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+
+    const overlay = overlayLayerRef.current;
+    if (!overlay) return;
+    const source = overlay.getSource();
+    if (!source) return;
+
+    // Pop last snapshot from history
+    const snapshot = historyRef.current.pop();
+    if (!snapshot) return;
+
+    // Restore features from snapshot
+    const featuresData = JSON.parse(snapshot);
+    const geoJsonFormatter = new GeoJSON();
+
+    // Clear current features
+    source.clear();
+
+    // Restore features
+    featuresData.forEach((featureData: { geometry: unknown; properties: Record<string, unknown> }) => {
+      const geometry = geoJsonFormatter.readGeometry(featureData.geometry, {
+        dataProjection: "EPSG:3857",
+        featureProjection: "EPSG:3857",
+      });
+      const feature = new Feature(geometry);
+      feature.set("label_data", featureData.properties.label_data);
+      feature.set("patch_id", featureData.properties.patch_id);
+      source.addFeature(feature);
+    });
+
+    // Clear selection
+    if (selectRef.current) {
+      selectRef.current.getFeatures().clear();
+    }
+    setSelection([]);
+
+    // Update canUndo state
+    setCanUndo(historyRef.current.length > 0);
+
+    message.success("Undo successful");
+  }, []);
+
   const startEditing = useCallback(() => {
     console.log("[usePolygonEditor] startEditing called, mapRef.current:", !!mapRef.current, "isEditing:", isEditing);
     if (!mapRef.current || isEditing) {
@@ -147,6 +235,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     modify.setActive(selectedCollection.getLength() > 0);
     mapRef.current.addInteraction(modify);
     modifyRef.current = modify;
+
+    // Save history before modification starts
+    modify.on("modifystart", () => {
+      saveHistory();
+    });
 
     const updateModifyActive = () => {
       modify.setActive(selectedCollection.getLength() > 0);
@@ -255,7 +348,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     // Draw interaction created lazily on toggle
     setIsEditing(true);
     console.log("[usePolygonEditor] startEditing completed, interactions added");
-  }, [ensureOverlay, isEditing, mapRef]);
+  }, [ensureOverlay, isEditing, mapRef, saveHistory]);
 
   const stopEditing = useCallback(() => {
     if (!mapRef.current || !isEditing) return;
@@ -273,6 +366,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       mapRef.current.removeInteraction(selectRef.current);
       selectRef.current = null;
     }
+
+    // Clear history (fresh start for next editing session)
+    historyRef.current = [];
+    setCanUndo(false);
 
     // Keep overlay for now; page unmount clears it. Clear selection/draw flags
     setSelection([]);
@@ -338,6 +435,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         console.log("[usePolygonEditor] Draw interaction added to map");
         // Auto-exit draw mode after polygon completion
         draw.once("drawend", () => {
+          // Save history after drawing completes (new feature was added)
+          // Small delay to ensure feature is added to source
+          setTimeout(() => saveHistory(), 50);
+
           if (!mapRef.current || !drawRef.current) return;
           mapRef.current.removeInteraction(drawRef.current);
           drawRef.current = null;
@@ -351,7 +452,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         console.log("[usePolygonEditor] Draw interaction removed from map");
       }
     },
-    [ensureOverlay, isDrawing, mapRef],
+    [ensureOverlay, isDrawing, mapRef, saveHistory],
   );
 
   const deleteSelected = useCallback(() => {
@@ -361,11 +462,14 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
     if (!source) return;
 
+    // Save history before deleting
+    saveHistory();
+
     const featuresToDelete = [...(select.getFeatures().getArray() as Feature<Geometry>[])];
     featuresToDelete.forEach((f) => source.removeFeature(f));
     select.getFeatures().clear();
     setSelection([]);
-  }, []);
+  }, [saveHistory]);
 
   const mergeSelected = useCallback(() => {
     const overlay = overlayLayerRef.current;
@@ -382,20 +486,23 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const ga = a.getGeometry();
     const gb = b.getGeometry();
     if (!ga || !gb) return;
-    // Enforce intersecting-only merge per MVP spec
-    if (!geomIntersects(ga, gb)) {
-      message.warning("Polygons must intersect to merge.");
+
+    // Save history before merging
+    saveHistory();
+
+    // Union handles all cases: intersecting, containing, or separate polygons
+    const merged = geomUnion(ga, gb);
+    if (!merged) {
+      message.error("Failed to merge polygons.");
       return;
     }
-    const merged = geomUnion(ga, gb);
-    if (!merged) return;
     // keep id from first feature
     a.setGeometry(merged);
     source.removeFeature(b);
     select.getFeatures().clear();
     select.getFeatures().push(a);
     setSelection([a]);
-  }, []);
+  }, [saveHistory]);
 
   // Cut hole / trim edges: user draws a polygon, then we subtract from single selected feature
   const cutHoleWithDrawn = useCallback(() => {
@@ -441,6 +548,9 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const cutFeature = evt.feature as Feature<Geometry>;
       const cutGeom = cutFeature.getGeometry();
       if (cutGeom) {
+        // Save history before cutting
+        saveHistory();
+
         // Perform difference operation - works for holes, edge trimming, and no-ops if no overlap
         const diff = geomDifference(targetGeom, cutGeom);
         if (!diff) {
@@ -458,7 +568,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       }
       setIsDrawing(false);
     });
-  }, [ensureOverlay, mapRef]);
+  }, [ensureOverlay, mapRef, saveHistory]);
 
   const clearAll = useCallback(() => {
     const overlay = overlayLayerRef.current;
@@ -523,6 +633,8 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       setOverlayVisible,
       mergeSelected,
       cutHoleWithDrawn,
+      undo,
+      canUndo,
     }),
     [
       clearAll,
@@ -536,6 +648,8 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       setOverlayVisible,
       mergeSelected,
       cutHoleWithDrawn,
+      undo,
+      canUndo,
     ],
   );
 }

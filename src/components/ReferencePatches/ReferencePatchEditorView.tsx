@@ -513,6 +513,29 @@ export default function ReferencePatchEditorView({
     }
   }, [editingMode, layerSelection, editor]);
 
+  // Keyboard shortcut for undo (Ctrl/Cmd+Z) - only during editing
+  useEffect(() => {
+    if (!editingMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault(); // Prevent browser undo
+        if (editor.canUndo) {
+          editor.undo();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingMode, editor]);
+
   // Memoize the callback that receives the patch geometry getter
   const handleGetPatchGeometry = useCallback((getter: (patchId: number) => GeoJSON.Polygon | null) => {
     setGetPatchGeometryFromMap(() => getter);
@@ -775,6 +798,8 @@ export default function ReferencePatchEditorView({
                 console.log("After toggle, isActive:", ai.isActive);
               }}
               onDeleteSelected={editor.deleteSelected}
+              onUndo={editor.undo}
+              canUndo={editor.canUndo}
               onSave={handleSaveEdits}
               onCancel={handleCancelEditing}
               position="top-right"

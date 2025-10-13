@@ -7,6 +7,7 @@ import {
   MergeCellsOutlined,
   RobotOutlined,
   DeleteOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
   onMerge: () => void;
   onToggleAI: () => void;
   onDeleteSelected: () => void;
+  onUndo: () => void;
+  canUndo: boolean;
   onSave: () => void;
   onCancel: () => void;
   position?: "top-right" | "top-left";
@@ -38,6 +41,8 @@ export default function EditorToolbar({
   onMerge,
   onToggleAI,
   onDeleteSelected,
+  onUndo,
+  canUndo,
   onSave,
   onCancel,
   position = "top-right",
@@ -82,11 +87,11 @@ export default function EditorToolbar({
           <Button
             icon={<MergeCellsOutlined />}
             onClick={onMerge}
-            disabled={!hasSelection || selectionCount < 2}
+            disabled={!hasSelection || selectionCount !== 2}
             block
-            title="Select 2+ polygons to merge"
+            title="Select exactly 2 polygons to merge (works with overlapping or nested polygons)"
           >
-            Merge Selected {hasSelection && selectionCount >= 2 ? `(${selectionCount})` : ""}
+            Merge Selected {hasSelection && selectionCount === 2 ? `(${selectionCount})` : ""}
           </Button>
 
           {/* AI Segmentation */}
@@ -115,6 +120,17 @@ export default function EditorToolbar({
             block
           >
             Delete Selected {hasSelection && selectionCount > 0 ? `(${selectionCount})` : ""}
+          </Button>
+
+          {/* Undo */}
+          <Button
+            icon={<UndoOutlined />}
+            onClick={onUndo}
+            disabled={!canUndo}
+            block
+            title="Undo last action (Ctrl/Cmd+Z)"
+          >
+            Undo
           </Button>
 
           <Divider style={{ margin: "8px 0" }} />
