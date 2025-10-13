@@ -32,6 +32,7 @@ export interface UsePolygonEditorReturn {
   cutHoleWithDrawn: () => void;
   undo: () => void;
   canUndo: boolean;
+  saveHistorySnapshot: () => void; // Exposed for AI segmentation
 }
 
 export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): UsePolygonEditorReturn {
@@ -119,20 +120,26 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const features = source.getFeatures();
     const geoJsonFormatter = new GeoJSON();
 
-    // Serialize all features to GeoJSON
-    const featuresGeoJSON = features.map((f) => {
-      const geomGeoJSON = geoJsonFormatter.writeGeometryObject(f.getGeometry()!, {
-        dataProjection: "EPSG:3857",
-        featureProjection: "EPSG:3857",
+    // Serialize all features to GeoJSON (excluding temporary features like AI bbox)
+    const featuresGeoJSON = features
+      .filter((f) => {
+        // Exclude temporary features (like AI segmentation bbox)
+        const role = f.get("dt_role");
+        return role !== "bbox";
+      })
+      .map((f) => {
+        const geomGeoJSON = geoJsonFormatter.writeGeometryObject(f.getGeometry()!, {
+          dataProjection: "EPSG:3857",
+          featureProjection: "EPSG:3857",
+        });
+        return {
+          geometry: geomGeoJSON,
+          properties: {
+            label_data: f.get("label_data"),
+            patch_id: f.get("patch_id"),
+          },
+        };
       });
-      return {
-        geometry: geomGeoJSON,
-        properties: {
-          label_data: f.get("label_data"),
-          patch_id: f.get("patch_id"),
-        },
-      };
-    });
 
     const snapshot = JSON.stringify(featuresGeoJSON);
 
@@ -433,12 +440,14 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         drawRef.current = draw;
         setIsDrawing(true);
         console.log("[usePolygonEditor] Draw interaction added to map");
+
+        // Save history when drawing starts (before new feature is added)
+        draw.once("drawstart", () => {
+          saveHistory();
+        });
+
         // Auto-exit draw mode after polygon completion
         draw.once("drawend", () => {
-          // Save history after drawing completes (new feature was added)
-          // Small delay to ensure feature is added to source
-          setTimeout(() => saveHistory(), 50);
-
           if (!mapRef.current || !drawRef.current) return;
           mapRef.current.removeInteraction(drawRef.current);
           drawRef.current = null;
@@ -635,6 +644,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       cutHoleWithDrawn,
       undo,
       canUndo,
+      saveHistorySnapshot: saveHistory,
     }),
     [
       clearAll,
@@ -650,6 +660,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       cutHoleWithDrawn,
       undo,
       canUndo,
+      saveHistory,
     ],
   );
 }
