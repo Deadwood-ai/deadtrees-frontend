@@ -62,6 +62,7 @@ export default function EditorToolbar({
             block
             type={isDrawing ? "primary" : "default"}
             htmlType="button"
+            title="Click to draw vertices, or hold Shift for freehand drawing"
           >
             {isDrawing ? "Stop Drawing" : "Draw Polygon"}
           </Button>
@@ -72,7 +73,7 @@ export default function EditorToolbar({
             onClick={onCutHole}
             disabled={!hasSelection || selectionCount !== 1}
             block
-            title="Select one polygon, then draw a hole to cut"
+            title="Select one polygon, then draw to cut a hole or trim edges. Hold Shift for freehand."
           >
             Cut Hole {hasSelection && selectionCount === 1 ? "(Ready)" : ""}
           </Button>

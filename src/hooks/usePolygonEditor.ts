@@ -3,7 +3,7 @@ import Map from "ol/Map";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Draw, Modify, Select } from "ol/interaction";
-import { click } from "ol/events/condition";
+import { click, shiftKeyOnly } from "ol/events/condition";
 import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
 import { Style, Fill, Stroke } from "ol/style";
@@ -296,7 +296,12 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         const overlay = overlayLayerRef.current!;
         const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
         console.log("[usePolygonEditor] Creating draw interaction, overlay:", !!overlay, "source:", !!source);
-        const draw = new Draw({ source: (source as unknown as VectorSource)!, type: "Polygon" });
+        const draw = new Draw({
+          source: (source as unknown as VectorSource)!,
+          type: "Polygon",
+          freehand: false, // Standard click-to-draw by default
+          freehandCondition: shiftKeyOnly, // Enable freehand when Shift is held
+        });
         mapRef.current.addInteraction(draw);
         drawRef.current = draw;
         setIsDrawing(true);
@@ -362,7 +367,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     setSelection([a]);
   }, []);
 
-  // Cut hole flow: user draws a polygon, then we subtract from single selected feature
+  // Cut hole / trim edges: user draws a polygon, then we subtract from single selected feature
   const cutHoleWithDrawn = useCallback(() => {
     if (!mapRef.current) return;
     ensureOverlay();
@@ -370,41 +375,43 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     if (!select) return;
     const selected = select.getFeatures().getArray() as Feature<Geometry>[];
     if (selected.length !== 1) {
-      message.warning("Select a single polygon, then draw a hole inside it.");
+      message.warning("Select a single polygon, then draw a shape to cut out or trim.");
       return;
     }
     const target = selected[0];
     const targetGeom = target.getGeometry();
     if (!targetGeom) return;
 
-    // temporary draw for the hole polygon
+    // temporary draw for the hole/trim polygon
     if (drawRef.current) {
       mapRef.current.removeInteraction(drawRef.current);
       drawRef.current = null;
     }
     // Use a temporary in-memory source that is NOT the overlay
     const tempSource = new VectorSource<Feature<Geometry>>();
-    const draw = new Draw({ source: tempSource as unknown as VectorSource, type: "Polygon" });
+    const draw = new Draw({
+      source: tempSource as unknown as VectorSource,
+      type: "Polygon",
+      freehand: false, // Standard click-to-draw by default
+      freehandCondition: shiftKeyOnly, // Enable freehand when Shift is held
+    });
     mapRef.current.addInteraction(draw);
     drawRef.current = draw;
     setIsDrawing(true);
 
     draw.once("drawend", (evt) => {
-      const holeFeature = evt.feature as Feature<Geometry>;
-      const holeGeom = holeFeature.getGeometry();
-      if (holeGeom) {
-        // Validate that hole overlaps the target
-        if (!geomIntersects(targetGeom, holeGeom)) {
-          message.warning("Hole must overlap the selected polygon.");
+      const cutFeature = evt.feature as Feature<Geometry>;
+      const cutGeom = cutFeature.getGeometry();
+      if (cutGeom) {
+        // Perform difference operation - works for holes, edge trimming, and no-ops if no overlap
+        const diff = geomDifference(targetGeom, cutGeom);
+        if (!diff) {
+          message.error("Failed to cut polygon. Result would be empty.");
         } else {
-          const diff = geomDifference(targetGeom, holeGeom);
-          if (!diff) {
-            message.error("Failed to cut hole.");
-          } else {
-            target.setGeometry(diff);
-            // Clear temp source; hole feature was never added to overlay
-            tempSource.clear();
-          }
+          target.setGeometry(diff);
+          // Clear temp source; cut feature was never added to overlay
+          tempSource.clear();
+          message.success("Polygon cut successfully!");
         }
       }
       if (drawRef.current) {
