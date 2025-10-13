@@ -499,9 +499,18 @@ export default function ReferencePatchMap({
     }
   }, [forestCoverId, deadwoodId]);
 
-  // Update layer visibility based on radio selection and reference data existence
+  // Update layer visibility based on radio selection, reference data existence, and editing mode
   useEffect(() => {
     if (!deadwoodLayerRef.current || !forestCoverLayerRef.current) return;
+
+    // If in editing mode, hide ALL prediction layers (both global and reference)
+    if (isEditingMode) {
+      deadwoodLayerRef.current.setVisible(false);
+      forestCoverLayerRef.current.setVisible(false);
+      if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
+      if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
+      return;
+    }
 
     // Check if selected patch has reference data
     const hasReferenceData =
@@ -536,7 +545,7 @@ export default function ReferencePatchMap({
     // Hide reference layers when showing global predictions
     if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
     if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
-  }, [layerSelection, selectedPatchId, selectedBasePatch]);
+  }, [layerSelection, selectedPatchId, selectedBasePatch, isEditingMode]);
 
   // Load and display reference geometries when patch has reference data
   useEffect(() => {
@@ -618,7 +627,8 @@ export default function ReferencePatchMap({
 
           referenceDeadwoodLayerRef.current = layer;
           map.addLayer(layer);
-          const visible = layerSelection === "deadwood";
+          // Hide reference layers during editing mode
+          const visible = !isEditingMode && layerSelection === "deadwood";
           layer.setVisible(visible);
           console.log("Added deadwood layer, visible:", visible, "features:", source.getFeatures().length);
         }
@@ -671,7 +681,8 @@ export default function ReferencePatchMap({
 
           referenceForestCoverLayerRef.current = layer;
           map.addLayer(layer);
-          const visible = layerSelection === "forest_cover";
+          // Hide reference layers during editing mode
+          const visible = !isEditingMode && layerSelection === "forest_cover";
           layer.setVisible(visible);
           console.log("Added forest cover layer, visible:", visible, "features:", source.getFeatures().length);
         }
@@ -679,7 +690,7 @@ export default function ReferencePatchMap({
     };
 
     loadReferenceGeometries();
-  }, [selectedBasePatch, layerSelection]);
+  }, [selectedBasePatch, layerSelection, isEditingMode]);
 
   // Add/update AOI layers when geometry becomes available
   useEffect(() => {

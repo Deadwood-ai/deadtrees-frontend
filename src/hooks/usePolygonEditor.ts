@@ -8,6 +8,7 @@ import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
 import { Style, Fill, Stroke } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
+import type { FeatureLike } from "ol/Feature";
 import { union as geomUnion, difference as geomDifference, intersects as geomIntersects } from "../utils/geometry";
 import { message } from "antd";
 
@@ -48,15 +49,42 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     const source = new VectorSource<Feature<Geometry>>({ wrapX: false } as unknown as { wrapX: boolean });
 
-    // Base (unselected) style: subtle blue
+    // Define styles for different states
+    // Default: Blue, thin stroke
     const baseStyle = new Style({
-      fill: new Fill({ color: "rgba(59,130,246,0.10)" }), // blue-500 @ 10%
-      stroke: new Stroke({ color: "#3b82f6", width: 2 }), // blue-500
+      fill: new Fill({ color: "rgba(59,130,246,0.05)" }), // blue-500 @ 5% - very light
+      stroke: new Stroke({ color: "#3b82f6", width: 2 }), // blue-500, thin
     });
+
+    // Hover: Cyan, medium stroke
+    const hoverStyle = new Style({
+      fill: new Fill({ color: "rgba(6,182,212,0.05)" }), // cyan-500 @ 5% - very light
+      stroke: new Stroke({ color: "#06b6d4", width: 3 }), // cyan-500, medium
+    });
+
+    // Selected: Orange, thick stroke
+    const selectedStyle = new Style({
+      fill: new Fill({ color: "rgba(249,115,22,0.05)" }), // orange-500 @ 5% - very light
+      stroke: new Stroke({ color: "#f97316", width: 4 }), // orange-500, thick
+    });
+
+    // Style function that checks feature state
+    const styleFunction = (feature: FeatureLike) => {
+      const isSelected = feature.get("dt_selected") === true;
+      const isHovered = feature.get("dt_hovered") === true;
+
+      if (isSelected) {
+        return selectedStyle;
+      } else if (isHovered) {
+        return hoverStyle;
+      } else {
+        return baseStyle;
+      }
+    };
 
     const layer = new VectorLayer({
       source: source as unknown as VectorSource,
-      style: baseStyle,
+      style: styleFunction,
       updateWhileAnimating: false,
       updateWhileInteracting: false,
     });
@@ -85,16 +113,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     console.log("[usePolygonEditor] Overlay layer:", !!overlay);
 
     // Select interaction limited to overlay layer
-    // Selected style: blue highlight
-    const selectedStyle = new Style({
-      fill: new Fill({ color: "rgba(59,130,246,0.20)" }), // blue-500 @ 20%
-      stroke: new Stroke({ color: "#2563eb", width: 3 }), // blue-600 (darker blue)
-    });
-
-    // Enable multi-selection by toggling on click
+    // Use null style - styling handled by layer's style function
     const select = new Select({
       layers: [overlay],
-      style: selectedStyle,
+      style: null, // Don't apply custom style, use layer's style function
       multi: true,
       condition: click,
       addCondition: click,
@@ -104,9 +126,19 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     mapRef.current.addInteraction(select);
     selectRef.current = select;
 
-    // Track selection changes
+    // Track selection changes and update feature properties
     const selectedCollection = select.getFeatures();
-    const updateSelection = () => setSelection(selectedCollection.getArray() as Feature<Geometry>[]);
+    const updateSelection = () => {
+      const allFeatures = overlay.getSource()?.getFeatures() || [];
+      const selectedFeatures = selectedCollection.getArray() as Feature<Geometry>[];
+
+      // Update dt_selected property on all features
+      allFeatures.forEach((f) => {
+        f.set("dt_selected", selectedFeatures.includes(f));
+      });
+
+      setSelection(selectedFeatures);
+    };
     selectedCollection.on(["add", "remove"], updateSelection);
 
     // Modify interaction, active only when selection exists
@@ -117,28 +149,27 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     const updateModifyActive = () => {
       modify.setActive(selectedCollection.getLength() > 0);
-      setSelection(selectedCollection.getArray() as Feature<Geometry>[]);
+      const allFeatures = overlay.getSource()?.getFeatures() || [];
+      const selectedFeatures = selectedCollection.getArray() as Feature<Geometry>[];
+
+      // Update dt_selected property on all features
+      allFeatures.forEach((f) => {
+        f.set("dt_selected", selectedFeatures.includes(f));
+      });
+
+      setSelection(selectedFeatures);
     };
     selectedCollection.on(["add", "remove"], updateModifyActive);
 
-    // If a feature becomes selected, clear any hover style so selection style is visible
+    // If a feature becomes selected, clear any hover state
     selectedCollection.on(["add"], () => {
       if (hoveredFeatureRef.current) {
-        try {
-          hoveredFeatureRef.current.setStyle(undefined);
-        } catch (e) {
-          // ignore
-        }
+        hoveredFeatureRef.current.set("dt_hovered", false);
         hoveredFeatureRef.current = null;
       }
     });
 
-    // Hover highlight handler
-    // Hover style: darker blue (slightly darker than base)
-    const hoverStyle = new Style({
-      fill: new Fill({ color: "rgba(37,99,235,0.15)" }), // blue-600 @ 15%
-      stroke: new Stroke({ color: "#1e40af", width: 2.5 }), // blue-800 (darker border)
-    });
+    // Hover highlight handler - use feature properties instead of setStyle
     const handlePointerMove = (evt: MapBrowserEvent<UIEvent>) => {
       if (!mapRef.current || !overlayLayerRef.current) return;
       let hitFeature: Feature<Geometry> | null = null;
@@ -166,22 +197,16 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         hitFeature = null;
       }
 
+      // Clear hover state from previous feature
       if (hoveredFeatureRef.current && hoveredFeatureRef.current !== hitFeature) {
-        try {
-          hoveredFeatureRef.current.setStyle(undefined);
-        } catch (e) {
-          // ignore
-        }
+        hoveredFeatureRef.current.set("dt_hovered", false);
         hoveredFeatureRef.current = null;
       }
 
+      // Set hover state on new feature
       if (hitFeature && hoveredFeatureRef.current !== hitFeature) {
         hoveredFeatureRef.current = hitFeature as Feature<Geometry>;
-        try {
-          (hitFeature as Feature<Geometry>).setStyle(hoverStyle);
-        } catch (e) {
-          // ignore
-        }
+        (hitFeature as Feature<Geometry>).set("dt_hovered", true);
       }
     };
     mapRef.current.on("pointermove", handlePointerMove);
@@ -209,15 +234,15 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       if (!hitOverlay) {
         const coll = selectRef.current.getFeatures();
         if (coll.getLength() > 0) {
+          // Clear dt_selected from all features
+          const allFeatures = overlayLayerRef.current?.getSource()?.getFeatures() || [];
+          allFeatures.forEach((f) => f.set("dt_selected", false));
+
           coll.clear();
           setSelection([]);
           if (modifyRef.current) modifyRef.current.setActive(false);
           if (hoveredFeatureRef.current) {
-            try {
-              hoveredFeatureRef.current.setStyle(undefined);
-            } catch (e) {
-              // ignore
-            }
+            hoveredFeatureRef.current.set("dt_hovered", false);
             hoveredFeatureRef.current = null;
           }
         }
@@ -263,11 +288,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       clickListenerRef.current = null;
     }
     if (hoveredFeatureRef.current) {
-      try {
-        hoveredFeatureRef.current.setStyle(undefined);
-      } catch (e) {
-        // ignore
-      }
+      hoveredFeatureRef.current.set("dt_hovered", false);
       hoveredFeatureRef.current = null;
     }
     // Clear overlay features on exit to restore base layer visibility via listeners upstream
