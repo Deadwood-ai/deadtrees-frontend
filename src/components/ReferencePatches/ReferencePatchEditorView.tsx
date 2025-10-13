@@ -67,25 +67,34 @@ export default function ReferencePatchEditorView({
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
-  // Keyboard shortcuts for layer selection (J/K/L) - disabled during editing
+  // Keyboard shortcuts for layer selection (J/K/L) - filtered during editing
   useEffect(() => {
-    if (editingMode) return; // Don't handle shortcuts during editing
-
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
+      // Determine available layers based on editing mode
+      const availableLayers = editingMode
+        ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
+        : ["deadwood", "forest_cover", "ortho_only"];
+
       switch (e.key.toLowerCase()) {
         case "j":
-          setLayerSelection("deadwood");
+          if (availableLayers.includes("deadwood")) {
+            setLayerSelection("deadwood");
+          }
           break;
         case "k":
-          setLayerSelection("forest_cover");
+          if (availableLayers.includes("forest_cover")) {
+            setLayerSelection("forest_cover");
+          }
           break;
         case "l":
-          setLayerSelection("ortho_only");
+          if (availableLayers.includes("ortho_only")) {
+            setLayerSelection("ortho_only");
+          }
           break;
       }
     };
@@ -488,6 +497,22 @@ export default function ReferencePatchEditorView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedPatchId, handleDeselect]);
 
+  // Control overlay visibility based on layer selection during editing
+  useEffect(() => {
+    if (!editingMode) {
+      // Always show overlay when editing (default state)
+      editor.setOverlayVisible(true);
+      return;
+    }
+
+    // When editing and "ortho_only" is selected, hide overlay
+    if (layerSelection === "ortho_only") {
+      editor.setOverlayVisible(false);
+    } else {
+      editor.setOverlayVisible(true);
+    }
+  }, [editingMode, layerSelection, editor]);
+
   // Memoize the callback that receives the patch geometry getter
   const handleGetPatchGeometry = useCallback((getter: (patchId: number) => GeoJSON.Polygon | null) => {
     setGetPatchGeometryFromMap(() => getter);
@@ -712,10 +737,17 @@ export default function ReferencePatchEditorView({
             isEditingMode={!!editingMode}
           />
 
-          {/* Layer Radio Buttons (bottom-left) - hidden during editing */}
-          {!editingMode && (
-            <LayerRadioButtons value={layerSelection} onChange={setLayerSelection} position="bottom-left" />
-          )}
+          {/* Layer Radio Buttons (bottom-left) - filtered during editing */}
+          <LayerRadioButtons
+            value={layerSelection}
+            onChange={setLayerSelection}
+            position="bottom-left"
+            availableLayers={
+              editingMode
+                ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
+                : undefined // Show all when not editing
+            }
+          />
 
           {/* Editor Toolbar - shown during editing mode */}
           {editingMode && (

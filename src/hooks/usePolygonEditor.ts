@@ -26,6 +26,7 @@ export interface UsePolygonEditorReturn {
   deleteSelected: () => void;
   clearAll: () => void;
   getOverlayLayer: () => VectorLayer<VectorSource> | null;
+  setOverlayVisible: (visible: boolean) => void;
   mergeSelected: () => void;
   cutHoleWithDrawn: () => void;
 }
@@ -317,11 +318,19 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         const overlay = overlayLayerRef.current!;
         const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
         console.log("[usePolygonEditor] Creating draw interaction, overlay:", !!overlay, "source:", !!source);
+
+        // Style for the sketch (polygon being drawn) - very visible
+        const sketchStyle = new Style({
+          fill: new Fill({ color: "rgba(255, 200, 0, 0.4)" }), // Bright yellow-orange @ 40% - highly visible
+          stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
+        });
+
         const draw = new Draw({
           source: (source as unknown as VectorSource)!,
           type: "Polygon",
           freehand: false, // Standard click-to-draw by default
           freehandCondition: shiftKeyOnly, // Enable freehand when Shift is held
+          style: sketchStyle, // Apply bright style to sketch
         });
         mapRef.current.addInteraction(draw);
         drawRef.current = draw;
@@ -410,11 +419,19 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     }
     // Use a temporary in-memory source that is NOT the overlay
     const tempSource = new VectorSource<Feature<Geometry>>();
+
+    // Style for the sketch (polygon being drawn) - very visible
+    const sketchStyle = new Style({
+      fill: new Fill({ color: "rgba(255, 200, 0, 0.4)" }), // Bright yellow-orange @ 40% - highly visible
+      stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
+    });
+
     const draw = new Draw({
       source: tempSource as unknown as VectorSource,
       type: "Polygon",
       freehand: false, // Standard click-to-draw by default
       freehandCondition: shiftKeyOnly, // Enable freehand when Shift is held
+      style: sketchStyle, // Apply bright style to sketch
     });
     mapRef.current.addInteraction(draw);
     drawRef.current = draw;
@@ -459,6 +476,12 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     setSelection([]);
   }, []);
 
+  const setOverlayVisible = useCallback((visible: boolean) => {
+    const overlay = overlayLayerRef.current;
+    if (!overlay) return;
+    overlay.setVisible(visible);
+  }, []);
+
   // Cleanup overlay layer on unmount
   useEffect(() => {
     const map = mapRef.current;
@@ -497,6 +520,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       deleteSelected,
       clearAll,
       getOverlayLayer: () => (overlayLayerRef.current as unknown as VectorLayer<VectorSource>) || null,
+      setOverlayVisible,
       mergeSelected,
       cutHoleWithDrawn,
     }),
@@ -509,6 +533,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       startEditing,
       stopEditing,
       toggleDraw,
+      setOverlayVisible,
       mergeSelected,
       cutHoleWithDrawn,
     ],
