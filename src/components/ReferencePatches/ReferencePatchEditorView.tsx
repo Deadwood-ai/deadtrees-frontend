@@ -63,11 +63,12 @@ export default function ReferencePatchEditorView({
     mapRef: mapRef as React.MutableRefObject<OLMap | null>,
     getOrthoLayer: getOrthoLayer || (() => undefined),
     getTargetVectorSource: () => editor.getOverlayLayer()?.getSource() || null,
+    onBeforeAddFeatures: editor.saveHistorySnapshot, // Save history before AI adds features (for undo)
   });
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
-  // Keyboard shortcuts for layer selection (J/K/L) - filtered during editing
+  // Keyboard shortcuts for layer selection (1/2/3) - filtered during editing
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if user is typing in an input
@@ -80,20 +81,20 @@ export default function ReferencePatchEditorView({
         ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
         : ["deadwood", "forest_cover", "ortho_only"];
 
-      switch (e.key.toLowerCase()) {
-        case "j":
+      switch (e.key) {
+        case "1":
+          if (availableLayers.includes("ortho_only")) {
+            setLayerSelection("ortho_only");
+          }
+          break;
+        case "2":
           if (availableLayers.includes("deadwood")) {
             setLayerSelection("deadwood");
           }
           break;
-        case "k":
+        case "3":
           if (availableLayers.includes("forest_cover")) {
             setLayerSelection("forest_cover");
-          }
-          break;
-        case "l":
-          if (availableLayers.includes("ortho_only")) {
-            setLayerSelection("ortho_only");
           }
           break;
       }
@@ -146,10 +147,25 @@ export default function ReferencePatchEditorView({
   // Get base patch for selected patch
   const selectedBasePatch = useMemo(() => {
     if (!selectedPatch) return null;
-    if (selectedPatch.resolution_cm === 20) return selectedPatch;
+    if (selectedPatch.resolution_cm === 20) {
+      console.log("[Editor] selectedBasePatch updated (20cm):", {
+        id: selectedPatch.id,
+        deadwoodLabel: selectedPatch.reference_deadwood_label_id,
+        forestCoverLabel: selectedPatch.reference_forest_cover_label_id,
+      });
+      return selectedPatch;
+    }
     // Find parent base patch by parsing patch_index
     const baseIndex = selectedPatch.patch_index.split("_")[0] + "_" + selectedPatch.patch_index.split("_")[1];
-    return basePatches.find((p) => p.patch_index === baseIndex) || null;
+    const basePatch = basePatches.find((p) => p.patch_index === baseIndex) || null;
+    if (basePatch) {
+      console.log("[Editor] selectedBasePatch updated (child patch):", {
+        id: basePatch.id,
+        deadwoodLabel: basePatch.reference_deadwood_label_id,
+        forestCoverLabel: basePatch.reference_forest_cover_label_id,
+      });
+    }
+    return basePatch;
   }, [selectedPatch, basePatches]);
 
   // Recursively generate nested patches
@@ -438,20 +454,23 @@ export default function ReferencePatchEditorView({
         geometries,
       });
 
-      // Clean up and exit editing mode
+      // Refetch patches to get updated reference label IDs BEFORE exiting editing mode
+      // This ensures the map has fresh data when we exit editing
+      console.log("[Editor] Before refetch, selectedBasePatch:", selectedBasePatch);
+      const refetchResult = await refetchPatches();
+      console.log("[Editor] After refetch, patches count:", refetchResult.data?.length);
+
+      const updatedPatch = refetchResult.data?.find((p) => p.id === basePatch.id);
+      console.log("[Editor] Updated patch label IDs:", {
+        deadwood: updatedPatch?.reference_deadwood_label_id,
+        forestCover: updatedPatch?.reference_forest_cover_label_id,
+      });
+
+      // NOW clean up and exit editing mode
+      // This ensures the reference geometry useEffect fires with the NEW patch data
       editor.stopEditing();
       editor.getOverlayLayer()?.getSource()?.clear();
       setEditingMode(null);
-
-      // Refetch patches to get updated reference label IDs
-      await refetchPatches();
-
-      // Force reload of reference geometries by briefly deselecting and reselecting
-      const currentPatchId = selectedPatchId;
-      setSelectedPatchId(null);
-      setTimeout(() => {
-        setSelectedPatchId(currentPatchId);
-      }, 100);
 
       message.success(`${editingMode === "deadwood" ? "Deadwood" : "Forest Cover"} reference updated!`);
       onUnsavedChanges(true);
@@ -469,7 +488,7 @@ export default function ReferencePatchEditorView({
     dataset.id,
     refetchPatches,
     onUnsavedChanges,
-    setSelectedPatchId,
+    selectedBasePatch,
   ]);
 
   // Handle cancel editing
@@ -535,6 +554,64 @@ export default function ReferencePatchEditorView({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editingMode, editor]);
+
+  // Keyboard shortcuts for editor actions (s, a, c, d, g) - only during editing
+  useEffect(() => {
+    if (!editingMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Ignore if modifier keys are pressed (except for shortcuts that need them)
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case "s":
+          // Toggle AI segmentation
+          e.preventDefault();
+          if (ai.isActive) {
+            ai.disable();
+          } else {
+            ai.enable();
+          }
+          break;
+        case "a":
+          // Toggle draw polygon
+          e.preventDefault();
+          editor.toggleDraw();
+          break;
+        case "c":
+          // Cut hole (only if one polygon is selected)
+          if (editor.selection && editor.selection.length === 1) {
+            e.preventDefault();
+            editor.cutHoleWithDrawn();
+          }
+          break;
+        case "d":
+          // Delete selected (only if something is selected)
+          if (editor.selection && editor.selection.length > 0) {
+            e.preventDefault();
+            editor.deleteSelected();
+          }
+          break;
+        case "g":
+          // Merge (only if exactly 2 polygons are selected)
+          if (editor.selection && editor.selection.length === 2) {
+            e.preventDefault();
+            editor.mergeSelected();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingMode, editor, ai]);
 
   // Memoize the callback that receives the patch geometry getter
   const handleGetPatchGeometry = useCallback((getter: (patchId: number) => GeoJSON.Polygon | null) => {
@@ -802,7 +879,7 @@ export default function ReferencePatchEditorView({
               canUndo={editor.canUndo}
               onSave={handleSaveEdits}
               onCancel={handleCancelEditing}
-              position="top-right"
+              position="top-left"
             />
           )}
 

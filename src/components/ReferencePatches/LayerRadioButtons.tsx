@@ -17,14 +17,22 @@ export default function LayerRadioButtons({ value, onChange, position = "bottom-
 
   return (
     <div className={`absolute ${position === "bottom-left" ? "left-2" : "right-2"} bottom-2 z-10`}>
-      <Card size="small" className="shadow-lg" bodyStyle={{ padding: "12px" }}>
+      <Card size="small" className="shadow-lg" bodyStyle={{ padding: "12px", width: 180 }}>
         <Radio.Group value={value} onChange={(e) => onChange(e.target.value)}>
           <Space direction="vertical" size="small" className="w-full">
+            {showOrthoOnly && (
+              <Radio value="ortho_only">
+                <span className="flex items-center justify-between">
+                  Ortho Only
+                  <span className="ml-2 text-xs text-gray-400">(1)</span>
+                </span>
+              </Radio>
+            )}
             {showDeadwood && (
               <Radio value="deadwood">
                 <span className="flex items-center justify-between">
                   Deadwood
-                  <span className="ml-2 text-xs text-gray-400">(J)</span>
+                  <span className="ml-2 text-xs text-gray-400">(2)</span>
                 </span>
               </Radio>
             )}
@@ -32,15 +40,7 @@ export default function LayerRadioButtons({ value, onChange, position = "bottom-
               <Radio value="forest_cover">
                 <span className="flex items-center justify-between">
                   Forest Cover
-                  <span className="ml-2 text-xs text-gray-400">(K)</span>
-                </span>
-              </Radio>
-            )}
-            {showOrthoOnly && (
-              <Radio value="ortho_only">
-                <span className="flex items-center justify-between">
-                  Ortho Only
-                  <span className="ml-2 text-xs text-gray-400">(L)</span>
+                  <span className="ml-2 text-xs text-gray-400">(3)</span>
                 </span>
               </Radio>
             )}

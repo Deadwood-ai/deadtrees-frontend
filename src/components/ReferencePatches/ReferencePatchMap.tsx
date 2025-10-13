@@ -552,18 +552,19 @@ export default function ReferencePatchMap({
     const loadReferenceGeometries = async () => {
       const map = mapRef.current;
       if (!map || !selectedBasePatch) {
-        console.log("Reference geometries: map or selectedBasePatch not available");
+        console.log("[Map] Reference geometries: map or selectedBasePatch not available");
         return;
       }
 
       const hasReferenceData =
         selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id;
 
-      console.log("Loading reference geometries for patch:", selectedBasePatch.id, {
+      console.log("[Map] Loading reference geometries for patch:", selectedBasePatch.id, {
         hasReferenceData,
         deadwoodLabelId: selectedBasePatch.reference_deadwood_label_id,
         forestCoverLabelId: selectedBasePatch.reference_forest_cover_label_id,
         layerSelection,
+        isEditingMode,
       });
 
       if (!hasReferenceData) {

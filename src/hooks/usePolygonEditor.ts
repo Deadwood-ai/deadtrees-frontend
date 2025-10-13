@@ -638,7 +638,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       toggleDraw,
       deleteSelected,
       clearAll,
-      getOverlayLayer: () => (overlayLayerRef.current as unknown as VectorLayer<VectorSource>) || null,
+      getOverlayLayer: () => {
+        const layer = (overlayLayerRef.current as unknown as VectorLayer<VectorSource>) || null;
+        console.log("[Editor] getOverlayLayer called, layer =", !!layer, "source =", !!layer?.getSource());
+        return layer;
+      },
       setOverlayVisible,
       mergeSelected,
       cutHoleWithDrawn,

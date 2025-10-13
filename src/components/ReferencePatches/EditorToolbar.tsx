@@ -52,7 +52,7 @@ export default function EditorToolbar({
       <Card
         title={`Editing ${type === "deadwood" ? "Deadwood" : "Forest Cover"}`}
         className="shadow-lg"
-        style={{ width: 300 }}
+        style={{ width: 180 }}
         size="small"
       >
         <Space direction="vertical" size="small" className="w-full">
@@ -67,9 +67,9 @@ export default function EditorToolbar({
             block
             type={isDrawing ? "primary" : "default"}
             htmlType="button"
-            title="Click to draw vertices, or hold Shift for freehand drawing"
+            title="Draw polygon (A) - Click to draw vertices, or hold Shift for freehand"
           >
-            {isDrawing ? "Stop Drawing" : "Draw Polygon"}
+            {isDrawing ? "Stop (A)" : "Draw (A)"}
           </Button>
 
           {/* Cut Hole */}
@@ -78,9 +78,9 @@ export default function EditorToolbar({
             onClick={onCutHole}
             disabled={!hasSelection || selectionCount !== 1}
             block
-            title="Select one polygon, then draw to cut a hole or trim edges. Hold Shift for freehand."
+            title="Cut hole or trim (C) - Select one polygon, then draw. Hold Shift for freehand."
           >
-            Cut Hole {hasSelection && selectionCount === 1 ? "(Ready)" : ""}
+            Cut (C) {hasSelection && selectionCount === 1 ? "✓" : ""}
           </Button>
 
           {/* Merge */}
@@ -89,9 +89,9 @@ export default function EditorToolbar({
             onClick={onMerge}
             disabled={!hasSelection || selectionCount !== 2}
             block
-            title="Select exactly 2 polygons to merge (works with overlapping or nested polygons)"
+            title="Merge 2 polygons (G) - Works with overlapping or nested polygons"
           >
-            Merge Selected {hasSelection && selectionCount === 2 ? `(${selectionCount})` : ""}
+            Merge (G) {hasSelection && selectionCount === 2 ? `✓` : ""}
           </Button>
 
           {/* AI Segmentation */}
@@ -105,10 +105,10 @@ export default function EditorToolbar({
             loading={isAIProcessing}
             block
             type={isAIActive ? "primary" : "default"}
-            title="Draw a box to run AI segmentation"
+            title="AI Segmentation (S) - Draw a box to run AI"
             htmlType="button"
           >
-            {isAIActive ? "AI Active (draw box)" : "AI Segment"}
+            {isAIActive ? "AI Active (S)" : "AI (S)"}
           </Button>
 
           {/* Delete */}
@@ -118,8 +118,9 @@ export default function EditorToolbar({
             disabled={!hasSelection || selectionCount === 0}
             danger
             block
+            title="Delete selected (D)"
           >
-            Delete Selected {hasSelection && selectionCount > 0 ? `(${selectionCount})` : ""}
+            Delete (D) {hasSelection && selectionCount > 0 ? `(${selectionCount})` : ""}
           </Button>
 
           {/* Undo */}
@@ -130,13 +131,13 @@ export default function EditorToolbar({
             block
             title="Undo last action (Ctrl/Cmd+Z)"
           >
-            Undo
+            Undo (⌘Z)
           </Button>
 
           <Divider style={{ margin: "8px 0" }} />
 
           {/* Save/Cancel */}
-          <Button type="primary" icon={<SaveOutlined />} onClick={onSave} block size="large" htmlType="button">
+          <Button type="primary" icon={<SaveOutlined />} onClick={onSave} block htmlType="button">
             Save Changes
           </Button>
 
