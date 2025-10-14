@@ -137,7 +137,14 @@ export default function EditorToolbar({
           <Divider style={{ margin: "8px 0" }} />
 
           {/* Save/Cancel */}
-          <Button type="primary" icon={<SaveOutlined />} onClick={onSave} block htmlType="button">
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={onSave}
+            block
+            htmlType="button"
+            title="Save changes (Ctrl/Cmd+S)"
+          >
             Save Changes
           </Button>
 

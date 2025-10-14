@@ -415,6 +415,26 @@ export default function ReferencePatchEditorView({
     }
   }, [layerSelection, selectedPatchId, allPatches, editor, geoJson, mapRef]);
 
+  // Keyboard shortcut for starting edit mode (E) - only when NOT editing
+  useEffect(() => {
+    if (editingMode) return; // Only allow when not already editing
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        handleEditLayer();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingMode, handleEditLayer]);
+
   // Handle save edits
   const handleSaveEdits = useCallback(async () => {
     if (!editingMode || !selectedPatchId) return;
@@ -554,6 +574,27 @@ export default function ReferencePatchEditorView({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editingMode, editor]);
+
+  // Keyboard shortcut for save (Ctrl/Cmd+S) - only during editing
+  useEffect(() => {
+    if (!editingMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Ctrl+S (Windows/Linux) or Cmd+S (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault(); // Prevent browser save dialog
+        handleSaveEdits();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingMode, handleSaveEdits]);
 
   // Keyboard shortcuts for editor actions (s, a, c, d, g) - only during editing
   useEffect(() => {

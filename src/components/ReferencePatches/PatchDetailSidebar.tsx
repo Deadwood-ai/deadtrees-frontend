@@ -525,8 +525,9 @@ export default function PatchDetailSidebar({
               disabled={!editButtonEnabled}
               block
               size="large"
+              title={editButtonEnabled ? "Edit current layer (E)" : "Select a layer to edit"}
             >
-              Edit {currentLayer === "deadwood" ? "Deadwood" : "Forest Cover"}
+              Edit {currentLayer === "deadwood" ? "Deadwood" : "Forest Cover"} (E)
             </Button>
             {!editButtonEnabled && (
               <Typography.Text type="secondary" className="mt-2 block text-center text-xs">
