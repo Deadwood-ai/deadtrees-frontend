@@ -145,7 +145,7 @@ export default function EditorToolbar({
             htmlType="button"
             title="Save changes (Ctrl/Cmd+S)"
           >
-            Save Changes
+            Save (⌘S)
           </Button>
 
           <Button onClick={onCancel} block htmlType="button">
