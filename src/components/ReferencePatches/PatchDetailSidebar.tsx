@@ -357,11 +357,11 @@ export default function PatchDetailSidebar({
       }
 
       switch (e.key.toLowerCase()) {
-        case " ": // Space key for Good
+        case "q": // Q key for Good
           e.preventDefault();
           handleStatusChangeWithAdvance("good");
           break;
-        case "f": // F key for Bad
+        case "r": // R key for Bad
           e.preventDefault();
           handleStatusChangeWithAdvance("bad");
           break;
@@ -480,10 +480,10 @@ export default function PatchDetailSidebar({
               className="w-full"
             >
               <Radio.Button value="good" className="w-1/2 text-center">
-                Good (Space)
+                Good (Q)
               </Radio.Button>
               <Radio.Button value="bad" className="w-1/2 text-center">
-                Bad (F)
+                Bad (R)
               </Radio.Button>
             </Radio.Group>
             {displayStatus !== "pending" && !isDelayingNavigation && (
