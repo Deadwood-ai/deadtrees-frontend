@@ -6,6 +6,7 @@ import { Draw, Modify, Select } from "ol/interaction";
 import { click, shiftKeyOnly } from "ol/events/condition";
 import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
+import MultiPolygon from "ol/geom/MultiPolygon";
 import { Style, Fill, Stroke } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
 import type { FeatureLike } from "ol/Feature";
@@ -565,10 +566,54 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         if (!diff) {
           message.error("Failed to cut polygon. Result would be empty.");
         } else {
-          target.setGeometry(diff);
+          const overlay = overlayLayerRef.current;
+          const source = overlay?.getSource() as VectorSource<Feature<Geometry>> | null;
+
+          // Check if result is a MultiPolygon (polygon was split into multiple pieces)
+          if (diff.getType() === "MultiPolygon" && source) {
+            // Split into separate Polygon features
+            const newFeatures: Feature<Geometry>[] = [];
+            const multiPolygon = diff as MultiPolygon;
+            const polygons = multiPolygon.getPolygons();
+
+            polygons.forEach((polygon) => {
+              const newFeature = new Feature({
+                geometry: polygon,
+              });
+
+              // Copy properties from original feature
+              newFeature.set("label_data", target.get("label_data"));
+              newFeature.set("patch_id", target.get("patch_id"));
+
+              newFeatures.push(newFeature);
+            });
+
+            // Remove original feature
+            source.removeFeature(target);
+
+            // Add all new features
+            source.addFeatures(newFeatures);
+
+            // Update selection to include all new features
+            if (selectRef.current) {
+              const selectedCollection = selectRef.current.getFeatures();
+              selectedCollection.clear();
+              newFeatures.forEach((f) => selectedCollection.push(f));
+
+              // Update selection state and feature properties
+              newFeatures.forEach((f) => f.set("dt_selected", true));
+              setSelection(newFeatures);
+            }
+
+            message.success(`Polygon split into ${newFeatures.length} separate pieces!`);
+          } else {
+            // Single polygon result - update original feature
+            target.setGeometry(diff);
+            message.success("Polygon cut successfully!");
+          }
+
           // Clear temp source; cut feature was never added to overlay
           tempSource.clear();
-          message.success("Polygon cut successfully!");
         }
       }
       if (drawRef.current) {
