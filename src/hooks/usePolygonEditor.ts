@@ -425,14 +425,14 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
         // Style for the sketch (polygon being drawn) - very visible
         const sketchStyle = new Style({
-          fill: new Fill({ color: "rgba(255, 200, 0, 0.4)" }), // Bright yellow-orange @ 40% - highly visible
+          fill: new Fill({ color: "rgba(255, 200, 0, 0.05)" }), // Bright yellow-orange @ 60% - highly visible for labeling
           stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
         });
 
         const draw = new Draw({
           source: (source as unknown as VectorSource)!,
           type: "Polygon",
-          freehand: false, // Standard click-to-draw by default
+          freehand: false, // Standard click-to-draw by defaulta
           freehandCondition: shiftKeyOnly, // Enable freehand when Shift is held
           style: sketchStyle, // Apply bright style to sketch
         });
@@ -538,7 +538,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     // Style for the sketch (polygon being drawn) - very visible
     const sketchStyle = new Style({
-      fill: new Fill({ color: "rgba(255, 200, 0, 0.4)" }), // Bright yellow-orange @ 40% - highly visible
+      fill: new Fill({ color: "rgba(255, 200, 0, 0.6)" }), // Bright yellow-orange @ 60% - highly visible for labeling
       stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
     });
 
