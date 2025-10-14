@@ -197,7 +197,7 @@ export default function ReferencePatchMap({
     const view = new View({
       center: [0, 0],
       zoom: 2,
-      maxZoom: 22, // Allow zooming to patch level, but basemap stops at 19
+      maxZoom: 24, // Allow high zoom for detailed annotation work
       projection: "EPSG:3857",
     });
 
@@ -214,7 +214,7 @@ export default function ReferencePatchMap({
           ],
           convertToRGB: true,
         }),
-        maxZoom: 23,
+        maxZoom: 25, // Allow very high zoom for detailed ortho imagery
         cacheSize: 1024,
         preload: 0,
       });
@@ -741,7 +741,7 @@ export default function ReferencePatchMap({
       .then((vo) => {
         const viewOptions = vo as { extent?: [number, number, number, number] };
         if (viewOptions?.extent) {
-          map.getView().fit(viewOptions.extent, { padding: [20, 20, 20, 20], maxZoom: 19, duration: 200 });
+          map.getView().fit(viewOptions.extent, { padding: [20, 20, 20, 20], maxZoom: 22, duration: 200 });
         }
       })
       .catch(() => {});
@@ -812,7 +812,7 @@ export default function ReferencePatchMap({
       // Use fit with padding for smooth animation
       view.fit(extent, {
         padding: [30, 30, 30, 30], // Reduced padding for closer zoom
-        maxZoom: 22, // Increased max zoom level for smaller patches
+        maxZoom: 24, // Allow high zoom for detailed patch viewing
         duration: 400,
       });
 
