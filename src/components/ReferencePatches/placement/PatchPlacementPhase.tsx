@@ -67,19 +67,10 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
       return;
     }
 
-    const targetSizeMeters = 204.8;
-    const patchGeometry: GeoJSON.Polygon = {
-      type: "Polygon",
-      coordinates: [
-        [
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-        ],
-      ],
-    };
+    // Use geodesic utilities to create a patch with correct ground dimensions
+    const { createGeodesicSquare, getTargetGroundSize } = await import("../../../utils/geodesic");
+    const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
+    const patchGeometry = createGeodesicSquare(aoiCentroid[0], aoiCentroid[1], targetGroundSize);
 
     try {
       setIsSaving(true);

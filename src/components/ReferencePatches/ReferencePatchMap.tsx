@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { Map, View } from "ol";
 import TileLayer from "ol/layer/Tile";
 import { XYZ } from "ol/source";
@@ -8,16 +8,18 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import VectorTileLayer from "ol/layer/VectorTile";
 import type Layer from "ol/layer/Layer";
-import { Style, Stroke, Fill } from "ol/style";
+import { Style, Stroke, Fill, Circle as CircleStyle } from "ol/style";
 import Feature from "ol/Feature";
-import { Polygon } from "ol/geom";
+import { Polygon, LineString } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
-import { Translate, Select } from "ol/interaction";
+import { Translate, Select, Draw } from "ol/interaction";
 import { click } from "ol/events/condition";
+import { getLength } from "ol/sphere";
+import Overlay from "ol/Overlay";
 import { polygon as turfPolygon, multiPolygon as turfMultiPolygon, intersect, area } from "@turf/turf";
 import { useUpdatePatchGeometry } from "../../hooks/useReferencePatches";
 import "ol/ol.css";
-import { message } from "antd";
+import { message, Button } from "antd";
 import { IReferencePatch, PatchResolution } from "../../types/referencePatches";
 import type { LayerSelection } from "./LayerRadioButtons";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
@@ -30,6 +32,7 @@ import {
   createAOIMaskLayer,
 } from "../DatasetDetailsMap/createVectorLayer";
 import { Settings } from "../../config";
+import { createGeodesicSquare, getTargetGroundSize } from "../../utils/geodesic";
 
 interface Props {
   datasetId: number;
@@ -47,12 +50,6 @@ interface Props {
   selectedBasePatch?: IReferencePatch | null; // For checking reference data existence
   isEditingMode?: boolean; // Disable patch selection when editing geometries
 }
-
-const TARGET_PATCH_SIZE_M: Record<PatchResolution, number> = {
-  20: 204.8,
-  10: 102.4,
-  5: 51.2,
-};
 
 export default function ReferencePatchMap({
   datasetId,
@@ -85,6 +82,13 @@ export default function ReferencePatchMap({
   const hasInitialFitRef = useRef<boolean>(false);
   const patchesRef = useRef<IReferencePatch[] | undefined>(patches);
   const previousFocusPatchIdRef = useRef<number | null>(null);
+
+  // Measuring tool state
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const measureLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const drawInteractionRef = useRef<Draw | null>(null);
+  const measureOverlaysRef = useRef<Overlay[]>([]);
+
   const { mutate: updatePatchGeometry } = useUpdatePatchGeometry();
   const { data: aoiData } = useDatasetAOI(datasetId);
 
@@ -350,6 +354,172 @@ export default function ReferencePatchMap({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only initialize map once on mount
+
+  // Initialize measuring tool layer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || measureLayerRef.current) return;
+
+    // Create vector source and layer for measurements
+    const measureSource = new VectorSource();
+    const measureLayer = new VectorLayer({
+      source: measureSource,
+      style: new Style({
+        fill: new Fill({
+          color: "rgba(255, 255, 255, 0.2)",
+        }),
+        stroke: new Stroke({
+          color: "#ffcc33",
+          width: 3,
+        }),
+        image: new CircleStyle({
+          radius: 5,
+          fill: new Fill({
+            color: "#ffcc33",
+          }),
+        }),
+      }),
+      zIndex: 200, // Above everything else
+    });
+
+    measureLayerRef.current = measureLayer;
+    map.addLayer(measureLayer);
+
+    return () => {
+      if (measureLayerRef.current) {
+        map.removeLayer(measureLayerRef.current);
+        measureLayerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Toggle measuring tool
+  useEffect(() => {
+    const map = mapRef.current;
+    const measureLayer = measureLayerRef.current;
+    if (!map || !measureLayer) return;
+
+    // Clean up existing draw interaction
+    if (drawInteractionRef.current) {
+      map.removeInteraction(drawInteractionRef.current);
+      drawInteractionRef.current = null;
+    }
+
+    // Clear previous measurements
+    measureOverlaysRef.current.forEach((overlay) => map.removeOverlay(overlay));
+    measureOverlaysRef.current = [];
+    measureLayer.getSource()?.clear();
+
+    if (!isMeasuring) return;
+
+    // Create draw interaction for line measurement
+    const draw = new Draw({
+      source: measureLayer.getSource() || undefined,
+      type: "LineString",
+      style: new Style({
+        fill: new Fill({
+          color: "rgba(255, 255, 255, 0.2)",
+        }),
+        stroke: new Stroke({
+          color: "rgba(255, 204, 51, 0.8)",
+          lineDash: [10, 10],
+          width: 3,
+        }),
+        image: new CircleStyle({
+          radius: 5,
+          stroke: new Stroke({
+            color: "rgba(255, 204, 51, 0.8)",
+          }),
+          fill: new Fill({
+            color: "rgba(255, 255, 255, 0.4)",
+          }),
+        }),
+      }),
+    });
+
+    let sketch: Feature<LineString> | null = null;
+    let measureTooltipElement: HTMLDivElement | null = null;
+    let measureTooltip: Overlay | null = null;
+
+    const createMeasureTooltip = () => {
+      if (measureTooltipElement) {
+        measureTooltipElement.remove();
+      }
+      measureTooltipElement = document.createElement("div");
+      measureTooltipElement.className = "ol-tooltip ol-tooltip-measure";
+      measureTooltipElement.style.cssText = `
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: bold;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      `;
+      measureTooltip = new Overlay({
+        element: measureTooltipElement,
+        offset: [0, -15],
+        positioning: "bottom-center",
+        stopEvent: false,
+        insertFirst: false,
+      });
+      map.addOverlay(measureTooltip);
+      measureOverlaysRef.current.push(measureTooltip);
+    };
+
+    const formatLength = (line: LineString): string => {
+      // Use geodesic measurement for accurate ground distance
+      const length = getLength(line, { projection: "EPSG:3857" });
+      let output: string;
+      if (length > 1000) {
+        output = `${(length / 1000).toFixed(3)} km`;
+      } else {
+        output = `${length.toFixed(2)} m`;
+      }
+      return output;
+    };
+
+    draw.on("drawstart", (evt) => {
+      sketch = evt.feature as Feature<LineString>;
+      createMeasureTooltip();
+
+      const geom = sketch.getGeometry();
+      let tooltipCoord = geom ? geom.getLastCoordinate() : [0, 0];
+
+      sketch.getGeometry()?.on("change", (evt) => {
+        const geom = evt.target as LineString;
+        const output = formatLength(geom);
+        tooltipCoord = geom.getLastCoordinate();
+        if (measureTooltipElement) {
+          measureTooltipElement.innerHTML = output;
+        }
+        if (measureTooltip) {
+          measureTooltip.setPosition(tooltipCoord);
+        }
+      });
+    });
+
+    draw.on("drawend", () => {
+      if (measureTooltipElement) {
+        measureTooltipElement.className = "ol-tooltip ol-tooltip-static";
+      }
+      sketch = null;
+      measureTooltipElement = null;
+      createMeasureTooltip();
+    });
+
+    map.addInteraction(draw);
+    drawInteractionRef.current = draw;
+
+    return () => {
+      if (drawInteractionRef.current) {
+        map.removeInteraction(drawInteractionRef.current);
+        drawInteractionRef.current = null;
+      }
+    };
+  }, [isMeasuring]);
 
   // Dynamically enable/disable patch selection based on editing mode
   useEffect(() => {
@@ -826,25 +996,54 @@ export default function ReferencePatchMap({
   return (
     <div className="relative h-full w-full">
       <div ref={mapContainerRef} className="h-full w-full bg-gray-100" />
+
+      {/* Measuring tool toggle */}
+      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
+        <Button
+          type={isMeasuring ? "primary" : "default"}
+          onClick={() => setIsMeasuring(!isMeasuring)}
+          size="large"
+          style={{
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}
+        >
+          📏 {isMeasuring ? "Stop Measuring" : "Measure Distance"}
+        </Button>
+        {isMeasuring && (
+          <div
+            className="rounded px-3 py-2 text-xs text-white"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            Click on map to draw line
+            <br />
+            Double-click to finish
+            <br />
+            <span className="text-yellow-300">Uses geodesic (true ground) measurement</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function enforcePatchDimensions(geometry: Polygon, resolution: PatchResolution): Polygon {
-  const size = TARGET_PATCH_SIZE_M[resolution];
+  // Get center of the patch
   const extent = geometry.getExtent();
   const cx = (extent[0] + extent[2]) / 2;
   const cy = (extent[1] + extent[3]) / 2;
-  const half = size / 2;
-  return new Polygon([
-    [
-      [cx - half, cy - half],
-      [cx + half, cy - half],
-      [cx + half, cy + half],
-      [cx - half, cy + half],
-      [cx - half, cy - half],
-    ],
-  ]);
+
+  // Get target ground size for this resolution
+  const targetGroundSize = getTargetGroundSize(resolution);
+
+  // Create a geodesically-correct square at this location
+  const geoJsonGeom = createGeodesicSquare(cx, cy, targetGroundSize);
+
+  // Convert back to OpenLayers Polygon
+  const coords = geoJsonGeom.coordinates[0];
+  return new Polygon([coords]);
 }
 
 function polygonToBBoxShort(geometry: GeoJSON.Polygon): { minx: number; miny: number; maxx: number; maxy: number } {

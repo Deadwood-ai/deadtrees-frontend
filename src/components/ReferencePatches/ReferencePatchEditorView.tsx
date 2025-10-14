@@ -171,6 +171,8 @@ export default function ReferencePatchEditorView({
   // Recursively generate nested patches
   const generateNestedPatchesRecursive = useCallback(
     async (parentPatch: IReferencePatch) => {
+      const { createGeodesicSquare, getTargetGroundSize } = await import("../../utils/geodesic");
+
       const parentGeom = parentPatch.geometry;
       const parentCoords = parentGeom.coordinates[0];
       const [minx, miny] = parentCoords[0];
@@ -181,6 +183,8 @@ export default function ReferencePatchEditorView({
       const halfHeight = (maxy - miny) / 2;
 
       const childResolution = parentPatch.resolution_cm === 20 ? 10 : 5;
+      const targetGroundSize = getTargetGroundSize(childResolution);
+
       const positions = [
         [centerX - halfWidth / 2, centerY - halfHeight / 2],
         [centerX + halfWidth / 2, centerY - halfHeight / 2],
@@ -191,18 +195,8 @@ export default function ReferencePatchEditorView({
       // Create all 4 child patches in parallel for better performance
       const patchCreationPromises = positions.map((position, i) => {
         const [cx, cy] = position;
-        const childGeometry: GeoJSON.Polygon = {
-          type: "Polygon",
-          coordinates: [
-            [
-              [cx - halfWidth / 2, cy - halfHeight / 2],
-              [cx + halfWidth / 2, cy - halfHeight / 2],
-              [cx + halfWidth / 2, cy + halfHeight / 2],
-              [cx - halfWidth / 2, cy + halfHeight / 2],
-              [cx - halfWidth / 2, cy - halfHeight / 2],
-            ],
-          ],
-        };
+        // Use geodesic utilities to create patches with correct ground dimensions
+        const childGeometry = createGeodesicSquare(cx, cy, targetGroundSize);
 
         return createPatch({
           dataset_id: dataset.id,
@@ -238,19 +232,9 @@ export default function ReferencePatchEditorView({
       return;
     }
 
-    const targetSizeMeters = 204.8;
-    const patchGeometry: GeoJSON.Polygon = {
-      type: "Polygon",
-      coordinates: [
-        [
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-          [aoiCentroid[0] + targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] + targetSizeMeters / 2],
-          [aoiCentroid[0] - targetSizeMeters / 2, aoiCentroid[1] - targetSizeMeters / 2],
-        ],
-      ],
-    };
+    const { createGeodesicSquare, getTargetGroundSize } = await import("../../utils/geodesic");
+    const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
+    const patchGeometry = createGeodesicSquare(aoiCentroid[0], aoiCentroid[1], targetGroundSize);
 
     try {
       // Create base patch in pending state (user will position it, then generate children)
