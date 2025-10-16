@@ -35,24 +35,20 @@ export default function DatasetReferencePatchEditor() {
   // Count 20cm base patches
   const basePatchesCount = useMemo(() => allPatches.filter((p) => p.resolution_cm === 20).length, [allPatches]);
 
-  // Calculate overall progress (percent marked = good + bad)
+  // Calculate overall progress (only count 5cm patches - 10cm are auto-validated)
   const overallProgress = useMemo(() => {
-    const total10 = progress?.total_10cm || 0;
     const total5 = progress?.total_5cm || 0;
-    const good10 = progress?.good_10cm || 0;
     const good5 = progress?.good_5cm || 0;
-    const bad10 = progress?.bad_10cm || 0;
     const bad5 = progress?.bad_5cm || 0;
-    const totalPatches = total10 + total5;
-    const completedPatches = good10 + good5 + bad10 + bad5;
-    return totalPatches > 0 ? Math.round((completedPatches / totalPatches) * 100) : 0;
+    const completedPatches = good5 + bad5;
+    return total5 > 0 ? Math.round((completedPatches / total5) * 100) : 0;
   }, [progress]);
 
-  // Check if all patches are marked (no pending patches) and we have patches
+  // Check if all 5cm patches are marked (no pending 5cm patches) and we have patches
   const allPatchesMarked = useMemo(() => {
     if (!progress) return false;
-    const hasPatches = progress.total_10cm > 0 || progress.total_5cm > 0;
-    const noPending = progress.pending_10cm === 0 && progress.pending_5cm === 0;
+    const hasPatches = progress.total_5cm > 0;
+    const noPending = progress.pending_5cm === 0;
     return hasPatches && noPending;
   }, [progress]);
 
@@ -144,8 +140,7 @@ export default function DatasetReferencePatchEditor() {
             <li>Release the session lock for other users</li>
           </ul>
           <p className="mt-2 font-semibold">
-            Progress: {(progress?.good_10cm || 0) + (progress?.good_5cm || 0)} good,{" "}
-            {(progress?.bad_10cm || 0) + (progress?.bad_5cm || 0)} bad patches marked
+            Progress: {progress?.good_5cm || 0} good, {progress?.bad_5cm || 0} bad patches marked
           </p>
         </div>
       ),
@@ -220,29 +215,24 @@ export default function DatasetReferencePatchEditor() {
           </div>
         </div>
 
-        {/* Compact Progress Summary */}
-        {progress && (progress.total_10cm > 0 || progress.total_5cm > 0 || basePatchesCount > 0) && (
+        {/* Compact Progress Summary - only show 5cm patches (10cm auto-validated) */}
+        {progress && (progress.total_5cm > 0 || basePatchesCount > 0) && (
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-xs text-gray-500">Patches</div>
               <div className="flex gap-2 text-xs">
                 <span>
-                  <span className="font-semibold">{basePatchesCount}</span> <span className="text-gray-500">20cm</span>
-                </span>
-                <span className="text-gray-300">|</span>
-                <span>
-                  <span className="font-semibold">{progress?.total_10cm || 0}</span>{" "}
-                  <span className="text-gray-500">10cm</span>
+                  <span className="font-semibold">{basePatchesCount}</span> <span className="text-gray-500">base</span>
                 </span>
                 <span className="text-gray-300">|</span>
                 <span>
                   <span className="font-semibold">{progress?.total_5cm || 0}</span>{" "}
-                  <span className="text-gray-500">5cm</span>
+                  <span className="text-gray-500">5cm QA</span>
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-gray-500">Progress</div>
+              <div className="text-xs text-gray-500">QA Progress</div>
               <div className="text-sm font-semibold">{overallProgress}% Marked</div>
             </div>
             <Progress

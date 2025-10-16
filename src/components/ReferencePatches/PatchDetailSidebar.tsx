@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import { IReferencePatch, PatchResolution, PatchStatus } from "../../types/referencePatches";
 import type { LayerSelection } from "./LayerRadioButtons";
+import BatchProgressIndicator from "./BatchProgressIndicator";
 
 interface Props {
   basePatch: IReferencePatch;
@@ -27,6 +28,13 @@ interface Props {
   onEditLayer: () => void;
   editButtonEnabled: boolean;
   onDeselect: () => void;
+  // Batch progress indicator
+  batchProgress?: {
+    layer: "deadwood" | "forest_cover" | null;
+    current: number;
+    total: number;
+    percentage: number;
+  } | null;
 }
 
 export default function PatchDetailSidebar({
@@ -43,6 +51,7 @@ export default function PatchDetailSidebar({
   onEditLayer,
   editButtonEnabled,
   onDeselect,
+  batchProgress,
 }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [optimisticStatuses, setOptimisticStatuses] = useState<Map<number, PatchStatus>>(new Map());
@@ -112,20 +121,19 @@ export default function PatchDetailSidebar({
     }
   }, [currentIndex, sortedPatches, onPatchSelect]);
 
-  // Calculate progress for this base patch
+  // Calculate progress for this base patch (only count 5cm - 10cm is auto-validated)
   const basePatchProgress = useMemo(() => {
     const patches10 = basePatchFamily.filter((p) => p.resolution_cm === 10);
     const patches5 = basePatchFamily.filter((p) => p.resolution_cm === 5);
     const completed10 = patches10.filter((p) => p.status === "good" || p.status === "bad").length;
     const completed5 = patches5.filter((p) => p.status === "good" || p.status === "bad").length;
-    const total = patches10.length + patches5.length;
-    const completed = completed10 + completed5;
+    const total5 = patches5.length;
     return {
       completed10,
       total10: patches10.length,
       completed5,
       total5: patches5.length,
-      percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      percent: total5 > 0 ? Math.round((completed5 / total5) * 100) : 0,
     };
   }, [basePatchFamily]);
 
@@ -147,7 +155,8 @@ export default function PatchDetailSidebar({
     if (wrapAroundInCurrentRes) return wrapAroundInCurrentRes;
 
     // Third priority: current resolution is 100% complete, move to next resolution
-    const resolutions: PatchResolution[] = [20, 10, 5];
+    // Skip 10cm since we only QA 5cm patches (10cm is auto-validated)
+    const resolutions: PatchResolution[] = [20, 5];
     const currentResIdx = resolutions.indexOf(selectedResolution);
     for (let i = currentResIdx + 1; i < resolutions.length; i++) {
       const nextRes = resolutions[i];
@@ -412,32 +421,43 @@ export default function PatchDetailSidebar({
         {hasSubPatches && (
           <Space direction="vertical" size="small" className="w-full">
             <div className="flex justify-between gap-4">
-              <div>
-                <div className="mb-1 text-xs text-gray-500">10cm Patches</div>
-                <div className="text-base">
-                  <span className="font-semibold">{basePatchProgress.completed10}</span>{" "}
-                  <span className="text-gray-400">/</span>{" "}
-                  <span className="text-gray-500">{basePatchProgress.total10}</span>
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 text-xs text-gray-500">5cm Patches</div>
+              <div className="flex-1">
+                <div className="mb-1 text-xs text-gray-500">5cm Patches (QA)</div>
                 <div className="text-base">
                   <span className="font-semibold">{basePatchProgress.completed5}</span>{" "}
                   <span className="text-gray-400">/</span>{" "}
                   <span className="text-gray-500">{basePatchProgress.total5}</span>
                 </div>
               </div>
+              <div className="flex-1">
+                <div className="mb-1 text-xs text-gray-500">10cm (Auto)</div>
+                <div className="text-base text-gray-400">
+                  <span>{basePatchProgress.completed10}</span> <span className="text-gray-300">/</span>{" "}
+                  <span>{basePatchProgress.total10}</span>
+                </div>
+              </div>
             </div>
             <div>
-              <div className="mb-1 text-xs text-gray-500">Progress</div>
+              <div className="mb-1 text-xs text-gray-500">QA Progress</div>
               <Progress percent={basePatchProgress.percent} />
             </div>
           </Space>
         )}
       </Card>
 
-      {/* Resolution Selector - only show if sub-patches exist */}
+      {/* Batch Progress Indicator */}
+      {batchProgress && batchProgress.layer && (
+        <div className="border-b bg-white p-3">
+          <BatchProgressIndicator
+            layer={batchProgress.layer}
+            current={batchProgress.current}
+            total={batchProgress.total}
+            percentage={batchProgress.percentage}
+          />
+        </div>
+      )}
+
+      {/* Resolution Selector - only show 5cm for QA (10cm is auto-validated) */}
       {hasSubPatches && (
         <Tabs
           activeKey={selectedResolution.toString()}
@@ -447,17 +467,13 @@ export default function PatchDetailSidebar({
               ? [
                   {
                     key: "20",
-                    label: "20cm",
+                    label: "20cm Base",
                   },
                 ]
               : []),
             {
-              key: "10",
-              label: "10cm",
-            },
-            {
               key: "5",
-              label: "5cm",
+              label: "5cm Patches (QA)",
             },
           ]}
           size="large"

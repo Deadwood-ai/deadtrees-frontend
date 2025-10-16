@@ -9,6 +9,7 @@ import {
   useDeleteReferencePatch,
 } from "../../hooks/useReferencePatches";
 import { useSaveReferenceGeometries } from "../../hooks/useReferenceGeometries";
+import { clipGeometriesInBatches } from "../../hooks/useReferenceGeometriesBatch";
 import usePolygonEditor from "../../hooks/usePolygonEditor";
 import useAISegmentation from "../../hooks/useAISegmentation";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
@@ -45,6 +46,12 @@ export default function ReferencePatchEditorView({
   >(null);
   const [layerSelection, setLayerSelection] = useState<LayerSelection>("deadwood");
   const [editingMode, setEditingMode] = useState<ILabelData | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{
+    layer: "deadwood" | "forest_cover" | null;
+    current: number;
+    total: number;
+    percentage: number;
+  } | null>(null);
 
   // Ref for OpenLayers map
   const mapRef = useRef<OLMap | null>(null);
@@ -655,9 +662,12 @@ export default function ReferencePatchEditorView({
   }, []);
 
   // Helper: Auto-copy model predictions to create initial reference data
+  // Uses batch processing to avoid timeouts on large datasets
   const autoCopyPredictionsAsReference = useCallback(
     async (basePatch: IReferencePatch) => {
       try {
+        console.log("[Auto-copy] Starting batch processing for patch:", basePatch.id);
+
         // Fetch model prediction labels for deadwood and forest_cover
         const { data: deadwoodLabel } = await supabase
           .from("v2_labels")
@@ -675,80 +685,85 @@ export default function ReferencePatchEditorView({
           .eq("label_source", "model_prediction")
           .maybeSingle();
 
-        // Copy deadwood geometries using PostGIS spatial filtering and clipping
+        const bbox = {
+          minx: basePatch.bbox_minx,
+          miny: basePatch.bbox_miny,
+          maxx: basePatch.bbox_maxx,
+          maxy: basePatch.bbox_maxy,
+        };
+
+        // Process deadwood geometries in batches
         if (deadwoodLabel) {
-          console.log("Fetching deadwood geometries for label:", deadwoodLabel.id, "bbox:", {
-            minx: basePatch.bbox_minx,
-            miny: basePatch.bbox_miny,
-            maxx: basePatch.bbox_maxx,
-            maxy: basePatch.bbox_maxy,
+          console.log("[Auto-copy] Processing deadwood geometries");
+
+          const deadwoodGeoms = await clipGeometriesInBatches({
+            labelId: deadwoodLabel.id,
+            geometryTable: "v2_deadwood_geometries",
+            bbox,
+            batchSize: 50,
+            onProgress: (progress) => {
+              setBatchProgress({
+                layer: "deadwood",
+                current: progress.current,
+                total: progress.total,
+                percentage: progress.percentage,
+              });
+            },
           });
 
-          const { data: deadwoodGeoms, error } = await supabase.rpc("get_clipped_geometries_for_patch", {
-            p_label_id: deadwoodLabel.id,
-            p_geometry_table: "v2_deadwood_geometries",
-            p_bbox_minx: basePatch.bbox_minx,
-            p_bbox_miny: basePatch.bbox_miny,
-            p_bbox_maxx: basePatch.bbox_maxx,
-            p_bbox_maxy: basePatch.bbox_maxy,
-            p_buffer_m: 2.0, // 2 meter buffer
-          });
-
-          if (error) {
-            console.error("Error clipping deadwood geometries:", error);
-            message.warning("Some deadwood geometries could not be clipped due to invalid geometry");
-          } else if (deadwoodGeoms && deadwoodGeoms.length > 0) {
-            console.log(`Successfully clipped ${deadwoodGeoms.length} deadwood geometries`);
+          if (deadwoodGeoms.length > 0) {
+            console.log(`[Auto-copy] Saving ${deadwoodGeoms.length} deadwood geometries`);
             await saveGeometries({
               patchId: basePatch.id,
               datasetId: dataset.id,
               layerType: ILabelData.DEADWOOD,
-              geometries: deadwoodGeoms.map((g: { geometry: unknown }) => g.geometry),
+              geometries: deadwoodGeoms,
             });
           } else {
-            console.log("No deadwood geometries found in patch area");
+            console.log("[Auto-copy] No deadwood geometries found in patch area");
           }
         }
 
-        // Copy forest cover geometries using PostGIS spatial filtering and clipping
+        // Process forest cover geometries in batches
         if (forestCoverLabel) {
-          console.log("Fetching forest cover geometries for label:", forestCoverLabel.id, "bbox:", {
-            minx: basePatch.bbox_minx,
-            miny: basePatch.bbox_miny,
-            maxx: basePatch.bbox_maxx,
-            maxy: basePatch.bbox_maxy,
+          console.log("[Auto-copy] Processing forest cover geometries");
+
+          const forestCoverGeoms = await clipGeometriesInBatches({
+            labelId: forestCoverLabel.id,
+            geometryTable: "v2_forest_cover_geometries",
+            bbox,
+            batchSize: 50,
+            onProgress: (progress) => {
+              setBatchProgress({
+                layer: "forest_cover",
+                current: progress.current,
+                total: progress.total,
+                percentage: progress.percentage,
+              });
+            },
           });
 
-          const { data: forestCoverGeoms, error } = await supabase.rpc("get_clipped_geometries_for_patch", {
-            p_label_id: forestCoverLabel.id,
-            p_geometry_table: "v2_forest_cover_geometries",
-            p_bbox_minx: basePatch.bbox_minx,
-            p_bbox_miny: basePatch.bbox_miny,
-            p_bbox_maxx: basePatch.bbox_maxx,
-            p_bbox_maxy: basePatch.bbox_maxy,
-            p_buffer_m: 2.0, // 2 meter buffer
-          });
-
-          if (error) {
-            console.error("Error clipping forest cover geometries:", error);
-            message.warning("Some forest cover geometries could not be clipped due to invalid geometry");
-          } else if (forestCoverGeoms && forestCoverGeoms.length > 0) {
-            console.log(`Successfully clipped ${forestCoverGeoms.length} forest cover geometries`);
+          if (forestCoverGeoms.length > 0) {
+            console.log(`[Auto-copy] Saving ${forestCoverGeoms.length} forest cover geometries`);
             await saveGeometries({
               patchId: basePatch.id,
               datasetId: dataset.id,
               layerType: ILabelData.FOREST_COVER,
-              geometries: forestCoverGeoms.map((g: { geometry: unknown }) => g.geometry),
+              geometries: forestCoverGeoms,
             });
           } else {
-            console.log("No forest cover geometries found in patch area");
+            console.log("[Auto-copy] No forest cover geometries found in patch area");
           }
         }
 
-        console.log("Reference data auto-copied and clipped successfully");
+        // Clear progress state
+        setBatchProgress(null);
+        console.log("[Auto-copy] Reference data auto-copied successfully");
       } catch (error) {
-        console.error("Failed to auto-copy predictions:", error);
-        // Don't fail the whole operation if this fails
+        // Clear progress on error
+        setBatchProgress(null);
+        console.error("[Auto-copy] Failed to auto-copy predictions:", error);
+        throw error; // Re-throw to be caught by handleGenerateSubPatches
       }
     },
     [dataset.id, saveGeometries],
@@ -758,7 +773,7 @@ export default function ReferencePatchEditorView({
   const handleGenerateSubPatches = useCallback(
     async (basePatch: IReferencePatch, currentGeometry?: GeoJSON.Polygon) => {
       try {
-        message.loading({ content: "Generating nested patches...", key: "generate" });
+        message.loading({ content: "Copying model predictions in batches...", key: "generate" });
 
         // Get current geometry from map if available, otherwise use provided or basePatch geometry
         // This ensures we use the MOVED position if the user translated the patch
@@ -786,17 +801,17 @@ export default function ReferencePatchEditorView({
 
         message.success({ content: "Patches generated and reference data created!", key: "generate" });
 
-        // Switch to 10cm resolution
-        setSelectedResolution(10);
+        // Switch to 5cm resolution (skip 10cm QA - it will be auto-validated from 5cm children)
+        setSelectedResolution(5);
 
         // Refetch patches to get updated reference label IDs
         await refetchPatches();
 
         // Small delay to allow React Query to update the patches list
         setTimeout(() => {
-          // Auto-select first 10cm patch to start checking
+          // Auto-select first 5cm patch to start checking
           const firstChild = allPatches.find(
-            (p) => p.parent_tile_id === basePatch.id && p.resolution_cm === 10 && p.status === "pending",
+            (p) => p.parent_tile_id !== null && p.resolution_cm === 5 && p.status === "pending",
           );
           if (firstChild) {
             setSelectedPatchId(firstChild.id);
@@ -935,6 +950,7 @@ export default function ReferencePatchEditorView({
             onEditLayer={handleEditLayer}
             editButtonEnabled={layerSelection !== "ortho_only"}
             onDeselect={handleDeselect}
+            batchProgress={batchProgress}
             onDelete={async (patchId: number) => {
               // Find the patch being deleted
               const patchToDelete = allPatches.find((p) => p.id === patchId);

@@ -16,10 +16,11 @@ interface Props {
   onRequestValidation: () => void;
 }
 
-const QA_RESOLUTIONS: PatchResolution[] = [20, 10];
+// Only QA 5cm patches - 10cm patches are auto-validated from their children
+const QA_RESOLUTIONS: PatchResolution[] = [5];
 
 export default function PatchQAPhase({ dataset, onUnsavedChanges, onRequestValidation }: Props) {
-  const [activeResolution, setActiveResolution] = useState<PatchResolution>(20);
+  const [activeResolution, setActiveResolution] = useState<PatchResolution>(5);
   const { data: patches = [] } = useReferencePatches(dataset.id, activeResolution);
   const { mutate: updateStatus, isPending: updating } = useUpdatePatchStatus();
   const { mutateAsync: generateChildren, isPending: generatingChildren } = useGenerateNestedPatches();

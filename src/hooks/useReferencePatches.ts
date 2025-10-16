@@ -175,12 +175,41 @@ export function useCreateReferencePatch() {
   });
 }
 
-// Update patch status
+// Helper function to calculate parent patch status from children
+async function calculateParentStatus(parentPatchId: number): Promise<PatchStatus> {
+  // Get all children of this parent
+  const { data: children, error } = await supabase
+    .from("reference_patches")
+    .select("status")
+    .eq("parent_tile_id", parentPatchId);
+
+  if (error || !children || children.length === 0) {
+    return "pending";
+  }
+
+  const statuses = children.map((c) => (c as { status: PatchStatus }).status);
+
+  // If all children are "good" → parent is "good"
+  if (statuses.every((s) => s === "good")) {
+    return "good";
+  }
+
+  // If any child is "bad" → parent is "bad"
+  if (statuses.some((s) => s === "bad")) {
+    return "bad";
+  }
+
+  // Otherwise (some pending or mixed) → parent is "pending"
+  return "pending";
+}
+
+// Update patch status with automatic parent status propagation
 export function useUpdatePatchStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ patchId, status }: { patchId: number; status: PatchStatus }) => {
+      // Update the patch itself
       const { data, error } = await supabase
         .from("reference_patches")
         .update({
@@ -192,7 +221,58 @@ export function useUpdatePatchStatus() {
         .single();
 
       if (error) throw error;
-      return data as IReferencePatch;
+
+      const updatedPatch = data as IReferencePatch;
+
+      // If this is a 5cm patch, update its parent 10cm patch status
+      if (updatedPatch.resolution_cm === 5 && updatedPatch.parent_tile_id) {
+        const parentStatus = await calculateParentStatus(updatedPatch.parent_tile_id);
+
+        // Update parent status
+        await supabase
+          .from("reference_patches")
+          .update({
+            status: parentStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedPatch.parent_tile_id);
+
+        // Also check if we need to update the grandparent (20cm patch)
+        const { data: parentPatch } = await supabase
+          .from("reference_patches")
+          .select("parent_tile_id")
+          .eq("id", updatedPatch.parent_tile_id)
+          .single();
+
+        if (parentPatch && (parentPatch as { parent_tile_id: number | null }).parent_tile_id) {
+          const grandparentStatus = await calculateParentStatus(
+            (parentPatch as { parent_tile_id: number }).parent_tile_id,
+          );
+
+          await supabase
+            .from("reference_patches")
+            .update({
+              status: grandparentStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", (parentPatch as { parent_tile_id: number }).parent_tile_id);
+        }
+      }
+
+      // If this is a 10cm patch, update its parent 20cm patch status
+      if (updatedPatch.resolution_cm === 10 && updatedPatch.parent_tile_id) {
+        const parentStatus = await calculateParentStatus(updatedPatch.parent_tile_id);
+
+        await supabase
+          .from("reference_patches")
+          .update({
+            status: parentStatus,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedPatch.parent_tile_id);
+      }
+
+      return updatedPatch;
     },
     onSuccess: (data) => {
       const datasetId = (data as IReferencePatch).dataset_id;

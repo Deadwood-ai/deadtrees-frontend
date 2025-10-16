@@ -97,11 +97,11 @@ export function createGeodesicSquare(
     type: "Polygon",
     coordinates: [
       [
-        [centerX - halfSize, centerY - halfSize],
-        [centerX + halfSize, centerY - halfSize],
-        [centerX + halfSize, centerY + halfSize],
-        [centerX - halfSize, centerY + halfSize],
-        [centerX - halfSize, centerY - halfSize],
+        [centerX - halfSize, centerY - halfSize], // Bottom-left corner
+        [centerX + halfSize, centerY - halfSize], // Bottom-right corner
+        [centerX + halfSize, centerY + halfSize], // Top-right corner
+        [centerX - halfSize, centerY + halfSize], // Top-left corner
+        [centerX - halfSize, centerY - halfSize], // Closing point (must match first point per GeoJSON spec)
       ],
     ],
   };

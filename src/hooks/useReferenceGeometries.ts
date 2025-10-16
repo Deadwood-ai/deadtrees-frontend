@@ -41,6 +41,7 @@ export function useReferenceGeometries(patchId: number | undefined, layerType: I
 }
 
 // Create or update reference label with geometries
+// Uses atomic RPC function to prevent race conditions
 export function useSaveReferenceGeometries() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -59,97 +60,25 @@ export function useSaveReferenceGeometries() {
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      const tableName =
-        layerType === "deadwood" ? "reference_patch_deadwood_geometries" : "reference_patch_forest_cover_geometries";
+      // Use atomic RPC function to handle label versioning and geometry insertion
+      // This prevents race conditions with the unique constraint
+      // Pass geometries directly - Supabase will convert to JSONB automatically
+      const { data, error } = await supabase.rpc("save_reference_geometries", {
+        p_patch_id: patchId,
+        p_dataset_id: datasetId,
+        p_user_id: user.id,
+        p_layer_type: layerType,
+        p_geometries: geometries,
+      });
 
-      // 1. Find if there's an active label for this patch
-      const { data: existingLabel, error: labelQueryError } = await supabase
-        .from("v2_labels")
-        .select("id, version, parent_label_id")
-        .eq("reference_patch_id", patchId)
-        .eq("label_data", layerType)
-        .eq("is_active", true)
-        .maybeSingle();
+      if (error) throw error;
 
-      if (labelQueryError) throw labelQueryError;
-
-      let newLabelId: number;
-
-      if (existingLabel) {
-        // 2a. Mark existing label as inactive
-        const { error: deactivateError } = await supabase
-          .from("v2_labels")
-          .update({ is_active: false })
-          .eq("id", existingLabel.id);
-
-        if (deactivateError) throw deactivateError;
-
-        // 2b. Create new version
-        const { data: newLabel, error: newLabelError } = await supabase
-          .from("v2_labels")
-          .insert({
-            dataset_id: datasetId,
-            user_id: user.id,
-            label_data: layerType,
-            label_type: "semantic_segmentation",
-            label_source: "reference_patch",
-            reference_patch_id: patchId,
-            version: existingLabel.version + 1,
-            parent_label_id: existingLabel.id,
-            is_active: true,
-          })
-          .select("id")
-          .single();
-
-        if (newLabelError) throw newLabelError;
-        newLabelId = newLabel.id;
-      } else {
-        // 2c. Create first version
-        const { data: newLabel, error: newLabelError } = await supabase
-          .from("v2_labels")
-          .insert({
-            dataset_id: datasetId,
-            user_id: user.id,
-            label_data: layerType,
-            label_type: "semantic_segmentation",
-            label_source: "reference_patch",
-            reference_patch_id: patchId,
-            version: 1,
-            parent_label_id: null,
-            is_active: true,
-          })
-          .select("id")
-          .single();
-
-        if (newLabelError) throw newLabelError;
-        newLabelId = newLabel.id;
-      }
-
-      // 3. Insert new geometries
-      const geometryRecords = geometries.map((geom) => ({
-        label_id: newLabelId,
-        patch_id: patchId,
-        geometry: geom,
-        area_m2: null, // Can be calculated later if needed
-        properties: {},
-      }));
-
-      const { error: insertError } = await supabase.from(tableName).insert(geometryRecords);
-
-      if (insertError) throw insertError;
-
-      // 4. Update patch's reference label ID
-      const patchColumnName =
-        layerType === "deadwood" ? "reference_deadwood_label_id" : "reference_forest_cover_label_id";
-
-      const { error: patchUpdateError } = await supabase
-        .from("reference_patches")
-        .update({ [patchColumnName]: newLabelId })
-        .eq("id", patchId);
-
-      if (patchUpdateError) throw patchUpdateError;
-
-      return { newLabelId, version: existingLabel ? existingLabel.version + 1 : 1 };
+      // data is an array with one row: [{ label_id, version }]
+      const result = data?.[0];
+      return {
+        newLabelId: result?.label_id,
+        version: result?.version,
+      };
     },
     onSuccess: (_data, variables) => {
       // Invalidate queries

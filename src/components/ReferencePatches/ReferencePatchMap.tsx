@@ -1002,7 +1002,6 @@ export default function ReferencePatchMap({
         <Button
           type={isMeasuring ? "primary" : "default"}
           onClick={() => setIsMeasuring(!isMeasuring)}
-          size="large"
           style={{
             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           }}
