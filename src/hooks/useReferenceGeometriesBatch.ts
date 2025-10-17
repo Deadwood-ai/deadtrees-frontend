@@ -16,6 +16,7 @@ interface ClipGeometriesBatchParams {
     maxx: number;
     maxy: number;
   };
+  epsgCode: number;
   batchSize?: number;
   onProgress?: (progress: BatchProgress) => void;
 }
@@ -33,6 +34,7 @@ export async function clipGeometriesInBatches({
   labelId,
   geometryTable,
   bbox,
+  epsgCode,
   batchSize = 50,
   onProgress,
 }: ClipGeometriesBatchParams): Promise<unknown[]> {
@@ -55,6 +57,7 @@ export async function clipGeometriesInBatches({
       p_bbox_miny: bbox.miny,
       p_bbox_maxx: bbox.maxx,
       p_bbox_maxy: bbox.maxy,
+      p_epsg_code: epsgCode,
       p_buffer_m: 2.0,
       p_limit: batchSize,
       p_offset: offset,

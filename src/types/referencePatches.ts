@@ -7,12 +7,14 @@ export interface IReferencePatch {
   dataset_id: number;
   user_id: string;
   resolution_cm: PatchResolution;
-  geometry: GeoJSON.Polygon; // In EPSG:3857
+  geometry: GeoJSON.Polygon; // In UTM projection (specified by utm_zone)
   parent_tile_id: number | null; // TODO: Rename to parent_patch_id in future migration
   status: PatchStatus;
   patch_index: string; // Renamed from tile_index in DB
+  utm_zone: string; // UTM zone for geometry (e.g., "32N", "33S")
+  epsg_code: number; // EPSG code for UTM zone (e.g., 32632 for 32N, 32733 for 33S)
 
-  // Bounding box for export
+  // Bounding box for export (in UTM coordinates)
   bbox_minx: number;
   bbox_miny: number;
   bbox_maxx: number;

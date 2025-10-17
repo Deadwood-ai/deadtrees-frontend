@@ -33,6 +33,11 @@ import {
 } from "../DatasetDetailsMap/createVectorLayer";
 import { Settings } from "../../config";
 import { createGeodesicSquare, getTargetGroundSize } from "../../utils/geodesic";
+import {
+  transformPolygonUtmToWebMercator,
+  transformPolygonWebMercatorToUtm,
+  defineUtmProjection,
+} from "../../utils/utm";
 
 interface Props {
   datasetId: number;
@@ -302,28 +307,32 @@ export default function ReferencePatchMap({
       const feature = evt.features?.item(0) as Feature<Polygon> | undefined;
       if (!feature) return;
       const patchId = feature.get("patchId") as number | undefined;
-      if (!patchId) return;
+      const utmZone = feature.get("utmZone") as string | undefined;
+      if (!patchId || !utmZone) return;
       const geom = feature.getGeometry();
       if (!geom) return;
 
-      const corrected = enforcePatchDimensions(geom as Polygon, resolution);
+      const corrected = enforcePatchDimensions(geom as Polygon, resolution, utmZone);
       feature.setGeometry(corrected);
-      const gjCorrected = geoJsonFormatter.writeGeometryObject(corrected) as GeoJSON.Polygon;
+      const gjCorrectedWebMercator = geoJsonFormatter.writeGeometryObject(corrected) as GeoJSON.Polygon;
 
-      const placementValidation = validatePlacementAgainstAOI(gjCorrected);
+      const placementValidation = validatePlacementAgainstAOI(gjCorrectedWebMercator);
       if (!placementValidation.ok) {
         message.error(placementValidation.message || "Patch placement invalid");
         return;
       }
-      if (hasOverlapWithExistingPatches(gjCorrected, patchId)) {
+      if (hasOverlapWithExistingPatches(gjCorrectedWebMercator, patchId)) {
         message.error("Patch overlaps an existing patch");
         return;
       }
 
+      // Transform corrected Web Mercator geometry back to UTM for storage
+      const gjCorrectedUtm = transformPolygonWebMercatorToUtm(gjCorrectedWebMercator, utmZone);
+
       updatePatchGeometry({
         patchId,
-        geometry: gjCorrected,
-        bbox: polygonToBBoxShort(gjCorrected),
+        geometry: gjCorrectedUtm,
+        bbox: polygonToBBoxShort(gjCorrectedUtm),
         aoiCoveragePercent: placementValidation.overlapPercent ? Math.round(placementValidation.overlapPercent) : null,
       });
       // Use patchesRef.current to access the latest patches array
@@ -607,14 +616,18 @@ export default function ReferencePatchMap({
         // Geometry shouldn't change, but status might
       } else {
         // Add new feature
+        // Transform patch geometry from UTM to Web Mercator for display
+        const webMercatorGeometry = transformPolygonUtmToWebMercator(p.geometry, p.utm_zone);
+
         const feature = new Feature({
-          geometry: geoJsonFormatter.readGeometry(p.geometry, {
+          geometry: geoJsonFormatter.readGeometry(webMercatorGeometry, {
             dataProjection: "EPSG:3857",
             featureProjection: "EPSG:3857",
           }) as Polygon,
         });
         feature.set("patchId", p.id);
         feature.set("status", p.status);
+        feature.set("utmZone", p.utm_zone); // Store UTM zone for later use
         src.addFeature(feature);
       }
     });
@@ -972,7 +985,10 @@ export default function ReferencePatchMap({
     }
 
     try {
-      const geometry = geoJsonFormatter.readGeometry(patch.geometry, {
+      // Transform patch geometry from UTM to Web Mercator for display
+      const webMercatorGeometry = transformPolygonUtmToWebMercator(patch.geometry, patch.utm_zone);
+
+      const geometry = geoJsonFormatter.readGeometry(webMercatorGeometry, {
         dataProjection: "EPSG:3857",
         featureProjection: "EPSG:3857",
       });
@@ -1028,20 +1044,29 @@ export default function ReferencePatchMap({
   );
 }
 
-function enforcePatchDimensions(geometry: Polygon, resolution: PatchResolution): Polygon {
-  // Get center of the patch
+function enforcePatchDimensions(geometry: Polygon, resolution: PatchResolution, utmZone: string): Polygon {
+  // Import UTM utilities (dynamic import already in scope from component)
+  const { webMercatorToUtm, createUtmSquare, getTargetGroundSize, utmToWebMercator } = require("../../utils/utm");
+
+  // Get center of the patch (in Web Mercator)
   const extent = geometry.getExtent();
   const cx = (extent[0] + extent[2]) / 2;
   const cy = (extent[1] + extent[3]) / 2;
 
+  // Transform center to UTM
+  const [centerUtmX, centerUtmY] = webMercatorToUtm(cx, cy, utmZone);
+
   // Get target ground size for this resolution
   const targetGroundSize = getTargetGroundSize(resolution);
 
-  // Create a geodesically-correct square at this location
-  const geoJsonGeom = createGeodesicSquare(cx, cy, targetGroundSize);
+  // Create exact square in UTM (no distortion!)
+  const utmGeoJsonGeom = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
-  // Convert back to OpenLayers Polygon
-  const coords = geoJsonGeom.coordinates[0];
+  // Transform back to Web Mercator for display
+  const webMercatorGeoJsonGeom = require("../../utils/utm").transformPolygonUtmToWebMercator(utmGeoJsonGeom, utmZone);
+
+  // Convert to OpenLayers Polygon
+  const coords = webMercatorGeoJsonGeom.coordinates[0];
   return new Polygon([coords]);
 }
 

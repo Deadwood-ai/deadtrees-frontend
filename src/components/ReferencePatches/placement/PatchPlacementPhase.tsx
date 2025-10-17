@@ -67,10 +67,15 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
       return;
     }
 
-    // Use geodesic utilities to create a patch with correct ground dimensions
-    const { createGeodesicSquare, getTargetGroundSize } = await import("../../../utils/geodesic");
+    // Calculate UTM zone and create patch in UTM coordinates
+    const { getUtmZoneFromWebMercator, webMercatorToUtm, createUtmSquare, getTargetGroundSize, getUtmEpsgCode } =
+      await import("../../../utils/utm");
+
+    const utmZone = getUtmZoneFromWebMercator(aoiCentroid[0], aoiCentroid[1]);
+    const epsgCode = getUtmEpsgCode(utmZone);
+    const [centerUtmX, centerUtmY] = webMercatorToUtm(aoiCentroid[0], aoiCentroid[1], utmZone);
     const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
-    const patchGeometry = createGeodesicSquare(aoiCentroid[0], aoiCentroid[1], targetGroundSize);
+    const patchGeometry = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
     try {
       setIsSaving(true);
@@ -78,6 +83,8 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
         dataset_id: dataset.id,
         resolution_cm: 20,
         geometry: patchGeometry,
+        utm_zone: utmZone,
+        epsg_code: epsgCode,
         parent_tile_id: null,
         status: "pending",
         patch_index: `20_${Date.now()}`,

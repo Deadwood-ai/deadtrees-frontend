@@ -178,7 +178,7 @@ export default function ReferencePatchEditorView({
   // Recursively generate nested patches
   const generateNestedPatchesRecursive = useCallback(
     async (parentPatch: IReferencePatch) => {
-      const { createGeodesicSquare, getTargetGroundSize } = await import("../../utils/geodesic");
+      const { createUtmSquare, getTargetGroundSize } = await import("../../utils/utm");
 
       const parentGeom = parentPatch.geometry;
       const parentCoords = parentGeom.coordinates[0];
@@ -188,6 +188,8 @@ export default function ReferencePatchEditorView({
       const centerY = (miny + maxy) / 2;
       const halfWidth = (maxx - minx) / 2;
       const halfHeight = (maxy - miny) / 2;
+      const utmZone = parentPatch.utm_zone;
+      const epsgCode = parentPatch.epsg_code; // Inherit EPSG from parent
 
       const childResolution = parentPatch.resolution_cm === 20 ? 10 : 5;
       const targetGroundSize = getTargetGroundSize(childResolution);
@@ -202,13 +204,15 @@ export default function ReferencePatchEditorView({
       // Create all 4 child patches in parallel for better performance
       const patchCreationPromises = positions.map((position, i) => {
         const [cx, cy] = position;
-        // Use geodesic utilities to create patches with correct ground dimensions
-        const childGeometry = createGeodesicSquare(cx, cy, targetGroundSize);
+        // Create exact square in UTM (no distortion correction needed!)
+        const childGeometry = createUtmSquare(cx, cy, targetGroundSize);
 
         return createPatch({
           dataset_id: dataset.id,
           resolution_cm: childResolution,
           geometry: childGeometry,
+          utm_zone: utmZone,
+          epsg_code: epsgCode, // Inherit from parent
           parent_tile_id: parentPatch.id,
           status: "pending",
           patch_index: `${parentPatch.patch_index}_${i}`,
@@ -239,9 +243,14 @@ export default function ReferencePatchEditorView({
       return;
     }
 
-    const { createGeodesicSquare, getTargetGroundSize } = await import("../../utils/geodesic");
+    const { getUtmZoneFromWebMercator, webMercatorToUtm, createUtmSquare, getTargetGroundSize, getUtmEpsgCode } =
+      await import("../../utils/utm");
+
+    const utmZone = getUtmZoneFromWebMercator(aoiCentroid[0], aoiCentroid[1]);
+    const epsgCode = getUtmEpsgCode(utmZone);
+    const [centerUtmX, centerUtmY] = webMercatorToUtm(aoiCentroid[0], aoiCentroid[1], utmZone);
     const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
-    const patchGeometry = createGeodesicSquare(aoiCentroid[0], aoiCentroid[1], targetGroundSize);
+    const patchGeometry = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
     try {
       // Create base patch in pending state (user will position it, then generate children)
@@ -249,6 +258,8 @@ export default function ReferencePatchEditorView({
         dataset_id: dataset.id,
         resolution_cm: 20,
         geometry: patchGeometry,
+        utm_zone: utmZone,
+        epsg_code: epsgCode,
         parent_tile_id: null,
         status: "pending",
         patch_index: `20_${Date.now()}`,
@@ -700,6 +711,7 @@ export default function ReferencePatchEditorView({
             labelId: deadwoodLabel.id,
             geometryTable: "v2_deadwood_geometries",
             bbox,
+            epsgCode: basePatch.epsg_code,
             batchSize: 50,
             onProgress: (progress) => {
               setBatchProgress({
@@ -732,6 +744,7 @@ export default function ReferencePatchEditorView({
             labelId: forestCoverLabel.id,
             geometryTable: "v2_forest_cover_geometries",
             bbox,
+            epsgCode: basePatch.epsg_code,
             batchSize: 50,
             onProgress: (progress) => {
               setBatchProgress({
@@ -782,7 +795,9 @@ export default function ReferencePatchEditorView({
         if (!currentGeometry && getPatchGeometryFromMap) {
           const mapGeometry = getPatchGeometryFromMap(basePatch.id);
           if (mapGeometry) {
-            geometryToUse = mapGeometry;
+            // ⚠️ Map geometry is in Web Mercator - transform back to UTM!
+            const { transformPolygonWebMercatorToUtm } = await import("../../utils/utm");
+            geometryToUse = transformPolygonWebMercatorToUtm(mapGeometry, basePatch.utm_zone);
           }
         }
 
