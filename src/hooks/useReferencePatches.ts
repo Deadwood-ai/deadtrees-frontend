@@ -203,6 +203,35 @@ async function calculateParentStatus(parentPatchId: number): Promise<PatchStatus
   return "pending";
 }
 
+// Helper function to calculate parent patch layer validation from children
+async function calculateParentLayerValidation(
+  parentPatchId: number,
+  layer: "deadwood" | "forest_cover",
+): Promise<boolean | null> {
+  const validationField = layer === "deadwood" ? "deadwood_validated" : "forest_cover_validated";
+
+  // Get all children of this parent
+  const { data: children, error } = await supabase
+    .from("reference_patches")
+    .select(validationField)
+    .eq("parent_tile_id", parentPatchId);
+
+  if (error || !children || children.length === 0) {
+    return null;
+  }
+
+  const validations = children.map((c) => (c as Record<string, boolean | null>)[validationField]);
+
+  // If any child is not yet validated (null), parent stays null
+  if (validations.some((v) => v === null)) {
+    return null;
+  }
+
+  // All children are validated - check if all are "good" (true)
+  const allGood = validations.every((v) => v === true);
+  return allGood ? true : false; // If any child is "bad" (false), parent is "bad"
+}
+
 // Update patch layer validation (new approach - per layer)
 export function useUpdatePatchLayerValidation() {
   const queryClient = useQueryClient();
@@ -219,6 +248,7 @@ export function useUpdatePatchLayerValidation() {
     }) => {
       const updateField = layer === "deadwood" ? "deadwood_validated" : "forest_cover_validated";
 
+      // Update the patch itself
       const { data, error } = await supabase
         .from("reference_patches")
         .update({
@@ -230,7 +260,60 @@ export function useUpdatePatchLayerValidation() {
         .single();
 
       if (error) throw error;
-      return data as IReferencePatch;
+
+      const updatedPatch = data as IReferencePatch;
+
+      // Auto-propagate validation to parent patches
+      // If this is a 5cm patch, update its parent 10cm patch validation
+      if (updatedPatch.resolution_cm === 5 && updatedPatch.parent_tile_id) {
+        const parentValidation = await calculateParentLayerValidation(updatedPatch.parent_tile_id, layer);
+
+        // Update parent validation for this layer
+        await supabase
+          .from("reference_patches")
+          .update({
+            [updateField]: parentValidation,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedPatch.parent_tile_id);
+
+        // Also check if we need to update the grandparent (20cm patch)
+        const { data: parentPatch } = await supabase
+          .from("reference_patches")
+          .select("parent_tile_id")
+          .eq("id", updatedPatch.parent_tile_id)
+          .single();
+
+        if (parentPatch && (parentPatch as { parent_tile_id: number | null }).parent_tile_id) {
+          const grandparentValidation = await calculateParentLayerValidation(
+            (parentPatch as { parent_tile_id: number }).parent_tile_id,
+            layer,
+          );
+
+          await supabase
+            .from("reference_patches")
+            .update({
+              [updateField]: grandparentValidation,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", (parentPatch as { parent_tile_id: number }).parent_tile_id);
+        }
+      }
+
+      // If this is a 10cm patch, update its parent 20cm patch validation
+      if (updatedPatch.resolution_cm === 10 && updatedPatch.parent_tile_id) {
+        const parentValidation = await calculateParentLayerValidation(updatedPatch.parent_tile_id, layer);
+
+        await supabase
+          .from("reference_patches")
+          .update({
+            [updateField]: parentValidation,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", updatedPatch.parent_tile_id);
+      }
+
+      return updatedPatch;
     },
     onSuccess: (data) => {
       const datasetId = (data as IReferencePatch).dataset_id;
