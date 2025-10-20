@@ -380,8 +380,8 @@ export default function DatasetAudit() {
                 options={[
                   { label: `Needs Audit (${needsAuditCount})`, value: "needs-audit" },
                   { label: `Audited (${auditedCount})`, value: "audited" },
-                  { label: `Tiles Pending (${needsTilesCount})`, value: "needs-tiles" },
-                  { label: `Training Ready (${trainingReadyCount})`, value: "training-ready" },
+                  { label: `Reference Pending (${needsTilesCount})`, value: "needs-tiles" },
+                  { label: `Reference Ready (${trainingReadyCount})`, value: "training-ready" },
                   { label: `Fixable (${fixableIssuesCount})`, value: "fixable-issues" },
                   { label: `Excluded (${excludedCount})`, value: "excluded" },
                   {
