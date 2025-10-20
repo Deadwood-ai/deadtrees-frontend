@@ -32,11 +32,12 @@ import {
   createAOIMaskLayer,
 } from "../DatasetDetailsMap/createVectorLayer";
 import { Settings } from "../../config";
-import { createGeodesicSquare, getTargetGroundSize } from "../../utils/geodesic";
 import {
   transformPolygonUtmToWebMercator,
   transformPolygonWebMercatorToUtm,
-  defineUtmProjection,
+  webMercatorToUtm,
+  createUtmSquare,
+  getTargetGroundSize,
 } from "../../utils/utm";
 
 interface Props {
@@ -86,6 +87,9 @@ export default function ReferencePatchMap({
   const selectRef = useRef<Select | null>(null);
   const hasInitialFitRef = useRef<boolean>(false);
   const patchesRef = useRef<IReferencePatch[] | undefined>(patches);
+
+  // State to track when reference layers are loaded (triggers visibility effect)
+  const [referenceLayersLoaded, setReferenceLayersLoaded] = useState(0);
   const previousFocusPatchIdRef = useRef<number | null>(null);
 
   // Measuring tool state
@@ -298,8 +302,10 @@ export default function ReferencePatchMap({
         // Use patchesRef.current to access the latest patches array
         const patch = patchesRef.current?.find((p) => p.id === feature.get("patchId"));
         if (!patch) return false;
-        // Only allow translation of base patches (20cm) that are pending
-        return patch.resolution_cm === 20 && patch.status === "pending";
+        // Only allow translation of base patches (20cm) that don't have reference data yet
+        return (
+          patch.resolution_cm === 20 && !patch.reference_deadwood_label_id && !patch.reference_forest_cover_label_id
+        );
       },
     });
     map.addInteraction(translate);
@@ -611,9 +617,7 @@ export default function ReferencePatchMap({
       const existingFeature = existingFeatures.find((f) => f.get("patchId") === p.id);
 
       if (existingFeature) {
-        // Update existing feature properties
-        existingFeature.set("status", p.status);
-        // Geometry shouldn't change, but status might
+        // Geometry exists, no need to update
       } else {
         // Add new feature
         // Transform patch geometry from UTM to Web Mercator for display
@@ -626,7 +630,6 @@ export default function ReferencePatchMap({
           }) as Polygon,
         });
         feature.set("patchId", p.id);
-        feature.set("status", p.status);
         feature.set("utmZone", p.utm_zone); // Store UTM zone for later use
         src.addFeature(feature);
       }
@@ -686,8 +689,54 @@ export default function ReferencePatchMap({
   useEffect(() => {
     if (!deadwoodLayerRef.current || !forestCoverLayerRef.current) return;
 
-    // If in editing mode, hide ALL prediction layers (both global and reference)
+    // If in editing mode, hide ALL layers (predictions + reference)
+    // Only the editing overlay should be visible during editing
     if (isEditingMode) {
+      deadwoodLayerRef.current.setVisible(false);
+      forestCoverLayerRef.current.setVisible(false);
+
+      // Hide reference layers too - editing overlay replaces them
+      if (referenceDeadwoodLayerRef.current) {
+        referenceDeadwoodLayerRef.current.setVisible(false);
+      }
+      if (referenceForestCoverLayerRef.current) {
+        referenceForestCoverLayerRef.current.setVisible(false);
+      }
+
+      console.log("[Map] Editing mode - all prediction/reference layers hidden, only editing overlay visible");
+      return;
+    }
+
+    // Determine what to show based on patch selection and reference data
+    const currentlySelectedPatch = patches?.find((p) => p.id === selectedPatchId);
+    const isBasePatchSelected = currentlySelectedPatch && currentlySelectedPatch.resolution_cm === 20;
+    const hasSubPatches = isBasePatchSelected && patches?.some((p) => p.parent_tile_id === currentlySelectedPatch.id);
+
+    // Check if base patch has reference data
+    const hasReferenceData =
+      selectedBasePatch &&
+      (selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id);
+
+    // Case 1: Base patch selected WITH sub-patches AND reference data
+    // → Show reference data (hide global predictions)
+    if (isBasePatchSelected && hasSubPatches && hasReferenceData) {
+      deadwoodLayerRef.current.setVisible(false);
+      forestCoverLayerRef.current.setVisible(false);
+
+      // Explicitly show reference layers based on layer selection
+      if (referenceDeadwoodLayerRef.current) {
+        referenceDeadwoodLayerRef.current.setVisible(layerSelection === "deadwood");
+      }
+      if (referenceForestCoverLayerRef.current) {
+        referenceForestCoverLayerRef.current.setVisible(layerSelection === "forest_cover");
+      }
+      console.log("[Map] Base patch with reference data - showing reference layers, layer:", layerSelection);
+      return;
+    }
+
+    // Case 2: Base patch selected WITH sub-patches but NO reference data yet
+    // → Hide everything (only ortho visible)
+    if (isBasePatchSelected && hasSubPatches && !hasReferenceData) {
       deadwoodLayerRef.current.setVisible(false);
       forestCoverLayerRef.current.setVisible(false);
       if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
@@ -695,21 +744,34 @@ export default function ReferencePatchMap({
       return;
     }
 
-    // Check if selected patch has reference data
-    const hasReferenceData =
-      selectedBasePatch &&
-      (selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id);
-
-    // If patch has reference data, hide global predictions and show reference layers instead
-    if (hasReferenceData) {
+    // Case 3: Sub-patch (5cm/10cm) selected with reference data
+    // → Hide global predictions, show reference data based on layer selection
+    if (!isBasePatchSelected && hasReferenceData) {
       deadwoodLayerRef.current.setVisible(false);
       forestCoverLayerRef.current.setVisible(false);
 
-      // Reference layers visibility controlled by separate effect below
+      // Explicitly show reference layers based on layer selection
+      if (referenceDeadwoodLayerRef.current) {
+        referenceDeadwoodLayerRef.current.setVisible(layerSelection === "deadwood");
+        console.log("[Map] Deadwood reference layer:", {
+          exists: true,
+          visible: layerSelection === "deadwood",
+          featureCount: referenceDeadwoodLayerRef.current.getSource()?.getFeatures().length || 0,
+        });
+      }
+      if (referenceForestCoverLayerRef.current) {
+        referenceForestCoverLayerRef.current.setVisible(layerSelection === "forest_cover");
+        console.log("[Map] Forest cover reference layer:", {
+          exists: true,
+          visible: layerSelection === "forest_cover",
+          featureCount: referenceForestCoverLayerRef.current.getSource()?.getFeatures().length || 0,
+        });
+      }
+      console.log("[Map] Sub-patch with reference data - showing reference layers, layer:", layerSelection);
       return;
     }
 
-    // Show global predictions based on layer selection (no reference data yet, or no patch selected)
+    // Case 4: Default - Show global predictions based on layer selection
     switch (layerSelection) {
       case "deadwood":
         deadwoodLayerRef.current.setVisible(true);
@@ -728,7 +790,7 @@ export default function ReferencePatchMap({
     // Hide reference layers when showing global predictions
     if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
     if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
-  }, [layerSelection, selectedPatchId, selectedBasePatch, isEditingMode]);
+  }, [layerSelection, selectedPatchId, selectedBasePatch, isEditingMode, patches, referenceLayersLoaded]);
 
   // Load and display reference geometries when patch has reference data
   useEffect(() => {
@@ -811,10 +873,9 @@ export default function ReferencePatchMap({
 
           referenceDeadwoodLayerRef.current = layer;
           map.addLayer(layer);
-          // Hide reference layers during editing mode
-          const visible = !isEditingMode && layerSelection === "deadwood";
-          layer.setVisible(visible);
-          console.log("Added deadwood layer, visible:", visible, "features:", source.getFeatures().length);
+          console.log("Added deadwood reference layer, features:", source.getFeatures().length);
+          // Trigger visibility effect to run again
+          setReferenceLayersLoaded((prev) => prev + 1);
         }
       }
 
@@ -865,16 +926,17 @@ export default function ReferencePatchMap({
 
           referenceForestCoverLayerRef.current = layer;
           map.addLayer(layer);
-          // Hide reference layers during editing mode
-          const visible = !isEditingMode && layerSelection === "forest_cover";
-          layer.setVisible(visible);
-          console.log("Added forest cover layer, visible:", visible, "features:", source.getFeatures().length);
+          console.log("Added forest cover reference layer, features:", source.getFeatures().length);
+          // Trigger visibility effect to run again
+          setReferenceLayersLoaded((prev) => prev + 1);
         }
       }
     };
 
     loadReferenceGeometries();
   }, [selectedBasePatch, layerSelection, isEditingMode]);
+
+  // Note: Visibility is now triggered via referenceLayersLoaded state in main visibility effect
 
   // Add/update AOI layers when geometry becomes available
   useEffect(() => {
@@ -1045,9 +1107,6 @@ export default function ReferencePatchMap({
 }
 
 function enforcePatchDimensions(geometry: Polygon, resolution: PatchResolution, utmZone: string): Polygon {
-  // Import UTM utilities (dynamic import already in scope from component)
-  const { webMercatorToUtm, createUtmSquare, getTargetGroundSize, utmToWebMercator } = require("../../utils/utm");
-
   // Get center of the patch (in Web Mercator)
   const extent = geometry.getExtent();
   const cx = (extent[0] + extent[2]) / 2;
@@ -1063,7 +1122,7 @@ function enforcePatchDimensions(geometry: Polygon, resolution: PatchResolution, 
   const utmGeoJsonGeom = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
   // Transform back to Web Mercator for display
-  const webMercatorGeoJsonGeom = require("../../utils/utm").transformPolygonUtmToWebMercator(utmGeoJsonGeom, utmZone);
+  const webMercatorGeoJsonGeom = transformPolygonUtmToWebMercator(utmGeoJsonGeom, utmZone);
 
   // Convert to OpenLayers Polygon
   const coords = webMercatorGeoJsonGeom.coordinates[0];

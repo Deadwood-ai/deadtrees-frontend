@@ -1,6 +1,6 @@
 export type PatchResolution = 5 | 10 | 20;
 
-export type PatchStatus = "pending" | "good" | "bad";
+export type PatchStatus = "pending" | "good" | "bad"; // Kept for UI display only, not in DB
 
 export interface IReferencePatch {
   id: number;
@@ -9,7 +9,6 @@ export interface IReferencePatch {
   resolution_cm: PatchResolution;
   geometry: GeoJSON.Polygon; // In UTM projection (specified by utm_zone)
   parent_tile_id: number | null; // TODO: Rename to parent_patch_id in future migration
-  status: PatchStatus;
   patch_index: string; // Renamed from tile_index in DB
   utm_zone: string; // UTM zone for geometry (e.g., "32N", "33S")
   epsg_code: number; // EPSG code for UTM zone (e.g., 32632 for 32N, 32733 for 33S)
@@ -25,9 +24,13 @@ export interface IReferencePatch {
   deadwood_prediction_coverage_percent: number | null;
   forest_cover_prediction_coverage_percent: number | null;
 
-  // Reference label links (NEW!)
+  // Reference label links
   reference_deadwood_label_id?: number | null;
   reference_forest_cover_label_id?: number | null;
+
+  // Layer-specific validation (null = pending, true = good, false = bad)
+  deadwood_validated: boolean | null;
+  forest_cover_validated: boolean | null;
 
   created_at: string;
   updated_at: string;
@@ -52,6 +55,15 @@ export interface IPatchGenerationProgress {
   good_5cm: number;
   bad_5cm: number;
   pending_5cm: number;
+  // New layer-specific validation tracking
+  deadwood_validated_5cm: number;
+  deadwood_good_5cm: number;
+  deadwood_bad_5cm: number;
+  deadwood_pending_5cm: number;
+  forest_cover_validated_5cm: number;
+  forest_cover_good_5cm: number;
+  forest_cover_bad_5cm: number;
+  forest_cover_pending_5cm: number;
 }
 
 export interface IPatchPlacementDraft {

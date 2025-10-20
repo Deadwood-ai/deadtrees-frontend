@@ -22,6 +22,8 @@ import { useQueuePositions } from "../hooks/useQueuePositions";
 import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
+import { useReferenceDatasetStatus } from "../hooks/useReferencePatches";
+import ReferenceBadge from "./ReferencePatches/ReferenceBadge";
 
 interface Dataset {
   id: number;
@@ -54,6 +56,12 @@ interface DataTableProps {
   onSelectedRowsChange?: (selectedRows: Dataset[]) => void;
   resetSelection?: boolean; // Flag to reset selection
   onResetSelectionComplete?: () => void; // Callback when reset is complete
+}
+
+// Helper component to render reference status badge for a dataset
+function ReferenceStatusBadge({ datasetId }: { datasetId: number }) {
+  const { data: refStatus } = useReferenceDatasetStatus(datasetId);
+  return <ReferenceBadge status={refStatus ?? null} size="small" />;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -189,7 +197,6 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
-    const isComplete = isDatasetComplete(record);
     const canView = isDatasetViewable(record);
     const canPublish = isDatasetPublishEligible(record);
     const isSelected = selectedRowKeys.includes(record.id);
@@ -402,7 +409,6 @@ const DataTable: React.FC<DataTableProps> = ({
 
         // Dataset has no DOI, show add/remove button based on selection state
         const isSelected = selectedRowKeys.includes(record.id);
-        const isComplete = isDatasetComplete(record);
         const canPublish = isDatasetPublishEligible(record);
 
         if (isSelected) {
@@ -443,7 +449,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
-      width: 180,
+      width: 220,
       render: (tag: string | undefined, record: Dataset) => {
         // Handle audit status separately as it's not part of the main processing pipeline
         if (tag === "audit_in_progress") {
@@ -465,11 +471,17 @@ const DataTable: React.FC<DataTableProps> = ({
           return (
             <div className="flex items-center gap-2">
               <AuditBadge datasetId={record.id} audit={audit} />
+              <ReferenceStatusBadge datasetId={record.id} />
             </div>
           );
         }
 
-        return progress;
+        return (
+          <div className="flex items-center gap-2">
+            {progress}
+            <ReferenceStatusBadge datasetId={record.id} />
+          </div>
+        );
       },
     },
     {

@@ -20,7 +20,8 @@ interface Props {
   allPatches: IReferencePatch[];
   onResolutionChange: (resolution: PatchResolution) => void;
   onPatchSelect: (patchId: number | null) => void;
-  onStatusUpdate: (patchId: number, status: PatchStatus) => Promise<void>;
+  onStatusUpdate: (patchId: number, status: PatchStatus) => Promise<void>; // Deprecated
+  onLayerValidation?: (patchId: number, layer: "deadwood" | "forest_cover", validated: boolean | null) => Promise<void>;
   onDelete: (patchId: number) => Promise<void>;
   onGenerateSubPatches?: (basePatch: IReferencePatch) => Promise<void>;
   // New props for Phase 3 & 4
@@ -45,6 +46,7 @@ export default function PatchDetailSidebar({
   onResolutionChange,
   onPatchSelect,
   onStatusUpdate,
+  onLayerValidation,
   onDelete,
   onGenerateSubPatches,
   currentLayer,
@@ -106,11 +108,14 @@ export default function PatchDetailSidebar({
   // BUT don't auto-select if all patches are already completed
   useEffect(() => {
     if (currentIndex === -1 && sortedPatches.length > 0) {
-      // Check if there are any pending patches (considering optimistic statuses)
+      // Check if there are any pending patches (considering optimistic statuses and layer validation)
       const hasPendingPatches = sortedPatches.some((p) => {
         const optimisticStatus = optimisticStatusesRef.current.get(p.id);
-        const effectiveStatus = optimisticStatus || p.status || "pending";
-        return effectiveStatus === "pending";
+        if (optimisticStatus === "pending") return true;
+        if (optimisticStatus) return false; // good or bad
+
+        // Check actual validation state
+        return p.deadwood_validated === null || p.forest_cover_validated === null;
       });
 
       // Only auto-select if there are pending patches
@@ -121,28 +126,53 @@ export default function PatchDetailSidebar({
     }
   }, [currentIndex, sortedPatches, onPatchSelect]);
 
-  // Calculate progress for this base patch (only count 5cm - 10cm is auto-validated)
+  // Calculate progress for this base patch - separate for deadwood and forest cover
   const basePatchProgress = useMemo(() => {
     const patches10 = basePatchFamily.filter((p) => p.resolution_cm === 10);
     const patches5 = basePatchFamily.filter((p) => p.resolution_cm === 5);
-    const completed10 = patches10.filter((p) => p.status === "good" || p.status === "bad").length;
-    const completed5 = patches5.filter((p) => p.status === "good" || p.status === "bad").length;
+
+    // Layer-specific validation tracking
+    const deadwoodValidated5 = patches5.filter((p) => p.deadwood_validated !== null).length;
+    const forestCoverValidated5 = patches5.filter((p) => p.forest_cover_validated !== null).length;
+    const completed5 = patches5.filter(
+      (p) => p.deadwood_validated !== null && p.forest_cover_validated !== null,
+    ).length;
+
     const total5 = patches5.length;
+
     return {
-      completed10,
+      completed10: patches10.filter((p) => p.deadwood_validated !== null || p.forest_cover_validated !== null).length,
       total10: patches10.length,
       completed5,
-      total5: patches5.length,
+      total5,
       percent: total5 > 0 ? Math.round((completed5 / total5) * 100) : 0,
+      deadwoodValidated: deadwoodValidated5,
+      deadwoodPercent: total5 > 0 ? Math.round((deadwoodValidated5 / total5) * 100) : 0,
+      forestCoverValidated: forestCoverValidated5,
+      forestCoverPercent: total5 > 0 ? Math.round((forestCoverValidated5 / total5) * 100) : 0,
     };
   }, [basePatchFamily]);
 
-  // Find next pending patch
+  // Find next pending patch (considering current layer validation)
   const findNextPendingPatch = useCallback(() => {
-    // Helper to get effective status (optimistic or actual)
+    // Helper to get effective status based on current layer
     // Use ref to always get the latest optimistic statuses
     const getEffectiveStatus = (patch: IReferencePatch) => {
-      return optimisticStatusesRef.current.get(patch.id) || patch.status || "pending";
+      const optimisticStatus = optimisticStatusesRef.current.get(patch.id);
+      if (optimisticStatus) return optimisticStatus;
+
+      // For layer-specific validation, check the active layer
+      if (currentLayer === "deadwood" && patch.deadwood_validated !== undefined) {
+        if (patch.deadwood_validated === null) return "pending";
+        return patch.deadwood_validated ? "good" : "bad";
+      }
+      if (currentLayer === "forest_cover" && patch.forest_cover_validated !== undefined) {
+        if (patch.forest_cover_validated === null) return "pending";
+        return patch.forest_cover_validated ? "good" : "bad";
+      }
+
+      // No layer-specific data - assume pending
+      return "pending";
     };
 
     // First priority: look for pending patches in current resolution after current index
@@ -186,7 +216,7 @@ export default function PatchDetailSidebar({
 
     // No pending patches found in any resolution - all complete!
     return null;
-  }, [sortedPatches, currentIndex, selectedResolution, basePatchFamily, onResolutionChange]);
+  }, [sortedPatches, currentIndex, selectedResolution, basePatchFamily, onResolutionChange, currentLayer]);
 
   // Handle navigation
   const handlePrevious = useCallback(() => {
@@ -229,13 +259,33 @@ export default function PatchDetailSidebar({
     };
   }, [selectedPatch.id]);
 
-  // Get the current display status (optimistic if available, otherwise actual)
+  // Get the current display status based on active layer validation
   // Use useMemo to ensure it recalculates when dependencies change
   const displayStatus = useMemo(() => {
     const optimistic = optimisticStatuses.get(selectedPatch.id);
-    const actual = selectedPatch.status || "pending";
-    return optimistic || actual;
-  }, [optimisticStatuses, selectedPatch.id, selectedPatch.status]);
+    if (optimistic) return optimistic;
+
+    // Use layer-specific validation if available and a specific layer is active
+    if (currentLayer === "deadwood" && selectedPatch.deadwood_validated !== undefined) {
+      const validated = selectedPatch.deadwood_validated;
+      if (validated === null) return "pending";
+      return validated ? "good" : "bad";
+    }
+    if (currentLayer === "forest_cover" && selectedPatch.forest_cover_validated !== undefined) {
+      const validated = selectedPatch.forest_cover_validated;
+      if (validated === null) return "pending";
+      return validated ? "good" : "bad";
+    }
+
+    // No layer-specific data - assume pending
+    return "pending";
+  }, [
+    optimisticStatuses,
+    selectedPatch.id,
+    selectedPatch.deadwood_validated,
+    selectedPatch.forest_cover_validated,
+    currentLayer,
+  ]);
 
   // Handle status change from radio button (instant with auto-advance after brief delay)
   const handleRadioStatusChange = useCallback(
@@ -267,8 +317,16 @@ export default function PatchDetailSidebar({
         // Clear the delaying flag after navigation
         setIsDelayingNavigation(false);
 
-        // Update status in background after navigating
-        onStatusUpdate(patchIdToUpdate, status).then(() => {
+        // Determine validation value based on status
+        const validated = status === "good" ? true : status === "bad" ? false : null;
+
+        // Update validation based on current layer
+        const updatePromise =
+          onLayerValidation && (currentLayer === "deadwood" || currentLayer === "forest_cover")
+            ? onLayerValidation(patchIdToUpdate, currentLayer, validated)
+            : onStatusUpdate(patchIdToUpdate, status);
+
+        updatePromise.then(() => {
           // Clear optimistic status after DB update completes
           setOptimisticStatuses((prev) => {
             const next = new Map(prev);
@@ -280,7 +338,15 @@ export default function PatchDetailSidebar({
         });
       }, 200); // 200ms delay to show button state change
     },
-    [selectedPatch, findNextPendingPatch, onStatusUpdate, onPatchSelect, optimisticStatuses],
+    [
+      selectedPatch,
+      findNextPendingPatch,
+      onStatusUpdate,
+      onLayerValidation,
+      currentLayer,
+      onPatchSelect,
+      optimisticStatuses,
+    ],
   );
 
   // Handle clear rating (no auto-advance)
@@ -298,8 +364,13 @@ export default function PatchDetailSidebar({
     // Mark that we're in a transition state
     setIsDelayingNavigation(true);
 
-    // Update status immediately in background
-    onStatusUpdate(patchIdToUpdate, "pending").then(() => {
+    // Update validation based on current layer (clear = null)
+    const updatePromise =
+      onLayerValidation && (currentLayer === "deadwood" || currentLayer === "forest_cover")
+        ? onLayerValidation(patchIdToUpdate, currentLayer, null)
+        : onStatusUpdate(patchIdToUpdate, "pending");
+
+    updatePromise.then(() => {
       // Wait a bit after DB update before clearing optimistic status
       // This ensures the refetch has completed and we have the new data
       setTimeout(() => {
@@ -313,7 +384,7 @@ export default function PatchDetailSidebar({
         optimisticStatusesRef.current.delete(patchIdToUpdate);
       }, 100);
     });
-  }, [selectedPatch, onStatusUpdate, optimisticStatuses]);
+  }, [selectedPatch, onStatusUpdate, onLayerValidation, currentLayer, optimisticStatuses]);
 
   // Handle status change with auto-advance (for keyboard shortcuts)
   const handleStatusChangeWithAdvance = useCallback(
@@ -339,8 +410,16 @@ export default function PatchDetailSidebar({
           onPatchSelect(null);
         }
 
-        // Update status in background after navigating
-        onStatusUpdate(patchIdToUpdate, status).then(() => {
+        // Determine validation value based on status
+        const validated = status === "good" ? true : status === "bad" ? false : null;
+
+        // Update validation based on current layer
+        const updatePromise =
+          onLayerValidation && (currentLayer === "deadwood" || currentLayer === "forest_cover")
+            ? onLayerValidation(patchIdToUpdate, currentLayer, validated)
+            : onStatusUpdate(patchIdToUpdate, status);
+
+        updatePromise.then(() => {
           // Clear optimistic status after DB update completes
           setOptimisticStatuses((prev) => {
             const next = new Map(prev);
@@ -352,7 +431,15 @@ export default function PatchDetailSidebar({
         });
       }, 250); // Visual feedback delay - show button selection before navigating
     },
-    [selectedPatch, findNextPendingPatch, onStatusUpdate, onPatchSelect, optimisticStatuses],
+    [
+      selectedPatch,
+      findNextPendingPatch,
+      onStatusUpdate,
+      onLayerValidation,
+      currentLayer,
+      onPatchSelect,
+      optimisticStatuses,
+    ],
   );
 
   // Check if all patches are completed
@@ -420,26 +507,34 @@ export default function PatchDetailSidebar({
         </div>
         {hasSubPatches && (
           <Space direction="vertical" size="small" className="w-full">
-            <div className="flex justify-between gap-4">
-              <div className="flex-1">
-                <div className="mb-1 text-xs text-gray-500">5cm Patches (QA)</div>
-                <div className="text-base">
-                  <span className="font-semibold">{basePatchProgress.completed5}</span>{" "}
-                  <span className="text-gray-400">/</span>{" "}
-                  <span className="text-gray-500">{basePatchProgress.total5}</span>
-                </div>
+            {/* Layer-specific progress bars */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-gray-500">Deadwood Validation</span>
+                <span className="text-xs font-medium">
+                  {basePatchProgress.deadwoodValidated} / {basePatchProgress.total5}
+                </span>
               </div>
-              <div className="flex-1">
-                <div className="mb-1 text-xs text-gray-500">10cm (Auto)</div>
-                <div className="text-base text-gray-400">
-                  <span>{basePatchProgress.completed10}</span> <span className="text-gray-300">/</span>{" "}
-                  <span>{basePatchProgress.total10}</span>
-                </div>
-              </div>
+              <Progress
+                percent={basePatchProgress.deadwoodPercent}
+                strokeColor={currentLayer === "deadwood" ? "#1890ff" : undefined}
+                strokeWidth={currentLayer === "deadwood" ? 12 : 8}
+                className={currentLayer === "deadwood" ? "font-semibold" : ""}
+              />
             </div>
             <div>
-              <div className="mb-1 text-xs text-gray-500">QA Progress</div>
-              <Progress percent={basePatchProgress.percent} />
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-gray-500">Forest Cover Validation</span>
+                <span className="text-xs font-medium">
+                  {basePatchProgress.forestCoverValidated} / {basePatchProgress.total5}
+                </span>
+              </div>
+              <Progress
+                percent={basePatchProgress.forestCoverPercent}
+                strokeColor={currentLayer === "forest_cover" ? "#52c41a" : undefined}
+                strokeWidth={currentLayer === "forest_cover" ? 12 : 8}
+                className={currentLayer === "forest_cover" ? "font-semibold" : ""}
+              />
             </div>
           </Space>
         )}
@@ -463,7 +558,7 @@ export default function PatchDetailSidebar({
           activeKey={selectedResolution.toString()}
           onChange={(key) => onResolutionChange(Number(key) as PatchResolution)}
           items={[
-            ...(basePatch.status === "pending"
+            ...(basePatch.deadwood_validated === null || basePatch.forest_cover_validated === null
               ? [
                   {
                     key: "20",
@@ -557,7 +652,7 @@ export default function PatchDetailSidebar({
       {/* Initial Base Patch: Generate Sub-patches */}
       {!hasSubPatches &&
         selectedPatch.resolution_cm === 20 &&
-        selectedPatch.status === "pending" &&
+        (selectedPatch.deadwood_validated === null || selectedPatch.forest_cover_validated === null) &&
         onGenerateSubPatches && (
           <div className="flex-1 p-4">
             <Space direction="vertical" size="middle" className="w-full">

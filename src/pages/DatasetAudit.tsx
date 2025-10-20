@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined } from "@ant-design/icons";
@@ -12,6 +12,7 @@ import { IDataset } from "../types/dataset";
 import { useDatasetAudits } from "../hooks/useDatasetAudit";
 import { supabase } from "../hooks/useSupabase";
 import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
+import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
 
 const { Title } = Typography;
 
@@ -55,6 +56,7 @@ const isProcessingComplete = (dataset: IDataset) => {
 export default function DatasetAudit() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ALL HOOKS MUST BE CALLED FIRST - NO EARLY RETURNS BEFORE THIS POINT
   const { user } = useAuth();
@@ -63,11 +65,19 @@ export default function DatasetAudit() {
   const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
   const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
   const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
+  const { data: referenceDatasetIds = new Set() } = useReferenceDatasetIds();
 
-  // Filter states
-  const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
+  // Filter states - initialize from URL params if available
+  const initialFilter = (searchParams.get("tab") as AuditFilter) || "needs-audit";
+  const [auditFilter, setAuditFilter] = useState<AuditFilter>(initialFilter);
   const [idFilter, setIdFilter] = useState<string>("");
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+
+  // Handler for tab change that updates both state and URL
+  const handleTabChange = (value: AuditFilter) => {
+    setAuditFilter(value);
+    setSearchParams({ tab: value });
+  };
 
   // Add a constant for the minimum dataset ID
   const MIN_AUDIT_DATASET_ID = 2559;
@@ -88,8 +98,13 @@ export default function DatasetAudit() {
 
     let filtered = datasets;
 
-    // First filter by minimum ID for auditing (skip for Flagged tab)
-    if (auditFilter !== "flagged" && hasAboveMinId) {
+    // First filter by minimum ID for auditing (skip for Flagged, Tiles Pending, and Training Ready tabs)
+    if (
+      auditFilter !== "flagged" &&
+      auditFilter !== "needs-tiles" &&
+      auditFilter !== "training-ready" &&
+      hasAboveMinId
+    ) {
       filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
     }
 
@@ -98,9 +113,11 @@ export default function DatasetAudit() {
     } else if (auditFilter === "audited") {
       filtered = filtered.filter((dataset) => dataset.is_audited);
     } else if (auditFilter === "needs-tiles") {
-      filtered = filtered.filter((dataset) => dataset.is_audited && !dataset.has_ml_tiles);
+      // Show all datasets that are in reference_datasets AND don't have patches yet (regardless of audit status)
+      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && !dataset.has_ml_tiles);
     } else if (auditFilter === "training-ready") {
-      filtered = filtered.filter((dataset) => dataset.has_ml_tiles);
+      // Only show datasets that are in reference_datasets AND have patches completed
+      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && dataset.has_ml_tiles);
     } else if (auditFilter === "fixable-issues") {
       filtered = filtered.filter((dataset) => {
         const audit = auditMap.get(dataset.id);
@@ -142,7 +159,7 @@ export default function DatasetAudit() {
     }
 
     return filtered;
-  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg, hasAboveMinId]);
+  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg, hasAboveMinId, referenceDatasetIds]);
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
@@ -159,15 +176,15 @@ export default function DatasetAudit() {
 
   const needsTilesCount = useMemo(() => {
     if (!datasets) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => d.is_audited && !d.has_ml_tiles).length;
-  }, [datasets, hasAboveMinId]);
+    // Don't apply minimum ID filter - show ALL reference datasets
+    return datasets.filter((d) => referenceDatasetIds.has(d.id) && !d.has_ml_tiles).length;
+  }, [datasets, referenceDatasetIds]);
 
   const trainingReadyCount = useMemo(() => {
     if (!datasets) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => d.has_ml_tiles).length;
-  }, [datasets, hasAboveMinId]);
+    // Don't apply minimum ID filter - show ALL reference datasets
+    return datasets.filter((d) => referenceDatasetIds.has(d.id) && d.has_ml_tiles).length;
+  }, [datasets, referenceDatasetIds]);
 
   const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
@@ -339,18 +356,6 @@ export default function DatasetAudit() {
     ...baseColumns,
     // Only show Reference Patches column in "needs-tiles" and "training-ready" tabs
     ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [referencePatchesColumn] : []),
-    {
-      title: "Edit Labels",
-      key: "edit_labels",
-      render: (_: unknown, record: IDataset) => (
-        <Tooltip title="Open label editor for this dataset">
-          <Button size="small" onClick={() => navigate(`/dataset-label/${record.id}`)}>
-            Edit Labels
-          </Button>
-        </Tooltip>
-      ),
-      width: 130,
-    },
   ];
 
   return (
@@ -371,7 +376,7 @@ export default function DatasetAudit() {
             <div>
               <Segmented
                 value={auditFilter}
-                onChange={(value) => setAuditFilter(value as AuditFilter)}
+                onChange={(value) => handleTabChange(value as AuditFilter)}
                 options={[
                   { label: `Needs Audit (${needsAuditCount})`, value: "needs-audit" },
                   { label: `Audited (${auditedCount})`, value: "audited" },

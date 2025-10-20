@@ -68,9 +68,9 @@ export function usePatchSessionLock(datasetId: number | undefined) {
 
       return {
         dataset_id: datasetId,
-        is_locked: (data as any).is_in_tile_generation || false,
-        locked_by: (data as any).tile_generation_locked_by || null,
-        locked_at: (data as any).tile_generation_locked_at || null,
+        is_locked: (data as { is_in_tile_generation?: boolean }).is_in_tile_generation || false,
+        locked_by: (data as { tile_generation_locked_by?: string }).tile_generation_locked_by || null,
+        locked_at: (data as { tile_generation_locked_at?: string }).tile_generation_locked_at || null,
       };
     },
     enabled: !!datasetId,
@@ -203,7 +203,45 @@ async function calculateParentStatus(parentPatchId: number): Promise<PatchStatus
   return "pending";
 }
 
+// Update patch layer validation (new approach - per layer)
+export function useUpdatePatchLayerValidation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      patchId,
+      layer,
+      validated,
+    }: {
+      patchId: number;
+      layer: "deadwood" | "forest_cover";
+      validated: boolean | null;
+    }) => {
+      const updateField = layer === "deadwood" ? "deadwood_validated" : "forest_cover_validated";
+
+      const { data, error } = await supabase
+        .from("reference_patches")
+        .update({
+          [updateField]: validated,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", patchId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as IReferencePatch;
+    },
+    onSuccess: (data) => {
+      const datasetId = (data as IReferencePatch).dataset_id;
+      queryClient.invalidateQueries({ queryKey: ["reference-patches", datasetId] });
+      queryClient.invalidateQueries({ queryKey: ["patch-progress", datasetId] });
+    },
+  });
+}
+
 // Update patch status with automatic parent status propagation
+// DEPRECATED: Use useUpdatePatchLayerValidation instead
 export function useUpdatePatchStatus() {
   const queryClient = useQueryClient();
 
@@ -382,8 +420,9 @@ export function useGenerateNestedPatches() {
           resolution_cm: childResolution,
           geometry,
           parent_tile_id: parentPatch.id, // Note: DB column still named parent_tile_id
-          status: "pending",
           patch_index: `${parentPatch.patch_index}_${quad.idx}`,
+          utm_zone: parentPatch.utm_zone,
+          epsg_code: parentPatch.epsg_code,
           bbox_minx: quad.minx,
           bbox_miny: quad.miny,
           bbox_maxx: quad.maxx,
@@ -393,6 +432,8 @@ export function useGenerateNestedPatches() {
           forest_cover_prediction_coverage_percent: null,
           reference_deadwood_label_id: null,
           reference_forest_cover_label_id: null,
+          deadwood_validated: null,
+          forest_cover_validated: null,
         });
       }
 
@@ -423,26 +464,49 @@ export function usePatchProgress(datasetId: number | undefined) {
 
       const { data, error } = await supabase
         .from("reference_patches")
-        .select("resolution_cm, status")
+        .select("resolution_cm, deadwood_validated, forest_cover_validated")
         .eq("dataset_id", datasetId);
 
       if (error) throw error;
       if (!data) return null;
 
-      const patches = data as unknown as Pick<IReferencePatch, "resolution_cm" | "status">[];
+      const patches = data as unknown as Pick<
+        IReferencePatch,
+        "resolution_cm" | "deadwood_validated" | "forest_cover_validated"
+      >[];
+
+      const patches5cm = patches.filter((p) => p.resolution_cm === 5);
+      const patches10cm = patches.filter((p) => p.resolution_cm === 10);
+      const patches20cm = patches.filter((p) => p.resolution_cm === 20);
 
       const progress: IPatchGenerationProgress = {
         dataset_id: datasetId,
-        total_20cm: patches.filter((p) => p.resolution_cm === 20).length,
-        completed_20cm: patches.filter((p) => p.resolution_cm === 20 && p.status !== "pending").length,
-        total_10cm: patches.filter((p) => p.resolution_cm === 10).length,
-        good_10cm: patches.filter((p) => p.resolution_cm === 10 && p.status === "good").length,
-        bad_10cm: patches.filter((p) => p.resolution_cm === 10 && p.status === "bad").length,
-        pending_10cm: patches.filter((p) => p.resolution_cm === 10 && p.status === "pending").length,
-        total_5cm: patches.filter((p) => p.resolution_cm === 5).length,
-        good_5cm: patches.filter((p) => p.resolution_cm === 5 && p.status === "good").length,
-        bad_5cm: patches.filter((p) => p.resolution_cm === 5 && p.status === "bad").length,
-        pending_5cm: patches.filter((p) => p.resolution_cm === 5 && p.status === "pending").length,
+        // 20cm base patches
+        total_20cm: patches20cm.length,
+        completed_20cm: patches20cm.filter((p) => p.deadwood_validated !== null || p.forest_cover_validated !== null)
+          .length,
+        // 10cm patches (auto-validated based on children)
+        total_10cm: patches10cm.length,
+        good_10cm: patches10cm.filter((p) => p.deadwood_validated === true && p.forest_cover_validated === true).length,
+        bad_10cm: patches10cm.filter((p) => p.deadwood_validated === false || p.forest_cover_validated === false)
+          .length,
+        pending_10cm: patches10cm.filter((p) => p.deadwood_validated === null || p.forest_cover_validated === null)
+          .length,
+        // 5cm patches - legacy combined view
+        total_5cm: patches5cm.length,
+        good_5cm: patches5cm.filter((p) => p.deadwood_validated === true && p.forest_cover_validated === true).length,
+        bad_5cm: patches5cm.filter((p) => p.deadwood_validated === false || p.forest_cover_validated === false).length,
+        pending_5cm: patches5cm.filter((p) => p.deadwood_validated === null || p.forest_cover_validated === null)
+          .length,
+        // Layer-specific validation for 5cm patches
+        deadwood_validated_5cm: patches5cm.filter((p) => p.deadwood_validated !== null).length,
+        deadwood_good_5cm: patches5cm.filter((p) => p.deadwood_validated === true).length,
+        deadwood_bad_5cm: patches5cm.filter((p) => p.deadwood_validated === false).length,
+        deadwood_pending_5cm: patches5cm.filter((p) => p.deadwood_validated === null).length,
+        forest_cover_validated_5cm: patches5cm.filter((p) => p.forest_cover_validated !== null).length,
+        forest_cover_good_5cm: patches5cm.filter((p) => p.forest_cover_validated === true).length,
+        forest_cover_bad_5cm: patches5cm.filter((p) => p.forest_cover_validated === false).length,
+        forest_cover_pending_5cm: patches5cm.filter((p) => p.forest_cover_validated === null).length,
       };
 
       return progress;
@@ -509,6 +573,64 @@ export function useReopenPatchGeneration() {
       await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
       await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
       await queryClient.refetchQueries({ queryKey: ["datasets"] });
+    },
+  });
+}
+
+// Check if dataset is in reference_datasets and get validation status
+export type ReferenceDatasetStatus = "pending" | "ready" | null;
+
+export function useReferenceDatasetStatus(datasetId: number | undefined) {
+  return useQuery({
+    queryKey: ["reference-dataset-status", datasetId],
+    queryFn: async (): Promise<ReferenceDatasetStatus> => {
+      if (!datasetId) return null;
+
+      // Check if dataset is in reference_datasets table
+      const { data: refDataset, error: refError } = await supabase
+        .from("reference_datasets")
+        .select("id")
+        .eq("dataset_id", datasetId)
+        .maybeSingle();
+
+      if (refError) throw refError;
+      if (!refDataset) return null; // Not a reference dataset
+
+      // Dataset is in reference_datasets, now check if all 5cm patches are validated
+      const { data: patches, error: patchError } = await supabase
+        .from("reference_patches")
+        .select("resolution_cm, deadwood_validated, forest_cover_validated")
+        .eq("dataset_id", datasetId)
+        .eq("resolution_cm", 5);
+
+      if (patchError) throw patchError;
+
+      // If no 5cm patches exist, it's pending
+      if (!patches || patches.length === 0) return "pending";
+
+      // Check if all 5cm patches have both layers validated
+      const allValidated = patches.every(
+        (p: { deadwood_validated: boolean | null; forest_cover_validated: boolean | null }) =>
+          p.deadwood_validated !== null && p.forest_cover_validated !== null,
+      );
+
+      return allValidated ? "ready" : "pending";
+    },
+    enabled: !!datasetId,
+  });
+}
+
+// Get all dataset IDs that are in reference_datasets table
+export function useReferenceDatasetIds() {
+  return useQuery({
+    queryKey: ["reference-dataset-ids"],
+    queryFn: async (): Promise<Set<number>> => {
+      const { data, error } = await supabase.from("reference_datasets").select("dataset_id");
+
+      if (error) throw error;
+
+      // Return as a Set for O(1) lookup performance
+      return new Set((data || []).map((row: { dataset_id: number }) => row.dataset_id));
     },
   });
 }

@@ -1,9 +1,11 @@
-import { Button, Tooltip, Tag } from "antd";
+import { Button, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
+import { useReferenceDatasetStatus } from "../hooks/useReferencePatches";
+import ReferenceBadge from "./ReferencePatches/ReferenceBadge";
 
 interface ListItemProps {
   item: IDataset;
@@ -19,6 +21,7 @@ interface ListItemProps {
 const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: ListItemProps) => {
   const navigate = useNavigate();
   const { setNavigationSource } = useDatasetDetailsMap();
+  const { data: refStatus } = useReferenceDatasetStatus(item.id);
 
   const handleMouseEnter = () => {
     if (setHoveredItem) {
@@ -92,16 +95,19 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
               </Button>
             </Tooltip>
           </div>
-          <div className="pt-0.5 text-xs">
-            {new Date(
-              parseInt(item.aquisition_year),
-              item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
-              item.aquisition_day ? parseInt(item.aquisition_day) : 1,
-            ).toLocaleDateString("en-GB", {
-              year: "numeric",
-              ...(item.aquisition_month && { month: "numeric" }),
-              ...(item.aquisition_day && { day: "numeric" }),
-            })}
+          <div className="flex flex-col items-end gap-1">
+            <div className="pt-0.5 text-xs">
+              {new Date(
+                parseInt(item.aquisition_year),
+                item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
+                item.aquisition_day ? parseInt(item.aquisition_day) : 1,
+              ).toLocaleDateString("en-GB", {
+                year: "numeric",
+                ...(item.aquisition_month && { month: "numeric" }),
+                ...(item.aquisition_day && { day: "numeric" }),
+              })}
+            </div>
+            {refStatus && <ReferenceBadge status={refStatus} size="small" />}
           </div>
         </div>
         <div className="flex space-x-1">

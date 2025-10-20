@@ -6,6 +6,7 @@ import {
   useReferencePatches,
   useCreateReferencePatch,
   useUpdatePatchStatus,
+  useUpdatePatchLayerValidation,
   useDeleteReferencePatch,
 } from "../../hooks/useReferencePatches";
 import { useSaveReferenceGeometries } from "../../hooks/useReferenceGeometries";
@@ -61,6 +62,7 @@ export default function ReferencePatchEditorView({
   const { data: aoiData } = useDatasetAOI(dataset.id);
   const { mutateAsync: createPatch } = useCreateReferencePatch();
   const { mutateAsync: updateStatus } = useUpdatePatchStatus();
+  const { mutateAsync: updateLayerValidation } = useUpdatePatchLayerValidation();
   const { mutateAsync: deletePatch } = useDeleteReferencePatch();
   const { mutateAsync: saveGeometries } = useSaveReferenceGeometries();
 
@@ -214,7 +216,6 @@ export default function ReferencePatchEditorView({
           utm_zone: utmZone,
           epsg_code: epsgCode, // Inherit from parent
           parent_tile_id: parentPatch.id,
-          status: "pending",
           patch_index: `${parentPatch.patch_index}_${i}`,
           bbox_minx: childGeometry.coordinates[0][0][0],
           bbox_miny: childGeometry.coordinates[0][0][1],
@@ -223,6 +224,8 @@ export default function ReferencePatchEditorView({
           aoi_coverage_percent: null,
           deadwood_prediction_coverage_percent: null,
           forest_cover_prediction_coverage_percent: null,
+          deadwood_validated: null,
+          forest_cover_validated: null,
         });
       });
 
@@ -261,7 +264,6 @@ export default function ReferencePatchEditorView({
         utm_zone: utmZone,
         epsg_code: epsgCode,
         parent_tile_id: null,
-        status: "pending",
         patch_index: `20_${Date.now()}`,
         bbox_minx: patchGeometry.coordinates[0][0][0],
         bbox_miny: patchGeometry.coordinates[0][0][1],
@@ -270,6 +272,8 @@ export default function ReferencePatchEditorView({
         aoi_coverage_percent: 100,
         deadwood_prediction_coverage_percent: null,
         forest_cover_prediction_coverage_percent: null,
+        deadwood_validated: null,
+        forest_cover_validated: null,
       });
 
       // Explicitly refetch to ensure UI updates immediately
@@ -810,8 +814,9 @@ export default function ReferencePatchEditorView({
         // Step 2: Generate nested patches
         await generateNestedPatchesRecursive(patchToGenerate);
 
-        // Step 3: Mark base patch as good
-        await updateStatus({ patchId: basePatch.id, status: "good" });
+        // Step 3: Mark base patch as validated (both layers)
+        await updateLayerValidation({ patchId: basePatch.id, layer: "deadwood", validated: true });
+        await updateLayerValidation({ patchId: basePatch.id, layer: "forest_cover", validated: true });
         onUnsavedChanges(true);
 
         message.success({ content: "Patches generated and reference data created!", key: "generate" });
@@ -826,7 +831,10 @@ export default function ReferencePatchEditorView({
         setTimeout(() => {
           // Auto-select first 5cm patch to start checking
           const firstChild = allPatches.find(
-            (p) => p.parent_tile_id !== null && p.resolution_cm === 5 && p.status === "pending",
+            (p) =>
+              p.parent_tile_id !== null &&
+              p.resolution_cm === 5 &&
+              (p.deadwood_validated === null || p.forest_cover_validated === null),
           );
           if (firstChild) {
             setSelectedPatchId(firstChild.id);
@@ -839,7 +847,7 @@ export default function ReferencePatchEditorView({
     },
     [
       generateNestedPatchesRecursive,
-      updateStatus,
+      updateLayerValidation,
       onUnsavedChanges,
       allPatches,
       getPatchGeometryFromMap,
@@ -959,6 +967,14 @@ export default function ReferencePatchEditorView({
             onPatchSelect={setSelectedPatchId}
             onStatusUpdate={async (patchId: number, status: "good" | "bad" | "pending") => {
               await updateStatus({ patchId, status });
+              onUnsavedChanges(true);
+            }}
+            onLayerValidation={async (
+              patchId: number,
+              layer: "deadwood" | "forest_cover",
+              validated: boolean | null,
+            ) => {
+              await updateLayerValidation({ patchId, layer, validated });
               onUnsavedChanges(true);
             }}
             currentLayer={layerSelection}
