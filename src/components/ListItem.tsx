@@ -4,8 +4,6 @@ import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
-import { useReferenceDatasetStatus } from "../hooks/useReferencePatches";
-import ReferenceBadge from "./ReferencePatches/ReferenceBadge";
 
 interface ListItemProps {
   item: IDataset;
@@ -21,7 +19,6 @@ interface ListItemProps {
 const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: ListItemProps) => {
   const navigate = useNavigate();
   const { setNavigationSource } = useDatasetDetailsMap();
-  const { data: refStatus } = useReferenceDatasetStatus(item.id);
 
   const handleMouseEnter = () => {
     if (setHoveredItem) {
@@ -107,7 +104,6 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
                 ...(item.aquisition_day && { day: "numeric" }),
               })}
             </div>
-            {refStatus && <ReferenceBadge status={refStatus} size="small" />}
           </div>
         </div>
         <div className="flex space-x-1">

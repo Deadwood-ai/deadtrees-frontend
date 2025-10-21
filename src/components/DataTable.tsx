@@ -22,8 +22,6 @@ import { useQueuePositions } from "../hooks/useQueuePositions";
 import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
-import { useReferenceDatasetStatus } from "../hooks/useReferencePatches";
-import ReferenceBadge from "./ReferencePatches/ReferenceBadge";
 
 interface Dataset {
   id: number;
@@ -56,12 +54,6 @@ interface DataTableProps {
   onSelectedRowsChange?: (selectedRows: Dataset[]) => void;
   resetSelection?: boolean; // Flag to reset selection
   onResetSelectionComplete?: () => void; // Callback when reset is complete
-}
-
-// Helper component to render reference status badge for a dataset
-function ReferenceStatusBadge({ datasetId }: { datasetId: number }) {
-  const { data: refStatus } = useReferenceDatasetStatus(datasetId);
-  return <ReferenceBadge status={refStatus ?? null} size="small" />;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -468,20 +460,10 @@ const DataTable: React.FC<DataTableProps> = ({
         const audit = auditsById?.get(record.id);
 
         if (isComplete && audit?.final_assessment) {
-          return (
-            <div className="flex items-center gap-2">
-              <AuditBadge datasetId={record.id} audit={audit} />
-              <ReferenceStatusBadge datasetId={record.id} />
-            </div>
-          );
+          return <AuditBadge datasetId={record.id} audit={audit} />;
         }
 
-        return (
-          <div className="flex items-center gap-2">
-            {progress}
-            <ReferenceStatusBadge datasetId={record.id} />
-          </div>
-        );
+        return progress;
       },
     },
     {
