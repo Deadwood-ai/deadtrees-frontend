@@ -3,6 +3,7 @@ interface LogoBannerProps {
     path?: string;
     text?: string;
     url?: string;
+    height?: string;
   }>;
   title: string;
 }
@@ -33,7 +34,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                     <img
                       src={logo.path}
                       alt={logo.text || "Partner logo"}
-                      className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                      className={`${logo.height || "h-16"} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
                     />
                     {logo.text && (
                       <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
@@ -76,7 +77,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                     <img
                       src={logo.path}
                       alt={logo.text || "Partner logo"}
-                      className="h-16 w-full object-contain transition-opacity duration-200 group-hover:opacity-80"
+                      className={`${logo.height || "h-16"} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
                     />
                     {logo.text && (
                       <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">

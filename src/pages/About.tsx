@@ -45,6 +45,22 @@ export default function About() {
       text: "European Space Agency",
       url: "https://www.esa.int/",
     },
+    {
+      path: "assets/logos/dlr.jpeg",
+      text: "German Aerospace Center (DLR)",
+      url: "https://ml4earth.de/",
+    },
+    {
+      path: "assets/logos/geonadir.png",
+      text: "Geonadir - Open Aerial Imagery Platform",
+      url: "https://www.geonadir.com",
+    },
+    {
+      path: "assets/logos/bmwk.jpg",
+      text: "Federal Ministry for Economic Affairs and Climate Action (BMWK)",
+      url: "https://ml4earth.de/",
+      height: "h-24",
+    },
   ];
 
   const navigate = useNavigate();
