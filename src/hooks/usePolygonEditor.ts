@@ -6,6 +6,7 @@ import { Draw, Modify, Select } from "ol/interaction";
 import { click, shiftKeyOnly } from "ol/events/condition";
 import Feature from "ol/Feature";
 import Geometry from "ol/geom/Geometry";
+import Polygon from "ol/geom/Polygon";
 import MultiPolygon from "ol/geom/MultiPolygon";
 import { Style, Fill, Stroke } from "ol/style";
 import MapBrowserEvent from "ol/MapBrowserEvent";
@@ -30,6 +31,7 @@ export interface UsePolygonEditorReturn {
   getOverlayLayer: () => VectorLayer<VectorSource> | null;
   setOverlayVisible: (visible: boolean) => void;
   mergeSelected: () => void;
+  clipSelected: () => void;
   cutHoleWithDrawn: () => void;
   undo: () => void;
   canUndo: boolean;
@@ -514,6 +516,60 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     setSelection([a]);
   }, [saveHistory]);
 
+  const clipSelected = useCallback(() => {
+    const overlay = overlayLayerRef.current;
+    const select = selectRef.current;
+    if (!overlay || !select) return;
+    const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
+    if (!source) return;
+    const selected = select.getFeatures().getArray() as Feature<Geometry>[];
+    if (selected.length !== 2) {
+      message.warning("Select exactly two polygons to clip.");
+      return;
+    }
+    const [a, b] = selected;
+    const ga = a.getGeometry();
+    const gb = b.getGeometry();
+    if (!ga || !gb) return;
+
+    // Save history before clipping
+    saveHistory();
+
+    // Calculate areas to determine which is larger (in map projection units)
+    // Both Polygon and MultiPolygon have getArea() method
+    const areaA = ga instanceof Polygon || ga instanceof MultiPolygon ? ga.getArea() : 0;
+    const areaB = gb instanceof Polygon || gb instanceof MultiPolygon ? gb.getArea() : 0;
+
+    // Determine which is larger and which is smaller
+    let larger, smaller, largerFeature, smallerFeature;
+    if (areaA >= areaB) {
+      larger = ga;
+      smaller = gb;
+      largerFeature = a;
+      smallerFeature = b;
+    } else {
+      larger = gb;
+      smaller = ga;
+      largerFeature = b;
+      smallerFeature = a;
+    }
+
+    // Subtract smaller polygon from larger polygon
+    const clipped = geomDifference(larger, smaller);
+    if (!clipped) {
+      message.error("Failed to clip polygons. They may not overlap.");
+      return;
+    }
+
+    // Update the larger polygon with clipped result, remove the smaller polygon
+    largerFeature.setGeometry(clipped);
+    source.removeFeature(smallerFeature);
+    select.getFeatures().clear();
+    select.getFeatures().push(largerFeature);
+    setSelection([largerFeature]);
+    message.success("Smaller polygon clipped from larger polygon");
+  }, [saveHistory]);
+
   // Cut hole / trim edges: user draws a polygon, then we subtract from single selected feature
   const cutHoleWithDrawn = useCallback(() => {
     if (!mapRef.current) return;
@@ -690,6 +746,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       },
       setOverlayVisible,
       mergeSelected,
+      clipSelected,
       cutHoleWithDrawn,
       undo,
       canUndo,
@@ -706,6 +763,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       toggleDraw,
       setOverlayVisible,
       mergeSelected,
+      clipSelected,
       cutHoleWithDrawn,
       undo,
       canUndo,

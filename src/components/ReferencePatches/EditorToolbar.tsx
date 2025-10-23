@@ -20,6 +20,7 @@ interface Props {
   onToggleDraw: () => void;
   onCutHole: () => void;
   onMerge: () => void;
+  onClip: () => void;
   onToggleAI: () => void;
   onDeleteSelected: () => void;
   onUndo: () => void;
@@ -39,6 +40,7 @@ export default function EditorToolbar({
   onToggleDraw,
   onCutHole,
   onMerge,
+  onClip,
   onToggleAI,
   onDeleteSelected,
   onUndo,
@@ -92,6 +94,17 @@ export default function EditorToolbar({
             title="Merge 2 polygons (G) - Works with overlapping or nested polygons"
           >
             Merge (G) {hasSelection && selectionCount === 2 ? `✓` : ""}
+          </Button>
+
+          {/* Clip */}
+          <Button
+            icon={<ScissorOutlined rotate={90} />}
+            onClick={onClip}
+            disabled={!hasSelection || selectionCount !== 2}
+            block
+            title="Clip overlap (X) - Removes smaller polygon from larger"
+          >
+            Clip (X) {hasSelection && selectionCount === 2 ? `✓` : ""}
           </Button>
 
           {/* AI Segmentation */}

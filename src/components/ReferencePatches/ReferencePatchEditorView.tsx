@@ -653,6 +653,13 @@ export default function ReferencePatchEditorView({
             editor.mergeSelected();
           }
           break;
+        case "x":
+          // Clip (only if exactly 2 polygons are selected)
+          if (editor.selection && editor.selection.length === 2) {
+            e.preventDefault();
+            editor.clipSelected();
+          }
+          break;
       }
     };
 
@@ -928,6 +935,7 @@ export default function ReferencePatchEditorView({
               }}
               onCutHole={editor.cutHoleWithDrawn}
               onMerge={editor.mergeSelected}
+              onClip={editor.clipSelected}
               onToggleAI={() => {
                 console.log("Toggle AI clicked, current isActive:", ai.isActive);
                 if (ai.isActive) {
