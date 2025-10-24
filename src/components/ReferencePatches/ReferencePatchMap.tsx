@@ -723,12 +723,19 @@ export default function ReferencePatchMap({
       deadwoodLayerRef.current.setVisible(false);
       forestCoverLayerRef.current.setVisible(false);
 
-      // Explicitly show reference layers based on layer selection
+      // First, hide both reference layers to prevent flickering
       if (referenceDeadwoodLayerRef.current) {
-        referenceDeadwoodLayerRef.current.setVisible(layerSelection === "deadwood");
+        referenceDeadwoodLayerRef.current.setVisible(false);
       }
       if (referenceForestCoverLayerRef.current) {
-        referenceForestCoverLayerRef.current.setVisible(layerSelection === "forest_cover");
+        referenceForestCoverLayerRef.current.setVisible(false);
+      }
+
+      // Then show only the selected layer
+      if (layerSelection === "deadwood" && referenceDeadwoodLayerRef.current) {
+        referenceDeadwoodLayerRef.current.setVisible(true);
+      } else if (layerSelection === "forest_cover" && referenceForestCoverLayerRef.current) {
+        referenceForestCoverLayerRef.current.setVisible(true);
       }
       console.log("[Map] Base patch with reference data - showing reference layers, layer:", layerSelection);
       return;
@@ -750,20 +757,27 @@ export default function ReferencePatchMap({
       deadwoodLayerRef.current.setVisible(false);
       forestCoverLayerRef.current.setVisible(false);
 
-      // Explicitly show reference layers based on layer selection
+      // First, hide both reference layers to prevent flickering
       if (referenceDeadwoodLayerRef.current) {
-        referenceDeadwoodLayerRef.current.setVisible(layerSelection === "deadwood");
-        console.log("[Map] Deadwood reference layer:", {
-          exists: true,
-          visible: layerSelection === "deadwood",
-          featureCount: referenceDeadwoodLayerRef.current.getSource()?.getFeatures().length || 0,
-        });
+        referenceDeadwoodLayerRef.current.setVisible(false);
       }
       if (referenceForestCoverLayerRef.current) {
-        referenceForestCoverLayerRef.current.setVisible(layerSelection === "forest_cover");
+        referenceForestCoverLayerRef.current.setVisible(false);
+      }
+
+      // Then show only the selected layer
+      if (layerSelection === "deadwood" && referenceDeadwoodLayerRef.current) {
+        referenceDeadwoodLayerRef.current.setVisible(true);
+        console.log("[Map] Deadwood reference layer:", {
+          exists: true,
+          visible: true,
+          featureCount: referenceDeadwoodLayerRef.current.getSource()?.getFeatures().length || 0,
+        });
+      } else if (layerSelection === "forest_cover" && referenceForestCoverLayerRef.current) {
+        referenceForestCoverLayerRef.current.setVisible(true);
         console.log("[Map] Forest cover reference layer:", {
           exists: true,
-          visible: layerSelection === "forest_cover",
+          visible: true,
           featureCount: referenceForestCoverLayerRef.current.getSource()?.getFeatures().length || 0,
         });
       }
@@ -772,24 +786,24 @@ export default function ReferencePatchMap({
     }
 
     // Case 4: Default - Show global predictions based on layer selection
+    // First, hide all layers to prevent flickering
+    deadwoodLayerRef.current.setVisible(false);
+    forestCoverLayerRef.current.setVisible(false);
+    if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
+    if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
+
+    // Then show only the selected layer
     switch (layerSelection) {
       case "deadwood":
         deadwoodLayerRef.current.setVisible(true);
-        forestCoverLayerRef.current.setVisible(false);
         break;
       case "forest_cover":
-        deadwoodLayerRef.current.setVisible(false);
         forestCoverLayerRef.current.setVisible(true);
         break;
       case "ortho_only":
-        deadwoodLayerRef.current.setVisible(false);
-        forestCoverLayerRef.current.setVisible(false);
+        // All layers already hidden
         break;
     }
-
-    // Hide reference layers when showing global predictions
-    if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
-    if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
   }, [layerSelection, selectedPatchId, selectedBasePatch, isEditingMode, patches, referenceLayersLoaded]);
 
   // Load and display reference geometries when patch has reference data
@@ -808,7 +822,6 @@ export default function ReferencePatchMap({
         hasReferenceData,
         deadwoodLabelId: selectedBasePatch.reference_deadwood_label_id,
         forestCoverLabelId: selectedBasePatch.reference_forest_cover_label_id,
-        layerSelection,
         isEditingMode,
       });
 
@@ -934,7 +947,9 @@ export default function ReferencePatchMap({
     };
 
     loadReferenceGeometries();
-  }, [selectedBasePatch, layerSelection, isEditingMode]);
+  }, [selectedBasePatch, isEditingMode]);
+  // Note: layerSelection is NOT a dependency - we don't need to reload geometries when changing layers,
+  // just toggle visibility (handled by the separate visibility effect)
 
   // Note: Visibility is now triggered via referenceLayersLoaded state in main visibility effect
 
