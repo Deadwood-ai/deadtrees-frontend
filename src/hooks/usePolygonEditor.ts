@@ -213,32 +213,77 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     // Select interaction limited to overlay layer
     // Use null style - styling handled by layer's style function
+    // Note: We use basic click condition and handle multi-select logic manually
     const select = new Select({
       layers: [overlay],
       style: null, // Don't apply custom style, use layer's style function
-      multi: true,
-      condition: click,
-      addCondition: click,
-      removeCondition: click,
-      toggleCondition: click,
+      multi: false, // We'll handle multi-select manually
+      condition: click, // Always trigger on click
     });
     mapRef.current.addInteraction(select);
     selectRef.current = select;
 
     // Track selection changes and update feature properties
     const selectedCollection = select.getFeatures();
-    const updateSelection = () => {
-      const allFeatures = overlay.getSource()?.getFeatures() || [];
-      const selectedFeatures = selectedCollection.getArray() as Feature<Geometry>[];
 
-      // Update dt_selected property on all features
-      allFeatures.forEach((f) => {
-        f.set("dt_selected", selectedFeatures.includes(f));
+    // Custom selection logic to implement:
+    // 1. Click on polygon -> single selection (clear previous)
+    // 2. Click on selected polygon -> deselect it
+    // 3. Shift+click -> additive selection (max 2)
+    select.on("select", (evt) => {
+      const clickedFeature = evt.selected.length > 0 ? evt.selected[0] : null;
+      const wasSelected = evt.deselected.length > 0 ? evt.deselected[0] : null;
+      const shiftKey = evt.mapBrowserEvent.originalEvent.shiftKey;
+      const currentSelection = selectedCollection.getArray();
+
+      console.log("[Selection] Click event:", {
+        clickedFeature: !!clickedFeature,
+        wasSelected: !!wasSelected,
+        shiftKey,
+        currentSelectionCount: currentSelection.length,
       });
 
-      setSelection(selectedFeatures);
-    };
-    selectedCollection.on(["add", "remove"], updateSelection);
+      // Behavior 1: Clicking selected feature -> deselect it
+      if (wasSelected && !clickedFeature) {
+        // OpenLayers already removed it, we're good
+        console.log("[Selection] Deselected feature");
+        return;
+      }
+
+      // Behavior 2: Shift+click -> additive selection (max 2)
+      if (shiftKey && clickedFeature) {
+        // Check if we already have this feature (shouldn't happen with OL, but safe check)
+        if (currentSelection.includes(clickedFeature)) {
+          console.log("[Selection] Feature already selected");
+          return;
+        }
+
+        // If we have 2+ features, remove the oldest ones
+        while (currentSelection.length > 2) {
+          const toRemove = currentSelection[0];
+          selectedCollection.remove(toRemove);
+          console.log("[Selection] Removed oldest to maintain max 2");
+        }
+
+        console.log("[Selection] Added to selection (Shift), total:", currentSelection.length);
+        return;
+      }
+
+      // Behavior 3: Click without Shift -> single selection (clear others)
+      if (!shiftKey && clickedFeature) {
+        // Clear all other selections, keep only clicked
+        const otherFeatures = currentSelection.filter((f) => f !== clickedFeature);
+        otherFeatures.forEach((f) => selectedCollection.remove(f));
+
+        // Ensure clicked feature is in selection
+        if (!currentSelection.includes(clickedFeature)) {
+          selectedCollection.push(clickedFeature);
+        }
+
+        console.log("[Selection] Single select (no Shift)");
+        return;
+      }
+    });
 
     // Modify interaction, active only when selection exists
     const modify = new Modify({ features: selectedCollection });
@@ -251,19 +296,30 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       saveHistory();
     });
 
-    const updateModifyActive = () => {
-      modify.setActive(selectedCollection.getLength() > 0);
+    // Unified selection update handler - updates both React state and modify interaction
+    const updateSelection = () => {
       const allFeatures = overlay.getSource()?.getFeatures() || [];
       const selectedFeatures = selectedCollection.getArray() as Feature<Geometry>[];
 
-      // Update dt_selected property on all features
+      // Update dt_selected property on all features for visual feedback
       allFeatures.forEach((f) => {
         f.set("dt_selected", selectedFeatures.includes(f));
       });
 
-      setSelection(selectedFeatures);
+      // Update modify interaction active state
+      modify.setActive(selectedFeatures.length > 0);
+
+      // Update React state - THIS is what drives the toolbar
+      setSelection([...selectedFeatures]); // Create new array to ensure React detects change
+
+      console.log("[Selection] Updated:", {
+        count: selectedFeatures.length,
+        featureIds: selectedFeatures.map((f) => f.getId() || f.get("id") || "unknown"),
+      });
     };
-    selectedCollection.on(["add", "remove"], updateModifyActive);
+
+    // Listen to selection changes
+    selectedCollection.on(["add", "remove"], updateSelection);
 
     // If a feature becomes selected, clear any hover state
     selectedCollection.on(["add"], () => {
