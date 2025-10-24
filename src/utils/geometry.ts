@@ -50,18 +50,70 @@ export function union(a: Geometry, b: Geometry): Geometry | null {
 }
 
 export function difference(subject: Geometry, clip: Geometry): Geometry | null {
+  console.log("[geometry.difference] Input subject:", subject.getType());
+  console.log("[geometry.difference] Input clip:", clip.getType());
+
   const S = olToPC(subject);
   const C = olToPC(clip);
-  if (!S || !C) return null;
+
+  console.log("[geometry.difference] Converted to PC format:", {
+    subjectPolygons: S?.length || 0,
+    clipPolygons: C?.length || 0,
+  });
+
+  if (!S || !C) {
+    console.error("[geometry.difference] Failed to convert geometries to PC format");
+    return null;
+  }
+
   const any = pc as unknown as {
     difference?: (...polys: PCPolygon[]) => PCMultiPolygon;
     default?: { difference?: (...polys: PCPolygon[]) => PCMultiPolygon };
   };
   const fn = any.difference || any.default?.difference;
-  if (!fn) return null;
-  const res = fn(...S, ...C);
-  if (!res || res.length === 0) return null;
-  return pcToOL(res);
+
+  if (!fn) {
+    console.error("[geometry.difference] polygon-clipping difference function not found");
+    return null;
+  }
+
+  console.log(
+    "[geometry.difference] Calling polygon-clipping.difference with:",
+    S.length,
+    "subject polygons and",
+    C.length,
+    "clip polygons",
+  );
+
+  // For MultiPolygon subjects, we need to subtract clip from each polygon separately
+  // then combine the results
+  let res: PCMultiPolygon;
+  if (S.length === 1) {
+    // Single polygon subject - straightforward
+    res = fn(S[0], ...C);
+  } else {
+    // MultiPolygon subject - apply difference to each polygon separately
+    const results: PCMultiPolygon = [];
+    for (const subjectPoly of S) {
+      const polyResult = fn(subjectPoly, ...C);
+      if (polyResult && polyResult.length > 0) {
+        results.push(...polyResult);
+      }
+    }
+    res = results;
+  }
+
+  console.log("[geometry.difference] Result from polygon-clipping:", res, "length:", res?.length || 0);
+
+  if (!res || res.length === 0) {
+    console.warn("[geometry.difference] Result is empty - polygon would be completely removed");
+    return null;
+  }
+
+  const olGeometry = pcToOL(res);
+  console.log("[geometry.difference] Converted back to OL geometry:", olGeometry?.getType());
+
+  return olGeometry;
 }
 
 // Returns true if geometries have any overlapping area

@@ -532,6 +532,8 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const gb = b.getGeometry();
     if (!ga || !gb) return;
 
+    console.log("=== CLIP OPERATION DEBUG ===");
+
     // Save history before clipping
     saveHistory();
 
@@ -540,6 +542,15 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const areaA = ga instanceof Polygon || ga instanceof MultiPolygon ? ga.getArea() : 0;
     const areaB = gb instanceof Polygon || gb instanceof MultiPolygon ? gb.getArea() : 0;
 
+    console.log("Polygon A:", {
+      type: ga.getType(),
+      area: areaA.toFixed(2),
+    });
+    console.log("Polygon B:", {
+      type: gb.getType(),
+      area: areaB.toFixed(2),
+    });
+
     // Determine which is larger and which is smaller
     let larger, smaller, largerFeature, smallerFeature;
     if (areaA >= areaB) {
@@ -547,27 +558,41 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       smaller = gb;
       largerFeature = a;
       smallerFeature = b;
+      console.log("A is larger (area: " + areaA.toFixed(2) + ") - will keep A, remove B");
     } else {
       larger = gb;
       smaller = ga;
       largerFeature = b;
       smallerFeature = a;
+      console.log("B is larger (area: " + areaB.toFixed(2) + ") - will keep B, remove A");
     }
 
     // Subtract smaller polygon from larger polygon
+    console.log("Calling geomDifference(larger, smaller)...");
     const clipped = geomDifference(larger, smaller);
+    console.log("geomDifference result:", clipped);
+
     if (!clipped) {
+      console.error("geomDifference returned null/undefined - polygons may not overlap");
       message.error("Failed to clip polygons. They may not overlap.");
+      console.log("=== END CLIP OPERATION DEBUG (FAILED) ===");
       return;
     }
 
+    console.log("Clipped geometry:", {
+      type: clipped.getType(),
+      area: (clipped instanceof Polygon || clipped instanceof MultiPolygon ? clipped.getArea() : 0).toFixed(2),
+    });
+
     // Update the larger polygon with clipped result, remove the smaller polygon
+    console.log("Setting clipped geometry on larger feature and removing smaller feature");
     largerFeature.setGeometry(clipped);
     source.removeFeature(smallerFeature);
     select.getFeatures().clear();
     select.getFeatures().push(largerFeature);
     setSelection([largerFeature]);
     message.success("Smaller polygon clipped from larger polygon");
+    console.log("=== END CLIP OPERATION DEBUG (SUCCESS) ===");
   }, [saveHistory]);
 
   // Cut hole / trim edges: user draws a polygon, then we subtract from single selected feature
@@ -614,19 +639,40 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const cutFeature = evt.feature as Feature<Geometry>;
       const cutGeom = cutFeature.getGeometry();
       if (cutGeom) {
+        console.log("=== CUT OPERATION DEBUG ===");
+        console.log("Target geometry:", {
+          type: targetGeom.getType(),
+          area: targetGeom instanceof Polygon || targetGeom instanceof MultiPolygon ? targetGeom.getArea() : 0,
+        });
+        console.log("Cut geometry:", {
+          type: cutGeom.getType(),
+          area: cutGeom instanceof Polygon || cutGeom instanceof MultiPolygon ? cutGeom.getArea() : 0,
+        });
+
         // Save history before cutting
         saveHistory();
 
         // Perform difference operation - works for holes, edge trimming, and no-ops if no overlap
+        console.log("Calling geomDifference(target, cut)...");
         const diff = geomDifference(targetGeom, cutGeom);
+        console.log("geomDifference result:", diff);
+
         if (!diff) {
+          console.error("geomDifference returned null/undefined - polygon would be empty");
           message.error("Failed to cut polygon. Result would be empty.");
+          console.log("=== END CUT OPERATION DEBUG (FAILED) ===");
         } else {
+          console.log("Result geometry:", {
+            type: diff.getType(),
+            area: diff instanceof Polygon || diff instanceof MultiPolygon ? diff.getArea() : 0,
+          });
+
           const overlay = overlayLayerRef.current;
           const source = overlay?.getSource() as VectorSource<Feature<Geometry>> | null;
 
           // Check if result is a MultiPolygon (polygon was split into multiple pieces)
           if (diff.getType() === "MultiPolygon" && source) {
+            console.log("Result is MultiPolygon - splitting into separate features");
             // Split into separate Polygon features
             const newFeatures: Feature<Geometry>[] = [];
             const multiPolygon = diff as MultiPolygon;
@@ -662,15 +708,20 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
             }
 
             message.success(`Polygon split into ${newFeatures.length} separate pieces!`);
+            console.log("=== END CUT OPERATION DEBUG (SUCCESS - MultiPolygon) ===");
           } else {
             // Single polygon result - update original feature
+            console.log("Single Polygon result - updating original feature");
             target.setGeometry(diff);
             message.success("Polygon cut successfully!");
+            console.log("=== END CUT OPERATION DEBUG (SUCCESS - Polygon) ===");
           }
 
           // Clear temp source; cut feature was never added to overlay
           tempSource.clear();
         }
+      } else {
+        console.log("=== END CUT OPERATION DEBUG (No cutGeom) ===");
       }
       if (drawRef.current) {
         mapRef.current?.removeInteraction(drawRef.current);
