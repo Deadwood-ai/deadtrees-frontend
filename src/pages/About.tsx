@@ -1,6 +1,6 @@
 import { Typography, Button, Card, Tabs, Collapse, Tooltip, message, Input } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, ExportOutlined, CopyOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExportOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
@@ -290,9 +290,16 @@ export default function About() {
                     {pub.publisher}, {pub.year}
                   </Text>
                 </div>
-                <Button type="link" icon={<ExportOutlined />} href={pub.url} target="_blank">
-                  View Paper
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="link" icon={<ExportOutlined />} href={pub.url} target="_blank">
+                    View Paper
+                  </Button>
+                  {pub.data_url && (
+                    <Button type="link" icon={<DownloadOutlined />} href={pub.data_url} target="_blank">
+                      Data Link
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
           ))
