@@ -401,82 +401,77 @@ export default function DatasetDetails() {
                           duration: 0,
                         });
 
-                        // For dataset.zip, use the new status checking approach
-                        if (!labelsOnly) {
-                          // First initiate the download
-                          fetch(baseUrl)
-                            .then((response) => response.json())
-                            .then((data) => {
-                              const jobId = data.job_id;
+                        // Both dataset.zip and labels.gpkg use the background job approach
+                        // First initiate the download
+                        fetch(baseUrl)
+                          .then((response) => response.json())
+                          .then((data) => {
+                            const jobId = data.job_id;
 
-                              // Function to check status
-                              const checkStatus = () => {
-                                fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`)
-                                  .then((response) => response.json())
-                                  .then((statusData) => {
-                                    if (statusData.status === "completed") {
-                                      // Download is ready - close loading message
-                                      downloadMsg();
-                                      finishDownload(); // Update global state
+                            // Build the correct status endpoint based on download type
+                            const statusEndpoint = labelsOnly
+                              ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/status`
+                              : `${Settings.API_URL}/download/datasets/${jobId}/status`;
 
-                                      // Start actual download
-                                      window.location.href = `${Settings.API_URL}/download/datasets/${jobId}/download`;
+                            // Build the correct download endpoint based on download type
+                            const downloadEndpoint = labelsOnly
+                              ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/download`
+                              : `${Settings.API_URL}/download/datasets/${jobId}/download`;
 
-                                      // Show success message
-                                      message.success({
-                                        content: "Download started! The file will be saved to your downloads folder.",
-                                        duration: 5,
-                                      });
-                                    } else if (statusData.status === "failed") {
-                                      // Handle failure
-                                      downloadMsg();
-                                      finishDownload(); // Update global state
-                                      message.error({
-                                        content: "Download preparation failed. Please try again.",
-                                        duration: 5,
-                                      });
-                                    } else {
-                                      // Still processing, check again in 1 second
-                                      setTimeout(checkStatus, 1000);
-                                    }
-                                  })
-                                  .catch((error) => {
-                                    // Handle error
+                            // Function to check status
+                            const checkStatus = () => {
+                              fetch(statusEndpoint)
+                                .then((response) => response.json())
+                                .then((statusData) => {
+                                  if (statusData.status === "completed") {
+                                    // Download is ready - close loading message
+                                    downloadMsg();
+                                    finishDownload(); // Update global state
+
+                                    // Start actual download
+                                    window.location.href = downloadEndpoint;
+
+                                    // Show success message
+                                    message.success({
+                                      content: `${labelsOnly ? "Predictions" : "Dataset"} download started! The file will be saved to your downloads folder.`,
+                                      duration: 5,
+                                    });
+                                  } else if (statusData.status === "failed") {
+                                    // Handle failure
                                     downloadMsg();
                                     finishDownload(); // Update global state
                                     message.error({
-                                      content: `Error checking download status: ${error.message}`,
+                                      content: "Download preparation failed. Please try again.",
                                       duration: 5,
                                     });
+                                  } else {
+                                    // Still processing, check again in 1 second
+                                    setTimeout(checkStatus, 1000);
+                                  }
+                                })
+                                .catch((error) => {
+                                  // Handle error
+                                  downloadMsg();
+                                  finishDownload(); // Update global state
+                                  message.error({
+                                    content: `Error checking download status: ${error.message}`,
+                                    duration: 5,
                                   });
-                              };
+                                });
+                            };
 
-                              // Start checking status
-                              checkStatus();
-                            })
-                            .catch((error) => {
-                              // Handle error initiating download
-                              downloadMsg();
-                              finishDownload(); // Update global state
-                              message.error({
-                                content: `Error initiating download: ${error.message}`,
-                                duration: 5,
-                              });
-                            });
-                        } else {
-                          // For labels.gpkg, use direct download as before
-                          window.location.href = baseUrl;
-
-                          // Close loading message after a brief delay
-                          setTimeout(() => {
+                            // Start checking status
+                            checkStatus();
+                          })
+                          .catch((error) => {
+                            // Handle error initiating download
                             downloadMsg();
                             finishDownload(); // Update global state
-                            message.success({
-                              content: "Download started! The file will be saved to your downloads folder.",
+                            message.error({
+                              content: `Error initiating download: ${error.message}`,
                               duration: 5,
                             });
-                          }, 3000);
-                        }
+                          });
                       }}
                     >
                       {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
