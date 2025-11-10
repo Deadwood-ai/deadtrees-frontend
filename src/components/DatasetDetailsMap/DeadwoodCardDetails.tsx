@@ -150,12 +150,12 @@ export function DeadwoodCardDetails({
                       <div>
                         <div className="font-semibold text-gray-800">Deadwood Detection:</div>
                         <a
-                          href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
+                          href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
                           className="text-blue-600 underline"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          Möhring et al., 2025, (ISPRS Open)
+                          Möhring et al. (under review)
                         </a>
                       </div>
                     )}
