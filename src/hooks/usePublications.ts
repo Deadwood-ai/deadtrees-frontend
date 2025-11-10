@@ -9,6 +9,7 @@ interface Publication {
   url: string;
   publication_date: string;
   publisher: string;
+  data_url?: string | null;
 }
 
 export const usePublications = () => {

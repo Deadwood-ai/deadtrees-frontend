@@ -1,6 +1,4 @@
-import { Input, Button, Collapse, notification, Alert } from "antd";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Collapse } from "antd";
 
 import LogoBannerBand from "../components/Home/LogoBanner";
 import Hero from "../components/Home/Hero";
@@ -19,6 +17,9 @@ const logos = [
   { path: "assets/logos/NFDI4Earth_logo.jpg" },
   { path: "assets/logos/scads.png" },
   { path: "assets/logos/MLR.png" },
+  { path: "assets/logos/dlr.jpeg" },
+  { path: "assets/logos/geonadir.png" },
+  { path: "assets/logos/bmwk.jpg", height: "h-24" },
 ];
 
 const FAQ = () => {

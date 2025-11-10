@@ -89,9 +89,8 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     url: `${config.className}/{z}/{x}/{y}`,
     maxZoom: 22,
     tileSize: 512,
-    cacheSize: 1024,
-    transition: 250,
-    // transition: 1,
+    cacheSize: 2048, // Increased cache for better performance
+    transition: 0, // Disable transition for instant rendering
   });
 
   const vectorLayer = new VectorTileLayer({
@@ -107,13 +106,13 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     }),
     maxZoom: 23,
     className: config.className,
-    renderMode: "vector",
-    renderBuffer: 256,
+    renderMode: "hybrid", // Use hybrid mode for better performance (GPU acceleration)
+    renderBuffer: 64, // Reduced from 256 for faster rendering
     declutter: false,
-    updateWhileAnimating: false,
-    updateWhileInteracting: false,
+    updateWhileAnimating: true, // Enable smooth updates during animation
+    updateWhileInteracting: true, // Enable smooth updates during panning/zooming
     useInterimTilesOnError: true,
-    preload: 0,
+    preload: 1, // Preload 1 level of adjacent tiles for smoother experience
   });
 
   return vectorLayer;

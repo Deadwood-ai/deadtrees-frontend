@@ -1,0 +1,290 @@
+---
+description: React component patterns, state management, and UI composition for pages and components
+globs:
+  - "src/pages/**/*.tsx"
+  - "src/components/**/*.tsx"
+alwaysApply: false
+---
+
+# React Component Patterns
+
+## Component Size Limits
+
+**Keep components under 200 lines.** If exceeded, decompose using:
+
+1. **Extract hooks** - Business logic → `use[Name].ts`
+2. **Extract subcomponents** - Sections → `[Name]Section.tsx`
+3. **Extract renders** - Complex JSX → `render[Name]()`
+4. **Extract config** - Constants → `[name].config.ts`
+
+## Component Structure Template
+
+```tsx
+// 1. Imports (grouped: react, external, internal, types)
+import { useState, useEffect } from "react";
+import { Button, Form } from "antd";
+import { useDataset } from "../hooks/useDataset";
+import type { Dataset } from "../types/dataset";
+
+// 2. Types (interfaces for props)
+interface MyComponentProps {
+  datasetId: number;
+  onComplete?: (result: Dataset) => void;
+}
+
+// 3. Component (max 200 lines total)
+export function MyComponent({ datasetId, onComplete }: MyComponentProps) {
+  // a. Hooks (in order: context, query, state, effects, callbacks)
+  const { data, isLoading, error } = useDataset(datasetId);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    // Effects with cleanup
+    return () => cleanup();
+  }, []);
+
+  // b. Early returns for loading/error states
+  if (isLoading) return <Spin />;
+  if (error) return <Alert type="error" message={error.message} />;
+  if (!data) return null;
+
+  // c. Render (extract to subcomponents if complex)
+  return (
+    <div>
+      <Header data={data} />
+      <Content data={data} isEditing={isEditing} />
+      <Actions onEdit={() => setIsEditing(true)} />
+    </div>
+  );
+}
+```
+
+## State Management Patterns
+
+### Local State (useState)
+
+Use for:
+
+- UI state (modals, tabs, editing mode)
+- Form input values (if not using Ant Design Form)
+- Temporary flags
+
+```tsx
+const [isModalOpen, setModalOpen] = useState(false);
+const [activeTab, setActiveTab] = useState("details");
+```
+
+### Server State (React Query)
+
+**Always use for:**
+
+- Data from Supabase
+- API responses
+- Real-time subscriptions
+
+```tsx
+// ✅ Correct: Use custom hook
+const { data, isLoading, error } = useDatasets();
+
+// ❌ Wrong: Fetch in useEffect
+useEffect(() => {
+  fetch("/api/datasets").then(/* ... */);
+}, []);
+```
+
+### Global State (Context)
+
+**Minimize use.** Only for:
+
+- Auth session
+- Map viewport sync (specific cases)
+- Theme preferences
+
+```tsx
+// Context pattern (only when necessary)
+const MyContext = createContext<MyContextType | undefined>(undefined);
+
+export function MyProvider({ children }) {
+  const value = useMemo(
+    () => ({
+      /* state */
+    }),
+    [
+      /* deps */
+    ],
+  );
+  return <MyContext.Provider value={value}>{children}</MyContext.Provider>;
+}
+
+export function useMyContext() {
+  const context = useContext(MyContext);
+  if (!context) throw new Error("useMyContext must be within MyProvider");
+  return context;
+}
+```
+
+## Processing Status Patterns
+
+**Centralize status logic** in `src/utils/processingSteps.ts`:
+
+```tsx
+import { calculateProcessingProgress } from "../utils/processingSteps";
+
+function DatasetStatus({ dataset }: { dataset: Dataset }) {
+  const { isComplete, percentage, currentStepInfo } = calculateProcessingProgress(dataset);
+
+  if (dataset.has_error) return <Tag color="error">Error</Tag>;
+  if (isComplete) return <Tag color="success">Complete</Tag>;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Progress percent={percentage} size="small" />
+      <span>{currentStepInfo.label}</span>
+    </div>
+  );
+}
+```
+
+## Form Patterns
+
+### Ant Design Forms (Preferred)
+
+```tsx
+function MyForm({ onSubmit }: { onSubmit: (values: FormValues) => void }) {
+  const [form] = Form.useForm();
+
+  // Watch for reactive validation
+  const name = Form.useWatch("name", form);
+  const isValid = name && name.length > 3;
+
+  return (
+    <Form form={form} onFinish={onSubmit} layout="vertical">
+      <Form.Item label="Name" name="name" rules={[{ required: true }]}>
+        <Input />
+      </Form.Item>
+      <Button type="primary" htmlType="submit" disabled={!isValid}>
+        Submit
+      </Button>
+    </Form>
+  );
+}
+```
+
+### Modals with Forms
+
+```tsx
+function EditModal({ visible, onClose, dataset }: ModalProps) {
+  const [form] = Form.useForm();
+  const { mutateAsync: updateDataset, isPending } = useUpdateDataset();
+
+  const handleSubmit = async (values: FormValues) => {
+    await updateDataset({ id: dataset.id, ...values });
+    message.success("Updated successfully");
+    form.resetFields();
+    onClose();
+  };
+
+  return (
+    <Modal open={visible} onCancel={onClose} footer={null}>
+      <Form form={form} onFinish={handleSubmit} initialValues={dataset}>
+        {/* form fields */}
+        <Button type="primary" htmlType="submit" loading={isPending}>
+          Save
+        </Button>
+      </Form>
+    </Modal>
+  );
+}
+```
+
+## Loading & Error States
+
+### Consistent Pattern
+
+```tsx
+function MyComponent() {
+  const { data, isLoading, error, refetch } = useMyData();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        type="error"
+        message="Failed to load data"
+        description={error.message}
+        action={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return <Empty description="No data found" />;
+  }
+
+  return <div>{/* render data */}</div>;
+}
+```
+
+## Real-time Updates
+
+**Use subscriptions for live status changes:**
+
+```tsx
+// In custom hook (src/hooks/useDatasetSubscription.ts pattern)
+useEffect(() => {
+  const channel = supabase
+    .channel("dataset_updates")
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "v2_datasets" }, (payload) => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries(["datasets", payload.new.id]);
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
+```
+
+## Performance
+
+### Memoization
+
+```tsx
+// Memoize expensive calculations
+const processedData = useMemo(() => expensiveTransform(data), [data]);
+
+// Memoize callbacks passed as props
+const handleClick = useCallback(
+  (id: number) => {
+    /* ... */
+  },
+  [
+    /* dependencies */
+  ],
+);
+```
+
+### Avoid Over-rendering
+
+```tsx
+// ✅ Store non-reactive data in refs
+const mapRef = useRef<Map | null>(null);
+
+// ❌ Don't store in state (causes re-renders)
+const [map, setMap] = useState<Map | null>(null);
+```
+
+## Reference Components
+
+- **Table**: `src/components/DataTable.tsx` - column defs, filters, actions
+- **Processing**: `src/components/ProcessingProgress.tsx` - status display
+- **Upload**: `src/components/Upload/UploadModal.tsx` - file uploads, forms
+- **Modal**: `src/components/PublicationModal.tsx` - complex forms, API integration

@@ -189,7 +189,6 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
-    const isComplete = isDatasetComplete(record);
     const canView = isDatasetViewable(record);
     const canPublish = isDatasetPublishEligible(record);
     const isSelected = selectedRowKeys.includes(record.id);
@@ -402,7 +401,6 @@ const DataTable: React.FC<DataTableProps> = ({
 
         // Dataset has no DOI, show add/remove button based on selection state
         const isSelected = selectedRowKeys.includes(record.id);
-        const isComplete = isDatasetComplete(record);
         const canPublish = isDatasetPublishEligible(record);
 
         if (isSelected) {
@@ -443,7 +441,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
-      width: 180,
+      width: 220,
       render: (tag: string | undefined, record: Dataset) => {
         // Handle audit status separately as it's not part of the main processing pipeline
         if (tag === "audit_in_progress") {
@@ -462,11 +460,7 @@ const DataTable: React.FC<DataTableProps> = ({
         const audit = auditsById?.get(record.id);
 
         if (isComplete && audit?.final_assessment) {
-          return (
-            <div className="flex items-center gap-2">
-              <AuditBadge datasetId={record.id} audit={audit} />
-            </div>
-          );
+          return <AuditBadge datasetId={record.id} audit={audit} />;
         }
 
         return progress;

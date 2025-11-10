@@ -11,6 +11,8 @@ import ProfilePage from "./pages/Profile";
 import Dataset from "./pages/Dataset";
 import DatasetDetails from "./pages/DatasetDetails";
 import DatasetAudit from "./pages/DatasetAudit";
+import DatasetMLTiles from "./pages/DatasetMLTiles";
+import DatasetReferencePatchEditor from "./pages/DatasetReferencePatchEditor";
 import DatasetLabelEditor from "./pages/DatasetLabelEditor";
 import Deadtrees from "./pages/Deadtrees";
 import SignUp from "./pages/auth/SignUp";
@@ -89,6 +91,10 @@ function AppWithTracking() {
         <Route path="dataset/:id" element={<DatasetDetails />} />
         <Route path="dataset-audit" element={<DatasetAudit />} />
         <Route path="dataset-audit/:id" element={<DatasetAudit />} />
+        {/* New route for Reference Patch Editor */}
+        <Route path="dataset-audit/:id/reference-patches" element={<DatasetReferencePatchEditor />} />
+        {/* Old route kept for backward compatibility */}
+        <Route path="dataset-audit/:id/ml-tiles" element={<DatasetMLTiles />} />
         <Route path="dataset-label/:id" element={<DatasetLabelEditor />} />
         <Route path="deadtrees" element={<Deadtrees />} />
         <Route path="about" element={<About />} />

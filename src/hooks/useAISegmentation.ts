@@ -19,6 +19,7 @@ interface UseAISegmentationParams {
   mapRef: React.MutableRefObject<Map | null>;
   getOrthoLayer: GetOrthoLayerFn;
   getTargetVectorSource?: () => VectorSource | null | undefined;
+  onBeforeAddFeatures?: () => void; // Called before adding AI-generated features (for undo history)
 }
 
 interface UseAISegmentationReturn {
@@ -43,6 +44,7 @@ export const useAISegmentation = ({
   mapRef,
   getOrthoLayer,
   getTargetVectorSource,
+  onBeforeAddFeatures,
 }: UseAISegmentationParams): UseAISegmentationReturn => {
   const [isActive, setIsActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,18 +91,29 @@ export const useAISegmentation = ({
   // Ensure result layer exists on the main map
   const ensureResultLayer = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
-    if (resultLayerRef.current && resultSourceRef.current) return;
+    if (!map) {
+      console.log("[AI Seg] ensureResultLayer: no map");
+      return;
+    }
 
-    // If caller provides a target vector source (e.g., polygon editor overlay), use it directly
+    // If caller provides a target vector source (e.g., polygon editor overlay), always use it
     const targetSource = getTargetVectorSource?.();
+    console.log("[AI Seg] ensureResultLayer: targetSource =", !!targetSource);
     if (targetSource) {
       resultSourceRef.current = targetSource;
       resultLayerRef.current = null; // not owned here
+      console.log("[AI Seg] Using provided target source");
+      return;
+    }
+
+    // Early return only if we already have our own layer (not using target source)
+    if (resultLayerRef.current && resultSourceRef.current) {
+      console.log("[AI Seg] Already have result layer");
       return;
     }
 
     // Fallback: create a temporary result layer owned by this hook
+    console.log("[AI Seg] Creating fallback AI layer");
     const source = new VectorSource();
     const layer = new VectorLayer<VectorSource>({
       source,
@@ -311,9 +324,21 @@ export const useAISegmentation = ({
           const fc = normalizeToFeatureCollection(raw);
           const filtered = fc ? keepLargestPolygon(fc) : null;
           const created = filtered ? convertPixelGeoJSONToMapFeatures(filtered, map) : [];
+          console.log("[AI Seg] Created features:", created.length);
           ensureResultLayer();
+          console.log("[AI Seg] resultSourceRef.current =", !!resultSourceRef.current);
           if (resultSourceRef.current && created.length) {
+            // Save history before adding AI-generated features (for undo)
+            if (onBeforeAddFeatures) {
+              onBeforeAddFeatures();
+            }
+            console.log("[AI Seg] Adding", created.length, "features to source");
             resultSourceRef.current.addFeatures(created);
+            console.log(
+              "[AI Seg] Features added. Source now has",
+              resultSourceRef.current.getFeatures().length,
+              "features",
+            );
           }
           if (created.length) setFeatures((prev) => [...prev, ...created]);
 
@@ -348,7 +373,7 @@ export const useAISegmentation = ({
 
     map.addInteraction(draw);
     drawInteractionRef.current = draw;
-  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, removeTempUI]);
+  }, [canUse, ensureResultLayer, getOrthoLayer, mapRef, removeTempUI, onBeforeAddFeatures]);
 
   // Clean up on unmount
   useEffect(() => {

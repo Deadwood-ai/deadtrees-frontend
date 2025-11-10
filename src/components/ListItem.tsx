@@ -1,4 +1,4 @@
-import { Button, Tooltip, Tag } from "antd";
+import { Button, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
@@ -92,16 +92,18 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
               </Button>
             </Tooltip>
           </div>
-          <div className="pt-0.5 text-xs">
-            {new Date(
-              parseInt(item.aquisition_year),
-              item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
-              item.aquisition_day ? parseInt(item.aquisition_day) : 1,
-            ).toLocaleDateString("en-GB", {
-              year: "numeric",
-              ...(item.aquisition_month && { month: "numeric" }),
-              ...(item.aquisition_day && { day: "numeric" }),
-            })}
+          <div className="flex flex-col items-end gap-1">
+            <div className="pt-0.5 text-xs">
+              {new Date(
+                parseInt(item.aquisition_year),
+                item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
+                item.aquisition_day ? parseInt(item.aquisition_day) : 1,
+              ).toLocaleDateString("en-GB", {
+                year: "numeric",
+                ...(item.aquisition_month && { month: "numeric" }),
+                ...(item.aquisition_day && { day: "numeric" }),
+              })}
+            </div>
           </div>
         </div>
         <div className="flex space-x-1">

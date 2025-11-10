@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined } from "@ant-design/icons";
@@ -12,10 +12,18 @@ import { IDataset } from "../types/dataset";
 import { useDatasetAudits } from "../hooks/useDatasetAudit";
 import { supabase } from "../hooks/useSupabase";
 import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
+import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
 
 const { Title } = Typography;
 
-type AuditFilter = "needs-audit" | "ready" | "fixable-issues" | "excluded" | "flagged" | "major-issues";
+type AuditFilter =
+  | "needs-audit"
+  | "audited"
+  | "needs-tiles"
+  | "training-ready"
+  | "fixable-issues"
+  | "excluded"
+  | "flagged";
 
 // Month constants for filtering
 const MONTHS = [
@@ -48,6 +56,7 @@ const isProcessingComplete = (dataset: IDataset) => {
 export default function DatasetAudit() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ALL HOOKS MUST BE CALLED FIRST - NO EARLY RETURNS BEFORE THIS POINT
   const { user } = useAuth();
@@ -56,11 +65,19 @@ export default function DatasetAudit() {
   const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
   const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
   const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
+  const { data: referenceDatasetIds = new Set() } = useReferenceDatasetIds();
 
-  // Filter states
-  const [auditFilter, setAuditFilter] = useState<AuditFilter>("needs-audit");
+  // Filter states - initialize from URL params if available
+  const initialFilter = (searchParams.get("tab") as AuditFilter) || "needs-audit";
+  const [auditFilter, setAuditFilter] = useState<AuditFilter>(initialFilter);
   const [idFilter, setIdFilter] = useState<string>("");
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+
+  // Handler for tab change that updates both state and URL
+  const handleTabChange = (value: AuditFilter) => {
+    setAuditFilter(value);
+    setSearchParams({ tab: value });
+  };
 
   // Add a constant for the minimum dataset ID
   const MIN_AUDIT_DATASET_ID = 2559;
@@ -81,19 +98,26 @@ export default function DatasetAudit() {
 
     let filtered = datasets;
 
-    // First filter by minimum ID for auditing (skip for Flagged tab)
-    if (auditFilter !== "flagged" && hasAboveMinId) {
+    // First filter by minimum ID for auditing (skip for Flagged, Tiles Pending, and Training Ready tabs)
+    if (
+      auditFilter !== "flagged" &&
+      auditFilter !== "needs-tiles" &&
+      auditFilter !== "training-ready" &&
+      hasAboveMinId
+    ) {
       filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
     }
 
-    // Filter by audit status and disposition
     if (auditFilter === "needs-audit") {
       filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
-    } else if (auditFilter === "ready") {
-      filtered = filtered.filter((dataset) => {
-        const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && audit && audit.final_assessment === "no_issues";
-      });
+    } else if (auditFilter === "audited") {
+      filtered = filtered.filter((dataset) => dataset.is_audited);
+    } else if (auditFilter === "needs-tiles") {
+      // Show all datasets that are in reference_datasets AND don't have patches yet (regardless of audit status)
+      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && !dataset.has_ml_tiles);
+    } else if (auditFilter === "training-ready") {
+      // Only show datasets that are in reference_datasets AND have patches completed
+      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && dataset.has_ml_tiles);
     } else if (auditFilter === "fixable-issues") {
       filtered = filtered.filter((dataset) => {
         const audit = auditMap.get(dataset.id);
@@ -135,7 +159,7 @@ export default function DatasetAudit() {
     }
 
     return filtered;
-  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg]);
+  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg, hasAboveMinId, referenceDatasetIds]);
 
   // Update counts to also respect the minimum ID filter
   const needsAuditCount = useMemo(() => {
@@ -144,14 +168,23 @@ export default function DatasetAudit() {
     return base.filter((d) => !d.is_audited && isProcessingComplete(d)).length;
   }, [datasets, hasAboveMinId]);
 
-  const readyCount = useMemo(() => {
-    if (!datasets || !audits) return 0;
+  const auditedCount = useMemo(() => {
+    if (!datasets) return 0;
     const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => {
-      const audit = auditMap.get(d.id);
-      return d.is_audited && audit && audit.final_assessment === "no_issues";
-    }).length;
-  }, [datasets, audits, auditMap, hasAboveMinId]);
+    return base.filter((d) => d.is_audited).length;
+  }, [datasets, hasAboveMinId]);
+
+  const needsTilesCount = useMemo(() => {
+    if (!datasets) return 0;
+    // Don't apply minimum ID filter - show ALL reference datasets
+    return datasets.filter((d) => referenceDatasetIds.has(d.id) && !d.has_ml_tiles).length;
+  }, [datasets, referenceDatasetIds]);
+
+  const trainingReadyCount = useMemo(() => {
+    if (!datasets) return 0;
+    // Don't apply minimum ID filter - show ALL reference datasets
+    return datasets.filter((d) => referenceDatasetIds.has(d.id) && d.has_ml_tiles).length;
+  }, [datasets, referenceDatasetIds]);
 
   const fixableIssuesCount = useMemo(() => {
     if (!datasets || !audits) return 0;
@@ -305,69 +338,25 @@ export default function DatasetAudit() {
     },
   ];
 
-  // Add Major Issues column when viewing major issues
-  const columns =
-    auditFilter === "major-issues"
-      ? [
-          ...baseColumns.slice(0, -1), // All columns except Actions
-          {
-            title: "Major Issues",
-            key: "major_issues",
-            render: (_: unknown, record: IDataset) => {
-              const audit = auditMap.get(record.id);
-              if (!audit) return <Tag color="default">No audit data</Tag>;
+  // Conditionally include Reference Patches column only for needs-tiles and training-ready tabs
+  const referencePatchesColumn = {
+    title: "Reference Patches",
+    key: "reference_patches",
+    render: (_: unknown, record: IDataset) => (
+      <Tooltip title="Open Reference Patch Editor for this dataset">
+        <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/reference-patches`)}>
+          {record.has_ml_tiles ? "Continue Patches" : "Generate Patches"}
+        </Button>
+      </Tooltip>
+    ),
+    width: 180,
+  };
 
-              return audit.has_major_issue ? <Tag color="red">🚨 Yes</Tag> : <Tag color="green">No</Tag>;
-            },
-            width: 120,
-          },
-          baseColumns[baseColumns.length - 1], // Actions column
-        ]
-      : auditFilter === "flagged"
-        ? [
-            ...baseColumns.slice(0, -1),
-            {
-              title: "Flag Count",
-              key: "flag_count",
-              render: (_: unknown, record: IDataset) => {
-                const agg = flaggedMap.get(record.id);
-                if (!agg) return 0;
-                return (agg.open_count || 0) + (agg.acknowledged_count || 0);
-              },
-              width: 120,
-            },
-            {
-              title: "Latest Flag Status",
-              key: "latest_flag_status",
-              render: (_: unknown, record: IDataset) => {
-                const agg = flaggedMap.get(record.id);
-                if (!agg) return <Tag>None</Tag>;
-                const status = agg.latest_status;
-                const color = status === "open" ? "red" : status === "acknowledged" ? "gold" : "green";
-                return <Tag color={color}>{status.charAt(0).toUpperCase() + status.slice(1)}</Tag>;
-              },
-              width: 160,
-            },
-            // Removed Latest Note column per requirement
-            baseColumns[baseColumns.length - 1],
-          ]
-        : auditFilter === "ready"
-          ? [
-              ...baseColumns,
-              {
-                title: "Edit Labels",
-                key: "edit_labels",
-                render: (_: unknown, record: IDataset) => (
-                  <Tooltip title="Open label editor for this dataset">
-                    <Button size="small" onClick={() => navigate(`/dataset-label/${record.id}`)}>
-                      Edit Labels
-                    </Button>
-                  </Tooltip>
-                ),
-                width: 130,
-              },
-            ]
-          : baseColumns;
+  const columns = [
+    ...baseColumns,
+    // Only show Reference Patches column in "needs-tiles" and "training-ready" tabs
+    ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [referencePatchesColumn] : []),
+  ];
 
   return (
     <div className="p-6">
@@ -387,24 +376,14 @@ export default function DatasetAudit() {
             <div>
               <Segmented
                 value={auditFilter}
-                onChange={(value) => setAuditFilter(value as AuditFilter)}
+                onChange={(value) => handleTabChange(value as AuditFilter)}
                 options={[
-                  {
-                    label: `Needs Audit (${needsAuditCount})`,
-                    value: "needs-audit",
-                  },
-                  {
-                    label: `Ready (${readyCount})`,
-                    value: "ready",
-                  },
-                  {
-                    label: `Fixable (${fixableIssuesCount})`,
-                    value: "fixable-issues",
-                  },
-                  {
-                    label: `Excluded (${excludedCount})`,
-                    value: "excluded",
-                  },
+                  { label: `Needs Audit (${needsAuditCount})`, value: "needs-audit" },
+                  { label: `Audited (${auditedCount})`, value: "audited" },
+                  { label: `Reference Pending (${needsTilesCount})`, value: "needs-tiles" },
+                  { label: `Reference Ready (${trainingReadyCount})`, value: "training-ready" },
+                  { label: `Fixable (${fixableIssuesCount})`, value: "fixable-issues" },
+                  { label: `Excluded (${excludedCount})`, value: "excluded" },
                   {
                     label: (
                       <span>
