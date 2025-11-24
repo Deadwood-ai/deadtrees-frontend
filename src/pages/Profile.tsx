@@ -119,8 +119,8 @@ export default function ProfilePage() {
                   </p>
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                     <li>
-                      🗺️ <strong>Formats:</strong> GeoTIFF (max 16GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
-                      20GB)
+                      🗺️ <strong>Formats:</strong> GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
+                      30GB)
                     </li>
                     <li>
                       🔧 <strong>Raw Images:</strong> For orthomosaic generation we recommend {">"}85%-front and {">"}

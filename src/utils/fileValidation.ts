@@ -11,14 +11,14 @@ export const detectUploadType = (fileName: string): UploadType => {
 };
 
 export const validateFileSize = (file: File, uploadType: UploadType): boolean => {
-  const MAX_ZIP_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
-  const MAX_GEOTIFF_SIZE = 16 * 1024 * 1024 * 1024; // 16GB
+  const MAX_ZIP_SIZE = 30 * 1024 * 1024 * 1024; // 30GB
+  const MAX_GEOTIFF_SIZE = 20 * 1024 * 1024 * 1024; // 20GB
 
   if (uploadType === UploadType.RAW_IMAGES_ZIP && file.size > MAX_ZIP_SIZE) {
-    throw new Error("ZIP files must be smaller than 20GB");
+    throw new Error("ZIP files must be smaller than 30GB");
   }
   if (uploadType === UploadType.GEOTIFF && file.size > MAX_GEOTIFF_SIZE) {
-    throw new Error("GeoTIFF files must be smaller than 16GB");
+    throw new Error("GeoTIFF files must be smaller than 20GB");
   }
   return true;
 };
