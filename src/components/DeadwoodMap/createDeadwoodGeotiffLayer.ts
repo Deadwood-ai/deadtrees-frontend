@@ -7,14 +7,17 @@ const createDeadwoodGeotiffLayer = (year: string) => {
     sources: [
       {
         url: getDeadwoodCOGUrl(year),
+        bands: [1],
         min: 0,
-        max: 10000,
+        max: 255,
       },
     ],
-    interpolate: false,
     normalize: true,
+    interpolate: false, // Show actual pixel grid
   });
 
+  // Single-band COG: values 0-255 (normalized to 0-1)
+  // Low values = no deadwood (transparent), high values = deadwood (red)
   const layer = new TileLayerWebGL({
     source,
     className: "geotiff-layer" + year,
@@ -25,20 +28,20 @@ const createDeadwoodGeotiffLayer = (year: string) => {
         ["linear"],
         ["band", 1],
         0,
-        [129, 176, 247, 0],
-        0.2,
-        [129, 176, 247, 0.2],
-        0.4,
-        [129, 176, 247, 0.3],
-        0.6,
-        [129, 176, 247, 0.6],
-        0.8,
-        [129, 176, 247, 0.8],
+        [255, 0, 0, 0], // 0: fully transparent
+        0.04,
+        [255, 0, 0, 0], // ~5/138: still transparent (noise threshold)
+        0.07,
+        [255, 0, 0, 0], // ~10/138: start showing red
+        0.25,
+        [255, 0, 0, 0.3], // ~35/138: medium opacity
+        0.5,
+        [255, 0, 0, 0.75], // ~69/138: high opacity
         1,
-        [129, 176, 247, 1],
+        [255, 0, 0, 1], // 138/138: solid red
       ],
     },
-    visible: year === "2018",
+    visible: year === "2025",
   });
 
   layer.cleanup = () => {

@@ -18,9 +18,9 @@ const DeadwoodCard = ({
       <div className="flex w-80 flex-col justify-center rounded-md bg-white px-3 py-1">
         <p className="m-0 py-2 text-lg text-gray-800"> Deadwood for {year}</p>
         <div className="mb-2 flex w-full items-end ">
-          <p className="m-0 w-full text-xs text-gray-600">Satellite-based prediction</p>
+          <p className="m-0 w-full text-xs text-gray-600">Sentinel-2-based maps</p>
           <div className="w-2/3">
-            <p className="m-0 w-full text-xs text-gray-600">opacity</p>
+            <p className="m-0 w-full text-xs text-gray-600">Layer Opacity</p>
             <Slider
               className="m-0 w-full"
               defaultValue={1}
@@ -31,15 +31,6 @@ const DeadwoodCard = ({
               min={0}
             />
           </div>
-        </div>
-        <div className="mb-4 flex items-center space-x-2">
-          <p className="m-0 text-xs text-gray-800">Method prototype by:</p>
-          <a
-            className="m-0 italic underline"
-            href="https://www.sciencedirect.com/science/article/pii/S2667393223000054?via%3Dihub"
-          >
-            Schiefer et al., 2023
-          </a>
         </div>
         <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
       </div>

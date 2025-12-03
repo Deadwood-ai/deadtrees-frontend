@@ -16,7 +16,8 @@ import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
 import Legend from "./Legend";
 import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
 import createDeadwoodGeotiffLayer from "./createDeadwoodGeotiffLayer";
-import getDeadwoodCOGUrl from "../../utils/getDeadwoodCOGUrl";
+import createForestGeotiffLayer from "./createForestGeotiffLayer";
+import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
 import DeadwoodCard from "./DeadwoodCard";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 
@@ -26,17 +27,12 @@ const sites = {
   Bayern: [13.330993298074588, 49.03963187270776],
 };
 
-const yearByIndex = {
-  1: "2018",
-  2: "2019",
-  3: "2020",
-  4: "2021",
-  5: "2022",
-};
+// Available years for the COG layers
+const availableYears = ["2017", "2018", "2019", "2022", "2023", "2024", "2025"];
 
 const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
-  const [selectedYear, setSelectedYear] = useState<string>("2022");
+  const [selectedYear, setSelectedYear] = useState<string>("2025");
   const [bounds, setBounds] = useState([]);
   const [selectedSite, setSelectedSite] = useState<string>("Bayern");
   const [sliderValue, setSliderValue] = useState<number>(1);
@@ -45,26 +41,38 @@ const DeadtreesMap = () => {
   const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
 
   // handler functions
-  const handleClick = async (event, year) => {
+  const handleClick = async (event: { coordinate: number[] }, year: string) => {
     if (mapRef.current) {
-      const value = await getPixelValueOfCoordinate({
-        coordinates: event.coordinate,
-        cogUrl: getDeadwoodCOGUrl(year),
-      });
+      // Fetch both deadwood and forest values
+      const [deadwoodValue, forestValue] = await Promise.all([
+        getPixelValueOfCoordinate({
+          coordinates: event.coordinate,
+          cogUrl: getDeadwoodCOGUrl(year),
+        }),
+        getPixelValueOfCoordinate({
+          coordinates: event.coordinate,
+          cogUrl: getForestCOGUrl(year),
+        }),
+      ]);
 
       const popupContent = document.getElementById("popup-content");
 
       if (popupContent) {
-        if (value > 0) {
-          popupContent.innerHTML = `Deadwood ${(value / 100).toFixed(0)} %`;
-        } else {
-          popupContent.innerHTML = `No deadwood`;
-        }
+        const dwVal = Number(deadwoodValue) || 0;
+        const fVal = Number(forestValue) || 0;
+        // Normalize from 0-255 to 0-100%
+        const deadwoodPct = dwVal > 0 ? Math.round((dwVal / 255) * 100) : 0;
+        const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
+
+        popupContent.innerHTML = `
+          <div style="line-height: 1.6;">
+            <div><span style="color: #228b22;">🌲 Forest:</span> <b>${forestPct}%</b></div>
+            <div><span style="color: #ff0000;">🪵 Deadwood:</span> <b>${deadwoodPct}%</b></div>
+          </div>
+        `;
       }
-      const overlay = mapRef.current.getOverlays().getArray()[0];
+      const overlay = (mapRef.current as Map).getOverlays().getArray()[0];
       overlay.setPosition(event.coordinate);
-    } else {
-      // console.log("map not initialized");
     }
   };
 
@@ -91,15 +99,15 @@ const DeadtreesMap = () => {
           tileSize: DeadwoodMapStyle === "satellite-streets-v12" ? 512 : 256,
         }),
       });
-      const geotifLayer2018 = createDeadwoodGeotiffLayer("2018");
-      const geotifLayer2019 = createDeadwoodGeotiffLayer("2019");
-      const geotifLayer2020 = createDeadwoodGeotiffLayer("2020");
-      const geotifLayer2021 = createDeadwoodGeotiffLayer("2021");
-      const geotifLayer2022 = createDeadwoodGeotiffLayer("2022");
+      // Create forest layers for all years (below deadwood)
+      const forestLayers = availableYears.map((year) => createForestGeotiffLayer(year));
+      // Create deadwood layers for all years (on top of forest)
+      const deadwoodLayers = availableYears.map((year) => createDeadwoodGeotiffLayer(year));
 
       const newMap = new Map({
         target: mapContainer.current,
-        layers: [basemapLayer, geotifLayer2018, geotifLayer2019, geotifLayer2020, geotifLayer2021, geotifLayer2022],
+        // Layer order: basemap -> forest -> deadwood (deadwood on top)
+        layers: [basemapLayer, ...forestLayers, ...deadwoodLayers],
         view: initialView,
         overlays: [],
         controls: [],
@@ -188,8 +196,8 @@ const DeadtreesMap = () => {
   //update opacity of geotiff layer
   useEffect(() => {
     if (map) {
-      const layers = map.getLayers().getArray();
-      layers.forEach((layer, index) => {
+      const layers = (map as Map).getLayers().getArray();
+      layers.forEach((layer) => {
         if (layer instanceof TileLayerWebGL) {
           layer.setOpacity(sliderValue);
         }
@@ -209,14 +217,11 @@ const DeadtreesMap = () => {
   // update onClick handler when selectedYear changes
   useEffect(() => {
     if (mapRef.current) {
-      // Remove the old click listener
-      mapRef.current.un("click", handleClick);
-
       // Add a new click listener with the current selectedYear
       const clickHandler = (event) => handleClick(event, selectedYear);
       mapRef.current.on("click", clickHandler);
 
-      // Clean up function to remove the listener when the component unmounts or selectedYear changes
+      // Clean up function to remove the listener
       return () => {
         if (mapRef.current) {
           mapRef.current.un("click", clickHandler);
@@ -225,17 +230,31 @@ const DeadtreesMap = () => {
     }
   }, [selectedYear]);
 
-  // update visibility of geotiff layers based on selectedYear
+  // update visibility of geotiff layers based on selectedYear (show both forest and deadwood)
   useEffect(() => {
     if (map) {
-      const layers = map.getLayers().getArray();
-      // console.log(layers);
-      layers.forEach((layer, index) => {
+      const layers = (map as Map).getLayers().getArray();
+      const numYears = availableYears.length;
+
+      layers.forEach((layer, idx) => {
         if (layer instanceof TileLayerWebGL) {
-          layer.setVisible(yearByIndex[index] === selectedYear);
+          const className = layer.getClassName();
+          const isForest = className.startsWith("forest-layer");
+          const isDeadwood = className.startsWith("geotiff-layer");
+
+          if (isForest) {
+            // Forest layers are at indices 1 to numYears
+            const layerIndex = idx - 1; // Subtract 1 for basemap
+            const layerYear = availableYears[layerIndex];
+            layer.setVisible(layerYear === selectedYear);
+          } else if (isDeadwood) {
+            // Deadwood layers are at indices numYears+1 to 2*numYears
+            const layerIndex = idx - 1 - numYears; // Subtract 1 for basemap and numYears for forest layers
+            const layerYear = availableYears[layerIndex];
+            layer.setVisible(layerYear === selectedYear);
+          }
         }
       });
-      // update onclick listerer
     }
   }, [selectedYear, map]);
 
@@ -277,15 +296,6 @@ const DeadtreesMap = () => {
               placeSelect={(place) => setBounds(place.bbox)}
             />
           </GeoapifyContext>
-          <div className="mt-4">
-            <Alert
-              message="Prototype Version"
-              description="This is a prototype visualization. A much more comprehensive and optimized version is currently in development. Stay tuned for updates!"
-              type="info"
-              showIcon
-              closable
-            />
-          </div>
         </div>
         <div className="absolute left-4 top-24 z-50">
           <MapStyleSwitchButtons

@@ -7,18 +7,21 @@ const YearSelectionButtons = ({
   year: string;
   setSelectedYear: React.Dispatch<React.SetStateAction<string>>;
 }) => {
-  const years = ["2018", "2019", "2020", "2021", "2022"];
+  const years = ["2016", "2017", "2018", "2019", "2022", "2023", "2024", "2025"];
 
   const handleSliderChange = (value: number) => {
     setSelectedYear(years[value]);
   };
 
   const marks = {
-    0: "2018",
-    1: "2019",
-    2: "2020",
-    3: "2021",
+    0: "2016",
+    1: "2017",
+    2: "2018",
+    3: "2019",
     4: "2022",
+    5: "2023",
+    6: "2024",
+    7: "2025",
   };
 
   return (
@@ -30,7 +33,7 @@ const YearSelectionButtons = ({
           marginRight: "24px",
         }}
         min={0}
-        max={4}
+        max={7}
         value={years.indexOf(year)}
         onChange={handleSliderChange}
         marks={marks}
