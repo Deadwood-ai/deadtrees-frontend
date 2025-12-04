@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Radio } from "antd";
+import { Radio } from "antd";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
-import { BingMaps, XYZ } from "ol/source";
+import { XYZ } from "ol/source";
+import { GeoTIFF } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import View from "ol/View";
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
@@ -13,13 +14,28 @@ import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-g
 
 import "./popup.css";
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
-import Legend from "./Legend";
 import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
-import createDeadwoodGeotiffLayer from "./createDeadwoodGeotiffLayer";
-import createForestGeotiffLayer from "./createForestGeotiffLayer";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
 import DeadwoodCard from "./DeadwoodCard";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
+
+// Helper to create GeoTIFF source for deadwood
+const createDeadwoodSource = (year: string) => {
+  return new GeoTIFF({
+    sources: [{ url: getDeadwoodCOGUrl(year), bands: [1], min: 0, max: 255 }],
+    normalize: true,
+    interpolate: false,
+  });
+};
+
+// Helper to create GeoTIFF source for forest
+const createForestSource = (year: string) => {
+  return new GeoTIFF({
+    sources: [{ url: getForestCOGUrl(year), bands: [1], min: 0, max: 255 }],
+    normalize: true,
+    interpolate: false,
+  });
+};
 
 const sites = {
   Waldshut: [8.174864507120049, 47.682517904265666],
@@ -27,8 +43,31 @@ const sites = {
   Bayern: [13.330993298074588, 49.03963187270776],
 };
 
-// Available years for the COG layers
-const availableYears = ["2017", "2018", "2019", "2022", "2023", "2024", "2025"];
+// Source caches - persist across renders to reuse already-loaded sources
+const deadwoodSourceCache: Record<string, GeoTIFF> = {};
+const forestSourceCache: Record<string, GeoTIFF> = {};
+
+// Get or create cached deadwood source
+const getCachedDeadwoodSource = (year: string): GeoTIFF => {
+  if (!deadwoodSourceCache[year]) {
+    console.log(`[Cache] Creating new deadwood source for ${year}`);
+    deadwoodSourceCache[year] = createDeadwoodSource(year);
+  } else {
+    console.log(`[Cache] Reusing cached deadwood source for ${year}`);
+  }
+  return deadwoodSourceCache[year];
+};
+
+// Get or create cached forest source
+const getCachedForestSource = (year: string): GeoTIFF => {
+  if (!forestSourceCache[year]) {
+    console.log(`[Cache] Creating new forest source for ${year}`);
+    forestSourceCache[year] = createForestSource(year);
+  } else {
+    console.log(`[Cache] Reusing cached forest source for ${year}`);
+  }
+  return forestSourceCache[year];
+};
 
 const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
@@ -38,6 +77,8 @@ const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
+  const forestLayerRef = useRef<TileLayerWebGL | null>(null);
+  const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
   const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
 
   // handler functions
@@ -65,9 +106,15 @@ const DeadtreesMap = () => {
         const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
 
         popupContent.innerHTML = `
-          <div style="line-height: 1.6;">
-            <div><span style="color: #228b22;">🌲 Forest:</span> <b>${forestPct}%</b></div>
-            <div><span style="color: #ff0000;">🪵 Deadwood:</span> <b>${deadwoodPct}%</b></div>
+          <div style="font-family: system-ui, sans-serif; font-size: 12px; padding: 4px 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="color: #6b7280;">Forest</span>
+              <span style="color: #16a34a; font-weight: 600; min-width: 40px; text-align: right;">${forestPct}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #6b7280;">Deadwood</span>
+              <span style="color: #dc2626; font-weight: 600; min-width: 40px; text-align: right;">${deadwoodPct}%</span>
+            </div>
           </div>
         `;
       }
@@ -99,15 +146,63 @@ const DeadtreesMap = () => {
           tileSize: DeadwoodMapStyle === "satellite-streets-v12" ? 512 : 256,
         }),
       });
-      // Create forest layers for all years (below deadwood)
-      const forestLayers = availableYears.map((year) => createForestGeotiffLayer(year));
-      // Create deadwood layers for all years (on top of forest)
-      const deadwoodLayers = availableYears.map((year) => createDeadwoodGeotiffLayer(year));
+      // Create only 2 layers - one for forest, one for deadwood (for current year)
+      const forestLayer = new TileLayerWebGL({
+        source: getCachedForestSource(selectedYear),
+        className: "forest-layer",
+        style: {
+          color: [
+            "interpolate",
+            ["linear"],
+            ["band", 1],
+            0,
+            [34, 139, 34, 0],
+            0.1,
+            [34, 139, 34, 0.1],
+            0.3,
+            [34, 139, 34, 0.3],
+            0.5,
+            [34, 139, 34, 0.5],
+            0.7,
+            [34, 139, 34, 0.7],
+            1,
+            [0, 100, 0, 0.9],
+          ],
+        },
+      });
+
+      const deadwoodLayer = new TileLayerWebGL({
+        source: getCachedDeadwoodSource(selectedYear),
+        className: "deadwood-layer",
+        style: {
+          color: [
+            "interpolate",
+            ["linear"],
+            ["band", 1],
+            0,
+            [255, 0, 0, 0],
+            0.04,
+            [255, 0, 0, 0],
+            0.07,
+            [255, 0, 0, 0],
+            0.25,
+            [255, 0, 0, 0.3],
+            0.5,
+            [255, 0, 0, 0.75],
+            1,
+            [255, 0, 0, 1],
+          ],
+        },
+      });
+
+      // Store refs
+      forestLayerRef.current = forestLayer;
+      deadwoodLayerRef.current = deadwoodLayer;
 
       const newMap = new Map({
         target: mapContainer.current,
         // Layer order: basemap -> forest -> deadwood (deadwood on top)
-        layers: [basemapLayer, ...forestLayers, ...deadwoodLayers],
+        layers: [basemapLayer, forestLayer, deadwoodLayer],
         view: initialView,
         overlays: [],
         controls: [],
@@ -193,17 +288,15 @@ const DeadtreesMap = () => {
     }
   }, [DeadwoodMapStyle, map]);
 
-  //update opacity of geotiff layer
+  //update opacity of geotiff layers
   useEffect(() => {
-    if (map) {
-      const layers = (map as Map).getLayers().getArray();
-      layers.forEach((layer) => {
-        if (layer instanceof TileLayerWebGL) {
-          layer.setOpacity(sliderValue);
-        }
-      });
+    if (forestLayerRef.current) {
+      forestLayerRef.current.setOpacity(sliderValue);
     }
-  }, [sliderValue, map]);
+    if (deadwoodLayerRef.current) {
+      deadwoodLayerRef.current.setOpacity(sliderValue);
+    }
+  }, [sliderValue]);
 
   // update on selectedSite change
   useEffect(() => {
@@ -230,33 +323,14 @@ const DeadtreesMap = () => {
     }
   }, [selectedYear]);
 
-  // update visibility of geotiff layers based on selectedYear (show both forest and deadwood)
+  // Update sources when year changes (use cached sources for instant switching)
   useEffect(() => {
-    if (map) {
-      const layers = (map as Map).getLayers().getArray();
-      const numYears = availableYears.length;
-
-      layers.forEach((layer, idx) => {
-        if (layer instanceof TileLayerWebGL) {
-          const className = layer.getClassName();
-          const isForest = className.startsWith("forest-layer");
-          const isDeadwood = className.startsWith("geotiff-layer");
-
-          if (isForest) {
-            // Forest layers are at indices 1 to numYears
-            const layerIndex = idx - 1; // Subtract 1 for basemap
-            const layerYear = availableYears[layerIndex];
-            layer.setVisible(layerYear === selectedYear);
-          } else if (isDeadwood) {
-            // Deadwood layers are at indices numYears+1 to 2*numYears
-            const layerIndex = idx - 1 - numYears; // Subtract 1 for basemap and numYears for forest layers
-            const layerYear = availableYears[layerIndex];
-            layer.setVisible(layerYear === selectedYear);
-          }
-        }
-      });
+    if (forestLayerRef.current && deadwoodLayerRef.current) {
+      // Use cached sources - instant if already loaded
+      forestLayerRef.current.setSource(getCachedForestSource(selectedYear));
+      deadwoodLayerRef.current.setSource(getCachedDeadwoodSource(selectedYear));
     }
-  }, [selectedYear, map]);
+  }, [selectedYear]);
 
   // components ---------------------------------------------------
 
@@ -312,13 +386,10 @@ const DeadtreesMap = () => {
             }}
           />
         </div>
-        <div className="absolute bottom-10 left-4 z-20">
+        <div className="absolute bottom-2 left-4 z-20">
           <SideSelectionButtons />
         </div>
-        <div className="absolute bottom-56 right-4 z-50">
-          <Legend />
-        </div>
-        <div className="absolute bottom-10 right-4 z-50">
+        <div className="absolute bottom-2 right-4 z-50">
           <DeadwoodCard
             year={selectedYear}
             sliderValue={sliderValue}

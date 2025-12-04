@@ -31,12 +31,14 @@ const createDeadwoodGeotiffLayer = (year: string) => {
         [255, 0, 0, 0], // 0: fully transparent
         0.04,
         [255, 0, 0, 0], // ~5/138: still transparent (noise threshold)
-        0.07,
-        [255, 0, 0, 0], // ~10/138: start showing red
+        0.15,
+        [255, 0, 0, 0.15], // ~10/138: start showing red
         0.25,
-        [255, 0, 0, 0.3], // ~35/138: medium opacity
+        [255, 0, 0, 0.25], // ~35/138: medium opacity
         0.5,
-        [255, 0, 0, 0.75], // ~69/138: high opacity
+        [255, 0, 0, 0.5], // ~69/138: high opacity
+        0.75,
+        [255, 0, 0, 0.75],
         1,
         [255, 0, 0, 1], // 138/138: solid red
       ],

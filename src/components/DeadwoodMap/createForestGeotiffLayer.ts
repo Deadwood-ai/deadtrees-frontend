@@ -29,7 +29,7 @@ const createForestGeotiffLayer = (year: string) => {
         ["band", 1],
         0,
         [34, 139, 34, 0], // 0: fully transparent
-        0.1,
+        0.15,
         [34, 139, 34, 0.1], // 10%: light green, low opacity
         0.3,
         [34, 139, 34, 0.3], // 30%: medium green
