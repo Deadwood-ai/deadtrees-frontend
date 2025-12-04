@@ -336,18 +336,11 @@ const DeadtreesMap = () => {
 
   const SideSelectionButtons = () => {
     return (
-      <div>
-        <Radio.Group
-          value={selectedSite}
-          // defaultValue={"Harz"}
-          defaultValue={false}
-          onChange={(e) => setSelectedSite(e.target.value)}
-        >
-          <Radio.Button value="Harz">Harz National Park</Radio.Button>
-          <Radio.Button value="Waldshut">Waldshut</Radio.Button>
-          <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
-        </Radio.Group>
-      </div>
+      <Radio.Group value={selectedSite} onChange={(e) => setSelectedSite(e.target.value)}>
+        <Radio.Button value="Harz">Harz National Park</Radio.Button>
+        <Radio.Button value="Waldshut">Waldshut</Radio.Button>
+        <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
+      </Radio.Group>
     );
   };
 

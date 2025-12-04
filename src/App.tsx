@@ -1,5 +1,5 @@
 import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
-import { Layout } from "antd";
+import { ConfigProvider, Layout } from "antd";
 import { useEffect } from "react";
 import { trackPageView, initializePostHog } from "./utils/analytics";
 import { AOIProvider } from "./contexts/AOIContext";
@@ -110,13 +110,22 @@ function AppWithTracking() {
   );
 }
 
+// Global Ant Design theme with light green primary color
+const globalTheme = {
+  token: {
+    // colorPrimary: "#7CE380",
+  },
+};
+
 // Main App component that doesn't use hooks directly
 export default function App() {
   return (
-    <BrowserRouter>
-      <AOIProvider>
-        <AppWithTracking />
-      </AOIProvider>
-    </BrowserRouter>
+    <ConfigProvider theme={globalTheme}>
+      <BrowserRouter>
+        <AOIProvider>
+          <AppWithTracking />
+        </AOIProvider>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
