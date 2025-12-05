@@ -1,4 +1,5 @@
-import { Slider } from "antd";
+import { Slider, Switch } from "antd";
+import { FlagOutlined } from "@ant-design/icons";
 import YearSelectionButtons from "./YearSelectionButtons";
 
 interface DeadwoodCardProps {
@@ -6,6 +7,10 @@ interface DeadwoodCardProps {
   sliderValue: number;
   setSliderValue: React.Dispatch<React.SetStateAction<number>>;
   setSelectedYear: React.Dispatch<React.SetStateAction<string>>;
+  showFlagsLayer?: boolean;
+  setShowFlagsLayer?: React.Dispatch<React.SetStateAction<boolean>>;
+  showFlagsToggle?: boolean;
+  flagsCount?: number;
 }
 
 // Horizontal gradient legend item
@@ -20,7 +25,16 @@ const LegendItem = ({ label, gradientClass }: { label: string; gradientClass: st
   </div>
 );
 
-const DeadwoodCard = ({ year, sliderValue, setSliderValue, setSelectedYear }: DeadwoodCardProps) => {
+const DeadwoodCard = ({
+  year,
+  sliderValue,
+  setSliderValue,
+  setSelectedYear,
+  showFlagsLayer,
+  setShowFlagsLayer,
+  showFlagsToggle,
+  flagsCount,
+}: DeadwoodCardProps) => {
   return (
     <div className="flex w-[300px] flex-col rounded-lg bg-white px-4 py-4 shadow-lg">
       {/* Header */}
@@ -67,6 +81,22 @@ const DeadwoodCard = ({ year, sliderValue, setSliderValue, setSelectedYear }: De
 
         {/* Year Stepper */}
         <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
+
+        {/* Flags Toggle - only show when user is logged in */}
+        {showFlagsToggle && setShowFlagsLayer && (
+          <>
+            <div className="border-t border-gray-100" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FlagOutlined className="text-orange-500" />
+                <span className="text-[11px] text-gray-500">
+                  My Flags {flagsCount !== undefined && flagsCount > 0 && `(${flagsCount})`}
+                </span>
+              </div>
+              <Switch size="small" checked={showFlagsLayer} onChange={(checked) => setShowFlagsLayer(checked)} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

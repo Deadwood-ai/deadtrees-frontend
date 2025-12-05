@@ -1,13 +1,23 @@
-import { useEffect, useRef, useState } from "react";
-import { Radio } from "antd";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Radio, Alert, Button, Modal, Input, message } from "antd";
+import { FlagOutlined } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import { XYZ } from "ol/source";
 import { GeoTIFF } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import View from "ol/View";
+import Feature from "ol/Feature";
+import { Polygon, Point } from "ol/geom";
+import { getCenter } from "ol/extent";
+import { Draw } from "ol/interaction";
+import { createBox } from "ol/interaction/Draw";
+import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
+import type { FeatureLike } from "ol/Feature";
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
 import "./geocoder.css";
 import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-geocoder-autocomplete";
@@ -18,6 +28,9 @@ import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
 import DeadwoodCard from "./DeadwoodCard";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
+import { useAuth } from "../../hooks/useAuthProvider";
+import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
+import type { IMapFlag } from "../../types/mapFlags";
 
 // Helper to create GeoTIFF source for deadwood
 const createDeadwoodSource = (year: string) => {
@@ -81,8 +94,26 @@ const DeadtreesMap = () => {
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
   const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
 
+  // Flag feature state
+  const [isDrawingFlag, setIsDrawingFlag] = useState(false);
+  const [flagModalOpen, setFlagModalOpen] = useState(false);
+  const [pendingFlagBbox, setPendingFlagBbox] = useState<[number, number, number, number] | null>(null);
+  const [flagDescription, setFlagDescription] = useState("");
+  const [showFlagsLayer, setShowFlagsLayer] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState<number>(DeadwoodMapViewport.zoom || 10);
+  const flagsLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
+  const drawInteractionRef = useRef<Draw | null>(null);
+  const flagHoverOverlayRef = useRef<Overlay | null>(null);
+
+  // Auth and flags hooks
+  const { user } = useAuth();
+  const { data: mapFlags = [] } = useMapFlags();
+  const createFlagMutation = useCreateMapFlag();
+
   // handler functions
-  const handleClick = async (event: { coordinate: number[] }, year: string) => {
+  const handleClick = async (event: { coordinate: number[] }, year: string, skipIfDrawing: boolean) => {
+    // Skip click handling when drawing flag bbox
+    if (skipIfDrawing) return;
     if (mapRef.current) {
       // Fetch both deadwood and forest values
       const [deadwoodValue, forestValue] = await Promise.all([
@@ -225,11 +256,28 @@ const DeadtreesMap = () => {
 
       newMap.addOverlay(overlay);
 
+      // Create flag hover overlay
+      const flagPopupElement = document.createElement("div");
+      flagPopupElement.id = "flag-popup";
+      flagPopupElement.className = "ol-popup";
+      flagPopupElement.style.cssText =
+        "background: white; padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 12px; max-width: 250px; pointer-events: none;";
+
+      const flagHoverOverlay = new Overlay({
+        element: flagPopupElement,
+        positioning: "bottom-center",
+        offset: [0, -10],
+      });
+      newMap.addOverlay(flagHoverOverlay);
+      flagHoverOverlayRef.current = flagHoverOverlay;
+
       newMap.on("moveend", () => {
+        const zoom = newMap.getView().getZoom();
         setDeadwoodMapViewport({
           center: newMap.getView().getCenter(),
-          zoom: newMap.getView().getZoom(),
+          zoom: zoom,
         });
+        setCurrentZoom(zoom || 10);
       });
 
       const closer = popupElement.querySelector("#popup-closer");
@@ -311,7 +359,7 @@ const DeadtreesMap = () => {
   useEffect(() => {
     if (mapRef.current) {
       // Add a new click listener with the current selectedYear
-      const clickHandler = (event) => handleClick(event, selectedYear);
+      const clickHandler = (event) => handleClick(event, selectedYear, isDrawingFlag);
       mapRef.current.on("click", clickHandler);
 
       // Clean up function to remove the listener
@@ -321,7 +369,7 @@ const DeadtreesMap = () => {
         }
       };
     }
-  }, [selectedYear]);
+  }, [selectedYear, isDrawingFlag]);
 
   // Update sources when year changes (use cached sources for instant switching)
   useEffect(() => {
@@ -331,6 +379,215 @@ const DeadtreesMap = () => {
       deadwoodLayerRef.current.setSource(getCachedDeadwoodSource(selectedYear));
     }
   }, [selectedYear]);
+
+  // Zoom threshold for switching between point and bbox display
+  const ZOOM_THRESHOLD = 12;
+
+  // Style function for flags - shows point at low zoom, bbox at high zoom
+  const getFlagStyle = useCallback(
+    (feature: FeatureLike) => {
+      const showAsPoint = currentZoom < ZOOM_THRESHOLD;
+
+      if (showAsPoint) {
+        // Point style - need to return center point of the polygon geometry
+        const geometry = feature.getGeometry();
+        const extent = geometry?.getExtent();
+        const centerPoint = extent ? new Point(getCenter(extent)) : undefined;
+
+        return new Style({
+          geometry: centerPoint, // Render at center point instead of polygon
+          image: new CircleStyle({
+            radius: 8,
+            fill: new Fill({ color: "#1677ff" }),
+            stroke: new Stroke({ color: "#ffffff", width: 2 }),
+          }),
+        });
+      } else {
+        // Bbox style
+        return new Style({
+          fill: new Fill({ color: "rgba(22, 119, 255, 0.15)" }),
+          stroke: new Stroke({ color: "#1677ff", width: 2 }),
+        });
+      }
+    },
+    [currentZoom],
+  );
+
+  // Create and update flags layer
+  useEffect(() => {
+    if (!mapRef.current || !user) return;
+
+    // Create flags layer if it doesn't exist
+    if (!flagsLayerRef.current) {
+      const flagsSource = new VectorSource<Feature<Polygon>>();
+      const flagsLayer = new VectorLayer({
+        source: flagsSource,
+        style: getFlagStyle,
+        zIndex: 100,
+      });
+      flagsLayerRef.current = flagsLayer;
+      mapRef.current.addLayer(flagsLayer);
+
+      // Add hover handler for flags
+      mapRef.current.on("pointermove", (evt) => {
+        if (!flagHoverOverlayRef.current || !flagsLayerRef.current) return;
+
+        const pixel = evt.pixel;
+        const feature = mapRef.current?.forEachFeatureAtPixel(pixel, (f, layer) => {
+          if (layer === flagsLayerRef.current) return f;
+          return undefined;
+        });
+
+        if (feature) {
+          const flagId = feature.get("flagId");
+          const description = feature.get("description");
+          const popupElement = flagHoverOverlayRef.current.getElement();
+          if (popupElement) {
+            popupElement.innerHTML = `
+              <div style="font-family: system-ui, sans-serif;">
+                <div style="font-weight: 600; color: #1677ff; margin-bottom: 4px;">Flag #${flagId}</div>
+                <div style="color: #374151; line-height: 1.4;">${description}</div>
+              </div>
+            `;
+          }
+          flagHoverOverlayRef.current.setPosition(evt.coordinate);
+        } else {
+          flagHoverOverlayRef.current.setPosition(undefined);
+        }
+      });
+    } else {
+      // Update style when zoom changes
+      flagsLayerRef.current.setStyle(getFlagStyle);
+    }
+
+    // Update flags on the layer
+    const source = flagsLayerRef.current.getSource();
+    if (source) {
+      source.clear();
+      mapFlags.forEach((flag: IMapFlag) => {
+        const [minLon, minLat, maxLon, maxLat] = flag.bbox;
+        // Create polygon from bbox in EPSG:3857
+        const extent = transformExtent([minLon, minLat, maxLon, maxLat], "EPSG:4326", "EPSG:3857");
+        const polygon = new Polygon([
+          [
+            [extent[0], extent[1]],
+            [extent[2], extent[1]],
+            [extent[2], extent[3]],
+            [extent[0], extent[3]],
+            [extent[0], extent[1]],
+          ],
+        ]);
+        const feature = new Feature({ geometry: polygon });
+        feature.set("flagId", flag.id);
+        feature.set("description", flag.description);
+        // Store center for point rendering
+        const centerX = (extent[0] + extent[2]) / 2;
+        const centerY = (extent[1] + extent[3]) / 2;
+        feature.set("center", [centerX, centerY]);
+        source.addFeature(feature);
+      });
+    }
+  }, [mapFlags, user, getFlagStyle]);
+
+  // Toggle flags layer visibility
+  useEffect(() => {
+    if (flagsLayerRef.current) {
+      flagsLayerRef.current.setVisible(showFlagsLayer);
+    }
+  }, [showFlagsLayer]);
+
+  // Start drawing flag bbox
+  const startFlagDrawing = useCallback(() => {
+    if (!mapRef.current || isDrawingFlag) return;
+
+    // Set crosshair cursor
+    const mapElement = mapRef.current.getTargetElement();
+    if (mapElement) {
+      mapElement.style.cursor = "crosshair";
+    }
+
+    const source = new VectorSource<Feature<Polygon>>();
+    const draw = new Draw({
+      source,
+      type: "Circle",
+      geometryFunction: createBox(),
+      style: new Style({
+        fill: new Fill({ color: "rgba(22, 119, 255, 0.2)" }),
+        stroke: new Stroke({ color: "#1677ff", width: 2, lineDash: [5, 5] }),
+      }),
+    });
+
+    draw.on("drawend", (event) => {
+      const geometry = event.feature.getGeometry() as Polygon;
+      const extent = geometry.getExtent();
+      // Convert extent to EPSG:4326 for storage
+      const [minLon, minLat, maxLon, maxLat] = transformExtent(extent, "EPSG:3857", "EPSG:4326");
+      setPendingFlagBbox([minLon, minLat, maxLon, maxLat]);
+      setFlagModalOpen(true);
+
+      // Remove draw interaction and reset cursor
+      if (mapRef.current && drawInteractionRef.current) {
+        mapRef.current.removeInteraction(drawInteractionRef.current);
+        drawInteractionRef.current = null;
+        const mapEl = mapRef.current.getTargetElement();
+        if (mapEl) {
+          mapEl.style.cursor = "";
+        }
+      }
+      setIsDrawingFlag(false);
+    });
+
+    mapRef.current.addInteraction(draw);
+    drawInteractionRef.current = draw;
+    setIsDrawingFlag(true);
+    message.info("Click and drag to draw a rectangle on the map");
+  }, [isDrawingFlag]);
+
+  // Cancel flag drawing
+  const cancelFlagDrawing = useCallback(() => {
+    if (mapRef.current) {
+      if (drawInteractionRef.current) {
+        mapRef.current.removeInteraction(drawInteractionRef.current);
+        drawInteractionRef.current = null;
+      }
+      // Reset cursor
+      const mapElement = mapRef.current.getTargetElement();
+      if (mapElement) {
+        mapElement.style.cursor = "";
+      }
+    }
+    setIsDrawingFlag(false);
+  }, []);
+
+  // Submit flag
+  const handleFlagSubmit = useCallback(async () => {
+    if (!pendingFlagBbox || !flagDescription.trim()) {
+      message.warning("Please enter a description for the flag");
+      return;
+    }
+
+    try {
+      await createFlagMutation.mutateAsync({
+        bbox: pendingFlagBbox,
+        description: flagDescription.trim(),
+        year: selectedYear,
+      });
+      message.success("Flag added successfully");
+      setFlagModalOpen(false);
+      setPendingFlagBbox(null);
+      setFlagDescription("");
+    } catch (error) {
+      message.error("Failed to add flag");
+      console.error(error);
+    }
+  }, [pendingFlagBbox, flagDescription, selectedYear, createFlagMutation]);
+
+  // Cancel flag modal
+  const handleFlagCancel = useCallback(() => {
+    setFlagModalOpen(false);
+    setPendingFlagBbox(null);
+    setFlagDescription("");
+  }, []);
 
   // components ---------------------------------------------------
 
@@ -354,6 +611,15 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       >
+        <div className="absolute bottom-16 left-1/2 z-40 max-w-xl -translate-x-1/2">
+          <Alert
+            message="Preview visualization (alpha) — this map will evolve and improve over time."
+            type="warning"
+            showIcon
+            closable
+            // banner
+          />
+        </div>
         <div className="absolute right-4 top-24 z-20 w-96 rounded-sm">
           <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
             <GeoapifyGeocoderAutocomplete
@@ -364,7 +630,7 @@ const DeadtreesMap = () => {
             />
           </GeoapifyContext>
         </div>
-        <div className="absolute left-4 top-24 z-50">
+        <div className="absolute left-4 top-24 z-50 flex flex-col gap-2">
           <MapStyleSwitchButtons
             mapStyle={DeadwoodMapStyle}
             onChange={(next) => {
@@ -378,6 +644,18 @@ const DeadtreesMap = () => {
               setDeadwoodMapStyle(next);
             }}
           />
+          {/* Flag button - only show when logged in */}
+          {user && (
+            <Button
+              type={isDrawingFlag ? "primary" : "default"}
+              danger={isDrawingFlag}
+              icon={<FlagOutlined />}
+              onClick={isDrawingFlag ? cancelFlagDrawing : startFlagDrawing}
+              title={isDrawingFlag ? "Cancel flagging" : "Flag an area"}
+            >
+              {isDrawingFlag ? "Cancel" : "Flag Area"}
+            </Button>
+          )}
         </div>
         <div className="absolute bottom-2 left-4 z-20">
           <SideSelectionButtons />
@@ -388,9 +666,38 @@ const DeadtreesMap = () => {
             sliderValue={sliderValue}
             setSliderValue={setSliderValue}
             setSelectedYear={setSelectedYear}
+            showFlagsLayer={showFlagsLayer}
+            setShowFlagsLayer={setShowFlagsLayer}
+            showFlagsToggle={!!user}
+            flagsCount={mapFlags.length}
           />
         </div>
       </div>
+
+      {/* Flag description modal */}
+      <Modal
+        title="Flag this area"
+        open={flagModalOpen}
+        onOk={handleFlagSubmit}
+        onCancel={handleFlagCancel}
+        okText="Submit Flag"
+        confirmLoading={createFlagMutation.isPending}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-gray-600">
+            Describe what you noticed in this area (e.g., incorrect prediction, missing deadwood, etc.)
+          </p>
+          <Input.TextArea
+            value={flagDescription}
+            onChange={(e) => setFlagDescription(e.target.value)}
+            placeholder="Enter your description..."
+            rows={4}
+            maxLength={500}
+            showCount
+          />
+          <p className="text-xs text-gray-400">Year: {selectedYear}</p>
+        </div>
+      </Modal>
     </div>
   );
 };
