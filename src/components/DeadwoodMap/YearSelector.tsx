@@ -22,7 +22,7 @@ const YearSelector = ({ year, setYear }: YearSelectorProps) => {
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-lg">
+    <div className="flex items-center gap-2 rounded-lg bg-white/95 px-3 py-2 backdrop-blur-sm">
       <button
         onClick={handlePrev}
         disabled={isFirst}

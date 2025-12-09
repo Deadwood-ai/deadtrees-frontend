@@ -53,7 +53,7 @@ const LayerControlPanel = ({
     : [{ value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" }];
 
   return (
-    <div className="flex w-48 flex-col rounded-lg bg-white p-3 shadow-lg">
+    <div className="flex w-48 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
       <Segmented

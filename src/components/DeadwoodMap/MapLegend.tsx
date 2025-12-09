@@ -36,7 +36,7 @@ const GradientBar = ({
 
 const MapLegend = ({ clickedValues }: MapLegendProps) => {
   return (
-    <div className="flex w-52 flex-col rounded-lg bg-white p-3 shadow-lg">
+    <div className="flex w-52 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Header */}
       <div className="mb-3 text-xs font-medium text-gray-500">Legend</div>
 

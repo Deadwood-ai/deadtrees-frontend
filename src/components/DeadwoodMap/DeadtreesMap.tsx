@@ -25,6 +25,7 @@ import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
 import MapLegend from "./MapLegend";
 import YearSelector from "./YearSelector";
+import ProcessingStatsBanner from "./ProcessingStatsBanner";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
@@ -720,7 +721,7 @@ const DeadtreesMap = () => {
         ref={mapContainer}
       >
         {/* Top Left - Layer Controls */}
-        <div className="absolute left-4 top-28 z-50">
+        <div className="absolute left-2 top-24 z-50">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
@@ -741,12 +742,17 @@ const DeadtreesMap = () => {
         </div>
 
         {/* Top Right - Location Controls */}
-        <div className="absolute right-4 top-28 z-50">
+        <div className="absolute right-2 top-24 z-50">
           <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
         </div>
 
+        {/* Top Center - Processing Stats */}
+        <div className="absolute left-1/2 top-24 z-50 -translate-x-1/2">
+          <ProcessingStatsBanner />
+        </div>
+
         {/* Bottom Center - Year Selector */}
-        <div className="absolute bottom-4 left-1/2 z-50 -translate-x-1/2">
+        <div className="absolute bottom-2 left-1/2 z-50 -translate-x-1/2">
           <YearSelector year={selectedYear} setYear={setSelectedYear} />
         </div>
 
@@ -761,7 +767,7 @@ const DeadtreesMap = () => {
         </div>
 
         {/* Bottom Right - Legend with Click Info */}
-        <div className="absolute bottom-4 right-4 z-50">
+        <div className="absolute bottom-2 right-2 z-50">
           <MapLegend clickedValues={clickedValues} />
         </div>
       </div>
