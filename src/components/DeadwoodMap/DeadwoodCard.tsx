@@ -11,6 +11,10 @@ interface DeadwoodCardProps {
   setShowFlagsLayer?: React.Dispatch<React.SetStateAction<boolean>>;
   showFlagsToggle?: boolean;
   flagsCount?: number;
+  showForest: boolean;
+  setShowForest: React.Dispatch<React.SetStateAction<boolean>>;
+  showDeadwood: boolean;
+  setShowDeadwood: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Horizontal gradient legend item
@@ -34,6 +38,10 @@ const DeadwoodCard = ({
   setShowFlagsLayer,
   showFlagsToggle,
   flagsCount,
+  showForest,
+  setShowForest,
+  showDeadwood,
+  setShowDeadwood,
 }: DeadwoodCardProps) => {
   return (
     <div className="flex w-[300px] flex-col rounded-lg bg-white px-4 py-4 shadow-lg">
@@ -81,6 +89,17 @@ const DeadwoodCard = ({
 
         {/* Year Stepper */}
         <YearSelectionButtons year={year} setSelectedYear={setSelectedYear} />
+
+        {/* Layer Toggles */}
+        <div className="border-t border-gray-100" />
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-gray-500">Tree Cover</span>
+          <Switch size="small" checked={showForest} onChange={(checked) => setShowForest(checked)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-gray-500">Deadwood Cover</span>
+          <Switch size="small" checked={showDeadwood} onChange={(checked) => setShowDeadwood(checked)} />
+        </div>
 
         {/* Flags Toggle - only show when user is logged in */}
         {showFlagsToggle && setShowFlagsLayer && (

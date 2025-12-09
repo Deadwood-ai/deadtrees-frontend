@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Radio, Alert, Button, Modal, Input, message } from "antd";
-import { FlagOutlined } from "@ant-design/icons";
+import { Alert, Modal, Input, message } from "antd";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
@@ -18,19 +17,22 @@ import { Draw } from "ol/interaction";
 import { createBox } from "ol/interaction/Draw";
 import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import type { FeatureLike } from "ol/Feature";
-import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
-import "./geocoder.css";
-import { GeoapifyContext, GeoapifyGeocoderAutocomplete } from "@geoapify/react-geocoder-autocomplete";
 
-import "./popup.css";
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
-import MapStyleSwitchButtons from "./MapStyleSwitchButtons";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
-import DeadwoodCard from "./DeadwoodCard";
+import LayerControlPanel from "./LayerControlPanel";
+import LocationControls from "./LocationControls";
+import MapLegend from "./MapLegend";
+import YearSelector from "./YearSelector";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
 import type { IMapFlag } from "../../types/mapFlags";
+
+interface ClickedValues {
+  forestPct: number;
+  deadwoodPct: number;
+}
 
 // Helper to create GeoTIFF source for deadwood
 const createDeadwoodSource = (year: string) => {
@@ -104,6 +106,17 @@ const DeadtreesMap = () => {
   const flagsLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
   const flagHoverOverlayRef = useRef<Overlay | null>(null);
+  const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
+  const clickedCellTooltipRef = useRef<Overlay | null>(null);
+
+  // Layer visibility state
+  const [showForest, setShowForest] = useState(true);
+  const [showDeadwood, setShowDeadwood] = useState(false);
+  const [deadwoodWarningShown, setDeadwoodWarningShown] = useState(false);
+  const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] = useState(false);
+
+  // Clicked location values (displayed in legend)
+  const [clickedValues, setClickedValues] = useState<ClickedValues | null>(null);
 
   // Auth and flags hooks
   const { user } = useAuth();
@@ -115,8 +128,8 @@ const DeadtreesMap = () => {
     // Skip click handling when drawing flag bbox
     if (skipIfDrawing) return;
     if (mapRef.current) {
-      // Fetch both deadwood and forest values
-      const [deadwoodValue, forestValue] = await Promise.all([
+      // Fetch both deadwood and forest values (forest also gives us the cell bounds)
+      const [deadwoodResult, forestResult] = await Promise.all([
         getPixelValueOfCoordinate({
           coordinates: event.coordinate,
           cogUrl: getDeadwoodCOGUrl(year),
@@ -127,30 +140,74 @@ const DeadtreesMap = () => {
         }),
       ]);
 
-      const popupContent = document.getElementById("popup-content");
+      // Use cell bounds from forest raster to create the polygon
+      const [minX, minY, maxX, maxY] = forestResult.cellBounds;
+      const cellPolygon = new Polygon([
+        [
+          [minX, minY],
+          [maxX, minY],
+          [maxX, maxY],
+          [minX, maxY],
+          [minX, minY],
+        ],
+      ]);
 
-      if (popupContent) {
-        const dwVal = Number(deadwoodValue) || 0;
-        const fVal = Number(forestValue) || 0;
-        // Normalize from 0-255 to 0-100%
-        const deadwoodPct = dwVal > 0 ? Math.round((dwVal / 255) * 100) : 0;
-        const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
-
-        popupContent.innerHTML = `
-          <div style="font-family: system-ui, sans-serif; font-size: 12px; padding: 4px 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="color: #6b7280;">Forest</span>
-              <span style="color: #16a34a; font-weight: 600; min-width: 40px; text-align: right;">${forestPct}%</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #6b7280;">Deadwood</span>
-              <span style="color: #dc2626; font-weight: 600; min-width: 40px; text-align: right;">${deadwoodPct}%</span>
-            </div>
-          </div>
-        `;
+      // Update clicked cell layer
+      if (clickedCellLayerRef.current) {
+        const source = clickedCellLayerRef.current.getSource();
+        if (source) {
+          source.clear();
+          const feature = new Feature({ geometry: cellPolygon });
+          source.addFeature(feature);
+        }
       }
-      const overlay = (mapRef.current as Map).getOverlays().getArray()[0];
-      overlay.setPosition(event.coordinate);
+
+      const dwVal = Number(deadwoodResult.value) || 0;
+      const fVal = Number(forestResult.value) || 0;
+      // Normalize from 0-255 to 0-100%
+      const deadwoodPct = dwVal > 0 ? Math.round((dwVal / 255) * 100) : 0;
+      const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
+
+      // Update tooltip over the clicked cell
+      if (clickedCellTooltipRef.current) {
+        const tooltipElement = clickedCellTooltipRef.current.getElement();
+        if (tooltipElement) {
+          tooltipElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px; color: #374151;">
+              <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #22c55e;"></span>
+                <span style="color: #6b7280;">Tree</span>
+                <span style="font-weight: 600;">${forestPct}%</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #ef4444;"></span>
+                <span style="color: #6b7280;">Deadwood</span>
+                <span style="font-weight: 600;">${deadwoodPct}%</span>
+              </span>
+              <button id="close-cell-tooltip" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; padding: 0 0 0 4px;">&times;</button>
+            </div>
+          `;
+          // Add close button handler
+          const closeBtn = tooltipElement.querySelector("#close-cell-tooltip");
+          if (closeBtn) {
+            closeBtn.addEventListener("click", () => {
+              clickedCellTooltipRef.current?.setPosition(undefined);
+              // Also clear the clicked cell layer
+              if (clickedCellLayerRef.current) {
+                const source = clickedCellLayerRef.current.getSource();
+                if (source) source.clear();
+              }
+              setClickedValues(null);
+            });
+          }
+        }
+        // Position tooltip at top center of the cell
+        const centerX = (minX + maxX) / 2;
+        clickedCellTooltipRef.current.setPosition([centerX, maxY]);
+      }
+
+      // Update state to display in legend panel
+      setClickedValues({ forestPct, deadwoodPct });
     }
   };
 
@@ -188,14 +245,14 @@ const DeadtreesMap = () => {
             ["band", 1],
             0,
             [34, 139, 34, 0],
-            0.1,
-            [34, 139, 34, 0.6],
+            0.15,
+            [34, 139, 34, 1],
             0.3,
-            [34, 139, 34, 0.7],
+            [34, 139, 34, 1],
             0.5,
-            [34, 139, 34, 0.8],
+            [34, 139, 34, 1],
             0.7,
-            [34, 139, 34, 0.9],
+            [34, 139, 34, 1],
             1,
             [0, 100, 0, 1],
           ],
@@ -205,6 +262,7 @@ const DeadtreesMap = () => {
       const deadwoodLayer = new TileLayerWebGL({
         source: getCachedDeadwoodSource(selectedYear),
         className: "deadwood-layer",
+        visible: false, // Deadwood is hidden by default
         style: {
           color: [
             "interpolate",
@@ -215,11 +273,11 @@ const DeadtreesMap = () => {
             0.07,
             [255, 0, 0, 0],
             0.25,
-            [255, 0, 0, 0.7],
+            [255, 0, 0, 1],
             0.5,
-            [255, 0, 0, 0.8],
+            [255, 0, 0, 1],
             0.75,
-            [255, 0, 0, 0.9],
+            [255, 0, 0, 1],
             1,
             [255, 0, 0, 1],
           ],
@@ -230,31 +288,26 @@ const DeadtreesMap = () => {
       forestLayerRef.current = forestLayer;
       deadwoodLayerRef.current = deadwoodLayer;
 
+      // Create clicked cell layer for showing selected pixel
+      const clickedCellSource = new VectorSource<Feature<Polygon>>();
+      const clickedCellLayer = new VectorLayer({
+        source: clickedCellSource,
+        style: new Style({
+          fill: new Fill({ color: "rgba(59, 130, 246, 0.2)" }),
+          stroke: new Stroke({ color: "#3b82f6", width: 2 }),
+        }),
+        zIndex: 50,
+      });
+      clickedCellLayerRef.current = clickedCellLayer;
+
       const newMap = new Map({
         target: mapContainer.current,
-        // Layer order: basemap -> forest -> deadwood (deadwood on top)
-        layers: [basemapLayer, forestLayer, deadwoodLayer],
+        // Layer order: basemap -> forest -> deadwood -> clicked cell (on top)
+        layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer],
         view: initialView,
         overlays: [],
         controls: [],
       });
-      const popupElement = document.createElement("div");
-      popupElement.id = "popup";
-      popupElement.className = "ol-popup";
-      popupElement.innerHTML = `
-        <div id="popup-content"></div>
-        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-      `;
-
-      const overlay = new Overlay({
-        element: popupElement,
-        autoPan: true,
-        autoPanAnimation: {
-          duration: 0,
-        },
-      });
-
-      newMap.addOverlay(overlay);
 
       // Create flag hover overlay
       const flagPopupElement = document.createElement("div");
@@ -271,6 +324,20 @@ const DeadtreesMap = () => {
       newMap.addOverlay(flagHoverOverlay);
       flagHoverOverlayRef.current = flagHoverOverlay;
 
+      // Create clicked cell tooltip overlay
+      const cellTooltipElement = document.createElement("div");
+      cellTooltipElement.id = "cell-tooltip";
+      cellTooltipElement.style.cssText =
+        "background: white; padding: 6px 10px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 12px; white-space: nowrap; font-family: system-ui, sans-serif;";
+
+      const cellTooltipOverlay = new Overlay({
+        element: cellTooltipElement,
+        positioning: "bottom-center",
+        offset: [0, -8],
+      });
+      newMap.addOverlay(cellTooltipOverlay);
+      clickedCellTooltipRef.current = cellTooltipOverlay;
+
       newMap.on("moveend", () => {
         const zoom = newMap.getView().getZoom();
         setDeadwoodMapViewport({
@@ -279,15 +346,6 @@ const DeadtreesMap = () => {
         });
         setCurrentZoom(zoom || 10);
       });
-
-      const closer = popupElement.querySelector("#popup-closer");
-      if (closer) {
-        closer.onclick = function () {
-          overlay.setPosition(undefined);
-          closer.blur();
-          return false;
-        };
-      }
 
       mapRef.current = newMap;
       // if (DeadwoodMapViewport.zoom != 2) {
@@ -377,8 +435,11 @@ const DeadtreesMap = () => {
       // Use cached sources - instant if already loaded
       forestLayerRef.current.setSource(getCachedForestSource(selectedYear));
       deadwoodLayerRef.current.setSource(getCachedDeadwoodSource(selectedYear));
+      // Maintain visibility state after source update
+      forestLayerRef.current.setVisible(showForest);
+      deadwoodLayerRef.current.setVisible(showDeadwood);
     }
-  }, [selectedYear]);
+  }, [selectedYear, showForest, showDeadwood]);
 
   // Zoom threshold for switching between point and bbox display
   const ZOOM_THRESHOLD = 12;
@@ -496,6 +557,25 @@ const DeadtreesMap = () => {
     }
   }, [showFlagsLayer]);
 
+  // Toggle forest layer visibility
+  useEffect(() => {
+    if (forestLayerRef.current) {
+      forestLayerRef.current.setVisible(showForest);
+    }
+  }, [showForest]);
+
+  // Toggle deadwood layer visibility and show warning modal
+  useEffect(() => {
+    if (deadwoodLayerRef.current) {
+      deadwoodLayerRef.current.setVisible(showDeadwood);
+    }
+
+    // Show warning modal when deadwood is enabled for the first time
+    if (showDeadwood && !deadwoodWarningShown) {
+      setDeadwoodWarningModalOpen(true);
+    }
+  }, [showDeadwood, deadwoodWarningShown]);
+
   // Start drawing flag bbox
   const startFlagDrawing = useCallback(() => {
     if (!mapRef.current || isDrawingFlag) return;
@@ -589,17 +669,35 @@ const DeadtreesMap = () => {
     setFlagDescription("");
   }, []);
 
-  // components ---------------------------------------------------
+  // Handle deadwood warning modal close
+  const handleDeadwoodWarningClose = useCallback(() => {
+    setDeadwoodWarningModalOpen(false);
+    setDeadwoodWarningShown(true);
+  }, []);
 
-  const SideSelectionButtons = () => {
-    return (
-      <Radio.Group value={selectedSite} onChange={(e) => setSelectedSite(e.target.value)}>
-        <Radio.Button value="Harz">Harz National Park</Radio.Button>
-        <Radio.Button value="Waldshut">Waldshut</Radio.Button>
-        <Radio.Button value="Bayern">Bavarian Forest</Radio.Button>
-      </Radio.Group>
-    );
-  };
+  // Handle map style change with zoom gate for satellite
+  const handleMapStyleChange = useCallback(
+    (style: string) => {
+      if (style === "satellite-streets-v12" && mapRef.current) {
+        const zoom = mapRef.current.getView().getZoom();
+        if (!zoom || zoom < 14) {
+          message.info("Zoom in closer to enable satellite view");
+          return;
+        }
+      }
+      setDeadwoodMapStyle(style);
+    },
+    [setDeadwoodMapStyle],
+  );
+
+  // Handle flag button click
+  const handleFlagClick = useCallback(() => {
+    if (isDrawingFlag) {
+      cancelFlagDrawing();
+    } else {
+      startFlagDrawing();
+    }
+  }, [isDrawingFlag, cancelFlagDrawing, startFlagDrawing]);
 
   return (
     <div className="h-full w-full">
@@ -607,70 +705,52 @@ const DeadtreesMap = () => {
         style={{
           width: "100%",
           height: "100%",
-          // borderRadius: "8px",
         }}
         ref={mapContainer}
       >
-        <div className="absolute bottom-16 left-1/2 z-40 max-w-xl -translate-x-1/2">
+        {/* Top Left - Layer Controls */}
+        <div className="absolute left-4 top-28 z-50">
+          <LayerControlPanel
+            mapStyle={DeadwoodMapStyle}
+            onMapStyleChange={handleMapStyleChange}
+            showForest={showForest}
+            setShowForest={setShowForest}
+            showDeadwood={showDeadwood}
+            setShowDeadwood={setShowDeadwood}
+            opacity={sliderValue}
+            setOpacity={setSliderValue}
+            showFlagsControls={!!user}
+            isDrawingFlag={isDrawingFlag}
+            onFlagClick={handleFlagClick}
+            showFlagsLayer={showFlagsLayer}
+            setShowFlagsLayer={setShowFlagsLayer}
+            flagsCount={mapFlags.length}
+          />
+        </div>
+
+        {/* Top Right - Location Controls */}
+        <div className="absolute right-4 top-28 z-50">
+          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
+        </div>
+
+        {/* Bottom Center - Year Selector */}
+        <div className="absolute bottom-4 left-1/2 z-50 -translate-x-1/2">
+          <YearSelector year={selectedYear} setYear={setSelectedYear} />
+        </div>
+
+        {/* Bottom Center Above Year - Warning Alert */}
+        <div className="absolute bottom-20 left-1/2 z-40 max-w-xl -translate-x-1/2">
           <Alert
             message="Preview visualization (alpha) — this map will evolve and improve over time."
             type="warning"
             showIcon
             closable
-            // banner
           />
         </div>
-        <div className="absolute right-4 top-24 z-20 w-96 rounded-sm">
-          <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
-            <GeoapifyGeocoderAutocomplete
-              placeholder="Enter address here"
-              // type="city"
-              filterByCountryCode={["de"]}
-              placeSelect={(place) => setBounds(place.bbox)}
-            />
-          </GeoapifyContext>
-        </div>
-        <div className="absolute left-4 top-24 z-50 flex flex-col gap-2">
-          <MapStyleSwitchButtons
-            mapStyle={DeadwoodMapStyle}
-            onChange={(next) => {
-              if (next === "satellite-streets-v12" && mapRef.current) {
-                const zoom = mapRef.current.getView().getZoom();
-                if (!zoom || zoom < 14) {
-                  // gate switch below 14
-                  return;
-                }
-              }
-              setDeadwoodMapStyle(next);
-            }}
-          />
-          {/* Flag button - only show when logged in */}
-          {user && (
-            <Button
-              type={isDrawingFlag ? "primary" : "default"}
-              danger={isDrawingFlag}
-              icon={<FlagOutlined />}
-              onClick={isDrawingFlag ? cancelFlagDrawing : startFlagDrawing}
-              title={isDrawingFlag ? "Cancel flagging" : "Flag an area"}
-            >
-              {isDrawingFlag ? "Cancel" : "Flag Area"}
-            </Button>
-          )}
-        </div>
-        <div className="absolute bottom-2 left-4 z-20">
-          <SideSelectionButtons />
-        </div>
-        <div className="absolute bottom-2 right-4 z-50">
-          <DeadwoodCard
-            year={selectedYear}
-            sliderValue={sliderValue}
-            setSliderValue={setSliderValue}
-            setSelectedYear={setSelectedYear}
-            showFlagsLayer={showFlagsLayer}
-            setShowFlagsLayer={setShowFlagsLayer}
-            showFlagsToggle={!!user}
-            flagsCount={mapFlags.length}
-          />
+
+        {/* Bottom Right - Legend with Click Info */}
+        <div className="absolute bottom-4 right-4 z-50">
+          <MapLegend clickedValues={clickedValues} />
         </div>
       </div>
 
@@ -697,6 +777,22 @@ const DeadtreesMap = () => {
           />
           <p className="text-xs text-gray-400">Year: {selectedYear}</p>
         </div>
+      </Modal>
+
+      {/* Deadwood warning modal */}
+      <Modal
+        title="Preview Visualization Notice"
+        open={deadwoodWarningModalOpen}
+        onOk={handleDeadwoodWarningClose}
+        onCancel={handleDeadwoodWarningClose}
+        okText="I Understand"
+        cancelButtonProps={{ style: { display: "none" } }}
+      >
+        <p className="text-gray-700">
+          This is a preview visualization, in alpha stage, and not a final product. This map will evolve, improve, and
+          expand in the coming months and years. In it's current form this preview map should not be used to draw
+          conclusions.
+        </p>
       </Modal>
     </div>
   );
