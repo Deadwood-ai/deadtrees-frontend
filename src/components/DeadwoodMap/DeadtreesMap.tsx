@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Alert, Modal, Input, message } from "antd";
+import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { fromLonLat, transformExtent } from "ol/proj";
@@ -88,7 +89,7 @@ const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
   const [selectedYear, setSelectedYear] = useState<string>("2025");
   const [bounds, setBounds] = useState([]);
-  const [selectedSite, setSelectedSite] = useState<string>("Bayern");
+  const [selectedSite, setSelectedSite] = useState<string>("");
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
@@ -108,6 +109,7 @@ const DeadtreesMap = () => {
   const flagHoverOverlayRef = useRef<Overlay | null>(null);
   const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
+  const preferredMapStyleRef = useRef<string>(DeadwoodMapStyle);
 
   // Layer visibility state
   const [showForest, setShowForest] = useState(true);
@@ -675,20 +677,29 @@ const DeadtreesMap = () => {
     setDeadwoodWarningShown(true);
   }, []);
 
-  // Handle map style change with zoom gate for satellite
+  // Handle map style change - track preferred style for auto-restore
   const handleMapStyleChange = useCallback(
     (style: string) => {
-      if (style === "satellite-streets-v12" && mapRef.current) {
-        const zoom = mapRef.current.getView().getZoom();
-        if (!zoom || zoom < 14) {
-          message.info("Zoom in closer to enable satellite view");
-          return;
-        }
-      }
+      preferredMapStyleRef.current = style;
       setDeadwoodMapStyle(style);
     },
     [setDeadwoodMapStyle],
   );
+
+  // Auto-switch map style based on zoom level
+  const SATELLITE_MIN_ZOOM = 14;
+  useEffect(() => {
+    const canShowSatellite = currentZoom >= SATELLITE_MIN_ZOOM;
+    const prefersSatellite = preferredMapStyleRef.current === "satellite-streets-v12";
+
+    if (prefersSatellite && canShowSatellite && DeadwoodMapStyle !== "satellite-streets-v12") {
+      // Restore satellite when zoomed in
+      setDeadwoodMapStyle("satellite-streets-v12");
+    } else if (prefersSatellite && !canShowSatellite && DeadwoodMapStyle === "satellite-streets-v12") {
+      // Force streets when zoomed out
+      setDeadwoodMapStyle("streets-v12");
+    }
+  }, [currentZoom, DeadwoodMapStyle, setDeadwoodMapStyle]);
 
   // Handle flag button click
   const handleFlagClick = useCallback(() => {
@@ -713,6 +724,7 @@ const DeadtreesMap = () => {
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
+            currentZoom={currentZoom}
             showForest={showForest}
             setShowForest={setShowForest}
             showDeadwood={showDeadwood}
@@ -781,18 +793,44 @@ const DeadtreesMap = () => {
 
       {/* Deadwood warning modal */}
       <Modal
-        title="Preview Visualization Notice"
+        title={
+          <div className="flex items-center gap-2">
+            <ExperimentOutlined className="text-orange-500" />
+            <span>Preview Visualization Notice</span>
+          </div>
+        }
         open={deadwoodWarningModalOpen}
         onOk={handleDeadwoodWarningClose}
         onCancel={handleDeadwoodWarningClose}
         okText="I Understand"
         cancelButtonProps={{ style: { display: "none" } }}
+        width={480}
       >
-        <p className="text-gray-700">
-          This is a preview visualization, in alpha stage, and not a final product. This map will evolve, improve, and
-          expand in the coming months and years. In it's current form this preview map should not be used to draw
-          conclusions.
-        </p>
+        <div className="flex flex-col gap-4">
+          {/* Alpha Warning */}
+          <div className="flex gap-3 rounded-lg bg-orange-50 p-3">
+            <InfoCircleOutlined className="mt-0.5 text-lg text-orange-500" />
+            <div className="text-gray-700">
+              <p className="mb-2 font-medium text-orange-700">Alpha Stage Product</p>
+              <p className="text-sm">
+                This is a preview visualization, not a final product. This map will evolve, improve, and expand in the
+                coming months and years. In its current form, this preview map should not be used to draw conclusions.
+              </p>
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div className="flex gap-3 rounded-lg bg-blue-50 p-3">
+            <FlagOutlined className="mt-0.5 text-lg text-blue-500" />
+            <div className="text-gray-700">
+              <p className="mb-2 font-medium text-blue-700">Help Us Improve</p>
+              <p className="text-sm">
+                Consider checking your local forest or study area and reporting feedback after logging in with the{" "}
+                <span className="font-semibold text-blue-600">'Flag Area'</span> feature.
+              </p>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

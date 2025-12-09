@@ -5,6 +5,7 @@ interface LayerControlPanelProps {
   // Basemap
   mapStyle: string;
   onMapStyleChange: (style: string) => void;
+  currentZoom: number;
   // Data layers
   showForest: boolean;
   setShowForest: (show: boolean) => void;
@@ -22,9 +23,12 @@ interface LayerControlPanelProps {
   flagsCount?: number;
 }
 
+const SATELLITE_MIN_ZOOM = 14;
+
 const LayerControlPanel = ({
   mapStyle,
   onMapStyleChange,
+  currentZoom,
   showForest,
   setShowForest,
   showDeadwood,
@@ -38,6 +42,16 @@ const LayerControlPanel = ({
   setShowFlagsLayer,
   flagsCount,
 }: LayerControlPanelProps) => {
+  const canShowSatellite = currentZoom >= SATELLITE_MIN_ZOOM;
+
+  // Build basemap options based on zoom level
+  const basemapOptions = canShowSatellite
+    ? [
+        { value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" },
+        { value: "satellite-streets-v12", icon: <PictureOutlined />, label: "Satellite" },
+      ]
+    : [{ value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" }];
+
   return (
     <div className="flex w-48 flex-col rounded-lg bg-white p-3 shadow-lg">
       {/* Basemap Selection */}
@@ -45,12 +59,9 @@ const LayerControlPanel = ({
       <Segmented
         size="small"
         block
-        value={mapStyle}
+        value={mapStyle === "satellite-streets-v12" && !canShowSatellite ? "streets-v12" : mapStyle}
         onChange={(value) => onMapStyleChange(value as string)}
-        options={[
-          { value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" },
-          { value: "satellite-streets-v12", icon: <PictureOutlined />, label: "Satellite" },
-        ]}
+        options={basemapOptions}
       />
 
       <Divider className="my-3" />

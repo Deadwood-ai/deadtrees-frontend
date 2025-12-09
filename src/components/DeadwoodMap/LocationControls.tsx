@@ -10,6 +10,9 @@ interface LocationControlsProps {
 }
 
 const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: LocationControlsProps) => {
+  // Use null when no site selected - Segmented won't highlight any option
+  const segmentedValue = selectedSite || null;
+
   return (
     <div className="flex w-72 flex-col gap-2 rounded-lg bg-white p-3 shadow-lg">
       {/* Address Search */}
@@ -27,7 +30,7 @@ const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: Locatio
       <Segmented
         size="small"
         block
-        value={selectedSite}
+        value={segmentedValue as string}
         onChange={(value) => onSiteChange(value as string)}
         options={[
           { value: "Harz", label: "Harz" },
