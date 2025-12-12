@@ -747,9 +747,9 @@ const DeadtreesMap = () => {
         </div>
 
         {/* Top Center - Processing Stats */}
-        <div className="absolute left-1/2 top-24 z-50 -translate-x-1/2">
+        {/* <div className="absolute left-1/2 top-24 z-50 -translate-x-1/2">
           <ProcessingStatsBanner />
-        </div>
+        </div> */}
 
         {/* Bottom Center - Year Selector */}
         <div className="absolute bottom-2 left-1/2 z-50 -translate-x-1/2">
