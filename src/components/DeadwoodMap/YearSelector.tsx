@@ -1,5 +1,8 @@
-import { Segmented } from "antd";
+import { useMemo } from "react";
+import { Segmented, Typography } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+
+const { Text } = Typography;
 
 interface YearSelectorProps {
   year: string;
@@ -7,6 +10,9 @@ interface YearSelectorProps {
 }
 
 const YEARS = ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"];
+
+// Memoize options outside component to keep them stable
+const YEAR_OPTIONS = YEARS.map((y) => ({ value: y, label: y }));
 
 const YearSelector = ({ year, setYear }: YearSelectorProps) => {
   const currentIndex = YEARS.indexOf(year);
@@ -23,6 +29,9 @@ const YearSelector = ({ year, setYear }: YearSelectorProps) => {
 
   return (
     <div className="flex items-center gap-2 rounded-lg bg-white/95 px-3 py-2 backdrop-blur-sm">
+      <Text type="secondary" className="whitespace-nowrap text-xs font-medium">
+        Prediction Year:
+      </Text>
       <button
         onClick={handlePrev}
         disabled={isFirst}
@@ -31,12 +40,7 @@ const YearSelector = ({ year, setYear }: YearSelectorProps) => {
         <LeftOutlined />
       </button>
 
-      <Segmented
-        size="small"
-        value={year}
-        onChange={(value) => setYear(value as string)}
-        options={YEARS.map((y) => ({ value: y, label: y }))}
-      />
+      <Segmented size="small" value={year} onChange={(value) => setYear(value as string)} options={YEAR_OPTIONS} />
 
       <button
         onClick={handleNext}

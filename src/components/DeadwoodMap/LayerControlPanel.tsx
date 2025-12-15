@@ -1,11 +1,10 @@
 import { Segmented, Slider, Switch, Button, Divider } from "antd";
-import { FlagOutlined, GlobalOutlined, PictureOutlined } from "@ant-design/icons";
+import { FlagOutlined } from "@ant-design/icons";
 
 interface LayerControlPanelProps {
   // Basemap
   mapStyle: string;
   onMapStyleChange: (style: string) => void;
-  currentZoom: number;
   // Data layers
   showForest: boolean;
   setShowForest: (show: boolean) => void;
@@ -23,12 +22,15 @@ interface LayerControlPanelProps {
   flagsCount?: number;
 }
 
-const SATELLITE_MIN_ZOOM = 14;
+// Basemap options: Map and Historical Satellite
+const basemapOptions = [
+  { value: "streets-v12", label: "Map" },
+  { value: "wayback", label: "Satellite" },
+];
 
 const LayerControlPanel = ({
   mapStyle,
   onMapStyleChange,
-  currentZoom,
   showForest,
   setShowForest,
   showDeadwood,
@@ -42,16 +44,6 @@ const LayerControlPanel = ({
   setShowFlagsLayer,
   flagsCount,
 }: LayerControlPanelProps) => {
-  const canShowSatellite = currentZoom >= SATELLITE_MIN_ZOOM;
-
-  // Build basemap options based on zoom level
-  const basemapOptions = canShowSatellite
-    ? [
-        { value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" },
-        { value: "satellite-streets-v12", icon: <PictureOutlined />, label: "Satellite" },
-      ]
-    : [{ value: "streets-v12", icon: <GlobalOutlined />, label: "Streets" }];
-
   return (
     <div className="flex w-48 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Basemap Selection */}
@@ -59,7 +51,7 @@ const LayerControlPanel = ({
       <Segmented
         size="small"
         block
-        value={mapStyle === "satellite-streets-v12" && !canShowSatellite ? "streets-v12" : mapStyle}
+        value={mapStyle}
         onChange={(value) => onMapStyleChange(value as string)}
         options={basemapOptions}
       />
@@ -78,8 +70,8 @@ const LayerControlPanel = ({
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-red-500" />
-            <span className="text-xs text-gray-600">Deadwood</span>
+            <div className="h-3 w-3 rounded-sm bg-purple-600" />
+            <span className="text-xs text-gray-600">Standing Deadwood</span>
           </div>
           <Switch size="small" checked={showDeadwood} onChange={setShowDeadwood} />
         </div>

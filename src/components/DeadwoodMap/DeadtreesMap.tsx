@@ -3,7 +3,7 @@ import { Alert, Modal, Input, message } from "antd";
 import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
-import { fromLonLat, transformExtent } from "ol/proj";
+import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -21,14 +21,15 @@ import type { FeatureLike } from "ol/Feature";
 
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
+import { getWaybackTileUrl } from "../../utils/waybackVersions";
 import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
 import MapLegend from "./MapLegend";
-import YearSelector from "./YearSelector";
-import ProcessingStatsBanner from "./ProcessingStatsBanner";
+import YearImagerySelector from "./YearImagerySelector";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
+import { useWaybackItemsDebounced } from "../../hooks/useWaybackItems";
 import type { IMapFlag } from "../../types/mapFlags";
 
 interface ClickedValues {
@@ -110,13 +111,35 @@ const DeadtreesMap = () => {
   const flagHoverOverlayRef = useRef<Overlay | null>(null);
   const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
-  const preferredMapStyleRef = useRef<string>(DeadwoodMapStyle);
 
   // Layer visibility state
   const [showForest, setShowForest] = useState(true);
   const [showDeadwood, setShowDeadwood] = useState(false);
   const [deadwoodWarningShown, setDeadwoodWarningShown] = useState(false);
   const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] = useState(false);
+
+  // Wayback imagery state - using debounced location-based query
+  const [selectedReleaseNum, setSelectedReleaseNum] = useState<number | null>(null);
+  const [autoMatchImagery, setAutoMatchImagery] = useState(true); // Auto-match imagery to prediction year
+
+  // Track map center in lon/lat for location-specific wayback queries
+  const [mapCenterLonLat, setMapCenterLonLat] = useState<{ lon: number; lat: number } | null>(() => {
+    // Convert initial center from EPSG:3857 to EPSG:4326
+    if (DeadwoodMapViewport.center) {
+      const [lon, lat] = toLonLat(DeadwoodMapViewport.center);
+      return { lon, lat };
+    }
+    return null;
+  });
+
+  // Fetch wayback items with actual imagery changes at current location (fast, no metadata)
+  // Uses debouncing: only re-fetches when user moves > 2km or zoom changes > 3 levels
+  const { data: localWaybackItems = [], isLoading: isWaybackLoading } = useWaybackItemsDebounced(
+    mapCenterLonLat?.lon,
+    mapCenterLonLat?.lat,
+    currentZoom,
+    DeadwoodMapStyle === "wayback", // Only fetch when wayback basemap is active
+  );
 
   // Clicked location values (displayed in legend)
   const [clickedValues, setClickedValues] = useState<ClickedValues | null>(null);
@@ -183,7 +206,7 @@ const DeadtreesMap = () => {
                 <span style="font-weight: 600;">${forestPct}%</span>
               </span>
               <span style="display: flex; align-items: center; gap: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 2px; background: #ef4444;"></span>
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #9333ea;"></span>
                 <span style="color: #6b7280;">Deadwood</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
               </span>
@@ -222,22 +245,18 @@ const DeadtreesMap = () => {
         center: DeadwoodMapViewport.center,
         zoom: DeadwoodMapViewport.zoom,
       });
+      // Default to Wayback basemap - will be updated once wayback items are loaded
       const basemapLayer = new TileLayer({
         preload: 0,
         source: new XYZ({
-          url:
-            DeadwoodMapStyle === "satellite-streets-v12"
-              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-              : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attributions:
-            DeadwoodMapStyle === "satellite-streets-v12"
-              ? "© Mapbox © OpenStreetMap contributors"
-              : "© OpenStreetMap contributors",
-          maxZoom: DeadwoodMapStyle === "satellite-streets-v12" ? undefined : 19,
-          tileSize: DeadwoodMapStyle === "satellite-streets-v12" ? 512 : 256,
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: "© OpenStreetMap contributors",
+          maxZoom: 19,
+          crossOrigin: "anonymous",
         }),
       });
       // Create only 2 layers - one for forest, one for deadwood (for current year)
+      // Forest layer: Light green → Dark green gradient based on cover intensity
       const forestLayer = new TileLayerWebGL({
         source: getCachedForestSource(selectedYear),
         className: "forest-layer",
@@ -247,21 +266,27 @@ const DeadtreesMap = () => {
             ["linear"],
             ["band", 1],
             0,
-            [34, 139, 34, 0],
-            0.15,
-            [34, 139, 34, 1],
-            0.3,
-            [34, 139, 34, 1],
-            0.5,
-            [34, 139, 34, 1],
+            [144, 238, 144, 0], // Transparent
+            0.1,
+            [144, 238, 144, 0.7], // Light green, semi-transparent
+            0.25,
+            [124, 205, 124, 0.85], // Pale green
+            0.4,
+            [86, 180, 86, 0.9], // Medium light green
+            0.55,
+            [60, 150, 60, 0.95], // Medium green
             0.7,
-            [34, 139, 34, 1],
+            [34, 120, 34, 1], // Forest green
+            0.85,
+            [20, 90, 20, 1], // Dark green
             1,
-            [0, 100, 0, 1],
+            [0, 70, 0, 1], // Very dark green
           ],
         },
       });
 
+      // Deadwood layer: Purple/Violet spectrum with enhanced visibility for high values
+      // Low values are more transparent, high values are more visible
       const deadwoodLayer = new TileLayerWebGL({
         source: getCachedDeadwoodSource(selectedYear),
         className: "deadwood-layer",
@@ -272,17 +297,27 @@ const DeadtreesMap = () => {
             ["linear"],
             ["band", 1],
             0,
-            [255, 0, 0, 0],
-            0.07,
-            [255, 0, 0, 0],
-            0.25,
-            [255, 0, 0, 1],
+            [200, 150, 255, 0], // Fully transparent
+            0.1,
+            [200, 150, 255, 0], // Still fully transparent (filter noise)
+            0.2,
+            [180, 130, 240, 0.1], // Very low opacity for low values
+            0.3,
+            [160, 110, 220, 0.15], // Low opacity
+            0.4,
+            [145, 90, 200, 0.25], // Still low opacity
             0.5,
-            [255, 0, 0, 1],
-            0.75,
-            [255, 0, 0, 1],
+            [130, 70, 180, 0.4], // Medium-low opacity
+            0.6,
+            [115, 55, 160, 0.6], // Medium opacity - starts becoming visible
+            0.7,
+            [100, 40, 140, 0.8], // High opacity - clearly visible
+            0.8,
+            [85, 30, 120, 0.95], // Very high opacity
+            0.9,
+            [70, 20, 100, 1], // Fully opaque
             1,
-            [255, 0, 0, 1],
+            [40, 10, 60, 1], // Maximum visibility - fully opaque
           ],
         },
       });
@@ -342,12 +377,20 @@ const DeadtreesMap = () => {
       clickedCellTooltipRef.current = cellTooltipOverlay;
 
       newMap.on("moveend", () => {
-        const zoom = newMap.getView().getZoom();
+        const view = newMap.getView();
+        const zoom = view.getZoom();
+        const center = view.getCenter();
         setDeadwoodMapViewport({
-          center: newMap.getView().getCenter(),
+          center: center,
           zoom: zoom,
         });
         setCurrentZoom(zoom || 10);
+
+        // Update lon/lat center for wayback queries
+        if (center) {
+          const [lon, lat] = toLonLat(center);
+          setMapCenterLonLat({ lon, lat });
+        }
       });
 
       mapRef.current = newMap;
@@ -377,25 +420,29 @@ const DeadtreesMap = () => {
   useEffect(() => {
     if (map) {
       const layer = map.getLayers().getArray()[0];
-      const nextIsSatellite = DeadwoodMapStyle === "satellite-streets-v12";
-      if (nextIsSatellite) {
-        const zoom = map.getView().getZoom();
-        if (!zoom || zoom < 14) {
-          return; // gate satellite at >=14
-        }
+      const nextIsWayback = DeadwoodMapStyle === "wayback";
+
+      let source: XYZ;
+      if (nextIsWayback && selectedReleaseNum) {
+        source = new XYZ({
+          url: getWaybackTileUrl(selectedReleaseNum),
+          attributions: "© Esri, Maxar, Earthstar Geographics",
+          maxZoom: 19,
+          crossOrigin: "anonymous",
+        });
+      } else {
+        // Streets basemap (OpenStreetMap)
+        source = new XYZ({
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attributions: "© OpenStreetMap contributors",
+          maxZoom: 19,
+          crossOrigin: "anonymous",
+        });
       }
-      layer.setSource(
-        new XYZ({
-          url: nextIsSatellite
-            ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
-            : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attributions: nextIsSatellite ? "© Mapbox © OpenStreetMap contributors" : "© OpenStreetMap contributors",
-          maxZoom: nextIsSatellite ? undefined : 19,
-          tileSize: nextIsSatellite ? 512 : 256,
-        }),
-      );
+
+      layer.setSource(source);
     }
-  }, [DeadwoodMapStyle, map]);
+  }, [DeadwoodMapStyle, map, selectedReleaseNum]);
 
   //update opacity of geotiff layers
   useEffect(() => {
@@ -444,8 +491,18 @@ const DeadtreesMap = () => {
     }
   }, [selectedYear, showForest, showDeadwood]);
 
+  // Initialize Wayback style and auto-select best imagery when items first load
+  useEffect(() => {
+    if (localWaybackItems.length > 0 && selectedReleaseNum === null) {
+      // Set to Wayback as default style
+      setDeadwoodMapStyle("wayback");
+      // Select best version for current year (handled by YearImagerySelector)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localWaybackItems.length]); // Only depend on length to run once when data loads
+
   // Zoom threshold for switching between point and bbox display
-  const ZOOM_THRESHOLD = 12;
+  const ZOOM_THRESHOLD = 1;
 
   // Style function for flags - shows point at low zoom, bbox at high zoom
   const getFlagStyle = useCallback(
@@ -678,29 +735,13 @@ const DeadtreesMap = () => {
     setDeadwoodWarningShown(true);
   }, []);
 
-  // Handle map style change - track preferred style for auto-restore
+  // Handle map style change
   const handleMapStyleChange = useCallback(
     (style: string) => {
-      preferredMapStyleRef.current = style;
       setDeadwoodMapStyle(style);
     },
     [setDeadwoodMapStyle],
   );
-
-  // Auto-switch map style based on zoom level
-  const SATELLITE_MIN_ZOOM = 14;
-  useEffect(() => {
-    const canShowSatellite = currentZoom >= SATELLITE_MIN_ZOOM;
-    const prefersSatellite = preferredMapStyleRef.current === "satellite-streets-v12";
-
-    if (prefersSatellite && canShowSatellite && DeadwoodMapStyle !== "satellite-streets-v12") {
-      // Restore satellite when zoomed in
-      setDeadwoodMapStyle("satellite-streets-v12");
-    } else if (prefersSatellite && !canShowSatellite && DeadwoodMapStyle === "satellite-streets-v12") {
-      // Force streets when zoomed out
-      setDeadwoodMapStyle("streets-v12");
-    }
-  }, [currentZoom, DeadwoodMapStyle, setDeadwoodMapStyle]);
 
   // Handle flag button click
   const handleFlagClick = useCallback(() => {
@@ -725,7 +766,6 @@ const DeadtreesMap = () => {
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
-            currentZoom={currentZoom}
             showForest={showForest}
             setShowForest={setShowForest}
             showDeadwood={showDeadwood}
@@ -751,13 +791,23 @@ const DeadtreesMap = () => {
           <ProcessingStatsBanner />
         </div> */}
 
-        {/* Bottom Center - Year Selector */}
+        {/* Bottom Center - Combined Year and Imagery Selector */}
         <div className="absolute bottom-2 left-1/2 z-50 -translate-x-1/2">
-          <YearSelector year={selectedYear} setYear={setSelectedYear} />
+          <YearImagerySelector
+            predictionYear={selectedYear}
+            onPredictionYearChange={setSelectedYear}
+            selectedReleaseNum={selectedReleaseNum}
+            onImageryChange={setSelectedReleaseNum}
+            waybackItems={localWaybackItems}
+            isLoading={isWaybackLoading}
+            isWaybackActive={DeadwoodMapStyle === "wayback"}
+            autoMatchImagery={autoMatchImagery}
+            onAutoMatchChange={setAutoMatchImagery}
+          />
         </div>
 
         {/* Bottom Center Above Year - Warning Alert */}
-        <div className="absolute bottom-20 left-1/2 z-40 max-w-xl -translate-x-1/2">
+        <div className="absolute bottom-28 left-1/2 z-40 max-w-xl -translate-x-1/2">
           <Alert
             message="Preview visualization (alpha) — this map will evolve and improve over time."
             type="warning"
