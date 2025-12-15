@@ -127,9 +127,13 @@ const YearImagerySelector = ({
   // Check if current prediction year has imagery
   const currentYearHasImagery = yearsWithImagery.has(predictionYear);
 
-  // Auto-select imagery when items first load (select closest to prediction year if auto-match enabled)
+  // Check if current selection is valid (exists in current waybackItems)
+  const isSelectionValid =
+    selectedReleaseNum !== null && waybackItems.some((item) => item.releaseNum === selectedReleaseNum);
+
+  // Auto-select imagery when items load or when current selection becomes invalid
   useEffect(() => {
-    if (waybackItems.length > 0 && !selectedReleaseNum) {
+    if (waybackItems.length > 0 && (!selectedReleaseNum || !isSelectionValid)) {
       if (autoMatchImagery) {
         const targetYear = parseInt(predictionYear);
         const closestItem = findClosestImagery(waybackItems, targetYear);
@@ -141,7 +145,7 @@ const YearImagerySelector = ({
         onImageryChange(waybackItems[waybackItems.length - 1].releaseNum);
       }
     }
-  }, [waybackItems, selectedReleaseNum, onImageryChange, autoMatchImagery, predictionYear]);
+  }, [waybackItems, selectedReleaseNum, isSelectionValid, onImageryChange, autoMatchImagery, predictionYear]);
 
   // Auto-match imagery when prediction year changes (if enabled)
   useEffect(() => {

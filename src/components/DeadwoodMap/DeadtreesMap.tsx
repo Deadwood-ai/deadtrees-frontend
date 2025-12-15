@@ -206,7 +206,7 @@ const DeadtreesMap = () => {
                 <span style="font-weight: 600;">${forestPct}%</span>
               </span>
               <span style="display: flex; align-items: center; gap: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 2px; background: #9333ea;"></span>
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #FFB31C;"></span>
                 <span style="color: #6b7280;">Deadwood</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
               </span>
@@ -285,7 +285,7 @@ const DeadtreesMap = () => {
         },
       });
 
-      // Deadwood layer: Purple/Violet spectrum with enhanced visibility for high values
+      // Deadwood layer: Selective Yellow (#FFB31C) spectrum with enhanced visibility for high values
       // Low values are more transparent, high values are more visible
       const deadwoodLayer = new TileLayerWebGL({
         source: getCachedDeadwoodSource(selectedYear),
@@ -297,25 +297,25 @@ const DeadtreesMap = () => {
             ["linear"],
             ["band", 1],
             0,
-            [200, 150, 255, 0], // Fully transparent
+            [255, 220, 150, 0], // Fully transparent
             0.1,
-            [200, 150, 255, 0], // Still fully transparent (filter noise)
+            [255, 220, 150, 0], // Still fully transparent (filter noise)
             0.2,
-            [180, 130, 240, 0.1], // Very low opacity for low values
+            [255, 200, 100, 0.1], // Very low opacity for low values
             0.3,
-            [160, 110, 220, 0.15], // Low opacity
+            [255, 190, 70, 0.15], // Low opacity
             0.4,
-            [145, 90, 200, 0.25], // Still low opacity
+            [255, 179, 50, 0.25], // Still low opacity
             0.5,
-            [130, 70, 180, 0.4], // Medium-low opacity
+            [255, 179, 28, 0.4], // Medium-low opacity - Selective Yellow
             0.6,
-            [115, 55, 160, 0.6], // Medium opacity - starts becoming visible
+            [240, 160, 25, 0.6], // Medium opacity - starts becoming visible
             0.7,
-            [100, 40, 140, 0.8], // High opacity - clearly visible
+            [220, 145, 22, 0.8], // High opacity - clearly visible
             0.8,
-            [85, 30, 120, 0.95], // Very high opacity
+            [204, 130, 20, 0.95], // Very high opacity
             0.9,
-            [70, 20, 100, 1], // Fully opaque
+            [180, 115, 18, 1], // Fully opaque
             1,
             [40, 10, 60, 1], // Maximum visibility - fully opaque
           ],

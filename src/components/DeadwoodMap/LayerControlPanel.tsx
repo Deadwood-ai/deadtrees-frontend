@@ -70,7 +70,7 @@ const LayerControlPanel = ({
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-purple-600" />
+            <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
             <span className="text-xs text-gray-600">Standing Deadwood</span>
           </div>
           <Switch size="small" checked={showDeadwood} onChange={setShowDeadwood} />

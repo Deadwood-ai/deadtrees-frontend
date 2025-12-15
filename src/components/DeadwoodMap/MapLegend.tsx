@@ -60,13 +60,13 @@ const MapLegend = ({ clickedValues }: MapLegendProps) => {
       <div className="mb-1">
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-purple-600" />
+            <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
             <span className="text-xs text-gray-600">Standing Deadwood</span>
           </div>
           <span className="text-xs text-gray-400">0–100%</span>
         </div>
         <GradientBar
-          gradientClass="bg-gradient-to-r from-purple-200 via-purple-500 to-purple-900"
+          gradientClass="bg-gradient-to-r from-[#fff4d9] via-[#FFB31C] to-[#cc8f16]"
           value={clickedValues?.deadwoodPct ?? null}
           indicatorColor="#000"
         />
@@ -87,7 +87,7 @@ const MapLegend = ({ clickedValues }: MapLegendProps) => {
             </div>
             <div className="flex items-center gap-1">
               <span className="text-gray-500">Deadwood:</span>
-              <span className="font-semibold text-purple-600">{clickedValues.deadwoodPct}%</span>
+              <span className="font-semibold text-[#cc8f16]">{clickedValues.deadwoodPct}%</span>
             </div>
           </div>
         ) : (
