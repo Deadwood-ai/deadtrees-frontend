@@ -3,6 +3,7 @@ import { Alert, Modal, Input, message } from "antd";
 import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
+import { Attribution } from "ol/control";
 import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
@@ -55,7 +56,7 @@ const createForestSource = (year: string) => {
   });
 };
 
-const sites = {
+const sites: Record<string, number[]> = {
   Waldshut: [8.174864507120049, 47.682517904265666],
   Harz: [10.668224826784524, 51.78688853393797],
   Bayern: [13.330993298074588, 49.03963187270776],
@@ -194,22 +195,25 @@ const DeadtreesMap = () => {
       const deadwoodPct = dwVal > 0 ? Math.round((dwVal / 255) * 100) : 0;
       const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
 
-      // Update tooltip over the clicked cell
+      // Update tooltip over the clicked cell - only show active layer
       if (clickedCellTooltipRef.current) {
         const tooltipElement = clickedCellTooltipRef.current.getElement();
         if (tooltipElement) {
-          tooltipElement.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px; color: #374151;">
-              <span style="display: flex; align-items: center; gap: 4px;">
+          const activeLayerHtml = showForest
+            ? `<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: #22c55e;"></span>
                 <span style="color: #6b7280;">Tree</span>
                 <span style="font-weight: 600;">${forestPct}%</span>
-              </span>
-              <span style="display: flex; align-items: center; gap: 4px;">
+              </span>`
+            : `<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: #FFB31C;"></span>
                 <span style="color: #6b7280;">Deadwood</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
-              </span>
+              </span>`;
+
+          tooltipElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px; color: #374151;">
+              ${activeLayerHtml}
               <button id="close-cell-tooltip" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; padding: 0 0 0 4px;">&times;</button>
             </div>
           `;
@@ -344,7 +348,12 @@ const DeadtreesMap = () => {
         layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer],
         view: initialView,
         overlays: [],
-        controls: [],
+        controls: [
+          new Attribution({
+            collapsible: true,
+            collapsed: true,
+          }),
+        ],
       });
 
       // Create flag hover overlay
@@ -426,7 +435,7 @@ const DeadtreesMap = () => {
       if (nextIsWayback && selectedReleaseNum) {
         source = new XYZ({
           url: getWaybackTileUrl(selectedReleaseNum),
-          attributions: "© Esri, Maxar, Earthstar Geographics",
+          attributions: "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics",
           maxZoom: 19,
           crossOrigin: "anonymous",
         });
@@ -803,11 +812,12 @@ const DeadtreesMap = () => {
             isWaybackActive={DeadwoodMapStyle === "wayback"}
             autoMatchImagery={autoMatchImagery}
             onAutoMatchChange={setAutoMatchImagery}
+            showForest={showForest}
           />
         </div>
 
-        {/* Bottom Center Above Year - Warning Alert */}
-        <div className="absolute bottom-28 left-1/2 z-40 max-w-xl -translate-x-1/2">
+        {/* Top Center - Warning Alert */}
+        <div className="absolute left-1/2 top-24 z-40 max-w-xl -translate-x-1/2">
           <Alert
             message="Preview visualization (alpha) — this map will evolve and improve over time."
             type="warning"
@@ -816,9 +826,21 @@ const DeadtreesMap = () => {
           />
         </div>
 
+        {/* Zoom hint for Standing Deadwood at low zoom levels */}
+        {showDeadwood && currentZoom < 10 && (
+          <div className="absolute left-1/2 top-40 z-40 max-w-md -translate-x-1/2">
+            <Alert
+              message="Zoom in to see Standing Deadwood predictions. Search for a location or use Quick Access to jump to hotspots."
+              type="info"
+              showIcon
+              closable
+            />
+          </div>
+        )}
+
         {/* Bottom Right - Legend with Click Info */}
         <div className="absolute bottom-2 right-2 z-50">
-          <MapLegend clickedValues={clickedValues} />
+          <MapLegend clickedValues={clickedValues} showForest={showForest} showDeadwood={showDeadwood} />
         </div>
       </div>
 

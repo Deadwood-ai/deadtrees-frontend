@@ -1,6 +1,15 @@
 import { useEffect, useMemo } from "react";
 import { Segmented, Tooltip, Typography, Spin, Button } from "antd";
-import { LeftOutlined, RightOutlined, LoadingOutlined, CameraOutlined, LinkOutlined } from "@ant-design/icons";
+import {
+  LeftOutlined,
+  RightOutlined,
+  LoadingOutlined,
+  CameraOutlined,
+  LinkOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
 import type { WaybackItemWithMetadata } from "../../hooks/useWaybackItems";
 
 const { Text } = Typography;
@@ -75,6 +84,8 @@ interface YearImagerySelectorProps {
   autoMatchImagery?: boolean;
   /** Callback when auto-match setting changes */
   onAutoMatchChange?: (enabled: boolean) => void;
+  /** Whether tree cover layer is shown (if false, deadwood is shown) */
+  showForest?: boolean;
 }
 
 /**
@@ -96,7 +107,11 @@ const YearImagerySelector = ({
   isWaybackActive = true,
   autoMatchImagery = true,
   onAutoMatchChange,
+  showForest = false,
 }: YearImagerySelectorProps) => {
+  // Determine the active product name based on which layer is shown
+  const activeProductName = showForest ? "Fractional Tree Cover" : "Fractional Standing Deadwood";
+
   // Items are already sorted by acquisition date (oldest first) from the hook
 
   // Extract years that have imagery from waybackItems
@@ -109,23 +124,24 @@ const YearImagerySelector = ({
     return years;
   }, [waybackItems]);
 
-  // Dynamic options with visual indicator for years with imagery
+  // Dynamic options with visual indicator for years with imagery (no opacity - all years have predictions)
   const predictionYearOptions = useMemo(
     () =>
       PREDICTION_YEARS.map((y) => ({
         value: y,
         label: (
-          <span className={!yearsWithImagery.has(y) ? "opacity-50" : ""}>
+          <span className="inline-flex items-center">
             {y}
-            {yearsWithImagery.has(y) && <span className="ml-0.5 text-green-500">•</span>}
+            {yearsWithImagery.has(y) && (
+              <span className="ml-0.5 text-green-500" style={{ fontSize: "18px", lineHeight: 0 }}>
+                •
+              </span>
+            )}
           </span>
         ),
       })),
     [yearsWithImagery],
   );
-
-  // Check if current prediction year has imagery
-  const currentYearHasImagery = yearsWithImagery.has(predictionYear);
 
   // Check if current selection is valid (exists in current waybackItems)
   const isSelectionValid =
@@ -198,53 +214,78 @@ const YearImagerySelector = ({
 
   const hasNoImagery = waybackItems.length === 0 && !isLoading;
 
+  // Get the base map year for display
+  const baseMapYear = selectedItem?.acquisitionDate?.getFullYear();
+  const yearsMatch = baseMapYear?.toString() === predictionYear;
+
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
-      {/* Row 1: Prediction Year */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handlePredictionPrev}
-          disabled={isPredictionFirst}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
-        >
-          <LeftOutlined />
-        </button>
-        <Segmented
-          size="small"
-          value={predictionYear}
-          onChange={(value) => onPredictionYearChange(value as string)}
-          options={predictionYearOptions}
-        />
-        <button
-          onClick={handlePredictionNext}
-          disabled={isPredictionLast}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
-        >
-          <RightOutlined />
-        </button>
+      {/* Row 1: Prediction Year with label on top */}
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePredictionPrev}
+            disabled={isPredictionFirst}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+          >
+            <LeftOutlined />
+          </button>
+          <Segmented
+            size="small"
+            value={predictionYear}
+            onChange={(value) => onPredictionYearChange(value as string)}
+            options={predictionYearOptions}
+          />
+          <button
+            onClick={handlePredictionNext}
+            disabled={isPredictionLast}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+          >
+            <RightOutlined />
+          </button>
 
-        {/* Auto-match toggle */}
-        {isWaybackActive && (
-          <Tooltip title={autoMatchImagery ? "Auto-matching imagery to year" : "Manual imagery selection"}>
-            <Button
-              size="small"
-              type={autoMatchImagery ? "primary" : "default"}
-              icon={<LinkOutlined />}
-              onClick={() => onAutoMatchChange?.(!autoMatchImagery)}
-              className="ml-1"
-            />
-          </Tooltip>
-        )}
+          {/* Auto-match toggle */}
+          {isWaybackActive && (
+            <Tooltip title={autoMatchImagery ? "Auto-matching imagery to year" : "Manual imagery selection"}>
+              <Button
+                size="small"
+                type={autoMatchImagery ? "primary" : "default"}
+                icon={<LinkOutlined />}
+                onClick={() => onAutoMatchChange?.(!autoMatchImagery)}
+                className="ml-1"
+              />
+            </Tooltip>
+          )}
+        </div>
       </div>
 
-      {/* Row 2: Satellite Imagery Info */}
+      {/* Row 2: Base Layer with label and informative message */}
       {isWaybackActive && (
         <div className="flex flex-col items-center gap-1 border-t border-gray-100 pt-2">
-          {/* Warning when year has no imagery */}
-          {!isLoading && !currentYearHasImagery && waybackItems.length > 0 && (
-            <Text type="warning" className="text-xs">
-              No imagery for {predictionYear} — showing closest available
-            </Text>
+          {/* Informative message - always visible when imagery is loaded */}
+          {!isLoading && waybackItems.length > 0 && selectedItem && (
+            <div className="flex items-center gap-1.5 text-xs">
+              {yearsMatch ? (
+                <CheckCircleOutlined className="text-green-500" style={{ fontSize: "12px" }} />
+              ) : (
+                <WarningOutlined className="text-amber-500" style={{ fontSize: "12px" }} />
+              )}
+              <Text type="secondary">
+                {yearsMatch ? (
+                  <>
+                    {predictionYear} {activeProductName} with matching{" "}
+                    <span className="text-green-500" style={{ fontSize: "14px", lineHeight: 0 }}>
+                      •
+                    </span>{" "}
+                    base map
+                  </>
+                ) : (
+                  <>
+                    {predictionYear} {activeProductName} against {baseMapYear || "unknown"} base map
+                  </>
+                )}
+              </Text>
+            </div>
           )}
 
           <div className="flex items-center justify-center gap-3">
@@ -324,6 +365,24 @@ const YearImagerySelector = ({
                     <RightOutlined style={{ fontSize: "10px" }} />
                   </button>
                 )}
+
+                {/* Info icon at bottom right */}
+                <Tooltip
+                  title={
+                    <div className="text-center">
+                      <div className="font-medium">About this view</div>
+                      <div className="mt-1">Predictions are available for all years (2017-2025).</div>
+                      <div className="mt-1">
+                        <span className="text-green-400">•</span> indicates base map imagery is available for that year.
+                      </div>
+                      <div className="mt-1 text-gray-300">
+                        The base map shows satellite imagery for visual context only.
+                      </div>
+                    </div>
+                  }
+                >
+                  <InfoCircleOutlined className="ml-1 cursor-help text-gray-400" style={{ fontSize: "12px" }} />
+                </Tooltip>
               </>
             )}
           </div>

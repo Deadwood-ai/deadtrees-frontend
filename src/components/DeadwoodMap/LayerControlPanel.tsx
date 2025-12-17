@@ -1,4 +1,4 @@
-import { Segmented, Slider, Switch, Button, Divider } from "antd";
+import { Segmented, Slider, Switch, Button, Divider, Radio } from "antd";
 import { FlagOutlined } from "@ant-design/icons";
 
 interface LayerControlPanelProps {
@@ -22,9 +22,9 @@ interface LayerControlPanelProps {
   flagsCount?: number;
 }
 
-// Basemap options: Map and Historical Satellite
+// Basemap options: Streets and Historical Satellite
 const basemapOptions = [
-  { value: "streets-v12", label: "Map" },
+  { value: "streets-v12", label: "Streets" },
   { value: "wayback", label: "Satellite" },
 ];
 
@@ -58,24 +58,34 @@ const LayerControlPanel = ({
 
       <Divider className="my-3" />
 
-      {/* Data Layers */}
-      <div className="mb-2 text-xs font-medium text-gray-500">Data Layers</div>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-green-500" />
-            <span className="text-xs text-gray-600">Tree Cover</span>
-          </div>
-          <Switch size="small" checked={showForest} onChange={setShowForest} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
-            <span className="text-xs text-gray-600">Standing Deadwood</span>
-          </div>
-          <Switch size="small" checked={showDeadwood} onChange={setShowDeadwood} />
-        </div>
-      </div>
+      {/* Data Layers - mutually exclusive, one must always be on */}
+      <div className="mb-2 text-xs font-medium text-gray-500">Data Layer</div>
+      <Radio.Group
+        value={showForest ? "forest" : showDeadwood ? "deadwood" : "forest"}
+        onChange={(e) => {
+          if (e.target.value === "forest") {
+            setShowForest(true);
+            setShowDeadwood(false);
+          } else {
+            setShowDeadwood(true);
+            setShowForest(false);
+          }
+        }}
+        className="flex flex-col gap-1"
+      >
+        <Radio value="forest" className="text-xs">
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-sm bg-green-500" />
+            <span className="text-gray-600">Tree</span>
+          </span>
+        </Radio>
+        <Radio value="deadwood" className="text-xs">
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
+            <span className="text-gray-600">Standing Deadwood</span>
+          </span>
+        </Radio>
+      </Radio.Group>
 
       <Divider className="my-3" />
 

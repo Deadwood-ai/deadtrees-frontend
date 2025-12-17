@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* OpenLayers Attribution Control - position in bottom-left */
+.ol-attribution {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: auto;
+  max-width: calc(100% - 16px);
+  background-color: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  z-index: 40;
+}
+
+.ol-attribution.ol-collapsed {
+  background-color: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.ol-attribution button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+}
+
+.ol-attribution ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: inline;
+}
+
+.ol-attribution li {
+  display: inline;
+  margin: 0 4px;
+}
+
 .logo-scroll {
   overflow: hidden;
   width: 100%;

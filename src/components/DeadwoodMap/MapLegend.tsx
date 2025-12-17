@@ -7,6 +7,8 @@ interface ClickedValues {
 
 interface MapLegendProps {
   clickedValues: ClickedValues | null;
+  showForest: boolean;
+  showDeadwood: boolean;
 }
 
 // Gradient bar with optional value indicator
@@ -34,64 +36,72 @@ const GradientBar = ({
   </div>
 );
 
-const MapLegend = ({ clickedValues }: MapLegendProps) => {
+const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) => {
   return (
     <div className="flex w-52 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Header */}
-      <div className="mb-3 text-sm font-medium text-gray-700">Fractional Cover</div>
+      <div className="mb-2 text-sm font-medium text-gray-700">Fractional Cover</div>
 
-      {/* Tree */}
-      <div className="mb-3">
-        <div className="mb-1 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-green-500" />
-            <span className="text-xs text-gray-600">Tree</span>
+      {/* Tree - only show when active */}
+      {showForest && (
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-sm bg-green-500" />
+              <span className="text-xs text-gray-600">Tree</span>
+            </div>
+            <span className="text-xs text-gray-400">0–100%</span>
           </div>
-          <span className="text-xs text-gray-400">0–100%</span>
+          <GradientBar
+            gradientClass="bg-gradient-to-r from-green-100 via-green-400 to-green-700"
+            value={clickedValues?.forestPct ?? null}
+            indicatorColor="#000"
+          />
         </div>
-        <GradientBar
-          gradientClass="bg-gradient-to-r from-green-100 via-green-400 to-green-700"
-          value={clickedValues?.forestPct ?? null}
-          indicatorColor="#000"
-        />
-      </div>
+      )}
 
-      {/* Standing Deadwood */}
-      <div className="mb-1">
-        <div className="mb-1 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
-            <span className="text-xs text-gray-600">Standing Deadwood</span>
+      {/* Standing Deadwood - only show when active */}
+      {showDeadwood && (
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
+              <span className="text-xs text-gray-600">Standing Deadwood</span>
+            </div>
+            <span className="text-xs text-gray-400">0–100%</span>
           </div>
-          <span className="text-xs text-gray-400">0–100%</span>
+          <GradientBar
+            gradientClass="bg-gradient-to-r from-[#fff4d9] via-[#FFB31C] to-[#cc8f16]"
+            value={clickedValues?.deadwoodPct ?? null}
+            indicatorColor="#000"
+          />
         </div>
-        <GradientBar
-          gradientClass="bg-gradient-to-r from-[#fff4d9] via-[#FFB31C] to-[#cc8f16]"
-          value={clickedValues?.deadwoodPct ?? null}
-          indicatorColor="#000"
-        />
-      </div>
+      )}
 
-      {/* Clicked Location Values */}
-      <div className="mt-3 border-t border-gray-100 pt-3">
-        <div className="mb-2 flex items-center gap-1 text-xs font-medium text-gray-500">
+      {/* Clicked Location Values - only show active layer value */}
+      <div className="mt-2 border-t border-gray-100 pt-2">
+        <div className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-500">
           <EnvironmentOutlined />
           <span>Clicked Location</span>
         </div>
 
         {clickedValues ? (
-          <div className="flex justify-between text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-gray-500">Tree:</span>
-              <span className="font-semibold text-green-600">{clickedValues.forestPct}%</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-500">Deadwood:</span>
-              <span className="font-semibold text-[#cc8f16]">{clickedValues.deadwoodPct}%</span>
-            </div>
+          <div className="flex text-xs">
+            {showForest && (
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Tree:</span>
+                <span className="font-semibold text-green-600">{clickedValues.forestPct}%</span>
+              </div>
+            )}
+            {showDeadwood && (
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">Deadwood:</span>
+                <span className="font-semibold text-[#cc8f16]">{clickedValues.deadwoodPct}%</span>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="text-center text-xs text-gray-400">Click on map to see values</div>
+          <div className="text-xs text-gray-400">Click on map to see values</div>
         )}
       </div>
     </div>

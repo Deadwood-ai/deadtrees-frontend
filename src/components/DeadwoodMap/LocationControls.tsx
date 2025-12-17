@@ -20,7 +20,6 @@ const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: Locatio
       <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
         <GeoapifyGeocoderAutocomplete
           placeholder="Search location..."
-          filterByCountryCode={["de"]}
           placeSelect={(place) => place?.bbox && onPlaceSelect(place.bbox)}
         />
       </GeoapifyContext>
