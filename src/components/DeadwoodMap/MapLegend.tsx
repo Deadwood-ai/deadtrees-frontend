@@ -42,7 +42,7 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
       {/* Header */}
       <div className="mb-2">
         <div className="text-sm font-medium text-gray-700">Fractional Cover</div>
-        <div className="text-xs text-gray-400">Sentinel-2-based</div>
+        <div className="text-xs text-gray-400">Sentinel-2 based</div>
       </div>
 
       {/* Tree - only show when active */}
