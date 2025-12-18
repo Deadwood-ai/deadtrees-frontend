@@ -25,7 +25,7 @@ interface LayerControlPanelProps {
 // Basemap options: Streets and Satellite
 const basemapOptions = [
   { value: "streets-v12", label: "Streets" },
-  { value: "wayback", label: "Satellite" },
+  { value: "wayback", label: "Imagery" },
 ];
 
 const LayerControlPanel = ({
