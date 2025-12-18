@@ -1,4 +1,4 @@
-import { Segmented, Slider, Switch, Button, Divider, Radio } from "antd";
+import { Segmented, Slider, Switch, Button, Divider, Checkbox } from "antd";
 import { FlagOutlined } from "@ant-design/icons";
 
 interface LayerControlPanelProps {
@@ -22,7 +22,7 @@ interface LayerControlPanelProps {
   flagsCount?: number;
 }
 
-// Basemap options: Streets and Historical Satellite
+// Basemap options: Streets and Satellite
 const basemapOptions = [
   { value: "streets-v12", label: "Streets" },
   { value: "wayback", label: "Satellite" },
@@ -58,34 +58,22 @@ const LayerControlPanel = ({
 
       <Divider className="my-3" />
 
-      {/* Data Layers - mutually exclusive, one must always be on */}
-      <div className="mb-2 text-xs font-medium text-gray-500">Data Layer</div>
-      <Radio.Group
-        value={showForest ? "forest" : showDeadwood ? "deadwood" : "forest"}
-        onChange={(e) => {
-          if (e.target.value === "forest") {
-            setShowForest(true);
-            setShowDeadwood(false);
-          } else {
-            setShowDeadwood(true);
-            setShowForest(false);
-          }
-        }}
-        className="flex flex-col gap-1"
-      >
-        <Radio value="forest" className="text-xs">
+      {/* Data Layers - independent toggles, 0/1/2 layers can be active */}
+      <div className="mb-2 text-xs font-medium text-gray-500">Data Layers</div>
+      <div className="flex flex-col gap-1">
+        <Checkbox checked={showForest} onChange={(e) => setShowForest(e.target.checked)}>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-sm bg-green-500" />
-            <span className="text-gray-600">Tree</span>
+            <span className="text-xs text-gray-600">Tree</span>
           </span>
-        </Radio>
-        <Radio value="deadwood" className="text-xs">
+        </Checkbox>
+        <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
-            <span className="text-gray-600">Standing Deadwood</span>
+            <span className="text-xs text-gray-600">Standing Deadwood</span>
           </span>
-        </Radio>
-      </Radio.Group>
+        </Checkbox>
+      </div>
 
       <Divider className="my-3" />
 

@@ -61,6 +61,7 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
       )}
 
       {/* Standing Deadwood - only show when active */}
+      {showDeadwood && showForest && <div className="mt-2" />}
       {showDeadwood && (
         <div>
           <div className="mb-1 flex items-center justify-between">

@@ -98,6 +98,7 @@ const DeadtreesMap = () => {
   const mapRef = useRef(null);
   const forestLayerRef = useRef<TileLayerWebGL | null>(null);
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
+  const hasAutoSelectedImageryRef = useRef(false); // Track if we've done initial auto-selection
   const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
 
   // Flag feature state
@@ -113,14 +114,16 @@ const DeadtreesMap = () => {
   const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
 
-  // Layer visibility state
+  // Layer visibility state - both layers visible by default
   const [showForest, setShowForest] = useState(true);
-  const [showDeadwood, setShowDeadwood] = useState(false);
-  const [deadwoodWarningShown, setDeadwoodWarningShown] = useState(false);
+  const [showDeadwood, setShowDeadwood] = useState(true);
   const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] = useState(false);
 
   // Wayback imagery state - using debounced location-based query
-  const [selectedReleaseNum, setSelectedReleaseNum] = useState<number | null>(null);
+  // Default to a recent Wayback release (31144 = 2024) for immediate satellite display
+  // This gets updated when location-specific wayback items load
+  const DEFAULT_WAYBACK_RELEASE = 31144;
+  const [selectedReleaseNum, setSelectedReleaseNum] = useState<number | null>(DEFAULT_WAYBACK_RELEASE);
   const [autoMatchImagery, setAutoMatchImagery] = useState(true); // Auto-match imagery to prediction year
 
   // Track map center in lon/lat for location-specific wayback queries
@@ -195,25 +198,30 @@ const DeadtreesMap = () => {
       const deadwoodPct = dwVal > 0 ? Math.round((dwVal / 255) * 100) : 0;
       const forestPct = fVal > 0 ? Math.round((fVal / 255) * 100) : 0;
 
-      // Update tooltip over the clicked cell - only show active layer
+      // Update tooltip over the clicked cell - show active layers
       if (clickedCellTooltipRef.current) {
         const tooltipElement = clickedCellTooltipRef.current.getElement();
         if (tooltipElement) {
-          const activeLayerHtml = showForest
-            ? `<span style="display: flex; align-items: center; gap: 4px;">
+          // Build tooltip content based on which layers are active
+          const layerParts: string[] = [];
+          if (showForest) {
+            layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: #22c55e;"></span>
                 <span style="color: #6b7280;">Tree</span>
                 <span style="font-weight: 600;">${forestPct}%</span>
-              </span>`
-            : `<span style="display: flex; align-items: center; gap: 4px;">
+              </span>`);
+          }
+          if (showDeadwood) {
+            layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: #FFB31C;"></span>
                 <span style="color: #6b7280;">Deadwood</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
-              </span>`;
+              </span>`);
+          }
 
           tooltipElement.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px; color: #374151;">
-              ${activeLayerHtml}
+              ${layerParts.join("")}
               <button id="close-cell-tooltip" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; padding: 0 0 0 4px;">&times;</button>
             </div>
           `;
@@ -249,12 +257,12 @@ const DeadtreesMap = () => {
         center: DeadwoodMapViewport.center,
         zoom: DeadwoodMapViewport.zoom,
       });
-      // Default to Wayback basemap - will be updated once wayback items are loaded
+      // Initialize with Wayback satellite imagery directly (using default release)
       const basemapLayer = new TileLayer({
         preload: 0,
         source: new XYZ({
-          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attributions: "© OpenStreetMap contributors",
+          url: getWaybackTileUrl(DEFAULT_WAYBACK_RELEASE),
+          attributions: "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics",
           maxZoom: 19,
           crossOrigin: "anonymous",
         }),
@@ -294,7 +302,7 @@ const DeadtreesMap = () => {
       const deadwoodLayer = new TileLayerWebGL({
         source: getCachedDeadwoodSource(selectedYear),
         className: "deadwood-layer",
-        visible: false, // Deadwood is hidden by default
+        visible: true, // Both layers visible by default
         style: {
           color: [
             "interpolate",
@@ -502,8 +510,9 @@ const DeadtreesMap = () => {
 
   // Initialize Wayback style and auto-select best imagery when items first load
   useEffect(() => {
-    if (localWaybackItems.length > 0 && selectedReleaseNum === null) {
-      // Set to Wayback as default style
+    if (localWaybackItems.length > 0 && !hasAutoSelectedImageryRef.current) {
+      hasAutoSelectedImageryRef.current = true;
+      // Set to Wayback as default style (already default, but ensure it's set)
       setDeadwoodMapStyle("wayback");
       // Select best version for current year (handled by YearImagerySelector)
     }
@@ -633,17 +642,20 @@ const DeadtreesMap = () => {
     }
   }, [showForest]);
 
-  // Toggle deadwood layer visibility and show warning modal
+  // Toggle deadwood layer visibility
   useEffect(() => {
     if (deadwoodLayerRef.current) {
       deadwoodLayerRef.current.setVisible(showDeadwood);
     }
+  }, [showDeadwood]);
 
-    // Show warning modal when deadwood is enabled for the first time
-    if (showDeadwood && !deadwoodWarningShown) {
+  // Show preview warning modal on initial load (once per browser session)
+  useEffect(() => {
+    const hasSeenWarning = sessionStorage.getItem("deadtrees-preview-warning-shown");
+    if (!hasSeenWarning) {
       setDeadwoodWarningModalOpen(true);
     }
-  }, [showDeadwood, deadwoodWarningShown]);
+  }, []);
 
   // Start drawing flag bbox
   const startFlagDrawing = useCallback(() => {
@@ -738,10 +750,10 @@ const DeadtreesMap = () => {
     setFlagDescription("");
   }, []);
 
-  // Handle deadwood warning modal close
+  // Handle preview warning modal close
   const handleDeadwoodWarningClose = useCallback(() => {
     setDeadwoodWarningModalOpen(false);
-    setDeadwoodWarningShown(true);
+    sessionStorage.setItem("deadtrees-preview-warning-shown", "true");
   }, []);
 
   // Handle map style change
@@ -813,30 +825,9 @@ const DeadtreesMap = () => {
             autoMatchImagery={autoMatchImagery}
             onAutoMatchChange={setAutoMatchImagery}
             showForest={showForest}
+            showDeadwood={showDeadwood}
           />
         </div>
-
-        {/* Top Center - Warning Alert */}
-        <div className="absolute left-1/2 top-24 z-40 max-w-xl -translate-x-1/2">
-          <Alert
-            message="Preview visualization (alpha) — this map will evolve and improve over time."
-            type="warning"
-            showIcon
-            closable
-          />
-        </div>
-
-        {/* Zoom hint for Standing Deadwood at low zoom levels */}
-        {showDeadwood && currentZoom < 10 && (
-          <div className="absolute left-1/2 top-40 z-40 max-w-md -translate-x-1/2">
-            <Alert
-              message="Zoom in to see Standing Deadwood predictions. Search for a location or use Quick Access to jump to hotspots."
-              type="info"
-              showIcon
-              closable
-            />
-          </div>
-        )}
 
         {/* Bottom Right - Legend with Click Info */}
         <div className="absolute bottom-2 right-2 z-50">
@@ -884,7 +875,7 @@ const DeadtreesMap = () => {
         cancelButtonProps={{ style: { display: "none" } }}
         width={480}
       >
-        <div className="flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-4">
           {/* Alpha Warning */}
           <div className="flex gap-3 rounded-lg bg-orange-50 p-3">
             <InfoCircleOutlined className="mt-0.5 text-lg text-orange-500" />

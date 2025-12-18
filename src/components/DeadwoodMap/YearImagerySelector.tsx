@@ -84,8 +84,10 @@ interface YearImagerySelectorProps {
   autoMatchImagery?: boolean;
   /** Callback when auto-match setting changes */
   onAutoMatchChange?: (enabled: boolean) => void;
-  /** Whether tree cover layer is shown (if false, deadwood is shown) */
+  /** Whether tree cover layer is shown */
   showForest?: boolean;
+  /** Whether standing deadwood layer is shown */
+  showDeadwood?: boolean;
 }
 
 /**
@@ -108,9 +110,17 @@ const YearImagerySelector = ({
   autoMatchImagery = true,
   onAutoMatchChange,
   showForest = false,
+  showDeadwood = false,
 }: YearImagerySelectorProps) => {
-  // Determine the active product name based on which layer is shown
-  const activeProductName = showForest ? "Fractional Tree Cover" : "Fractional Standing Deadwood";
+  // Determine the active product name based on which layers are shown
+  const activeProductName =
+    showForest && showDeadwood
+      ? "Fractional Cover"
+      : showForest
+        ? "Fractional Tree Cover"
+        : showDeadwood
+          ? "Fractional Standing Deadwood"
+          : "Predictions";
 
   // Items are already sorted by acquisition date (oldest first) from the hook
 
@@ -292,7 +302,7 @@ const YearImagerySelector = ({
             {isLoading ? (
               <div className="flex items-center gap-2 text-gray-400">
                 <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} />
-                <span className="text-xs">Loading satellite imagery...</span>
+                <span className="text-xs">Finding basemap imagery for this area ...</span>
               </div>
             ) : hasNoImagery ? (
               <Text type="secondary" className="text-xs text-gray-400">
