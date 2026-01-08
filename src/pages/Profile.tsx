@@ -93,8 +93,8 @@ export default function ProfilePage() {
   } else {
     return (
       <div className="m-auto min-h-screen w-full max-w-7xl">
-        <div className="flex items-center pb-8 pt-12">
-          <div className="w-1/2">
+        <div className="flex items-center justify-between pb-16 pt-12">
+          <div className="flex flex-col">
             <Badge count={myFlags.length} color="red">
               <ProfileAvatar email={user?.email ?? ""} />
             </Badge>
@@ -106,7 +106,7 @@ export default function ProfilePage() {
           <div>
             <Alert
               message="Upload and Publish Your Data"
-              className="max-w-5xl"
+              className="max-w-3xl"
               description={
                 <>
                   <p>
@@ -114,28 +114,28 @@ export default function ProfilePage() {
                     <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer">
                       FreiDATA
                     </a>{" "}
-                    to get a DOI. Questions?{" "}
-                    <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">Contact us</a>.
+                    to get a DOI.
                   </p>
                   <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                     <li>
-                      🗺️ <strong>Formats:</strong> GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG, JPG, TIF (max
-                      30GB)
+                      🗺️ <strong>Formats:</strong> Standalone GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG,
+                      JPG (max 30GB)
                     </li>
                     <li>
                       🔧 <strong>Raw Images:</strong> For orthomosaic generation we recommend {">"}85%-front and {">"}
-                      70%-side overlap{" "}
+                      70%-side overlap
                     </li>
                     <li>
-                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;10cm resolution, any reference system
+                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;10cm resolution, any coordinate reference system
                     </li>
                     <li>
-                      🏆 <strong>Publishing:</strong> Get DOI via{" "}
-                      <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer">
-                        FreiDATA
-                      </a>
+                      🏆 <strong>Publishing:</strong> After upload, click "request DOI" and "Publish Data". No direct
+                      interaction with FreiDATA needed.
                     </li>
                   </ul>
+                  <p>
+                    Questions? <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">Contact us</a>
+                  </p>
                 </>
               }
               type="info"
