@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0",
-    port: 5173,
+    port: 3000,
     hmr: {
-      clientPort: 5173,
+      clientPort: 3000,
     },
     proxy: {
       "/api/sam": {
