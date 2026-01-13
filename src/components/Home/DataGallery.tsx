@@ -7,6 +7,7 @@ import { Settings } from "../../config";
 import countryList from "../../utils/countryList";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import parseBBox from "../../utils/parseBBox";
+import { isDatasetViewable } from "../../utils/datasetVisibility";
 
 // Convert a geographic bounding box to area in hectares
 const calculateAreaFromBBox = (bboxArray: number[]): number => {
@@ -48,8 +49,8 @@ const Stats = () => {
   const stats = useMemo(() => {
     if (!data) return { orthophotos: 0, area: 0, countries: 0, fileSize: 0 };
 
-    // Filter data with required fields
-    const validData = data.filter((item) => item.is_thumbnail_done && item.is_cog_done && !item.has_error);
+    // Filter data with required fields using centralized visibility check
+    const validData = data.filter((item) => isDatasetViewable(item));
 
     // Calculate orthophoto count
     const orthophotos = validData.length;
@@ -117,20 +118,14 @@ const DataGallery = () => {
     // Debug: Check initial data
     // console.log("Initial data count:", sorted.length);
 
-    // First filter for required fields
+    // First filter for required fields using centralized visibility check
     const filtered = sorted.filter((item) => {
-      if (
-        !item.authors ||
-        !Array.isArray(item.authors) ||
-        !item.thumbnail_path ||
-        !item.admin_level_1 ||
-        !item.is_thumbnail_done ||
-        !item.is_cog_done ||
-        item.has_error
-      ) {
+      // Carousel-specific requirements (authors and thumbnail for display)
+      if (!item.authors || !Array.isArray(item.authors) || !item.thumbnail_path) {
         return false;
       }
-      return true;
+      // Use centralized visibility check for core requirements
+      return isDatasetViewable(item);
     });
 
     // Debug: Check after required fields filter

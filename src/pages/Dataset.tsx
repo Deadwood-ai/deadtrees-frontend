@@ -9,6 +9,7 @@ import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { usePublicDatasets } from "../hooks/useDatasets";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
+import { isDatasetViewable } from "../utils/datasetVisibility";
 
 type SortDirection = "asc" | "desc";
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
@@ -72,17 +73,8 @@ export default function Dataset() {
     if (!filteredData) return null;
 
     const filtered = filteredData.filter((d) => {
-      // Base condition for valid datasets
-      const baseCondition =
-        d.is_upload_done &&
-        d.is_cog_done &&
-        d.is_ortho_done &&
-        d.is_metadata_done &&
-        d.is_thumbnail_done &&
-        !d.has_error &&
-        d.admin_level_1;
-
-      if (!baseCondition) return false;
+      // Use centralized visibility check
+      if (!isDatasetViewable(d)) return false;
 
       // If no search value, return true for the base condition
       if (!searchValue.trim()) return true;

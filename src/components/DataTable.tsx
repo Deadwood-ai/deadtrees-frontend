@@ -19,6 +19,7 @@ import { isGeonadirDataset } from "../utils/datasetUtils";
 import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
 import { useQueuePositions } from "../hooks/useQueuePositions";
+import { isDatasetViewable } from "../utils/datasetVisibility";
 import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
@@ -141,10 +142,8 @@ const DataTable: React.FC<DataTableProps> = ({
     );
   };
 
-  // Dataset is viewable on the map as soon as a COG exists and there is no error
-  const isDatasetViewable = (record: Dataset): boolean => {
-    return !!(!record.has_error && record.is_cog_done);
-  };
+  // Dataset is viewable on the map - use centralized utility
+  // Note: isDatasetViewable is imported from utils/datasetVisibility
 
   // Dataset is eligible for publishing when processing artifacts and metadata are ready (predictions not required)
   const isDatasetPublishEligible = (record: Dataset): boolean => {
