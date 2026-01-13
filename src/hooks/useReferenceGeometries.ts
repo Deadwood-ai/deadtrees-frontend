@@ -202,13 +202,16 @@ export function useRevertToVersion() {
         if (insertError) throw insertError;
       }
 
-      // 5. Update patch's reference label ID
+      // 5. Update patch's reference label ID and updated_at timestamp
       const patchColumnName =
         layerType === "deadwood" ? "reference_deadwood_label_id" : "reference_forest_cover_label_id";
 
       const { error: patchUpdateError } = await supabase
         .from("reference_patches")
-        .update({ [patchColumnName]: newLabel.id })
+        .update({
+          [patchColumnName]: newLabel.id,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", patchId);
 
       if (patchUpdateError) throw patchUpdateError;
