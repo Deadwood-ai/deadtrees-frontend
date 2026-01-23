@@ -14,6 +14,7 @@ import DatasetAudit from "./pages/DatasetAudit";
 import DatasetMLTiles from "./pages/DatasetMLTiles";
 import DatasetReferencePatchEditor from "./pages/DatasetReferencePatchEditor";
 import DatasetLabelEditor from "./pages/DatasetLabelEditor";
+import DatasetCorrections from "./pages/DatasetCorrections";
 import Deadtrees from "./pages/Deadtrees";
 import SignUp from "./pages/auth/SignUp";
 import SignIn from "./pages/auth/SignIn";
@@ -37,6 +38,7 @@ function LayoutWrapper() {
     "/deadtrees",
     "/dataset-audit",
     "/dataset-label",
+    "/dataset-corrections",
     "/sign-in",
     "/sign-up",
     "/forgot-password",
@@ -96,6 +98,8 @@ function AppWithTracking() {
         {/* Old route kept for backward compatibility */}
         <Route path="dataset-audit/:id/ml-tiles" element={<DatasetMLTiles />} />
         <Route path="dataset-label/:id" element={<DatasetLabelEditor />} />
+        {/* Public labelling / corrections editor */}
+        <Route path="dataset-corrections/:id" element={<DatasetCorrections />} />
         <Route path="deadtrees" element={<Deadtrees />} />
         <Route path="about" element={<About />} />
         <Route path="impressum" element={<Impressum />} />

@@ -7,6 +7,7 @@ import {
   DownloadOutlined,
   FlagOutlined,
   InfoCircleOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
@@ -493,9 +494,21 @@ export default function DatasetDetails() {
         </div>
       </Col>
       <Col className="relative flex-1 pt-2">
-        {/* Small Report Issue button overlay in top-right of the map, with badge and popover */}
+        {/* Action buttons overlay in top-right of the map */}
         {user && (
-          <div className="absolute right-3 top-5 z-10">
+          <div className="absolute right-3 top-5 z-10 flex gap-2">
+            {/* Improve Predictions button */}
+            <Tooltip title="Help improve the model predictions by adding, removing, or correcting polygons">
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => navigate(`/dataset-corrections/${dataset.id}`)}
+              >
+                Improve Predictions
+              </Button>
+            </Tooltip>
+
+            {/* Report Issue button with badge and popover */}
             <Popover
               placement="leftTop"
               trigger={["hover"]}
@@ -540,6 +553,21 @@ export default function DatasetDetails() {
                 </Button>
               </Badge>
             </Popover>
+          </div>
+        )}
+
+        {/* Show improve button for non-logged-in users with login prompt */}
+        {!user && (
+          <div className="absolute right-3 top-5 z-10">
+            <Tooltip title="Login to help improve the model predictions">
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => navigate("/sign-in")}
+              >
+                Improve Predictions
+              </Button>
+            </Tooltip>
           </div>
         )}
         <DatasetDetailsMap data={dataset} />
