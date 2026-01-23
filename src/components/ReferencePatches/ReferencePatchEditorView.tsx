@@ -24,8 +24,7 @@ import Feature from "ol/Feature";
 import type TileLayerWebGL from "ol/layer/WebGLTile";
 import ReferencePatchMap from "./ReferencePatchMap";
 import PatchDetailSidebar from "./PatchDetailSidebar";
-import LayerRadioButtons, { LayerSelection } from "./LayerRadioButtons";
-import EditorToolbar from "./EditorToolbar";
+import { LayerRadioButtons, EditorToolbar, type LayerSelection } from "../PolygonEditor";
 
 interface Props {
   dataset: IDataset;
