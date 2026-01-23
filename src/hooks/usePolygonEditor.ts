@@ -506,7 +506,12 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         });
 
         // Auto-exit draw mode after polygon completion
-        draw.once("drawend", () => {
+        draw.once("drawend", (evt) => {
+          // Mark newly drawn feature as new (for save detection)
+          const drawnFeature = evt.feature;
+          if (drawnFeature) {
+            drawnFeature.set("is_new", true);
+          }
           if (!mapRef.current || !drawRef.current) return;
           mapRef.current.removeInteraction(drawRef.current);
           drawRef.current = null;
@@ -564,8 +569,9 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       message.error("Failed to merge polygons.");
       return;
     }
-    // keep id from first feature
+    // keep id from first feature, mark as modified for save detection
     a.setGeometry(merged);
+    a.set("is_modified", true);
     source.removeFeature(b);
     select.getFeatures().clear();
     select.getFeatures().push(a);
@@ -643,6 +649,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     // Update the larger polygon with clipped result, remove the smaller polygon
     console.log("Setting clipped geometry on larger feature and removing smaller feature");
     largerFeature.setGeometry(clipped);
+    largerFeature.set("is_modified", true);
     source.removeFeature(smallerFeature);
     select.getFeatures().clear();
     select.getFeatures().push(largerFeature);
@@ -749,6 +756,9 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
             // Remove original feature
             source.removeFeature(target);
 
+            // Mark all new features as new (for save detection)
+            newFeatures.forEach((f) => f.set("is_new", true));
+
             // Add all new features
             source.addFeatures(newFeatures);
 
@@ -769,6 +779,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
             // Single polygon result - update original feature
             console.log("Single Polygon result - updating original feature");
             target.setGeometry(diff);
+            target.set("is_modified", true);
             message.success("Polygon cut successfully!");
             console.log("=== END CUT OPERATION DEBUG (SUCCESS - Polygon) ===");
           }

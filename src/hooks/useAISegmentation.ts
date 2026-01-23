@@ -332,6 +332,8 @@ export const useAISegmentation = ({
             if (onBeforeAddFeatures) {
               onBeforeAddFeatures();
             }
+            // Mark all AI-generated features as new (for save detection)
+            created.forEach((f) => f.set("is_new", true));
             console.log("[AI Seg] Adding", created.length, "features to source");
             resultSourceRef.current.addFeatures(created);
             console.log(
