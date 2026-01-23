@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
-import { View, Map } from "ol";
+import { View, Map, Overlay } from "ol";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
@@ -9,6 +9,7 @@ import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
 import { Style, Fill, Stroke } from "ol/style";
 import { FeatureLike } from "ol/Feature";
+import { Tag } from "antd";
 
 import { IDataset } from "../../types/dataset";
 import DeadwoodCardDetails from "./DeadwoodCardDetails";
@@ -20,10 +21,30 @@ import { createForestCoverVectorLayer, createAOIVectorLayer, createAOIMaskLayer 
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 
-const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
+interface DatasetDetailsMapProps {
+  data: IDataset;
+  onMapReady?: (map: Map) => void;
+  onOrthoLayerReady?: (layer: TileLayerWebGL) => void;
+  onVectorLayersReady?: (deadwood: VectorTileLayer | null, forestCover: VectorTileLayer | null) => void;
+  hideDeadwoodLayer?: boolean;
+  hideForestCoverLayer?: boolean;
+  refreshKey?: number; // Increment to trigger layer refresh
+}
+
+const DatasetDetailsMap = ({ 
+  data, 
+  onMapReady, 
+  onOrthoLayerReady,
+  onVectorLayersReady,
+  hideDeadwoodLayer = false,
+  hideForestCoverLayer = false,
+  refreshKey = 0,
+}: DatasetDetailsMapProps) => {
   // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const tooltipOverlayRef = useRef<Overlay | null>(null);
   const [mapStyle, setMapStyle] = useState("streets-v12");
   const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
   const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
@@ -31,6 +52,7 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
   const [aoiOpacity, setAoiOpacity] = useState<number>(0.8);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
+  const [tooltipContent, setTooltipContent] = useState<{ type: string; status: string } | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
 
   // Fetch label data for the current dataset using modular hook
@@ -204,17 +226,29 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
               if (selectionLayer) layers.push(selectionLayer);
 
+              // Create tooltip overlay
+              if (tooltipRef.current) {
+                const tooltipOverlay = new Overlay({
+                  element: tooltipRef.current,
+                  positioning: "bottom-center",
+                  offset: [0, -10],
+                  stopEvent: false,
+                });
+                tooltipOverlayRef.current = tooltipOverlay;
+              }
+
               const newMap = new Map({
                 target: mapContainer.current,
                 layers: layers,
                 view: MapView,
                 // maxTilesLoading: 4,
-                overlays: [],
+                overlays: tooltipOverlayRef.current ? [tooltipOverlayRef.current] : [],
                 controls: [],
               });
 
-              // Add pointer move event handler (only if deadwood layer exists)
-              if (deadwoodVectorLayer) {
+              // Add pointer move event handler for deadwood and forest cover
+              const vectorLayers = [deadwoodVectorLayer, forestCoverVectorLayer].filter(Boolean);
+              if (vectorLayers.length > 0) {
                 newMap.on("pointermove", (event) => {
                   // Get current zoom level
                   const currentZoom = MapView.getZoom();
@@ -227,6 +261,8 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                     if (hoveredFeature || hoveredLabelId) {
                       setHoveredFeature(null);
                       setHoveredLabelId(null);
+                      setTooltipContent(null);
+                      tooltipOverlayRef.current?.setPosition(undefined);
 
                       const targetElement = newMap.getTargetElement();
                       if (targetElement) {
@@ -237,34 +273,49 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
                   }
 
                   const pixel = newMap.getEventPixel(event.originalEvent);
-                  const hit = newMap.hasFeatureAtPixel(pixel, {
-                    layerFilter: (layer) => layer === deadwoodVectorLayer,
-                  });
+                  
+                  // Check both deadwood and forest cover layers
+                  let hitLayer: VectorTileLayer | null = null;
+                  let layerType = "";
+                  
+                  if (deadwoodVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodVectorLayer })) {
+                    hitLayer = deadwoodVectorLayer;
+                    layerType = "Deadwood";
+                  } else if (forestCoverVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === forestCoverVectorLayer })) {
+                    hitLayer = forestCoverVectorLayer;
+                    layerType = "Forest Cover";
+                  }
 
                   const targetElement = newMap.getTargetElement();
                   if (targetElement) {
-                    targetElement.style.cursor = hit ? "pointer" : "";
+                    targetElement.style.cursor = hitLayer ? "pointer" : "";
                   }
 
-                  if (hit) {
-                    event.preventDefault();
-                    event.stopPropagation();
-
-                    deadwoodVectorLayer.getFeatures(pixel).then((features) => {
+                  if (hitLayer) {
+                    // Don't prevent default or stop propagation - allow panning to continue
+                    hitLayer.getFeatures(pixel).then((features) => {
                       if (features.length > 0) {
                         const feature = features[0];
                         setHoveredFeature(feature);
-                        // Store the label_id of the hovered feature
                         const polygonId = feature.get("id");
                         setHoveredLabelId(polygonId);
+                        
+                        // Get correction status from feature
+                        const correctionStatus = feature.get("correction_status") || "original";
+                        setTooltipContent({ type: layerType, status: correctionStatus });
+                        tooltipOverlayRef.current?.setPosition(event.coordinate);
                       } else {
                         setHoveredFeature(null);
                         setHoveredLabelId(null);
+                        setTooltipContent(null);
+                        tooltipOverlayRef.current?.setPosition(undefined);
                       }
                     });
                   } else {
                     setHoveredFeature(null);
                     setHoveredLabelId(null);
+                    setTooltipContent(null);
+                    tooltipOverlayRef.current?.setPosition(undefined);
                   }
                 });
               }
@@ -287,6 +338,11 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
               }
 
               mapRef.current = newMap;
+              
+              // Notify parent that map and ortho layer are ready
+              onMapReady?.(newMap);
+              onOrthoLayerReady?.(orthoCogLayer);
+              onVectorLayersReady?.(deadwoodVectorLayer, forestCoverVectorLayer);
             }
           })
           .catch(() => {
@@ -436,6 +492,38 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
     }
   }, [aoiOpacity]);
 
+  // Hide/show deadwood layer based on prop (for editing mode)
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.deadwoodVector) {
+      layerRefs.current.deadwoodVector.setVisible(!hideDeadwoodLayer);
+    }
+  }, [hideDeadwoodLayer]);
+
+  // Hide/show forest cover layer based on prop (for editing mode)
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.forestCoverVector) {
+      layerRefs.current.forestCoverVector.setVisible(!hideForestCoverLayer);
+    }
+  }, [hideForestCoverLayer]);
+
+  // Refresh vector layers when refreshKey changes (after saving edits)
+  useEffect(() => {
+    if (refreshKey > 0 && mapRef.current) {
+      if (layerRefs.current.deadwoodVector) {
+        const source = layerRefs.current.deadwoodVector.getSource();
+        if (source) {
+          source.refresh();
+        }
+      }
+      if (layerRefs.current.forestCoverVector) {
+        const source = layerRefs.current.forestCoverVector.getSource();
+        if (source) {
+          source.refresh();
+        }
+      }
+    }
+  }, [refreshKey]);
+
   // Update the map style effect to preserve the viewport
   useEffect(() => {
     if (mapRef.current && layerRefs.current.basemap) {
@@ -511,6 +599,28 @@ const DatasetDetailsMap = ({ data }: { data: IDataset }) => {
         ref={mapContainer}
         data-rr-ignore
       >
+        {/* Tooltip overlay element */}
+        <div
+          ref={tooltipRef}
+          className="pointer-events-none rounded bg-white px-2 py-1 shadow-lg"
+          style={{ display: tooltipContent ? "block" : "none" }}
+        >
+          {tooltipContent && (
+            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+              <span className="font-medium">{tooltipContent.type}</span>
+              {tooltipContent.status === "original" ? (
+                <Tag color="default" className="m-0">Original</Tag>
+              ) : tooltipContent.status === "pending" ? (
+                <Tag color="orange" className="m-0">Pending Review</Tag>
+              ) : tooltipContent.status === "approved" ? (
+                <Tag color="green" className="m-0">Approved</Tag>
+              ) : (
+                <Tag color="default" className="m-0">{tooltipContent.status}</Tag>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="absolute left-2 top-4 z-20">
           <MapStyleSwitchButtons
             mapStyle={mapStyle}

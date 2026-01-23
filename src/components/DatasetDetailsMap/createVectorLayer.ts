@@ -166,9 +166,10 @@ interface LayerOptions {
 
 export const createDeadwoodVectorLayer = (labelId?: number | null, options?: LayerOptions) =>
   createVectorLayer({
+    // Use original perf function for default, corrections-aware function when styling requested
     rpcFunctionName: options?.showCorrectionStyling 
       ? "get_deadwood_tiles_with_corrections" 
-      : "get_deadwood_tiles",
+      : "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
       fillColor: "rgba(255, 50, 50, 0.8)",
@@ -182,9 +183,10 @@ export const createDeadwoodVectorLayer = (labelId?: number | null, options?: Lay
 
 export const createForestCoverVectorLayer = (labelId?: number, options?: LayerOptions) =>
   createVectorLayer({
+    // Use original perf function for default, corrections-aware function when styling requested
     rpcFunctionName: options?.showCorrectionStyling 
       ? "get_forest_cover_tiles_with_corrections" 
-      : "get_forest_cover_tiles",
+      : "get_forest_cover_vector_tiles_perf",
     className: "forest-cover-vector",
     style: {
       fillColor: "rgba(34, 197, 94, 0.5)", // Green with high opacity

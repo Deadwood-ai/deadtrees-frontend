@@ -18,7 +18,7 @@ import { sanitizeText } from "../utils/textUtils";
 import { usePublicDatasets } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useDownload } from "../hooks/useDownloadProvider";
 import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
 import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation";
@@ -30,8 +30,22 @@ import { useDatasetAudit } from "../hooks/useDatasetAudit";
 import { Modal, Form, Input } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag, useDatasetFlags } from "../hooks/useDatasetFlags";
-import { LayerRadioButtons } from "../components/PolygonEditor";
-import type { LayerSelection } from "../components/PolygonEditor/LayerRadioButtons";
+import { EditorToolbar } from "../components/PolygonEditor";
+import usePolygonEditor from "../hooks/usePolygonEditor";
+import useAISegmentation from "../hooks/useAISegmentation";
+import {
+  usePredictionLabel,
+  useLoadGeometriesForEditing,
+  useSaveCorrections,
+  buildSavePayload,
+  type LayerType,
+} from "../hooks/useSaveCorrections";
+import { useDatasetLabelTypes } from "../hooks/useDatasetLabelTypes";
+import type { Map as OLMap } from "ol";
+import type TileLayerWebGL from "ol/layer/WebGLTile.js";
+import GeoJSON from "ol/format/GeoJSON";
+import type { Feature } from "ol";
+import type { Geometry } from "ol/geom";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -41,8 +55,19 @@ export default function DatasetDetails() {
   const { user } = useAuth();
   const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
   
-  // Layer selection for editing
-  const [layerSelection, setLayerSelection] = useState<LayerSelection>("deadwood");
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingLayerType, setEditingLayerType] = useState<LayerType | null>(null);
+  const [initialFeatures, setInitialFeatures] = useState<Feature<Geometry>[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const mapRef = useRef<OLMap | null>(null);
+  const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
+  const geoJson = useMemo(() => new GeoJSON(), []);
+
+  // Layer visibility during editing - hide the layer NOT being edited
+  const hideDeadwoodLayer = isEditing && editingLayerType === "forest_cover";
+  const hideForestCoverLayer = isEditing && editingLayerType === "deadwood";
 
   // Use the global download state
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
@@ -81,6 +106,228 @@ export default function DatasetDetails() {
 
   const myFlags = useMemo(() => (user?.id ? flags.filter((f) => f.created_by === user.id) : []), [flags, user?.id]);
   // Intentionally no extra computed counters; popover shows a short list and total badge
+
+  // ========== INLINE EDITING HOOKS ==========
+  
+  // Fetch label types for editing
+  const { deadwood: deadwoodLabel, forestCover: forestCoverLabel } = useDatasetLabelTypes({
+    datasetId: dataset?.id,
+    enabled: !!dataset?.id,
+  });
+
+  // Get the prediction label for the selected layer
+  const { data: predictionLabel } = usePredictionLabel(
+    dataset?.id,
+    editingLayerType
+  );
+
+  // Load geometries when editing
+  const { data: loadedGeometries, isLoading: isLoadingGeometries } = useLoadGeometriesForEditing(
+    predictionLabel?.id,
+    editingLayerType
+  );
+
+  // Correction save mutation
+  const saveCorrections = useSaveCorrections();
+
+  // Editor hooks
+  const editor = usePolygonEditor({ mapRef: mapRef as React.MutableRefObject<OLMap | null> });
+  const ai = useAISegmentation({
+    mapRef: mapRef as React.MutableRefObject<OLMap | null>,
+    getOrthoLayer: () => orthoLayerRef.current ?? undefined,
+    getTargetVectorSource: () => editor.getOverlayLayer()?.getSource() ?? undefined,
+  });
+
+  // Check which layers are available
+  const hasDeadwood = !!deadwoodLabel.data?.id;
+  const hasForestCover = !!forestCoverLabel.data?.id && dataset?.is_forest_cover_done;
+
+  // Map ready callback
+  const handleMapReady = useCallback((map: OLMap) => {
+    mapRef.current = map;
+  }, []);
+
+  const handleOrthoLayerReady = useCallback((layer: TileLayerWebGL) => {
+    orthoLayerRef.current = layer;
+  }, []);
+
+  // Start editing handler
+  const handleStartEditing = useCallback((layerType: LayerType) => {
+    if (!user) {
+      message.info("Please login to edit predictions");
+      navigate("/sign-in");
+      return;
+    }
+    setEditingLayerType(layerType);
+    setIsEditing(true);
+    editor.startEditing();
+  }, [user, navigate, editor]);
+
+  // Cancel editing handler
+  const handleCancelEditing = useCallback(() => {
+    editor.stopEditing();
+    editor.getOverlayLayer()?.getSource()?.clear();
+    setIsEditing(false);
+    setEditingLayerType(null);
+    setInitialFeatures([]);
+    message.info("Editing cancelled");
+  }, [editor]);
+
+  // Save edits handler
+  const handleSaveEdits = useCallback(async () => {
+    if (!predictionLabel?.id || !editingLayerType || !user?.id || !dataset?.id) return;
+
+    setIsSaving(true);
+    try {
+      const currentFeatures = editor.getOverlayLayer()?.getSource()?.getFeatures() || [];
+      const { deletions, additions } = buildSavePayload(initialFeatures, currentFeatures, geoJson);
+
+      if (deletions.length === 0 && additions.length === 0) {
+        message.info("No changes to save");
+        setIsSaving(false);
+        return;
+      }
+
+      const result = await saveCorrections.mutateAsync({
+        datasetId: dataset.id,
+        labelId: predictionLabel.id,
+        layerType: editingLayerType,
+        deletions,
+        additions,
+      });
+
+      if (!result.success) {
+        if (result.conflict_ids && result.conflict_ids.length > 0) {
+          message.error(`Conflict detected on ${result.conflict_ids.length} polygons. Please reload and try again.`);
+        } else {
+          message.error(result.message);
+        }
+        setIsSaving(false);
+        return;
+      }
+
+      message.success("Corrections saved successfully!");
+
+      // Clean up and exit editing mode
+      editor.stopEditing();
+      editor.getOverlayLayer()?.getSource()?.clear();
+      setIsEditing(false);
+      setEditingLayerType(null);
+      setInitialFeatures([]);
+      
+      // Refresh vector tile layers to show updated data
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error("Failed to save corrections:", error);
+      message.error("Failed to save corrections");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [predictionLabel?.id, editingLayerType, user?.id, dataset?.id, editor, initialFeatures, geoJson, saveCorrections]);
+
+  // Load geometries into editor when editing starts and data is ready
+  // This effect runs when loadedGeometries changes (after editing starts)
+  const hasLoadedFeatures = useRef(false);
+  useMemo(() => {
+    if (isEditing && loadedGeometries && editingLayerType && mapRef.current && !hasLoadedFeatures.current) {
+      hasLoadedFeatures.current = true;
+      
+      // Clone features for diff calculation
+      const clonedFeatures = loadedGeometries.map((f) => {
+        const clone = f.clone();
+        clone.set("geometry_id", f.get("geometry_id"));
+        clone.set("updated_at", f.get("updated_at"));
+        return clone;
+      });
+      setInitialFeatures(clonedFeatures);
+
+      // Load into editor overlay
+      const overlaySource = editor.getOverlayLayer()?.getSource();
+      if (overlaySource) {
+        overlaySource.clear();
+        loadedGeometries.forEach((f) => overlaySource.addFeature(f));
+      }
+    }
+    if (!isEditing) {
+      hasLoadedFeatures.current = false;
+    }
+  }, [isEditing, loadedGeometries, editingLayerType, editor]);
+
+  // Keyboard shortcuts for editing
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Undo: Ctrl/Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (editor.canUndo) {
+          editor.undo();
+        }
+        return;
+      }
+
+      // Save: Ctrl/Cmd+S
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSaveEdits();
+        return;
+      }
+
+      // Skip if modifier keys (except for above)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case "s":
+          e.preventDefault();
+          if (ai.isActive) {
+            ai.disable();
+          } else {
+            ai.enable();
+          }
+          break;
+        case "a":
+          e.preventDefault();
+          editor.toggleDraw();
+          break;
+        case "c":
+          if (editor.selection && editor.selection.length === 1) {
+            e.preventDefault();
+            editor.cutHoleWithDrawn();
+          }
+          break;
+        case "d":
+          if (editor.selection && editor.selection.length > 0) {
+            e.preventDefault();
+            editor.deleteSelected();
+          }
+          break;
+        case "g":
+          if (editor.selection && editor.selection.length === 2) {
+            e.preventDefault();
+            editor.mergeSelected();
+          }
+          break;
+        case "x":
+          if (editor.selection && editor.selection.length === 2) {
+            e.preventDefault();
+            editor.clipSelected();
+          }
+          break;
+        case "escape":
+          handleCancelEditing();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEditing, editor, ai, handleSaveEdits, handleCancelEditing]);
 
   if (!dataset) {
     return (
@@ -499,46 +746,58 @@ export default function DatasetDetails() {
         </div>
       </Col>
       <Col className="relative flex-1 pt-2">
-        {/* Layer selection toggle - bottom left */}
-        <LayerRadioButtons
-          value={layerSelection}
-          onChange={setLayerSelection}
-          position="bottom-left"
-          availableLayers={
-            dataset.is_forest_cover_done 
-              ? ["ortho_only", "deadwood", "forest_cover"] 
-              : ["ortho_only", "deadwood"]
-          }
-          showAOIIndicator={false}
-        />
+        {/* Editor toolbar when editing */}
+        {isEditing && (
+          <EditorToolbar
+            type={editingLayerType || "deadwood"}
+            isDrawing={editor.isDrawing}
+            hasSelection={editor.selection.length > 0}
+            selectionCount={editor.selection.length}
+            isAIActive={ai.isActive}
+            isAIProcessing={ai.isProcessing}
+            onToggleDraw={() => editor.toggleDraw()}
+            onCutHole={editor.cutHoleWithDrawn}
+            onMerge={editor.mergeSelected}
+            onClip={editor.clipSelected}
+            onToggleAI={() => ai.isActive ? ai.disable() : ai.enable()}
+            onDeleteSelected={editor.deleteSelected}
+            onUndo={editor.undo}
+            canUndo={editor.canUndo}
+            onSave={handleSaveEdits}
+            onCancel={handleCancelEditing}
+            position="top-right"
+            title={`Editing ${editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"}`}
+          />
+        )}
 
-        {/* Action buttons overlay in top-right of the map */}
-        {user && (
+        {/* Action buttons overlay in top-right of the map (when not editing) */}
+        {!isEditing && user && (
           <div className="absolute right-3 top-5 z-10 flex gap-2">
-            {/* Edit Layer button - only enabled when a layer is selected */}
-            <Tooltip 
-              title={
-                layerSelection === "ortho_only" 
-                  ? "Select a layer below (Deadwood or Forest Cover) to edit" 
-                  : `Edit ${layerSelection === "deadwood" ? "Deadwood" : "Forest Cover"} predictions`
-              }
-            >
-              <Button
-                size="small"
-                type={layerSelection !== "ortho_only" ? "primary" : "default"}
-                icon={<EditOutlined />}
-                onClick={() => {
-                  if (layerSelection === "ortho_only") {
-                    message.info("Please select a layer to edit (Deadwood or Forest Cover)");
-                    return;
-                  }
-                  navigate(`/dataset-corrections/${dataset.id}?layer=${layerSelection}`);
-                }}
-                disabled={layerSelection === "ortho_only"}
-              >
-                Edit {layerSelection !== "ortho_only" ? (layerSelection === "deadwood" ? "Deadwood" : "Forest Cover") : "Layer"}
-              </Button>
-            </Tooltip>
+            {/* Edit Deadwood button */}
+            {hasDeadwood && (
+              <Tooltip title="Edit deadwood predictions">
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleStartEditing("deadwood")}
+                >
+                  Edit Deadwood
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Edit Forest Cover button */}
+            {hasForestCover && (
+              <Tooltip title="Edit forest cover predictions">
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleStartEditing("forest_cover")}
+                >
+                  Edit Forest Cover
+                </Button>
+              </Tooltip>
+            )}
 
             {/* Report Issue button with badge and popover */}
             <Popover
@@ -588,22 +847,28 @@ export default function DatasetDetails() {
           </div>
         )}
 
-        {/* Show edit button for non-logged-in users with login prompt */}
-        {!user && (
-          <div className="absolute right-3 top-5 z-10">
+        {/* Show edit buttons for non-logged-in users with login prompt */}
+        {!isEditing && !user && (hasDeadwood || hasForestCover) && (
+          <div className="absolute right-3 top-5 z-10 flex gap-2">
             <Tooltip title="Login to edit predictions">
               <Button
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => navigate("/sign-in")}
-                disabled={layerSelection === "ortho_only"}
               >
-                Edit Layer
+                Edit Predictions
               </Button>
             </Tooltip>
           </div>
         )}
-        <DatasetDetailsMap data={dataset} />
+        <DatasetDetailsMap 
+          data={dataset} 
+          onMapReady={handleMapReady}
+          onOrthoLayerReady={handleOrthoLayerReady}
+          hideDeadwoodLayer={hideDeadwoodLayer}
+          hideForestCoverLayer={hideForestCoverLayer}
+          refreshKey={refreshKey}
+        />
       </Col>
 
       {/* Report Issue Modal */}

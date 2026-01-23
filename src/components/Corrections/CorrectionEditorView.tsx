@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+// Navigation is handled via onClose prop
 import { message, Button, Spin, Alert } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Map as OLMap, View } from "ol";
@@ -10,6 +10,7 @@ import { GeoTIFF } from "ol/source";
 import Feature from "ol/Feature";
 import type { Geometry } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
+import type BaseLayer from "ol/layer/Base";
 
 import { IDataset } from "../../types/dataset";
 import { Settings } from "../../config";
@@ -26,6 +27,7 @@ import {
 import { useAuth } from "../../hooks/useAuthProvider";
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
+import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 
 interface Props {
   dataset: IDataset;
@@ -35,7 +37,7 @@ interface Props {
 
 export default function CorrectionEditorView({ dataset, initialLayerType, onClose }: Props) {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { viewport } = useDatasetDetailsMap();
   const mapRef = useRef<OLMap | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
@@ -46,6 +48,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
   const [isEditing, setIsEditing] = useState(false);
   const [initialFeatures, setInitialFeatures] = useState<Feature<Geometry>[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
@@ -133,8 +136,12 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       orthoCogSource.getView().then((viewOptions) => {
         if (!viewOptions?.extent || !mapContainerRef.current) return;
 
+        // Use viewport from context if available (preserves position from dataset details)
+        const hasViewport = viewport.center[0] !== 0 && viewport.zoom !== 2;
+        
         const mapView = new View({
-          center: viewOptions.center,
+          center: hasViewport ? viewport.center : viewOptions.center,
+          zoom: hasViewport ? viewport.zoom : undefined,
           extent: viewOptions.extent,
           minZoom: 14,
           maxZoom: 23,
@@ -142,7 +149,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
           constrainOnlyCenter: true,
         });
 
-        const layers = [basemapLayer, orthoCogLayer];
+        const layers: BaseLayer[] = [basemapLayer, orthoCogLayer];
         if (forestCoverVectorLayer) layers.push(forestCoverVectorLayer);
         if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
 
@@ -153,8 +160,12 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
           controls: [],
         });
 
-        mapView.fit(viewOptions.extent);
+        // Only fit to extent if no viewport from context
+        if (!hasViewport) {
+          mapView.fit(viewOptions.extent);
+        }
         mapRef.current = newMap;
+        setIsMapReady(true);
       });
     }
 
@@ -248,22 +259,14 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
 
       message.success("Corrections saved successfully!");
 
-      // Clean up and exit editing mode
+      // Clean up and navigate back to dataset details
       editor.stopEditing();
       editor.getOverlayLayer()?.getSource()?.clear();
       setIsEditing(false);
       setInitialFeatures([]);
-
-      // Refresh the vector tile layer to show the saved changes
-      const layerToRefresh = editingLayerType === "deadwood" 
-        ? deadwoodLayerRef.current 
-        : forestCoverLayerRef.current;
-      if (layerToRefresh) {
-        const source = layerToRefresh.getSource();
-        if (source) {
-          source.refresh();
-        }
-      }
+      
+      // Navigate back to dataset details
+      onClose();
     } catch (error) {
       console.error("Failed to save corrections:", error);
       message.error("Failed to save corrections");
@@ -279,6 +282,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
     initialFeatures,
     geoJson,
     saveCorrections,
+    onClose,
   ]);
 
   // Cancel editing
@@ -288,7 +292,9 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
     setIsEditing(false);
     setInitialFeatures([]);
     message.info("Editing cancelled - no changes saved");
-  }, [editor]);
+    // Navigate back to dataset details
+    onClose();
+  }, [editor, onClose]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -436,6 +442,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       initialLayerType &&
       !isEditing &&
       !hasAutoStarted.current &&
+      isMapReady && // Map must be initialized
       predictionLabel?.id &&
       loadedGeometries &&
       !isLoadingLabels &&
@@ -443,9 +450,12 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       !isLoadingGeometries
     ) {
       hasAutoStarted.current = true;
-      handleStartEditing();
+      // Small delay to ensure editor is fully initialized with the map
+      setTimeout(() => {
+        handleStartEditing();
+      }, 100);
     }
-  }, [initialLayerType, isEditing, predictionLabel?.id, loadedGeometries, isLoadingLabels, isLoadingLabel, isLoadingGeometries, handleStartEditing]);
+  }, [initialLayerType, isEditing, isMapReady, predictionLabel?.id, loadedGeometries, isLoadingLabels, isLoadingLabel, isLoadingGeometries, handleStartEditing]);
 
   const isLoading = isLoadingLabels || isLoadingLabel || isLoadingGeometries;
   const canStartEditing = !!predictionLabel?.id && !!loadedGeometries && !isLoading;
