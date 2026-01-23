@@ -19,6 +19,8 @@ interface VectorLayerConfig {
     strokeWidth: number;
   };
   labelId?: number | null;
+  filterCorrectionStatus?: string | null; // 'all', 'pending', or null (default)
+  showCorrectionStyling?: boolean; // Enable different colors for pending/deleted
 }
 
 const createVectorLayer = (config: VectorLayerConfig) => {
@@ -39,13 +41,18 @@ const createVectorLayer = (config: VectorLayerConfig) => {
 
       try {
         const startTime = performance.now();
-        const { data, error } = await supabase.rpc(config.rpcFunctionName, {
+        const rpcParams: Record<string, unknown> = {
           z,
           x,
           y,
           resolution: 4096,
           filter_label_id: config.labelId || null,
-        });
+        };
+        // Add correction filter if using correction-aware functions
+        if (config.rpcFunctionName.includes("_with_corrections")) {
+          rpcParams.filter_correction_status = config.filterCorrectionStatus || null;
+        }
+        const { data, error } = await supabase.rpc(config.rpcFunctionName, rpcParams);
         // const fetchTime = performance.now() - startTime;
 
         if (error) throw error;
@@ -93,17 +100,51 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     transition: 0, // Disable transition for instant rendering
   });
 
+  // Create style function for correction-aware styling
+  const getFeatureStyle = (feature: Feature) => {
+    if (!config.showCorrectionStyling) {
+      // Default static style
+      return new Style({
+        fill: new Fill({ color: config.style.fillColor }),
+        stroke: new Stroke({ color: config.style.strokeColor, width: config.style.strokeWidth }),
+      });
+    }
+
+    // Correction-aware styling
+    const correctionStatus = feature.get("correction_status") as string | undefined;
+    const isDeleted = feature.get("is_deleted") as boolean | undefined;
+
+    let fillColor = config.style.fillColor;
+    let strokeColor = config.style.strokeColor;
+    let strokeWidth = config.style.strokeWidth;
+
+    if (isDeleted && correctionStatus === "pending") {
+      // Deleted but pending review - gray with dashed stroke
+      fillColor = "rgba(128, 128, 128, 0.4)";
+      strokeColor = "#666666";
+      strokeWidth = 2;
+    } else if (correctionStatus === "pending") {
+      // Pending correction (add/modify) - orange
+      fillColor = "rgba(255, 165, 0, 0.6)";
+      strokeColor = "#ff8c00";
+      strokeWidth = 2;
+    } else if (correctionStatus === "approved") {
+      // Approved correction - green tint
+      fillColor = "rgba(34, 197, 94, 0.6)";
+      strokeColor = "#16a34a";
+      strokeWidth = 1.5;
+    }
+    // 'original' or 'rejected' use default style
+
+    return new Style({
+      fill: new Fill({ color: fillColor }),
+      stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+    });
+  };
+
   const vectorLayer = new VectorTileLayer({
     source: vectorSource,
-    style: new Style({
-      fill: new Fill({
-        color: config.style.fillColor,
-      }),
-      stroke: new Stroke({
-        color: config.style.strokeColor,
-        width: config.style.strokeWidth,
-      }),
-    }),
+    style: getFeatureStyle,
     maxZoom: 23,
     className: config.className,
     renderMode: "hybrid", // Use hybrid mode for better performance (GPU acceleration)
@@ -118,9 +159,16 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   return vectorLayer;
 };
 
-export const createDeadwoodVectorLayer = (labelId?: number | null) =>
+interface LayerOptions {
+  showCorrectionStyling?: boolean;
+  filterCorrectionStatus?: string | null;
+}
+
+export const createDeadwoodVectorLayer = (labelId?: number | null, options?: LayerOptions) =>
   createVectorLayer({
-    rpcFunctionName: "get_deadwood_vector_tiles_perf1",
+    rpcFunctionName: options?.showCorrectionStyling 
+      ? "get_deadwood_tiles_with_corrections" 
+      : "get_deadwood_tiles",
     className: "deadwood-vector",
     style: {
       fillColor: "rgba(255, 50, 50, 0.8)",
@@ -128,11 +176,15 @@ export const createDeadwoodVectorLayer = (labelId?: number | null) =>
       strokeWidth: 1.5,
     },
     labelId: labelId || undefined,
+    showCorrectionStyling: options?.showCorrectionStyling,
+    filterCorrectionStatus: options?.filterCorrectionStatus,
   });
 
-export const createForestCoverVectorLayer = (labelId?: number) =>
+export const createForestCoverVectorLayer = (labelId?: number, options?: LayerOptions) =>
   createVectorLayer({
-    rpcFunctionName: "get_forest_cover_vector_tiles_perf",
+    rpcFunctionName: options?.showCorrectionStyling 
+      ? "get_forest_cover_tiles_with_corrections" 
+      : "get_forest_cover_tiles",
     className: "forest-cover-vector",
     style: {
       fillColor: "rgba(34, 197, 94, 0.5)", // Green with high opacity
@@ -140,6 +192,8 @@ export const createForestCoverVectorLayer = (labelId?: number) =>
       strokeWidth: 1,
     },
     labelId,
+    showCorrectionStyling: options?.showCorrectionStyling,
+    filterCorrectionStatus: options?.filterCorrectionStatus,
   });
 
 export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon) => {
