@@ -30,6 +30,8 @@ import { useDatasetAudit } from "../hooks/useDatasetAudit";
 import { Modal, Form, Input } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag, useDatasetFlags } from "../hooks/useDatasetFlags";
+import { LayerRadioButtons } from "../components/PolygonEditor";
+import type { LayerSelection } from "../components/PolygonEditor/LayerRadioButtons";
 
 export default function DatasetDetails() {
   const navigate = useNavigate();
@@ -38,6 +40,9 @@ export default function DatasetDetails() {
   const [labelsOnly, setLabelsOnly] = useState(false);
   const { user } = useAuth();
   const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
+  
+  // Layer selection for editing
+  const [layerSelection, setLayerSelection] = useState<LayerSelection>("deadwood");
 
   // Use the global download state
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
@@ -494,17 +499,44 @@ export default function DatasetDetails() {
         </div>
       </Col>
       <Col className="relative flex-1 pt-2">
+        {/* Layer selection toggle - bottom left */}
+        <LayerRadioButtons
+          value={layerSelection}
+          onChange={setLayerSelection}
+          position="bottom-left"
+          availableLayers={
+            dataset.is_forest_cover_done 
+              ? ["ortho_only", "deadwood", "forest_cover"] 
+              : ["ortho_only", "deadwood"]
+          }
+          showAOIIndicator={false}
+        />
+
         {/* Action buttons overlay in top-right of the map */}
         {user && (
           <div className="absolute right-3 top-5 z-10 flex gap-2">
-            {/* Improve Predictions button */}
-            <Tooltip title="Help improve the model predictions by adding, removing, or correcting polygons">
+            {/* Edit Layer button - only enabled when a layer is selected */}
+            <Tooltip 
+              title={
+                layerSelection === "ortho_only" 
+                  ? "Select a layer below (Deadwood or Forest Cover) to edit" 
+                  : `Edit ${layerSelection === "deadwood" ? "Deadwood" : "Forest Cover"} predictions`
+              }
+            >
               <Button
                 size="small"
+                type={layerSelection !== "ortho_only" ? "primary" : "default"}
                 icon={<EditOutlined />}
-                onClick={() => navigate(`/dataset-corrections/${dataset.id}`)}
+                onClick={() => {
+                  if (layerSelection === "ortho_only") {
+                    message.info("Please select a layer to edit (Deadwood or Forest Cover)");
+                    return;
+                  }
+                  navigate(`/dataset-corrections/${dataset.id}?layer=${layerSelection}`);
+                }}
+                disabled={layerSelection === "ortho_only"}
               >
-                Improve Predictions
+                Edit {layerSelection !== "ortho_only" ? (layerSelection === "deadwood" ? "Deadwood" : "Forest Cover") : "Layer"}
               </Button>
             </Tooltip>
 
@@ -556,16 +588,17 @@ export default function DatasetDetails() {
           </div>
         )}
 
-        {/* Show improve button for non-logged-in users with login prompt */}
+        {/* Show edit button for non-logged-in users with login prompt */}
         {!user && (
           <div className="absolute right-3 top-5 z-10">
-            <Tooltip title="Login to help improve the model predictions">
+            <Tooltip title="Login to edit predictions">
               <Button
                 size="small"
                 icon={<EditOutlined />}
                 onClick={() => navigate("/sign-in")}
+                disabled={layerSelection === "ortho_only"}
               >
-                Improve Predictions
+                Edit Layer
               </Button>
             </Tooltip>
           </div>
