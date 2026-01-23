@@ -429,6 +429,24 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
     }
   }, [isEditing, layerSelection]);
 
+  // Auto-start editing when component mounts with initialLayerType and data is ready
+  const hasAutoStarted = useRef(false);
+  useEffect(() => {
+    if (
+      initialLayerType &&
+      !isEditing &&
+      !hasAutoStarted.current &&
+      predictionLabel?.id &&
+      loadedGeometries &&
+      !isLoadingLabels &&
+      !isLoadingLabel &&
+      !isLoadingGeometries
+    ) {
+      hasAutoStarted.current = true;
+      handleStartEditing();
+    }
+  }, [initialLayerType, isEditing, predictionLabel?.id, loadedGeometries, isLoadingLabels, isLoadingLabel, isLoadingGeometries, handleStartEditing]);
+
   const isLoading = isLoadingLabels || isLoadingLabel || isLoadingGeometries;
   const canStartEditing = !!predictionLabel?.id && !!loadedGeometries && !isLoading;
 
