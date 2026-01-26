@@ -12,9 +12,11 @@ import { FeatureLike } from "ol/Feature";
 import { Tag } from "antd";
 
 import { IDataset } from "../../types/dataset";
-import DeadwoodCardDetails from "./DeadwoodCardDetails";
-import MapStyleSwitchButtons from "../DeadwoodMap/MapStyleSwitchButtons";
 import { Settings } from "../../config";
+import { getWaybackTileUrl } from "../../utils/waybackVersions";
+
+// Latest Wayback release (2024) for satellite imagery
+const DEFAULT_WAYBACK_RELEASE = 31144;
 import { createDeadwoodVectorLayer } from "./createVectorLayer";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { createForestCoverVectorLayer, createAOIVectorLayer, createAOIMaskLayer } from "./createVectorLayer";
@@ -28,7 +30,15 @@ interface DatasetDetailsMapProps {
   onVectorLayersReady?: (deadwood: VectorTileLayer | null, forestCover: VectorTileLayer | null) => void;
   hideDeadwoodLayer?: boolean;
   hideForestCoverLayer?: boolean;
+  hideDroneImagery?: boolean;
   refreshKey?: number; // Increment to trigger layer refresh
+  // New unified layer control props
+  showDeadwood?: boolean;
+  showForestCover?: boolean;
+  showDroneImagery?: boolean;
+  layerOpacity?: number; // Unified opacity for analysis layers (deadwood + forest cover)
+  mapStyle?: string; // 'streets-v12' or 'satellite-streets-v12'
+  onMapStyleChange?: (style: string) => void;
 }
 
 const DatasetDetailsMap = ({ 
@@ -38,22 +48,41 @@ const DatasetDetailsMap = ({
   onVectorLayersReady,
   hideDeadwoodLayer = false,
   hideForestCoverLayer = false,
+  hideDroneImagery = false,
   refreshKey = 0,
+  // New props with defaults
+  showDeadwood,
+  showForestCover,
+  showDroneImagery,
+  layerOpacity,
+  mapStyle: externalMapStyle,
+  onMapStyleChange,
 }: DatasetDetailsMapProps) => {
   // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const tooltipOverlayRef = useRef<Overlay | null>(null);
-  const [mapStyle, setMapStyle] = useState("streets-v12");
-  const [deadwoodOpacity, setDeadwoodOpacity] = useState<number>(1);
-  const [droneImageOpacity, setDroneImageOpacity] = useState<number>(1);
-  const [forestCoverOpacity, setForestCoverOpacity] = useState<number>(1);
+  
+  // Internal state - can be controlled by external props
+  const [internalMapStyle, setInternalMapStyle] = useState("streets-v12");
   const [aoiOpacity, setAoiOpacity] = useState<number>(0.8);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const [tooltipContent, setTooltipContent] = useState<{ type: string; status: string } | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
+
+  // Use external props if provided, otherwise use internal state
+  const mapStyle = externalMapStyle ?? internalMapStyle;
+  const setMapStyle = onMapStyleChange ?? setInternalMapStyle;
+  
+  // Compute effective visibility and opacity from props
+  // showDeadwood/showForestCover/showDroneImagery control visibility when provided
+  // layerOpacity controls opacity of analysis layers when provided
+  const effectiveDeadwoodVisible = showDeadwood !== undefined ? showDeadwood : !hideDeadwoodLayer;
+  const effectiveForestCoverVisible = showForestCover !== undefined ? showForestCover : !hideForestCoverLayer;
+  const effectiveDroneImageryVisible = showDroneImagery !== undefined ? showDroneImagery : !hideDroneImagery;
+  const effectiveLayerOpacity = layerOpacity ?? 1;
 
   // Fetch label data for the current dataset using modular hook
   const {
@@ -121,20 +150,20 @@ const DatasetDetailsMap = ({
         // preload: 4,
       });
 
-      // Create all other layers before map initialization - Raster API for satellite, Static API for streets
+      // Create basemap layer - Wayback for satellite, OSM for streets
       const basemapLayer = new TileLayer({
         preload: 0,
         source: new XYZ({
           url:
             mapStyle === "satellite-streets-v12"
-              ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+              ? getWaybackTileUrl(DEFAULT_WAYBACK_RELEASE)
               : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           attributions:
             mapStyle === "satellite-streets-v12"
-              ? "© Mapbox © OpenStreetMap contributors"
+              ? "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics"
               : "© OpenStreetMap contributors",
-          maxZoom: mapStyle === "satellite-streets-v12" ? undefined : 19,
-          tileSize: mapStyle === "satellite-streets-v12" ? 512 : 256,
+          maxZoom: 19,
+          crossOrigin: "anonymous",
         }),
       });
 
@@ -456,55 +485,43 @@ const DatasetDetailsMap = ({
     aoiGeometry,
   ]);
 
-  // update deadwood layer opacity
+  // Update deadwood layer visibility and opacity
   useEffect(() => {
     if (mapRef.current && layerRefs.current.deadwoodVector) {
-      layerRefs.current.deadwoodVector.setOpacity(deadwoodOpacity);
+      layerRefs.current.deadwoodVector.setVisible(effectiveDeadwoodVisible);
+      layerRefs.current.deadwoodVector.setOpacity(effectiveLayerOpacity);
     }
-  }, [deadwoodOpacity]);
+  }, [effectiveDeadwoodVisible, effectiveLayerOpacity]);
 
-  // update satellite layer opacity
-  useEffect(() => {
-    if (mapRef.current && layerRefs.current.orthoCog) {
-      layerRefs.current.orthoCog.setOpacity(droneImageOpacity);
-    }
-  }, [droneImageOpacity]);
-
-  // update forest cover layer opacity
+  // Update forest cover layer visibility and opacity
   useEffect(() => {
     if (mapRef.current && layerRefs.current.forestCoverVector) {
-      layerRefs.current.forestCoverVector.setOpacity(forestCoverOpacity);
+      layerRefs.current.forestCoverVector.setVisible(effectiveForestCoverVisible);
+      layerRefs.current.forestCoverVector.setOpacity(effectiveLayerOpacity);
     }
-  }, [forestCoverOpacity]);
+  }, [effectiveForestCoverVisible, effectiveLayerOpacity]);
 
-  // update AOI layer opacity
+  // Update drone imagery (ortho) visibility
+  useEffect(() => {
+    if (mapRef.current && layerRefs.current.orthoCog) {
+      layerRefs.current.orthoCog.setVisible(effectiveDroneImageryVisible);
+    }
+  }, [effectiveDroneImageryVisible]);
+
+  // Update AOI layer opacity
   useEffect(() => {
     if (mapRef.current && layerRefs.current.aoiVector) {
       layerRefs.current.aoiVector.setOpacity(aoiOpacity);
     }
   }, [aoiOpacity]);
 
-  // update AOI mask layer opacity (synchronized with AOI boundary)
+  // Update AOI mask layer opacity (synchronized with AOI boundary)
   useEffect(() => {
     if (mapRef.current && layerRefs.current.aoiMask) {
       // Synchronized with AOI boundary: higher AOI opacity = stronger focus effect
       layerRefs.current.aoiMask.setOpacity(aoiOpacity);
     }
   }, [aoiOpacity]);
-
-  // Hide/show deadwood layer based on prop (for editing mode)
-  useEffect(() => {
-    if (mapRef.current && layerRefs.current.deadwoodVector) {
-      layerRefs.current.deadwoodVector.setVisible(!hideDeadwoodLayer);
-    }
-  }, [hideDeadwoodLayer]);
-
-  // Hide/show forest cover layer based on prop (for editing mode)
-  useEffect(() => {
-    if (mapRef.current && layerRefs.current.forestCoverVector) {
-      layerRefs.current.forestCoverVector.setVisible(!hideForestCoverLayer);
-    }
-  }, [hideForestCoverLayer]);
 
   // Refresh vector layers when refreshKey changes (after saving edits)
   useEffect(() => {
@@ -531,16 +548,18 @@ const DatasetDetailsMap = ({
       const currentCenter = currentView.getCenter();
       const currentZoom = currentView.getZoom();
 
-      // Just update the source, don't recreate the map - Raster API for satellite, Static API for streets
+      // Just update the source, don't recreate the map - Wayback for satellite, OSM for streets
       const nextIsSatellite = mapStyle === "satellite-streets-v12";
       layerRefs.current.basemap.setSource(
         new XYZ({
           url: nextIsSatellite
-            ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.jpg?access_token=${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}`
+            ? getWaybackTileUrl(DEFAULT_WAYBACK_RELEASE)
             : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attributions: nextIsSatellite ? "© Mapbox © OpenStreetMap contributors" : "© OpenStreetMap contributors",
-          maxZoom: nextIsSatellite ? undefined : 19,
-          tileSize: nextIsSatellite ? 512 : 256,
+          attributions: nextIsSatellite
+            ? "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics"
+            : "© OpenStreetMap contributors",
+          maxZoom: 19,
+          crossOrigin: "anonymous",
         }),
       );
 
@@ -621,56 +640,7 @@ const DatasetDetailsMap = ({
           )}
         </div>
 
-        <div className="absolute left-2 top-4 z-20">
-          <MapStyleSwitchButtons
-            mapStyle={mapStyle}
-            onChange={(next) => {
-              if (next === "satellite-streets-v12" && mapRef.current) {
-                const zoom = mapRef.current.getView().getZoom();
-                if (!zoom || zoom < 14) {
-                  return;
-                }
-              }
-              setMapStyle(next);
-            }}
-          />
-        </div>
-
-        <div className="absolute bottom-4 right-6 z-50 ">
-          <DeadwoodCardDetails
-            deadwoodOpacity={deadwoodOpacity}
-            setDeadwoodOpacity={setDeadwoodOpacity}
-            droneImageOpacity={droneImageOpacity}
-            setDroneImageOpacity={setDroneImageOpacity}
-            forestCoverOpacity={forestCoverOpacity}
-            setForestCoverOpacity={setForestCoverOpacity}
-            aoiOpacity={aoiOpacity}
-            setAoiOpacity={setAoiOpacity}
-            showLegend={
-              !!deadwood.data &&
-              (() => {
-                const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
-                if (q === undefined || q === null) return true;
-                if (typeof q === "boolean") return q;
-                if (typeof q === "string") return q !== "bad";
-                return true;
-              })()
-            }
-            showForestCoverLegend={
-              !!forestCover.data &&
-              !!data.is_forest_cover_done &&
-              (() => {
-                const q: IDataset["forest_cover_quality"] | undefined =
-                  (data as IDataset).forest_cover_quality ?? undefined;
-                if (q === undefined || q === null) return true;
-                if (typeof q === "boolean") return q;
-                if (typeof q === "string") return q !== "bad";
-                return true;
-              })()
-            }
-            showAOI={!!aoiData}
-          />
-        </div>
+        {/* MapStyleSwitchButtons removed - basemap selector moved to parent DatasetLayerControlPanel */}
       </div>
     </div>
   );
