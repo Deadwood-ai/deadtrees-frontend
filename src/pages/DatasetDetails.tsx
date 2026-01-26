@@ -1,16 +1,17 @@
-import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Popover, Badge, Spin } from "antd";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { Button, Col, Row, Tag, Tooltip, Typography, message, Checkbox, Space, Spin } from "antd";
+import { useParams, useNavigate } from "react-router-dom";
 
 import {
   ArrowLeftOutlined,
   EnvironmentOutlined,
   DownloadOutlined,
-  FlagOutlined,
   InfoCircleOutlined,
-  EditOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { Settings } from "../config";
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
+import DatasetLayerControlPanel from "../components/DatasetDetailsMap/DatasetLayerControlPanel";
 import PublicationLink from "../components/PublicationLink";
 import countryList from "../utils/countryList";
 import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../utils/datasetUtils";
@@ -55,6 +56,16 @@ export default function DatasetDetails() {
   const { user } = useAuth();
   const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
   
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Layer control state (matching DeadtreesMap pattern)
+  const [mapStyle, setMapStyle] = useState("streets-v12");
+  const [showForestCover, setShowForestCover] = useState(true);
+  const [showDeadwood, setShowDeadwood] = useState(true);
+  const [showDroneImagery, setShowDroneImagery] = useState(true);
+  const [layerOpacity, setLayerOpacity] = useState(1);
+  
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editingLayerType, setEditingLayerType] = useState<LayerType | null>(null);
@@ -65,9 +76,11 @@ export default function DatasetDetails() {
   const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
   const geoJson = useMemo(() => new GeoJSON(), []);
 
-  // Layer visibility during editing - hide the layer NOT being edited
-  const hideDeadwoodLayer = isEditing && editingLayerType === "forest_cover";
-  const hideForestCoverLayer = isEditing && editingLayerType === "deadwood";
+  // Layer visibility during editing - hide BOTH vector tile layers when editing
+  // The layer being edited is replaced by the editor overlay with editable features
+  // The other layer is hidden to focus on the editing task
+  const hideDeadwoodLayer = isEditing;
+  const hideForestCoverLayer = isEditing;
 
   // Use the global download state
   const { isDownloading, startDownload, finishDownload, currentDownloadId } = useDownload();
@@ -329,6 +342,27 @@ export default function DatasetDetails() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isEditing, editor, ai, handleSaveEdits, handleCancelEditing]);
 
+  // Back button handler - must be before early return to maintain hook order
+  const handleBackClick = useCallback(() => {
+    // Reset the viewport context before navigating back
+    setViewport({
+      center: [0, 0],
+      zoom: 2,
+    });
+
+    // Clear navigation source
+    setNavigationSource(null);
+
+    // If we navigated here from another dataset detail page,
+    // go directly back to the main dataset list instead of the previous detail page
+    if (navigatedFrom === "navigation") {
+      navigate("/dataset");
+    } else {
+      // Regular back behavior
+      navigate(-1);
+    }
+  }, [setViewport, setNavigationSource, navigatedFrom, navigate]);
+
   if (!dataset) {
     return (
       <div className="flex h-full w-full items-center justify-center" style={{ minHeight: "60vh" }}>
@@ -340,51 +374,22 @@ export default function DatasetDetails() {
   // Check if this is a GeoNadir dataset
   const isFromGeonadir = isGeonadirDataset(dataset);
 
-  // console.log(dataset);
-
   return (
     <Row
-      className="h-full bg-slate-50"
+      className="relative h-full bg-slate-50"
       style={{
         width: "100%",
         height: "100%",
       }}
     >
-      <Col className="flex h-full w-96 flex-col">
-        {/* Fixed Header - Back Button */}
-        <div className="p-3 pb-0 pr-4">
-          <Button
-            size="large"
-            shape="circle"
-            onClick={() => {
-              // Reset the viewport context before navigating back
-              setViewport({
-                center: [0, 0],
-                zoom: 2,
-              });
-
-              // Clear navigation source
-              setNavigationSource(null);
-
-              // If we navigated here from another dataset detail page,
-              // go directly back to the main dataset list instead of the previous detail page
-              if (navigatedFrom === "navigation") {
-                navigate("/dataset");
-              } else {
-                // Regular back behavior
-                navigate(-1);
-              }
-            }}
-            icon={<ArrowLeftOutlined />}
-          />
-          {/* Removed left-column Report button per feedback (use map overlay instead) */}
-        </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto p-3 pr-4 pt-0">
+      {/* Collapsible Sidebar */}
+      {!sidebarCollapsed && (
+        <Col className="flex h-full w-96 flex-col border-r border-gray-200 bg-white">
+          {/* Scrollable Content Area - pt-14 to account for floating buttons */}
+          <div className="flex-1 overflow-y-auto p-3 pr-4 pt-14">
           {dataset ? (
             <div className="p-2">
-              <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+              <div className="space-y-3 rounded-md bg-white p-4">
                 <div className="flex items-center pb-4">
                   <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
                   <Tooltip
@@ -745,7 +750,59 @@ export default function DatasetDetails() {
           )}
         </div>
       </Col>
-      <Col className="relative flex-1 pt-2">
+      )}
+      
+      {/* Back Button - aligned with sidebar content padding */}
+      <div className="absolute left-5 top-3 z-20">
+        <Button
+          size="large"
+          shape="circle"
+          onClick={handleBackClick}
+          icon={<ArrowLeftOutlined />}
+          className="bg-white"
+        />
+      </div>
+      
+      {/* Sidebar Toggle - on right edge of sidebar when open, next to back button when closed */}
+      <div 
+        className="absolute top-3 z-20"
+        style={{ left: sidebarCollapsed ? "68px" : "calc(24rem - 52px)" }} // 24rem = w-96, 68px adds gap when collapsed
+      >
+        <Button
+          size="large"
+          shape="circle"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          className="bg-white"
+        />
+      </div>
+      
+      {/* Map Column - takes full width when sidebar collapsed */}
+      <Col className="relative flex-1">
+        {/* Layer Control Panel - top right */}
+        {!isEditing && (
+          <div className="absolute right-3 top-3 z-10">
+            <DatasetLayerControlPanel
+              mapStyle={mapStyle}
+              onMapStyleChange={setMapStyle}
+              showForestCover={showForestCover}
+              setShowForestCover={setShowForestCover}
+              showDeadwood={showDeadwood}
+              setShowDeadwood={setShowDeadwood}
+              showDroneImagery={showDroneImagery}
+              setShowDroneImagery={setShowDroneImagery}
+              hasForestCover={hasForestCover}
+              hasDeadwood={hasDeadwood}
+              opacity={layerOpacity}
+              setOpacity={setLayerOpacity}
+              onReportClick={() => setReportModalOpen(true)}
+              onEditForestCover={() => handleStartEditing("forest_cover")}
+              onEditDeadwood={() => handleStartEditing("deadwood")}
+              isLoggedIn={!!user}
+            />
+          </div>
+        )}
+
         {/* Editor toolbar when editing */}
         {isEditing && (
           <EditorToolbar
@@ -769,105 +826,21 @@ export default function DatasetDetails() {
             title={`Editing ${editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"}`}
           />
         )}
-
-        {/* Action buttons overlay in top-right of the map (when not editing) */}
-        {!isEditing && user && (
-          <div className="absolute right-3 top-5 z-10 flex gap-2">
-            {/* Edit Deadwood button */}
-            {hasDeadwood && (
-              <Tooltip title="Edit deadwood predictions">
-                <Button
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => handleStartEditing("deadwood")}
-                >
-                  Edit Deadwood
-                </Button>
-              </Tooltip>
-            )}
-
-            {/* Edit Forest Cover button */}
-            {hasForestCover && (
-              <Tooltip title="Edit forest cover predictions">
-                <Button
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => handleStartEditing("forest_cover")}
-                >
-                  Edit Forest Cover
-                </Button>
-              </Tooltip>
-            )}
-
-            {/* Report Issue button with badge and popover */}
-            <Popover
-              placement="leftTop"
-              trigger={["hover"]}
-              content={
-                myFlags.length > 0 ? (
-                  <div style={{ maxWidth: 320 }}>
-                    <Typography.Text strong>You reported {myFlags.length} issue(s)</Typography.Text>
-                    <div className="mt-2 space-y-2">
-                      {myFlags.slice(0, 3).map((f) => {
-                        const text = (f.description || "").slice(0, 200) + (f.description.length > 200 ? "…" : "");
-                        return (
-                          <div key={f.id} className="rounded border p-2">
-                            <div className="mb-1 flex items-center gap-2">
-                              {f.is_ortho_mosaic_issue && <Tag color="orange">Orthomosaic</Tag>}
-                              {f.is_prediction_issue && <Tag color="blue">Segmentation</Tag>}
-                              <Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
-                                {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
-                              </Tag>
-                            </div>
-                            <Tooltip title={f.description}>
-                              <div className="text-xs text-gray-700">{text}</div>
-                            </Tooltip>
-                          </div>
-                        );
-                      })}
-                      {myFlags.length > 3 && (
-                        <div className="text-xs text-gray-500">+ {myFlags.length - 3} more in your profile</div>
-                      )}
-                      <Link to="/profile" className="text-blue-600">
-                        View in Profile
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-600">Report issues you notice for this dataset.</div>
-                )
-              }
-            >
-              <Badge count={myFlags.length} size="small" offset={[0, 0]}>
-                <Button size="small" icon={<FlagOutlined />} onClick={() => setReportModalOpen(true)}>
-                  Report
-                </Button>
-              </Badge>
-            </Popover>
-          </div>
-        )}
-
-        {/* Show edit buttons for non-logged-in users with login prompt */}
-        {!isEditing && !user && (hasDeadwood || hasForestCover) && (
-          <div className="absolute right-3 top-5 z-10 flex gap-2">
-            <Tooltip title="Login to edit predictions">
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => navigate("/sign-in")}
-              >
-                Edit Predictions
-              </Button>
-            </Tooltip>
-          </div>
-        )}
         <DatasetDetailsMap 
           data={dataset} 
           onMapReady={handleMapReady}
           onOrthoLayerReady={handleOrthoLayerReady}
+          // Legacy hide props for editing mode
           hideDeadwoodLayer={hideDeadwoodLayer}
           hideForestCoverLayer={hideForestCoverLayer}
           refreshKey={refreshKey}
+          // New layer control props
+          showDeadwood={isEditing ? !hideDeadwoodLayer : showDeadwood}
+          showForestCover={isEditing ? !hideForestCoverLayer : showForestCover}
+          showDroneImagery={showDroneImagery}
+          layerOpacity={layerOpacity}
+          mapStyle={mapStyle}
+          onMapStyleChange={setMapStyle}
         />
       </Col>
 
