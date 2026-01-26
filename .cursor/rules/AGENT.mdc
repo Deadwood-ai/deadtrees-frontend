@@ -59,6 +59,9 @@ const { data, isLoading } = useDatasets();
 
 ---
 
+## Logging
+Use `console.debug()` instead of `console.log()` — debug logs don't clutter production if not removed. 
+
 ## OpenLayers Mapping (CRITICAL)
 
 ### NEVER Store Map in State
