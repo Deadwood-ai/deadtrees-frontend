@@ -74,6 +74,12 @@ const DataTable: React.FC<DataTableProps> = ({
   const nav = useNavigate();
   const queryClient = useQueryClient();
 
+  // Sort datasets by ID descending (newest first) for initial render
+  const sortedUserData = useMemo(
+    () => (userData ? [...(userData as Dataset[])].sort((a, b) => b.id - a.id) : []),
+    [userData]
+  );
+
   // Queue positions for user datasets
   const datasetIds = useMemo(() => (userData ? (userData as Dataset[]).map((d) => d.id) : []), [userData]);
   const { data: queueById } = useQueuePositions(datasetIds);
@@ -127,7 +133,7 @@ const DataTable: React.FC<DataTableProps> = ({
     fetchDatasetsInPublication();
   }, [user]);
 
-  console.log("userData in DataTable", userData);
+  console.debug("userData in DataTable", userData);
 
   const isDatasetComplete = (record: Dataset): boolean => {
     return !!(
@@ -241,6 +247,7 @@ const DataTable: React.FC<DataTableProps> = ({
       dataIndex: "id",
       key: "id",
       defaultSortOrder: "descend" as const,
+      sortDirections: ["descend", "ascend"] as const,
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
       width: 80,
     },
@@ -485,7 +492,7 @@ const DataTable: React.FC<DataTableProps> = ({
     <>
       <Table
         rowKey={"id"}
-        dataSource={userData as Dataset[]}
+        dataSource={sortedUserData}
         columns={columns}
         pagination={{ pageSize: 50 }}
         loading={isLoadingData}
