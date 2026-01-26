@@ -1,5 +1,5 @@
 import { Segmented, Slider, Switch, Button, Divider, Checkbox } from "antd";
-import { FlagOutlined } from "@ant-design/icons";
+import { FlagOutlined, LoginOutlined } from "@ant-design/icons";
 
 interface LayerControlPanelProps {
   // Basemap
@@ -13,10 +13,12 @@ interface LayerControlPanelProps {
   // Opacity
   opacity: number;
   setOpacity: (value: number) => void;
-  // Flags (optional, only for logged-in users)
+  // Flags
   showFlagsControls?: boolean;
+  isLoggedIn?: boolean;
   isDrawingFlag?: boolean;
   onFlagClick?: () => void;
+  onLoginRequired?: () => void;
   showFlagsLayer?: boolean;
   setShowFlagsLayer?: (show: boolean) => void;
   flagsCount?: number;
@@ -38,8 +40,10 @@ const LayerControlPanel = ({
   opacity,
   setOpacity,
   showFlagsControls,
+  isLoggedIn,
   isDrawingFlag,
   onFlagClick,
+  onLoginRequired,
   showFlagsLayer,
   setShowFlagsLayer,
   flagsCount,
@@ -88,28 +92,45 @@ const LayerControlPanel = ({
         tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%` }}
       />
 
-      {/* Flags Section - only for logged-in users */}
+      {/* Flags Section - shown to all users */}
       {showFlagsControls && (
         <>
           <Divider className="my-3" />
           <div className="mb-2 text-xs font-medium text-gray-500">Feedback</div>
-          <Button
-            size="small"
-            type={isDrawingFlag ? "primary" : "default"}
-            danger={isDrawingFlag}
-            icon={<FlagOutlined />}
-            onClick={onFlagClick}
-            block
-          >
-            {isDrawingFlag ? "Cancel" : "Flag Area"}
-          </Button>
-          {setShowFlagsLayer && (
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs text-gray-600">
-                Show Flags {flagsCount !== undefined && flagsCount > 0 && `(${flagsCount})`}
-              </span>
-              <Switch size="small" checked={showFlagsLayer} onChange={setShowFlagsLayer} />
-            </div>
+          <p className="mb-2 text-xs text-gray-500">
+            Help improve our AI by flagging incorrect predictions
+          </p>
+          {isLoggedIn ? (
+            <>
+              <Button
+                size="small"
+                type={isDrawingFlag ? "primary" : "default"}
+                danger={isDrawingFlag}
+                icon={<FlagOutlined />}
+                onClick={onFlagClick}
+                block
+              >
+                {isDrawingFlag ? "Cancel" : "Flag Area"}
+              </Button>
+              {setShowFlagsLayer && (
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-600">
+                    Show Flags {flagsCount !== undefined && flagsCount > 0 && `(${flagsCount})`}
+                  </span>
+                  <Switch size="small" checked={showFlagsLayer} onChange={setShowFlagsLayer} />
+                </div>
+              )}
+            </>
+          ) : (
+            <Button
+              size="small"
+              type="primary"
+              icon={<LoginOutlined />}
+              onClick={onLoginRequired}
+              block
+            >
+              Sign in to flag areas
+            </Button>
           )}
         </>
       )}
