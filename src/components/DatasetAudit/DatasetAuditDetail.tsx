@@ -153,7 +153,7 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   }, []);
 
   const handleAOIChange = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => {
-    console.log("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
+    console.debug("AOI changed in Detail:", geometry ? "AOI present" : "AOI cleared");
     currentAOIGeometry.current = geometry;
     setHasAOI(!!geometry);
     setIsAOILoaded(true);

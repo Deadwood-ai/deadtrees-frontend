@@ -200,16 +200,16 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
   }, []);
 
   const startEditing = useCallback(() => {
-    console.log("[usePolygonEditor] startEditing called, mapRef.current:", !!mapRef.current, "isEditing:", isEditing);
+    console.debug("[usePolygonEditor] startEditing called, mapRef.current:", !!mapRef.current, "isEditing:", isEditing);
     if (!mapRef.current || isEditing) {
-      console.log("[usePolygonEditor] Returning early from startEditing");
+      console.debug("[usePolygonEditor] Returning early from startEditing");
       return;
     }
 
-    console.log("[usePolygonEditor] Ensuring overlay...");
+    console.debug("[usePolygonEditor] Ensuring overlay...");
     ensureOverlay();
     const overlay = overlayLayerRef.current!;
-    console.log("[usePolygonEditor] Overlay layer:", !!overlay);
+    console.debug("[usePolygonEditor] Overlay layer:", !!overlay);
 
     // Select interaction limited to overlay layer
     // Use null style - styling handled by layer's style function
@@ -236,7 +236,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const shiftKey = evt.mapBrowserEvent.originalEvent.shiftKey;
       const currentSelection = selectedCollection.getArray();
 
-      console.log("[Selection] Click event:", {
+      console.debug("[Selection] Click event:", {
         clickedFeature: !!clickedFeature,
         wasSelected: !!wasSelected,
         shiftKey,
@@ -246,7 +246,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       // Behavior 1: Clicking selected feature -> deselect it
       if (wasSelected && !clickedFeature) {
         // OpenLayers already removed it, we're good
-        console.log("[Selection] Deselected feature");
+        console.debug("[Selection] Deselected feature");
         return;
       }
 
@@ -254,7 +254,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       if (shiftKey && clickedFeature) {
         // Check if we already have this feature (shouldn't happen with OL, but safe check)
         if (currentSelection.includes(clickedFeature)) {
-          console.log("[Selection] Feature already selected");
+          console.debug("[Selection] Feature already selected");
           return;
         }
 
@@ -262,10 +262,10 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         while (currentSelection.length > 2) {
           const toRemove = currentSelection[0];
           selectedCollection.remove(toRemove);
-          console.log("[Selection] Removed oldest to maintain max 2");
+          console.debug("[Selection] Removed oldest to maintain max 2");
         }
 
-        console.log("[Selection] Added to selection (Shift), total:", currentSelection.length);
+        console.debug("[Selection] Added to selection (Shift), total:", currentSelection.length);
         return;
       }
 
@@ -280,7 +280,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
           selectedCollection.push(clickedFeature);
         }
 
-        console.log("[Selection] Single select (no Shift)");
+        console.debug("[Selection] Single select (no Shift)");
         return;
       }
     });
@@ -312,7 +312,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       // Update React state - THIS is what drives the toolbar
       setSelection([...selectedFeatures]); // Create new array to ensure React detects change
 
-      console.log("[Selection] Updated:", {
+      console.debug("[Selection] Updated:", {
         count: selectedFeatures.length,
         featureIds: selectedFeatures.map((f) => f.getId() || f.get("id") || "unknown"),
       });
@@ -413,7 +413,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     // Draw interaction created lazily on toggle
     setIsEditing(true);
-    console.log("[usePolygonEditor] startEditing completed, interactions added");
+    console.debug("[usePolygonEditor] startEditing completed, interactions added");
   }, [ensureOverlay, isEditing, mapRef, saveHistory]);
 
   const stopEditing = useCallback(() => {
@@ -464,23 +464,23 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
   const toggleDraw = useCallback(
     (on?: boolean) => {
-      console.log("[usePolygonEditor] toggleDraw called, mapRef.current:", !!mapRef.current, "isDrawing:", isDrawing);
+      console.debug("[usePolygonEditor] toggleDraw called, mapRef.current:", !!mapRef.current, "isDrawing:", isDrawing);
       if (!mapRef.current) {
-        console.log("[usePolygonEditor] No map ref, returning");
+        console.debug("[usePolygonEditor] No map ref, returning");
         return;
       }
       ensureOverlay();
 
       const shouldEnable = typeof on === "boolean" ? on : !isDrawing;
-      console.log("[usePolygonEditor] shouldEnable:", shouldEnable);
+      console.debug("[usePolygonEditor] shouldEnable:", shouldEnable);
       if (shouldEnable) {
         if (drawRef.current) {
-          console.log("[usePolygonEditor] Draw already active, returning");
+          console.debug("[usePolygonEditor] Draw already active, returning");
           return;
         }
         const overlay = overlayLayerRef.current!;
         const source = overlay.getSource() as VectorSource<Feature<Geometry>> | null;
-        console.log("[usePolygonEditor] Creating draw interaction, overlay:", !!overlay, "source:", !!source);
+        console.debug("[usePolygonEditor] Creating draw interaction, overlay:", !!overlay, "source:", !!source);
 
         // Style for the sketch (polygon being drawn) - very visible
         const sketchStyle = new Style({
@@ -498,7 +498,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         mapRef.current.addInteraction(draw);
         drawRef.current = draw;
         setIsDrawing(true);
-        console.log("[usePolygonEditor] Draw interaction added to map");
+        console.debug("[usePolygonEditor] Draw interaction added to map");
 
         // Save history when drawing starts (before new feature is added)
         draw.once("drawstart", () => {
@@ -522,7 +522,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         mapRef.current.removeInteraction(drawRef.current);
         drawRef.current = null;
         setIsDrawing(false);
-        console.log("[usePolygonEditor] Draw interaction removed from map");
+        console.debug("[usePolygonEditor] Draw interaction removed from map");
       }
     },
     [ensureOverlay, isDrawing, mapRef, saveHistory],
@@ -594,7 +594,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const gb = b.getGeometry();
     if (!ga || !gb) return;
 
-    console.log("=== CLIP OPERATION DEBUG ===");
+    console.debug("=== CLIP OPERATION DEBUG ===");
 
     // Save history before clipping
     saveHistory();
@@ -604,11 +604,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const areaA = ga instanceof Polygon || ga instanceof MultiPolygon ? ga.getArea() : 0;
     const areaB = gb instanceof Polygon || gb instanceof MultiPolygon ? gb.getArea() : 0;
 
-    console.log("Polygon A:", {
+    console.debug("Polygon A:", {
       type: ga.getType(),
       area: areaA.toFixed(2),
     });
-    console.log("Polygon B:", {
+    console.debug("Polygon B:", {
       type: gb.getType(),
       area: areaB.toFixed(2),
     });
@@ -620,34 +620,34 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       smaller = gb;
       largerFeature = a;
       smallerFeature = b;
-      console.log("A is larger (area: " + areaA.toFixed(2) + ") - will keep A, remove B");
+      console.debug("A is larger (area: " + areaA.toFixed(2) + ") - will keep A, remove B");
     } else {
       larger = gb;
       smaller = ga;
       largerFeature = b;
       smallerFeature = a;
-      console.log("B is larger (area: " + areaB.toFixed(2) + ") - will keep B, remove A");
+      console.debug("B is larger (area: " + areaB.toFixed(2) + ") - will keep B, remove A");
     }
 
     // Subtract smaller polygon from larger polygon
-    console.log("Calling geomDifference(larger, smaller)...");
+    console.debug("Calling geomDifference(larger, smaller)...");
     const clipped = geomDifference(larger, smaller);
-    console.log("geomDifference result:", clipped);
+    console.debug("geomDifference result:", clipped);
 
     if (!clipped) {
       console.error("geomDifference returned null/undefined - polygons may not overlap");
       message.error("Failed to clip polygons. They may not overlap.");
-      console.log("=== END CLIP OPERATION DEBUG (FAILED) ===");
+      console.debug("=== END CLIP OPERATION DEBUG (FAILED) ===");
       return;
     }
 
-    console.log("Clipped geometry:", {
+    console.debug("Clipped geometry:", {
       type: clipped.getType(),
       area: (clipped instanceof Polygon || clipped instanceof MultiPolygon ? clipped.getArea() : 0).toFixed(2),
     });
 
     // Update the larger polygon with clipped result, remove the smaller polygon
-    console.log("Setting clipped geometry on larger feature and removing smaller feature");
+    console.debug("Setting clipped geometry on larger feature and removing smaller feature");
     largerFeature.setGeometry(clipped);
     largerFeature.set("is_modified", true);
     source.removeFeature(smallerFeature);
@@ -655,7 +655,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     select.getFeatures().push(largerFeature);
     setSelection([largerFeature]);
     message.success("Smaller polygon clipped from larger polygon");
-    console.log("=== END CLIP OPERATION DEBUG (SUCCESS) ===");
+    console.debug("=== END CLIP OPERATION DEBUG (SUCCESS) ===");
   }, [saveHistory]);
 
   // Cut hole / trim edges: user draws a polygon, then we subtract from single selected feature
@@ -702,12 +702,12 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const cutFeature = evt.feature as Feature<Geometry>;
       const cutGeom = cutFeature.getGeometry();
       if (cutGeom) {
-        console.log("=== CUT OPERATION DEBUG ===");
-        console.log("Target geometry:", {
+        console.debug("=== CUT OPERATION DEBUG ===");
+        console.debug("Target geometry:", {
           type: targetGeom.getType(),
           area: targetGeom instanceof Polygon || targetGeom instanceof MultiPolygon ? targetGeom.getArea() : 0,
         });
-        console.log("Cut geometry:", {
+        console.debug("Cut geometry:", {
           type: cutGeom.getType(),
           area: cutGeom instanceof Polygon || cutGeom instanceof MultiPolygon ? cutGeom.getArea() : 0,
         });
@@ -716,16 +716,16 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         saveHistory();
 
         // Perform difference operation - works for holes, edge trimming, and no-ops if no overlap
-        console.log("Calling geomDifference(target, cut)...");
+        console.debug("Calling geomDifference(target, cut)...");
         const diff = geomDifference(targetGeom, cutGeom);
-        console.log("geomDifference result:", diff);
+        console.debug("geomDifference result:", diff);
 
         if (!diff) {
           console.error("geomDifference returned null/undefined - polygon would be empty");
           message.error("Failed to cut polygon. Result would be empty.");
-          console.log("=== END CUT OPERATION DEBUG (FAILED) ===");
+          console.debug("=== END CUT OPERATION DEBUG (FAILED) ===");
         } else {
-          console.log("Result geometry:", {
+          console.debug("Result geometry:", {
             type: diff.getType(),
             area: diff instanceof Polygon || diff instanceof MultiPolygon ? diff.getArea() : 0,
           });
@@ -735,7 +735,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
           // Check if result is a MultiPolygon (polygon was split into multiple pieces)
           if (diff.getType() === "MultiPolygon" && source) {
-            console.log("Result is MultiPolygon - splitting into separate features");
+            console.debug("Result is MultiPolygon - splitting into separate features");
             // Split into separate Polygon features
             const newFeatures: Feature<Geometry>[] = [];
             const multiPolygon = diff as MultiPolygon;
@@ -774,21 +774,21 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
             }
 
             message.success(`Polygon split into ${newFeatures.length} separate pieces!`);
-            console.log("=== END CUT OPERATION DEBUG (SUCCESS - MultiPolygon) ===");
+            console.debug("=== END CUT OPERATION DEBUG (SUCCESS - MultiPolygon) ===");
           } else {
             // Single polygon result - update original feature
-            console.log("Single Polygon result - updating original feature");
+            console.debug("Single Polygon result - updating original feature");
             target.setGeometry(diff);
             target.set("is_modified", true);
             message.success("Polygon cut successfully!");
-            console.log("=== END CUT OPERATION DEBUG (SUCCESS - Polygon) ===");
+            console.debug("=== END CUT OPERATION DEBUG (SUCCESS - Polygon) ===");
           }
 
           // Clear temp source; cut feature was never added to overlay
           tempSource.clear();
         }
       } else {
-        console.log("=== END CUT OPERATION DEBUG (No cutGeom) ===");
+        console.debug("=== END CUT OPERATION DEBUG (No cutGeom) ===");
       }
       if (drawRef.current) {
         mapRef.current?.removeInteraction(drawRef.current);
@@ -859,7 +859,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       clearAll,
       getOverlayLayer: () => {
         const layer = (overlayLayerRef.current as unknown as VectorLayer<VectorSource>) || null;
-        console.log("[Editor] getOverlayLayer called, layer =", !!layer, "source =", !!layer?.getSource());
+        console.debug("[Editor] getOverlayLayer called, layer =", !!layer, "source =", !!layer?.getSource());
         return layer;
       },
       setOverlayVisible,

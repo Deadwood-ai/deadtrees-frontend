@@ -50,13 +50,13 @@ export function union(a: Geometry, b: Geometry): Geometry | null {
 }
 
 export function difference(subject: Geometry, clip: Geometry): Geometry | null {
-  console.log("[geometry.difference] Input subject:", subject.getType());
-  console.log("[geometry.difference] Input clip:", clip.getType());
+  console.debug("[geometry.difference] Input subject:", subject.getType());
+  console.debug("[geometry.difference] Input clip:", clip.getType());
 
   const S = olToPC(subject);
   const C = olToPC(clip);
 
-  console.log("[geometry.difference] Converted to PC format:", {
+  console.debug("[geometry.difference] Converted to PC format:", {
     subjectPolygons: S?.length || 0,
     clipPolygons: C?.length || 0,
   });
@@ -77,7 +77,7 @@ export function difference(subject: Geometry, clip: Geometry): Geometry | null {
     return null;
   }
 
-  console.log(
+  console.debug(
     "[geometry.difference] Calling polygon-clipping.difference with:",
     S.length,
     "subject polygons and",
@@ -103,7 +103,7 @@ export function difference(subject: Geometry, clip: Geometry): Geometry | null {
     res = results;
   }
 
-  console.log("[geometry.difference] Result from polygon-clipping:", res, "length:", res?.length || 0);
+  console.debug("[geometry.difference] Result from polygon-clipping:", res, "length:", res?.length || 0);
 
   if (!res || res.length === 0) {
     console.warn("[geometry.difference] Result is empty - polygon would be completely removed");
@@ -111,7 +111,7 @@ export function difference(subject: Geometry, clip: Geometry): Geometry | null {
   }
 
   const olGeometry = pcToOL(res);
-  console.log("[geometry.difference] Converted back to OL geometry:", olGeometry?.getType());
+  console.debug("[geometry.difference] Converted back to OL geometry:", olGeometry?.getType());
 
   return olGeometry;
 }

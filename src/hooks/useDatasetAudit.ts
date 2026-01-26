@@ -245,7 +245,7 @@ export function useSetAuditLock() {
 
         if (hoursSinceUpdate >= 1) {
           // Auto-clear stale lock
-          console.log(
+          console.debug(
             `Auto-clearing stale audit lock for dataset ${datasetId} (${hoursSinceUpdate.toFixed(1)} hours old)`,
           );
 

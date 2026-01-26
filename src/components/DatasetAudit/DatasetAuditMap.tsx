@@ -76,7 +76,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // console.log("Initializing map for dataset:", dataset?.file_name);
+    // console.debug("Initializing map for dataset:", dataset?.file_name);
 
     try {
       // Create AOI vector layer
@@ -218,14 +218,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         setIsMapReady(true);
       }
 
-      // console.log("Map initialized successfully");
+      // console.debug("Map initialized successfully");
     } catch (error) {
       // console.error("Error initializing map:", error);
     }
 
     return () => {
       if (mapInstanceRef.current) {
-        // console.log("Cleaning up map");
+        // console.debug("Cleaning up map");
 
         // Clean up layers
         Object.values(layerRefs.current).forEach((layer) => {
@@ -258,36 +258,36 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
   // Update getCurrentGeometry to handle both Polygon and MultiPolygon
   const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
-    // console.log("getCurrentGeometry called");
+    // console.debug("getCurrentGeometry called");
 
     if (!aoiLayerRef.current) {
-      // console.log("getCurrentGeometry: No AOI layer ref");
+      // console.debug("getCurrentGeometry: No AOI layer ref");
       return null;
     }
 
     const source = aoiLayerRef.current.getSource();
     if (!source) {
-      // console.log("getCurrentGeometry: No source");
+      // console.debug("getCurrentGeometry: No source");
       return null;
     }
 
     const features = source.getFeatures();
-    // console.log(`getCurrentGeometry: Found ${features.length} features`);
+    // console.debug(`getCurrentGeometry: Found ${features.length} features`);
 
     if (features.length === 0) {
-      // console.log("getCurrentGeometry: No features");
+      // console.debug("getCurrentGeometry: No features");
       return null;
     }
 
     const format = new GeoJSON();
 
     if (features.length === 1) {
-      // console.log("getCurrentGeometry: Processing single feature");
+      // console.debug("getCurrentGeometry: Processing single feature");
       const feature = features[0];
       const geometry = feature.getGeometry();
 
       if (geometry instanceof Polygon) {
-        // console.log("getCurrentGeometry: Single Polygon found");
+        // console.debug("getCurrentGeometry: Single Polygon found");
         const geoJsonGeometry = format.writeGeometryObject(geometry, {
           dataProjection: "EPSG:4326",
           featureProjection: "EPSG:3857",
@@ -297,21 +297,21 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           type: "MultiPolygon",
           coordinates: [geoJsonGeometry.coordinates],
         };
-        // console.log("getCurrentGeometry: Returning MultiPolygon with 1 polygon", result);
+        // console.debug("getCurrentGeometry: Returning MultiPolygon with 1 polygon", result);
         return result;
       } else if (geometry instanceof MultiPolygon) {
-        // console.log("getCurrentGeometry: Single MultiPolygon found");
+        // console.debug("getCurrentGeometry: Single MultiPolygon found");
         const result = format.writeGeometryObject(geometry, {
           dataProjection: "EPSG:4326",
           featureProjection: "EPSG:3857",
         }) as GeoJSON.MultiPolygon;
-        // console.log("getCurrentGeometry: Returning MultiPolygon", result);
+        // console.debug("getCurrentGeometry: Returning MultiPolygon", result);
         return result;
       } else {
-        // console.log("getCurrentGeometry: Unknown geometry type:", geometry?.getType());
+        // console.debug("getCurrentGeometry: Unknown geometry type:", geometry?.getType());
       }
     } else if (features.length > 1) {
-      // console.log("getCurrentGeometry: Processing multiple features");
+      // console.debug("getCurrentGeometry: Processing multiple features");
       // Multiple features - combine into MultiPolygon
       const polygonCoordinates: number[][][] = [];
 
@@ -334,14 +334,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       }
     }
 
-    // console.log("getCurrentGeometry: Returning null");
+    // console.debug("getCurrentGeometry: Returning null");
     return null;
   };
 
   const updateAOIWithGeometry = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null, sourceAction: string) => {
-    // console.log(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
-    // console.log(`Current hasAOI before update:`, hasAOI);
-    // console.log(`Will set hasAOI to:`, !!geometry);
+    // console.debug(`AOI updated via ${sourceAction}. Geometry:`, geometry ? "present" : "cleared", geometry);
+    // console.debug(`Current hasAOI before update:`, hasAOI);
+    // console.debug(`Will set hasAOI to:`, !!geometry);
 
     currentAOIRef.current = geometry;
     setHasAOI(!!geometry);
@@ -350,14 +350,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       onAOIChange(geometry);
     }
 
-    // console.log(`hasAOI state should now be:`, !!geometry);
+    // console.debug(`hasAOI state should now be:`, !!geometry);
   };
 
   // Add this useEffect to debug hasAOI changes
   useEffect(() => {
-    // console.log(`hasAOI state changed to:`, hasAOI);
-    // console.log(`Current features in source:`, aoiLayerRef.current?.getSource()?.getFeatures().length || 0);
-    // console.log(`Current geometry in ref:`, currentAOIRef.current ? "present" : "null");
+    // console.debug(`hasAOI state changed to:`, hasAOI);
+    // console.debug(`Current features in source:`, aoiLayerRef.current?.getSource()?.getFeatures().length || 0);
+    // console.debug(`Current geometry in ref:`, currentAOIRef.current ? "present" : "null");
   }, [hasAOI]);
 
   const clearInteractions = () => {
@@ -365,17 +365,17 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       if (drawInteractionRef.current) {
         mapInstanceRef.current.removeInteraction(drawInteractionRef.current);
         drawInteractionRef.current = null;
-        console.log("Draw interaction removed");
+        console.debug("Draw interaction removed");
       }
       if (selectInteractionRef.current) {
         mapInstanceRef.current.removeInteraction(selectInteractionRef.current);
         selectInteractionRef.current = null;
-        console.log("Select interaction removed");
+        console.debug("Select interaction removed");
       }
       if (modifyInteractionRef.current) {
         mapInstanceRef.current.removeInteraction(modifyInteractionRef.current);
         modifyInteractionRef.current = null;
-        console.log("Modify interaction removed");
+        console.debug("Modify interaction removed");
       }
     }
   };
@@ -383,21 +383,21 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // Load existing AOI when data is available
   useEffect(() => {
     if (!aoiLayerRef.current || !mapInstanceRef.current) {
-      // console.log("Map or AOI layer not ready yet for AOI loading.");
+      // console.debug("Map or AOI layer not ready yet for AOI loading.");
       return;
     }
     const source = aoiLayerRef.current.getSource();
     if (!source) {
-      // console.log("AOI source not ready.");
+      // console.debug("AOI source not ready.");
       return;
     }
 
     if (isAOILoading) {
-      // console.log("AOI data is loading...");
+      // console.debug("AOI data is loading...");
       return;
     }
 
-    // console.log("useEffect for AOI load: isAOILoading is false. Current aoiData:", aoiData);
+    // console.debug("useEffect for AOI load: isAOILoading is false. Current aoiData:", aoiData);
     source.clear();
     let loadedGeometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null = null;
 
@@ -423,7 +423,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
               source.addFeature(feature);
             }
           });
-          // console.log(`Loaded MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+          // console.debug(`Loaded MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
         } else if (loadedGeometry.type === "Polygon") {
           // Handle single Polygon
           const feature = format.readFeature(loadedGeometry, {
@@ -434,16 +434,16 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           if (feature && feature.getGeometry()) {
             source.addFeature(feature);
           }
-          // console.log("Loaded single Polygon");
+          // console.debug("Loaded single Polygon");
         }
 
-        // console.log("Existing AOI feature(s) added to map source:", loadedGeometry);
+        // console.debug("Existing AOI feature(s) added to map source:", loadedGeometry);
       } catch (error) {
         // console.error("Error processing existing AOI feature:", error);
         loadedGeometry = null;
       }
     } else {
-      // console.log("No existing AOI data found after loading or aoiData.geometry is null/undefined.");
+      // console.debug("No existing AOI data found after loading or aoiData.geometry is null/undefined.");
     }
 
     updateAOIWithGeometry(loadedGeometry, "initialLoad");
@@ -569,10 +569,10 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       const selectedFeatures = event.target.getFeatures();
       if (selectedFeatures.getLength() > 0) {
         setSelectedFeatureForEdit(selectedFeatures.item(0));
-        // console.log("Feature selected for editing");
+        // console.debug("Feature selected for editing");
       } else {
         setSelectedFeatureForEdit(null);
-        // console.log("No feature selected");
+        // console.debug("No feature selected");
       }
     });
 
@@ -594,7 +594,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
 
       if (currentGeometry) {
         updateAOIWithGeometry(currentGeometry, "modifyEndSuccess");
-        // console.log("Modified polygon. Updated complete geometry:", currentGeometry);
+        // console.debug("Modified polygon. Updated complete geometry:", currentGeometry);
       } else {
         console.warn("modify.on('modifyend'): Failed to get current geometry from source");
         updateAOIWithGeometry(currentAOIRef.current, "modifyEndFallback");
@@ -605,7 +605,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     mapInstanceRef.current.addInteraction(modify);
     selectInteractionRef.current = select;
     modifyInteractionRef.current = modify;
-    // console.log("Editing interactions (select, modify) added.");
+    // console.debug("Editing interactions (select, modify) added.");
     return true;
   };
 
@@ -658,7 +658,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     setIsEditing(false);
     setSelectedFeatureForEdit(null); // Reset selected feature
     message.success("AOI edits applied. Save audit to persist.");
-    // console.log("saveEditing called. Current AOI in ref:", currentAOIRef.current);
+    // console.debug("saveEditing called. Current AOI in ref:", currentAOIRef.current);
   };
 
   const cancelEditing = () => {
@@ -692,7 +692,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
               source.addFeature(feature);
             }
           });
-          // console.log(`Restored MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
+          // console.debug(`Restored MultiPolygon with ${loadedGeometry.coordinates.length} polygons`);
         } else if (loadedGeometry.type === "Polygon") {
           // Handle single Polygon
           const feature = format.readFeature(loadedGeometry, {
@@ -703,7 +703,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
           if (feature && feature.getGeometry()) {
             source.addFeature(feature);
           }
-          // console.log("Restored single Polygon");
+          // console.debug("Restored single Polygon");
         }
 
         updateAOIWithGeometry(aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon, "cancelEditingRestore");
@@ -711,7 +711,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         // console.error("Error restoring AOI after cancel:", error);
       }
     } else {
-      // console.log("cancelEditing: No original aoiData to restore or geometry was null.");
+      // console.debug("cancelEditing: No original aoiData to restore or geometry was null.");
     }
 
     message.info("Editing cancelled.");
@@ -730,14 +730,14 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
   // useEffect for unmount cleanup
   useEffect(() => {
     return () => {
-      // console.log("DatasetAuditMap unmounting. Cleaning up interactions.");
+      // console.debug("DatasetAuditMap unmounting. Cleaning up interactions.");
       clearInteractions(); // Use the clearInteractions helper
 
       // Also, ensure the map target is undefined to help with OpenLayers cleanup
       if (mapInstanceRef.current) {
         mapInstanceRef.current.setTarget(undefined);
         mapInstanceRef.current = null; // Help GC
-        // console.log("Map instance cleaned up.");
+        // console.debug("Map instance cleaned up.");
       }
       // You might also want to explicitly clear layer sources if not handled by OL's map disposal
       // if (aoiLayerRef.current) {

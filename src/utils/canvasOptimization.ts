@@ -24,5 +24,5 @@ export function applyCanvasOptimization() {
     return originalGetContext.call(this, contextType, contextAttributes);
   };
 
-  console.log("[Canvas Optimization] Applied willReadFrequently=true to all 2D canvas contexts");
+  console.debug("[Canvas Optimization] Applied willReadFrequently=true to all 2D canvas contexts");
 }

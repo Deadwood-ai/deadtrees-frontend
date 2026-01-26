@@ -3,7 +3,7 @@ import { Settings } from "../config";
 
 export const fetchData = async () => {
   const { data, error } = await supabase.from(Settings.DATA_TABLE_FULL).select("*").neq("data_access", "private");
-  console.log("fetched data", data);
+  console.debug("fetched data", data);
   if (error) throw error;
   return data;
 };

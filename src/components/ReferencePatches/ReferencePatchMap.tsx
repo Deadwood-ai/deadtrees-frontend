@@ -545,11 +545,11 @@ export default function ReferencePatchMap({
     if (isEditingMode) {
       // Remove select interaction when entering editing mode
       map.removeInteraction(select);
-      console.log("Disabled patch selection (editing mode active)");
+      console.debug("Disabled patch selection (editing mode active)");
     } else {
       // Re-add select interaction when exiting editing mode
       map.addInteraction(select);
-      console.log("Enabled patch selection (editing mode inactive)");
+      console.debug("Enabled patch selection (editing mode inactive)");
     }
   }, [isEditingMode]);
 
@@ -703,7 +703,7 @@ export default function ReferencePatchMap({
         referenceForestCoverLayerRef.current.setVisible(false);
       }
 
-      console.log("[Map] Editing mode - all prediction/reference layers hidden, only editing overlay visible");
+      console.debug("[Map] Editing mode - all prediction/reference layers hidden, only editing overlay visible");
       return;
     }
 
@@ -737,7 +737,7 @@ export default function ReferencePatchMap({
       } else if (layerSelection === "forest_cover" && referenceForestCoverLayerRef.current) {
         referenceForestCoverLayerRef.current.setVisible(true);
       }
-      console.log("[Map] Base patch with reference data - showing reference layers, layer:", layerSelection);
+      console.debug("[Map] Base patch with reference data - showing reference layers, layer:", layerSelection);
       return;
     }
 
@@ -768,20 +768,20 @@ export default function ReferencePatchMap({
       // Then show only the selected layer
       if (layerSelection === "deadwood" && referenceDeadwoodLayerRef.current) {
         referenceDeadwoodLayerRef.current.setVisible(true);
-        console.log("[Map] Deadwood reference layer:", {
+        console.debug("[Map] Deadwood reference layer:", {
           exists: true,
           visible: true,
           featureCount: referenceDeadwoodLayerRef.current.getSource()?.getFeatures().length || 0,
         });
       } else if (layerSelection === "forest_cover" && referenceForestCoverLayerRef.current) {
         referenceForestCoverLayerRef.current.setVisible(true);
-        console.log("[Map] Forest cover reference layer:", {
+        console.debug("[Map] Forest cover reference layer:", {
           exists: true,
           visible: true,
           featureCount: referenceForestCoverLayerRef.current.getSource()?.getFeatures().length || 0,
         });
       }
-      console.log("[Map] Sub-patch with reference data - showing reference layers, layer:", layerSelection);
+      console.debug("[Map] Sub-patch with reference data - showing reference layers, layer:", layerSelection);
       return;
     }
 
@@ -811,14 +811,14 @@ export default function ReferencePatchMap({
     const loadReferenceGeometries = async () => {
       const map = mapRef.current;
       if (!map || !selectedBasePatch) {
-        console.log("[Map] Reference geometries: map or selectedBasePatch not available");
+        console.debug("[Map] Reference geometries: map or selectedBasePatch not available");
         return;
       }
 
       const hasReferenceData =
         selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id;
 
-      console.log("[Map] Loading reference geometries for patch:", selectedBasePatch.id, {
+      console.debug("[Map] Loading reference geometries for patch:", selectedBasePatch.id, {
         hasReferenceData,
         deadwoodLabelId: selectedBasePatch.reference_deadwood_label_id,
         forestCoverLabelId: selectedBasePatch.reference_forest_cover_label_id,
@@ -827,7 +827,7 @@ export default function ReferencePatchMap({
 
       if (!hasReferenceData) {
         // Clean up reference layers if no reference data
-        console.log("No reference data, cleaning up layers");
+        console.debug("No reference data, cleaning up layers");
         if (referenceDeadwoodLayerRef.current) {
           map.removeLayer(referenceDeadwoodLayerRef.current);
           referenceDeadwoodLayerRef.current = null;
@@ -841,7 +841,7 @@ export default function ReferencePatchMap({
 
       // Load deadwood reference geometries
       if (selectedBasePatch.reference_deadwood_label_id) {
-        console.log("Fetching deadwood geometries for label:", selectedBasePatch.reference_deadwood_label_id);
+        console.debug("Fetching deadwood geometries for label:", selectedBasePatch.reference_deadwood_label_id);
         const { data: deadwoodGeoms, error } = await supabase
           .from("reference_patch_deadwood_geometries")
           .select("geometry")
@@ -850,7 +850,7 @@ export default function ReferencePatchMap({
         if (error) {
           console.error("Error fetching deadwood geometries:", error);
         } else {
-          console.log("Fetched deadwood geometries:", deadwoodGeoms?.length || 0);
+          console.debug("Fetched deadwood geometries:", deadwoodGeoms?.length || 0);
         }
 
         if (deadwoodGeoms && deadwoodGeoms.length > 0) {
@@ -886,7 +886,7 @@ export default function ReferencePatchMap({
 
           referenceDeadwoodLayerRef.current = layer;
           map.addLayer(layer);
-          console.log("Added deadwood reference layer, features:", source.getFeatures().length);
+          console.debug("Added deadwood reference layer, features:", source.getFeatures().length);
           // Trigger visibility effect to run again
           setReferenceLayersLoaded((prev) => prev + 1);
         }
@@ -894,7 +894,7 @@ export default function ReferencePatchMap({
 
       // Load forest cover reference geometries
       if (selectedBasePatch.reference_forest_cover_label_id) {
-        console.log("Fetching forest cover geometries for label:", selectedBasePatch.reference_forest_cover_label_id);
+        console.debug("Fetching forest cover geometries for label:", selectedBasePatch.reference_forest_cover_label_id);
         const { data: forestCoverGeoms, error } = await supabase
           .from("reference_patch_forest_cover_geometries")
           .select("geometry")
@@ -903,7 +903,7 @@ export default function ReferencePatchMap({
         if (error) {
           console.error("Error fetching forest cover geometries:", error);
         } else {
-          console.log("Fetched forest cover geometries:", forestCoverGeoms?.length || 0);
+          console.debug("Fetched forest cover geometries:", forestCoverGeoms?.length || 0);
         }
 
         if (forestCoverGeoms && forestCoverGeoms.length > 0) {
@@ -939,7 +939,7 @@ export default function ReferencePatchMap({
 
           referenceForestCoverLayerRef.current = layer;
           map.addLayer(layer);
-          console.log("Added forest cover reference layer, features:", source.getFeatures().length);
+          console.debug("Added forest cover reference layer, features:", source.getFeatures().length);
           // Trigger visibility effect to run again
           setReferenceLayersLoaded((prev) => prev + 1);
         }

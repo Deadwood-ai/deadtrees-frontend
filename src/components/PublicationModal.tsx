@@ -127,7 +127,7 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
       }
 
       const data = await response.json();
-      console.log("ORCID data:", data);
+      console.debug("ORCID data:", data);
 
       // Extract relevant information from ORCID response
       const firstName = data.person?.name?.["given-names"]?.value || "";

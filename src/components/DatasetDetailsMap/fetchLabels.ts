@@ -3,14 +3,14 @@ import { ILabels } from "../../types/dataset";
 import { supabase } from "../../hooks/useSupabase";
 
 const fetchLabels = async ({ dataset_id }: { dataset_id: number }): Promise<ILabels | null> => {
-  console.log("dataset_id", dataset_id);
+  console.debug("dataset_id", dataset_id);
   const { data, error } = await supabase.from(Settings.LABELS_TABLE).select("*").eq("dataset_id", dataset_id);
 
   if (error) {
     // console.error("Error fetching data:", error);
     return null;
   } else {
-    // console.log("Data fetched:", data);
+    // console.debug("Data fetched:", data);
 
     if (!data || data.length === 0) {
       return null;
