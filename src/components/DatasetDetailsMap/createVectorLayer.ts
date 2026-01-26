@@ -172,8 +172,8 @@ export const createDeadwoodVectorLayer = (labelId?: number | null, options?: Lay
       : "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
-      fillColor: "rgba(255, 50, 50, 0.8)",
-      strokeColor: "rgba(200, 50, 0, 1)",
+      fillColor: "rgba(255, 179, 28, 0.7)", // Orange (#FFB31C) matching DeadtreesMap
+      strokeColor: "#F59E0B", // Darker orange for stroke
       strokeWidth: 1.5,
     },
     labelId: labelId || undefined,
