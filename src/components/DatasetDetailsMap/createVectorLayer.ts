@@ -102,39 +102,33 @@ const createVectorLayer = (config: VectorLayerConfig) => {
 
   // Create style function for correction-aware styling
   const getFeatureStyle = (feature: Feature) => {
-    if (!config.showCorrectionStyling) {
-      // Default static style
-      return new Style({
-        fill: new Fill({ color: config.style.fillColor }),
-        stroke: new Stroke({ color: config.style.strokeColor, width: config.style.strokeWidth }),
-      });
-    }
-
-    // Correction-aware styling
+    // Get correction status from feature properties (only available with corrections-aware MVT)
     const correctionStatus = feature.get("correction_status") as string | undefined;
     const isDeleted = feature.get("is_deleted") as boolean | undefined;
 
+    // Hide deleted polygons - they should not be visible to regular users
+    // (Auditors would use a separate view/filter to see pending deletions)
+    if (isDeleted) {
+      return new Style({}); // Empty style = invisible
+    }
+
+    // Default style values - keep original fill, only change border for corrections
     let fillColor = config.style.fillColor;
     let strokeColor = config.style.strokeColor;
     let strokeWidth = config.style.strokeWidth;
 
-    if (isDeleted && correctionStatus === "pending") {
-      // Deleted but pending review - gray with dashed stroke
-      fillColor = "rgba(128, 128, 128, 0.4)";
-      strokeColor = "#666666";
-      strokeWidth = 2;
-    } else if (correctionStatus === "pending") {
-      // Pending correction (add/modify) - orange
-      fillColor = "rgba(255, 165, 0, 0.6)";
-      strokeColor = "#ff8c00";
-      strokeWidth = 2;
-    } else if (correctionStatus === "approved") {
-      // Approved correction - green tint
-      fillColor = "rgba(34, 197, 94, 0.6)";
-      strokeColor = "#16a34a";
-      strokeWidth = 1.5;
+    if (config.showCorrectionStyling && correctionStatus) {
+      if (correctionStatus === "pending") {
+        // Pending correction - keep original fill, subtle blue border
+        strokeColor = "#60A5FA"; // Light blue - "in review"
+        strokeWidth = 2;
+      } else if (correctionStatus === "approved") {
+        // Approved correction - keep original fill, subtle green border
+        strokeColor = "#34D399"; // Light green - "verified"
+        strokeWidth = 2;
+      }
+      // 'none' or 'rejected' use default style (original predictions)
     }
-    // 'original' or 'rejected' use default style
 
     return new Style({
       fill: new Fill({ color: fillColor }),
