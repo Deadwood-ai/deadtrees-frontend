@@ -78,6 +78,8 @@ export function useLoadGeometriesForEditing(labelId: number | undefined, layerTy
       const tableName =
         layerType === "deadwood" ? "v2_deadwood_geometries" : "v2_forest_cover_geometries";
 
+      // Note: correction_status is computed via RPC functions (JOINs with corrections table)
+      // It's not a column on the geometry tables, so we don't query for it here
       const { data, error } = await supabase
         .from(tableName)
         .select("id, geometry, updated_at, is_deleted")
@@ -100,6 +102,8 @@ export function useLoadGeometriesForEditing(labelId: number | undefined, layerTy
         // Store DB metadata on feature for save operation
         feature.set("geometry_id", row.id);
         feature.set("updated_at", row.updated_at);
+        // correction_status is not available from direct table query - it comes from RPC functions
+        // For editing, we track changes via is_new/is_modified instead
         feature.set("is_new", false);
         feature.set("is_modified", false);
         return feature;
