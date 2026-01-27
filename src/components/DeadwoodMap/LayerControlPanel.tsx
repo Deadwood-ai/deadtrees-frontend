@@ -95,43 +95,44 @@ const LayerControlPanel = ({
       {/* Flags Section - shown to all users */}
       {showFlagsControls && (
         <>
-          <Divider className="my-3" />
-          <div className="mb-2 text-xs font-medium text-gray-500">Feedback</div>
-          <p className="mb-2 text-xs text-gray-500">
-            Help improve our AI by flagging incorrect predictions
-          </p>
-          {isLoggedIn ? (
-            <>
+          <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
+            <div className="mb-1 text-xs font-medium text-blue-700">Feedback</div>
+            <p className="mb-2 text-xs text-blue-600">
+              Help improve our AI by flagging incorrect predictions
+            </p>
+            {isLoggedIn ? (
+              <>
+                <Button
+                  size="small"
+                  type={isDrawingFlag ? "primary" : "default"}
+                  danger={isDrawingFlag}
+                  icon={<FlagOutlined />}
+                  onClick={onFlagClick}
+                  block
+                >
+                  {isDrawingFlag ? "Cancel" : "Flag Area"}
+                </Button>
+                {setShowFlagsLayer && (
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-blue-600">
+                      Show Flags {flagsCount !== undefined && flagsCount > 0 && `(${flagsCount})`}
+                    </span>
+                    <Switch size="small" checked={showFlagsLayer} onChange={setShowFlagsLayer} />
+                  </div>
+                )}
+              </>
+            ) : (
               <Button
                 size="small"
-                type={isDrawingFlag ? "primary" : "default"}
-                danger={isDrawingFlag}
-                icon={<FlagOutlined />}
-                onClick={onFlagClick}
+                type="primary"
+                icon={<LoginOutlined />}
+                onClick={onLoginRequired}
                 block
               >
-                {isDrawingFlag ? "Cancel" : "Flag Area"}
+                Sign in to flag areas
               </Button>
-              {setShowFlagsLayer && (
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-600">
-                    Show Flags {flagsCount !== undefined && flagsCount > 0 && `(${flagsCount})`}
-                  </span>
-                  <Switch size="small" checked={showFlagsLayer} onChange={setShowFlagsLayer} />
-                </div>
-              )}
-            </>
-          ) : (
-            <Button
-              size="small"
-              type="primary"
-              icon={<LoginOutlined />}
-              onClick={onLoginRequired}
-              block
-            >
-              Sign in to flag areas
-            </Button>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>
