@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { trackPageView, initializePostHog } from "./utils/analytics";
 import { AOIProvider } from "./contexts/AOIContext";
 import { useDatasetSubscription } from "./hooks/useDatasetSubscription";
+import { AuditNavigationProvider } from "./hooks/useAuditNavigation";
 
 import Navigation from "./components/Navigation";
 import HomePage from "./pages/Home";
@@ -127,7 +128,9 @@ export default function App() {
     <ConfigProvider theme={globalTheme}>
       <BrowserRouter>
         <AOIProvider>
-          <AppWithTracking />
+          <AuditNavigationProvider>
+            <AppWithTracking />
+          </AuditNavigationProvider>
         </AOIProvider>
       </BrowserRouter>
     </ConfigProvider>
