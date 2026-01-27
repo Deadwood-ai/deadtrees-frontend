@@ -790,8 +790,13 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       >
-        {/* Top Left - Layer Controls */}
+        {/* Top Left - Location Controls */}
         <div className="absolute left-2 top-24 z-50">
+          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
+        </div>
+
+        {/* Top Right - Layer Controls */}
+        <div className="absolute right-2 top-24 z-50">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
@@ -810,11 +815,6 @@ const DeadtreesMap = () => {
             setShowFlagsLayer={setShowFlagsLayer}
             flagsCount={mapFlags.length}
           />
-        </div>
-
-        {/* Top Right - Location Controls */}
-        <div className="absolute right-2 top-24 z-50">
-          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
         </div>
 
         {/* Top Center - Processing Stats */}
