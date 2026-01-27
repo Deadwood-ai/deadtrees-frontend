@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Typography, Form, Radio, Input, message, Tooltip, Card, Space, Image, Collapse, Tag } from "antd";
-import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, DownloadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, DownloadOutlined, CheckCircleOutlined, RightOutlined, CopyOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
 import DatasetAuditMap from "./DatasetAuditMap";
 import {
@@ -11,15 +11,18 @@ import {
   useSetAuditLock,
   useClearAuditLock,
   useOrthoMetadata,
+  useMarkAsReviewed,
 } from "../../hooks/useDatasetAudit";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDownload } from "../../hooks/useDownloadProvider";
 import { useAuditNavigationGuard } from "../../hooks/useAuditNavigationGuard";
+import { useAuditNavigation } from "../../hooks/useAuditNavigation";
 import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../../hooks/usePhenologyData";
 import { useDatasetFlags, useUpdateFlagStatus } from "../../hooks/useDatasetFlags";
+import { useSeasonPrompt, DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -74,6 +77,12 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
   // Mutation to save audit data
   const { mutateAsync: saveAudit, isPending: isSavingAudit } = useSaveDatasetAudit();
 
+  // Mutation to mark as reviewed
+  const { mutateAsync: markAsReviewed, isPending: isMarkingReviewed } = useMarkAsReviewed();
+
+  // Navigation context for Save & Next
+  const { getNextDatasetId, currentIndex, totalCount } = useAuditNavigation();
+
   // Audit lock mutations
   const { mutateAsync: setAuditLock } = useSetAuditLock();
   const { mutateAsync: clearAuditLock } = useClearAuditLock();
@@ -83,6 +92,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
   // Add phenology data hook
   const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset.id);
+
+  // Season prompt hook for copying AI prompt
+  const { copyPromptWithImage } = useSeasonPrompt();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auditLockError, setAuditLockError] = useState<string | null>(null);
@@ -177,6 +189,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }),
   ];
 
+  // Track if we should navigate to next after save
+  const [navigateToNext, setNavigateToNext] = useState(false);
+
   const handleSubmit = async (values: AuditFormValues) => {
     // Wait for AOI to be loaded/processed before validating
     if (!isAOILoaded) {
@@ -223,9 +238,20 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
       // Clear form changes flag to disable navigation guard
       setHasFormChanges(false);
 
-      // Always navigate back to audit list
+      // Navigate to next dataset or back to list
       setTimeout(() => {
-        navigate("/dataset-audit");
+        if (navigateToNext) {
+          const nextId = getNextDatasetId(dataset.id);
+          if (nextId) {
+            navigate(`/dataset-audit/${nextId}`);
+          } else {
+            message.info("No more datasets in the current filter");
+            navigate("/dataset-audit");
+          }
+        } else {
+          navigate("/dataset-audit");
+        }
+        setNavigateToNext(false);
       }, 100);
     } catch (error) {
       console.error("Error saving audit data:", error);
@@ -235,10 +261,25 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
     }
   };
 
+  const handleSaveAndNext = () => {
+    setNavigateToNext(true);
+    form.submit();
+  };
+
   const handleCancel = () => {
     showExitConfirmation(() => {
       navigate("/dataset-audit");
     });
+  };
+
+  const handleMarkReviewed = async () => {
+    try {
+      await markAsReviewed(dataset.id);
+      message.success("Dataset marked as reviewed");
+    } catch (error) {
+      console.error("Error marking as reviewed:", error);
+      message.error("Failed to mark as reviewed");
+    }
   };
 
   const isLoading = isAuditLoading || !user || isLockingAudit;
@@ -506,6 +547,38 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
                 ) : (
                   <div className="text-xs text-gray-500">Phenology data not available</div>
                 )}
+              </div>
+
+              {/* Copy Season Prompt button */}
+              <div className="mb-3">
+                <Tooltip title="Copy season classification prompt and thumbnail to clipboard for AI assistance">
+                  <Button
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={async () => {
+                      const seasonInfo: DatasetSeasonInfo = {
+                        admin_level_2: dataset.admin_level_2 || undefined,
+                        admin_level_3: dataset.admin_level_3 || undefined,
+                        country: dataset.admin_level_1 || undefined,
+                        biome_name: dataset.biome_name || undefined,
+                        acquisition_date: [
+                          dataset.aquisition_year,
+                          dataset.aquisition_month?.toString().padStart(2, "0"),
+                          dataset.aquisition_day?.toString().padStart(2, "0"),
+                        ]
+                          .filter(Boolean)
+                          .join("-"),
+                        latitude: dataset.bbox ? parseFloat(dataset.bbox.split(",")[1]) : undefined,
+                      };
+                      const thumbnailUrl = dataset.thumbnail_path
+                        ? `${Settings.SUPABASE_URL}/storage/v1/object/public/thumbnails/${dataset.thumbnail_path}`
+                        : "";
+                      await copyPromptWithImage(seasonInfo, thumbnailUrl);
+                    }}
+                  >
+                    Copy AI Prompt
+                  </Button>
+                </Tooltip>
               </div>
 
               <Form.Item
@@ -888,32 +961,76 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
             {/* Updated Action Buttons */}
             <div className="sticky bottom-0 bg-gray-50 pb-2 pt-3">
-              <Space className="w-full justify-end">
-                <Button onClick={handleCancel}>Cancel</Button>
-                <Form.Item
-                  shouldUpdate={(prevValues, currentValues) =>
-                    prevValues.final_assessment !== currentValues.final_assessment
-                  }
-                  className="mb-0"
-                >
-                  {({ getFieldValue }) => {
-                    const assessment = getFieldValue("final_assessment");
-                    const aoiRequired = assessment === "no_issues";
+              <div className="flex w-full items-center justify-between">
+                {/* Left side: Mark as Reviewed button (only for already audited datasets) */}
+                <div>
+                  {auditData && !auditData.reviewed_at && (
+                    <Button
+                      type="default"
+                      icon={<CheckCircleOutlined />}
+                      onClick={handleMarkReviewed}
+                      loading={isMarkingReviewed}
+                    >
+                      Mark as Reviewed
+                    </Button>
+                  )}
+                  {auditData?.reviewed_at && (
+                    <Tag color="blue" className="text-xs">
+                      ✓ Reviewed by {auditData.reviewed_by_email?.split("@")[0] || "unknown"}
+                    </Tag>
+                  )}
+                </div>
 
-                    return (
-                      <Button
-                        type="primary"
-                        onClick={() => form.submit()}
-                        loading={isSaving}
-                        icon={<SaveOutlined />}
-                        disabled={aoiRequired && !hasAOI}
-                      >
-                        Save Audit
-                      </Button>
-                    );
-                  }}
-                </Form.Item>
-              </Space>
+                {/* Right side: Cancel and Save buttons */}
+                <Space>
+                  <Button onClick={handleCancel}>Cancel</Button>
+                  <Form.Item
+                    shouldUpdate={(prevValues, currentValues) =>
+                      prevValues.final_assessment !== currentValues.final_assessment
+                    }
+                    className="mb-0"
+                  >
+                    {({ getFieldValue }) => {
+                      const assessment = getFieldValue("final_assessment");
+                      const aoiRequired = assessment === "no_issues";
+                      const isDisabled = aoiRequired && !hasAOI;
+                      const nextId = getNextDatasetId(dataset.id);
+                      const idx = currentIndex(dataset.id);
+                      const hasNext = nextId !== null;
+
+                      return (
+                        <Space>
+                          <Button
+                            type="primary"
+                            onClick={() => {
+                              setNavigateToNext(false);
+                              form.submit();
+                            }}
+                            loading={isSaving && !navigateToNext}
+                            icon={<SaveOutlined />}
+                            disabled={isDisabled}
+                          >
+                            Save Audit
+                          </Button>
+                          {totalCount > 0 && (
+                            <Tooltip title={hasNext ? `Next: Dataset #${nextId}` : "No more datasets in filter"}>
+                              <Button
+                                type="primary"
+                                onClick={handleSaveAndNext}
+                                loading={isSaving && navigateToNext}
+                                icon={<RightOutlined />}
+                                disabled={isDisabled || !hasNext}
+                              >
+                                Save & Next {idx >= 0 && `(${idx + 1}/${totalCount})`}
+                              </Button>
+                            </Tooltip>
+                          )}
+                        </Space>
+                      );
+                    }}
+                  </Form.Item>
+                </Space>
+              </div>
             </div>
           </Form>
         </div>
