@@ -62,37 +62,55 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     const source = new VectorSource<Feature<Geometry>>({ wrapX: false } as unknown as { wrapX: boolean });
 
-    // Define styles for different states
-    // Default: Blue, thin stroke
-    const baseStyle = new Style({
-      fill: new Fill({ color: "rgba(59,130,246,0.05)" }), // blue-500 @ 5% - very light
-      stroke: new Stroke({ color: "#3b82f6", width: 2 }), // blue-500, thin
-    });
-
-    // Hover: Cyan, medium stroke
-    const hoverStyle = new Style({
-      fill: new Fill({ color: "rgba(6,182,212,0.05)" }), // cyan-500 @ 5% - very light
-      stroke: new Stroke({ color: "#06b6d4", width: 3 }), // cyan-500, medium
-    });
-
-    // Selected: Orange, thick stroke
-    const selectedStyle = new Style({
-      fill: new Fill({ color: "rgba(249,115,22,0.05)" }), // orange-500 @ 5% - very light
-      stroke: new Stroke({ color: "#f97316", width: 4 }), // orange-500, thick
-    });
-
-    // Style function that checks feature state
+    // Style function that determines appearance based on feature state and correction status
+    // - Original/Prediction: Default fill with thin gray border (no special border)
+    // - Edited/Pending (is_new, is_modified, or correction_status='pending'): Blue border
+    // - Approved (correction_status='approved'): Green border
+    // - Selected/Hovered states override base styling
     const styleFunction = (feature: FeatureLike) => {
       const isSelected = feature.get("dt_selected") === true;
       const isHovered = feature.get("dt_hovered") === true;
+      const isNew = feature.get("is_new") === true;
+      const isModified = feature.get("is_modified") === true;
+      const correctionStatus = feature.get("correction_status") as string | null;
+
+      // Determine if this feature has been edited (locally or from DB)
+      const hasEdits = isNew || isModified || correctionStatus === "pending";
+      const isApproved = correctionStatus === "approved";
+
+      // Fill color - very light, consistent across states
+      const fillColor = "rgba(100, 100, 100, 0.08)"; // neutral gray @ 8%
+
+      // Determine stroke color based on correction state
+      let strokeColor: string;
+      let strokeWidth: number;
 
       if (isSelected) {
-        return selectedStyle;
+        // Selected: Orange, thick stroke (interaction state takes priority)
+        strokeColor = "#f97316"; // orange-500
+        strokeWidth = 4;
       } else if (isHovered) {
-        return hoverStyle;
+        // Hover: Cyan, medium stroke (interaction state takes priority)
+        strokeColor = "#06b6d4"; // cyan-500
+        strokeWidth = 3;
+      } else if (isApproved) {
+        // Approved/Verified: Green border
+        strokeColor = "#34D399"; // green
+        strokeWidth = 2;
+      } else if (hasEdits) {
+        // Edited/Pending: Blue border
+        strokeColor = "#60A5FA"; // light blue
+        strokeWidth = 2;
       } else {
-        return baseStyle;
+        // Original/Prediction: Thin gray border (default, no special styling)
+        strokeColor = "#9CA3AF"; // gray-400
+        strokeWidth = 1;
       }
+
+      return new Style({
+        fill: new Fill({ color: fillColor }),
+        stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+      });
     };
 
     const layer = new VectorLayer({
