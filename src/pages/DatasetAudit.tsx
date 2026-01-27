@@ -1,446 +1,858 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Table, Button, Typography, message, Tag, Tooltip, Segmented, Input, Space, Checkbox } from "antd";
+import {
+	Table,
+	Button,
+	Typography,
+	message,
+	Tag,
+	Tooltip,
+	Segmented,
+	Input,
+	Space,
+	Checkbox,
+	Select,
+	Collapse,
+	Badge,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { SearchOutlined } from "@ant-design/icons";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import {
+	SearchOutlined,
+	MailOutlined,
+	FilterOutlined,
+	FlagOutlined,
+} from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useDatasets } from "../hooks/useDatasets";
 import DatasetAuditDetail from "../components/DatasetAudit/DatasetAuditDetail";
 import { IDataset } from "../types/dataset";
-import { useDatasetAudits } from "../hooks/useDatasetAudit";
+import { useDatasetAudits, DatasetAuditUserInfo, useDatasetContributors } from "../hooks/useDatasetAudit";
 import { supabase } from "../hooks/useSupabase";
 import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
 import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
+import { useAuditNavigation } from "../hooks/useAuditNavigation";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
-type AuditFilter =
-  | "needs-audit"
-  | "audited"
-  | "needs-tiles"
-  | "training-ready"
-  | "fixable-issues"
-  | "excluded"
-  | "flagged";
+// New simplified tab structure
+type AuditTab = "pending" | "completed" | "reference";
+
+// Status sub-filter for completed tab
+type CompletedStatusFilter = "all" | "ready" | "fixable" | "excluded" | "needs-review" | "reviewed";
 
 // Month constants for filtering
 const MONTHS = [
-  { label: "Jan", value: 1 },
-  { label: "Feb", value: 2 },
-  { label: "Mar", value: 3 },
-  { label: "Apr", value: 4 },
-  { label: "May", value: 5 },
-  { label: "Jun", value: 6 },
-  { label: "Jul", value: 7 },
-  { label: "Aug", value: 8 },
-  { label: "Sep", value: 9 },
-  { label: "Oct", value: 10 },
-  { label: "Nov", value: 11 },
-  { label: "Dec", value: 12 },
+	{ label: "Jan", value: 1 },
+	{ label: "Feb", value: 2 },
+	{ label: "Mar", value: 3 },
+	{ label: "Apr", value: 4 },
+	{ label: "May", value: 5 },
+	{ label: "Jun", value: 6 },
+	{ label: "Jul", value: 7 },
+	{ label: "Aug", value: 8 },
+	{ label: "Sep", value: 9 },
+	{ label: "Oct", value: 10 },
+	{ label: "Nov", value: 11 },
+	{ label: "Dec", value: 12 },
 ];
 
-// Helper function to check if dataset processing is complete (moved outside component to prevent re-renders)
+// Helper function to check if dataset processing is complete
 const isProcessingComplete = (dataset: IDataset) => {
-  return (
-    dataset.is_upload_done &&
-    dataset.is_ortho_done &&
-    dataset.is_cog_done &&
-    dataset.is_thumbnail_done &&
-    dataset.is_deadwood_done &&
-    dataset.is_metadata_done
-  );
+	return (
+		dataset.is_upload_done &&
+		dataset.is_ortho_done &&
+		dataset.is_cog_done &&
+		dataset.is_thumbnail_done &&
+		dataset.is_deadwood_done &&
+		dataset.is_metadata_done
+	);
+};
+
+// Helper to format location
+const formatLocation = (dataset: IDataset): string => {
+	const parts = [dataset.admin_level_3, dataset.admin_level_1].filter(Boolean);
+	return parts.length > 0 ? parts.join(", ") : "Unknown";
+};
+
+// Helper to format acquisition date
+const formatAcquisitionDate = (dataset: IDataset): string => {
+	const { aquisition_year, aquisition_month, aquisition_day } = dataset;
+	if (!aquisition_year) return "Unknown";
+	const parts = [String(aquisition_year)];
+	if (aquisition_month) parts.push(String(aquisition_month).padStart(2, "0"));
+	if (aquisition_day) parts.push(String(aquisition_day).padStart(2, "0"));
+	return parts.join("-");
+};
+
+// Biome badge colors
+const BIOME_COLORS: Record<string, { color: string; icon: string }> = {
+	"Tropical": { color: "green", icon: "🌴" },
+	"Subtropical": { color: "lime", icon: "🌴" },
+	"Temperate": { color: "blue", icon: "🌲" },
+	"Boreal": { color: "cyan", icon: "🌲" },
+	"Mediterranean": { color: "orange", icon: "🌿" },
+};
+
+const getBiomeBadge = (biomeName: string | null) => {
+	if (!biomeName) return <Tag color="default">Unknown</Tag>;
+	
+	// Find matching biome type
+	for (const [key, { color, icon }] of Object.entries(BIOME_COLORS)) {
+		if (biomeName.toLowerCase().includes(key.toLowerCase())) {
+			return (
+				<Tooltip title={biomeName}>
+					<Tag color={color}>
+						{icon} {key}
+					</Tag>
+				</Tooltip>
+			);
+		}
+	}
+	return (
+		<Tooltip title={biomeName}>
+			<Tag color="default">{biomeName.slice(0, 15)}...</Tag>
+		</Tooltip>
+	);
 };
 
 export default function DatasetAudit() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+	const { id } = useParams();
+	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const { setFilteredDatasetIds } = useAuditNavigation();
 
-  // ALL HOOKS MUST BE CALLED FIRST - NO EARLY RETURNS BEFORE THIS POINT
-  const { user } = useAuth();
-  const isAuthLoading = false;
-  const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
-  const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
-  const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
-  const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
-  const { data: referenceDatasetIds = new Set() } = useReferenceDatasetIds();
+	// ALL HOOKS MUST BE CALLED FIRST
+	const { user } = useAuth();
+	const isAuthLoading = false;
+	const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
+	const { data: datasets, isLoading: isDatasetLoading } = useDatasets();
+	const { data: audits, isLoading: isAuditsLoading } = useDatasetAudits();
+	const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
+	const { data: referenceDatasetIds = new Set() } = useReferenceDatasetIds();
+	const { data: contributorMap = new Map() } = useDatasetContributors();
 
-  // Filter states - initialize from URL params if available
-  const initialFilter = (searchParams.get("tab") as AuditFilter) || "needs-audit";
-  const [auditFilter, setAuditFilter] = useState<AuditFilter>(initialFilter);
-  const [idFilter, setIdFilter] = useState<string>("");
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+	// Filter states - initialize from URL params
+	const initialTab = (searchParams.get("tab") as AuditTab) || "pending";
+	const initialStatus = (searchParams.get("status") as CompletedStatusFilter) || "all";
+	const initialBiome = searchParams.get("biome") || "";
+	const initialCountry = searchParams.get("country") || "";
+	const initialAuditor = searchParams.get("auditor") || "";
+	const initialContributor = searchParams.get("contributor") || "";
+	const initialHasFlags = searchParams.get("hasFlags") === "true";
 
-  // Handler for tab change that updates both state and URL
-  const handleTabChange = (value: AuditFilter) => {
-    setAuditFilter(value);
-    setSearchParams({ tab: value });
-  };
+	const [activeTab, setActiveTab] = useState<AuditTab>(initialTab);
+	const [statusFilter, setStatusFilter] = useState<CompletedStatusFilter>(initialStatus);
+	const [idFilter, setIdFilter] = useState<string>(searchParams.get("id") || "");
+	const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+	const [biomeFilter, setBiomeFilter] = useState<string>(initialBiome);
+	const [countryFilter, setCountryFilter] = useState<string>(initialCountry);
+	const [auditorFilter, setAuditorFilter] = useState<string>(initialAuditor);
+	const [contributorFilter, setContributorFilter] = useState<string>(initialContributor);
+	const [hasFlagsFilter, setHasFlagsFilter] = useState<boolean>(initialHasFlags);
+	const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
 
-  // Add a constant for the minimum dataset ID
-  const MIN_AUDIT_DATASET_ID = 2559;
-  // Dynamically enable the min-ID filter only if such IDs exist in current dataset list (fixes empty views in dev)
-  const hasAboveMinId = useMemo(() => {
-    return (datasets || []).some((d) => d.id > MIN_AUDIT_DATASET_ID);
-  }, [datasets]);
+	// Update URL when filters change
+	useEffect(() => {
+		const params = new URLSearchParams();
+		params.set("tab", activeTab);
+		if (statusFilter !== "all") params.set("status", statusFilter);
+		if (biomeFilter) params.set("biome", biomeFilter);
+		if (countryFilter) params.set("country", countryFilter);
+		if (auditorFilter) params.set("auditor", auditorFilter);
+		if (contributorFilter) params.set("contributor", contributorFilter);
+		if (hasFlagsFilter) params.set("hasFlags", "true");
+		if (idFilter) params.set("id", idFilter);
+		setSearchParams(params, { replace: true });
+	}, [activeTab, statusFilter, biomeFilter, countryFilter, auditorFilter, contributorFilter, hasFlagsFilter, idFilter, setSearchParams]);
 
-  // Create a map of dataset_id to audit data for quick lookup
-  const auditMap = useMemo(() => {
-    if (!audits) return new Map();
-    return new Map(audits.map((audit) => [audit.dataset_id, audit]));
-  }, [audits]);
+	// Minimum dataset ID for auditing
+	const MIN_AUDIT_DATASET_ID = 2559;
+	const hasAboveMinId = useMemo(() => {
+		return (datasets || []).some((d) => d.id > MIN_AUDIT_DATASET_ID);
+	}, [datasets]);
 
-  // Filter datasets based on audit status, ID, and months
-  const filteredDatasets = useMemo(() => {
-    if (!datasets) return [];
+	// Create maps for quick lookup
+	const auditMap = useMemo(() => {
+		if (!audits) return new Map<number, DatasetAuditUserInfo>();
+		return new Map(audits.map((audit) => [audit.dataset_id, audit as unknown as DatasetAuditUserInfo]));
+	}, [audits]);
 
-    let filtered = datasets;
+	const flaggedMap = useMemo(() => new Map(flaggedAgg.map((r) => [r.dataset_id, r])), [flaggedAgg]);
 
-    // First filter by minimum ID for auditing (skip for Flagged, Tiles Pending, and Training Ready tabs)
-    if (
-      auditFilter !== "flagged" &&
-      auditFilter !== "needs-tiles" &&
-      auditFilter !== "training-ready" &&
-      hasAboveMinId
-    ) {
-      filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
-    }
+	// Extract unique values for filters
+	const uniqueBiomes = useMemo(() => {
+		if (!datasets) return [];
+		const biomes = new Set(datasets.map((d) => d.biome_name).filter(Boolean));
+		return Array.from(biomes).sort();
+	}, [datasets]);
 
-    if (auditFilter === "needs-audit") {
-      filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
-    } else if (auditFilter === "audited") {
-      filtered = filtered.filter((dataset) => dataset.is_audited);
-    } else if (auditFilter === "needs-tiles") {
-      // Show all datasets that are in reference_datasets AND don't have patches yet (regardless of audit status)
-      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && !dataset.has_ml_tiles);
-    } else if (auditFilter === "training-ready") {
-      // Only show datasets that are in reference_datasets AND have patches completed
-      filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id) && dataset.has_ml_tiles);
-    } else if (auditFilter === "fixable-issues") {
-      filtered = filtered.filter((dataset) => {
-        const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && audit && audit.final_assessment === "fixable_issues";
-      });
-    } else if (auditFilter === "excluded") {
-      filtered = filtered.filter((dataset) => {
-        const audit = auditMap.get(dataset.id);
-        return dataset.is_audited && audit && audit.final_assessment === "exclude_completely";
-      });
-    } else if (auditFilter === "flagged") {
-      const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
-      filtered = filtered.filter((d) => flaggedSet.has(d.id));
-    }
+	const uniqueCountries = useMemo(() => {
+		if (!datasets) return [];
+		const countries = new Set(datasets.map((d) => d.admin_level_1).filter(Boolean));
+		return Array.from(countries).sort();
+	}, [datasets]);
 
-    // Filter by ID if provided
-    if (idFilter.trim()) {
-      const idNumber = parseInt(idFilter.trim());
-      if (!isNaN(idNumber)) {
-        filtered = filtered.filter((dataset) => dataset.id === idNumber);
-      } else {
-        // If not a valid number, show no results
-        filtered = [];
-      }
-    }
+	const uniqueAuditors = useMemo(() => {
+		if (!audits) return [];
+		const auditors = new Set(
+			audits
+				.map((a) => (a as unknown as DatasetAuditUserInfo).audited_by_email)
+				.filter(Boolean)
+		);
+		return Array.from(auditors).sort();
+	}, [audits]);
 
-    // Filter by selected months if any are selected
-    if (selectedMonths.length > 0) {
-      filtered = filtered.filter((dataset) => {
-        // Handle the aquisition_month field (note: typo in field name is preserved)
-        const monthStr = dataset.aquisition_month;
-        if (!monthStr) return false; // Skip datasets with no month data
+	const uniqueContributors = useMemo(() => {
+		if (!contributorMap || contributorMap.size === 0) return [];
+		const contributors = new Set(Array.from(contributorMap.values()).filter(Boolean));
+		return Array.from(contributors).sort() as string[];
+	}, [contributorMap]);
 
-        const month = parseInt(monthStr);
-        if (isNaN(month) || month < 1 || month > 12) return false; // Skip invalid months
+	// Filter datasets based on tab and filters
+	const filteredDatasets = useMemo(() => {
+		if (!datasets) return [];
 
-        return selectedMonths.includes(month);
-      });
-    }
+		let filtered = datasets;
 
-    return filtered;
-  }, [datasets, auditFilter, idFilter, selectedMonths, auditMap, flaggedAgg, hasAboveMinId, referenceDatasetIds]);
+		// Apply minimum ID filter (except for Reference tab)
+		if (activeTab !== "reference" && hasAboveMinId) {
+			filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
+		}
 
-  // Update counts to also respect the minimum ID filter
-  const needsAuditCount = useMemo(() => {
-    if (!datasets) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => !d.is_audited && isProcessingComplete(d)).length;
-  }, [datasets, hasAboveMinId]);
+		// Tab-based filtering
+		if (activeTab === "pending") {
+			filtered = filtered.filter((dataset) => !dataset.is_audited && isProcessingComplete(dataset));
+		} else if (activeTab === "completed") {
+			filtered = filtered.filter((dataset) => dataset.is_audited);
 
-  const auditedCount = useMemo(() => {
-    if (!datasets) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => d.is_audited).length;
-  }, [datasets, hasAboveMinId]);
+			// Apply status sub-filter
+			if (statusFilter !== "all") {
+				filtered = filtered.filter((dataset) => {
+					const audit = auditMap.get(dataset.id);
+					if (!audit) return false;
 
-  const needsTilesCount = useMemo(() => {
-    if (!datasets) return 0;
-    // Don't apply minimum ID filter - show ALL reference datasets
-    return datasets.filter((d) => referenceDatasetIds.has(d.id) && !d.has_ml_tiles).length;
-  }, [datasets, referenceDatasetIds]);
+					switch (statusFilter) {
+						case "ready":
+							return audit.final_assessment === "no_issues";
+						case "fixable":
+							return audit.final_assessment === "fixable_issues";
+						case "excluded":
+							return audit.final_assessment === "exclude_completely";
+						case "needs-review":
+							return !audit.reviewed_at;
+						case "reviewed":
+							return !!audit.reviewed_at;
+						default:
+							return true;
+					}
+				});
+			}
+		} else if (activeTab === "reference") {
+			filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id));
+		}
 
-  const trainingReadyCount = useMemo(() => {
-    if (!datasets) return 0;
-    // Don't apply minimum ID filter - show ALL reference datasets
-    return datasets.filter((d) => referenceDatasetIds.has(d.id) && d.has_ml_tiles).length;
-  }, [datasets, referenceDatasetIds]);
+		// Apply common filters
+		if (idFilter.trim()) {
+			const idNumber = parseInt(idFilter.trim());
+			if (!isNaN(idNumber)) {
+				filtered = filtered.filter((dataset) => dataset.id === idNumber);
+			} else {
+				filtered = [];
+			}
+		}
 
-  const fixableIssuesCount = useMemo(() => {
-    if (!datasets || !audits) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => {
-      const audit = auditMap.get(d.id);
-      return d.is_audited && audit && audit.final_assessment === "fixable_issues";
-    }).length;
-  }, [datasets, audits, auditMap, hasAboveMinId]);
+		if (selectedMonths.length > 0) {
+			filtered = filtered.filter((dataset) => {
+				const month = parseInt(dataset.aquisition_month);
+				return !isNaN(month) && selectedMonths.includes(month);
+			});
+		}
 
-  const excludedCount = useMemo(() => {
-    if (!datasets || !audits) return 0;
-    const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
-    return base.filter((d) => {
-      const audit = auditMap.get(d.id);
-      return d.is_audited && audit && audit.final_assessment === "exclude_completely";
-    }).length;
-  }, [datasets, audits, auditMap, hasAboveMinId]);
+		if (biomeFilter) {
+			filtered = filtered.filter((dataset) => dataset.biome_name === biomeFilter);
+		}
 
-  const flaggedCount = useMemo(() => flaggedAgg.length, [flaggedAgg]);
-  const flaggedMap = useMemo(() => new Map(flaggedAgg.map((r) => [r.dataset_id, r])), [flaggedAgg]);
+		if (countryFilter) {
+			filtered = filtered.filter((dataset) => dataset.admin_level_1 === countryFilter);
+		}
 
-  // Check if user has audit privileges
-  useEffect(() => {
-    if (!isAuthLoading && !isAuditPrivilegeLoading && user && !canAudit) {
-      message.error("You do not have permission to access this page");
-      navigate("/");
-    }
-  }, [user, isAuthLoading, isAuditPrivilegeLoading, canAudit, navigate]);
+		if (auditorFilter && activeTab === "completed") {
+			filtered = filtered.filter((dataset) => {
+				const audit = auditMap.get(dataset.id);
+				return audit?.audited_by_email === auditorFilter;
+			});
+		}
 
-  // NOW WE CAN HAVE CONDITIONAL RENDERING AFTER ALL HOOKS ARE CALLED
+		if (contributorFilter) {
+			filtered = filtered.filter((dataset) => {
+				const email = contributorMap.get(dataset.id) || auditMap.get(dataset.id)?.uploaded_by_email;
+				return email === contributorFilter;
+			});
+		}
 
-  // Show loading while checking authentication and privileges
-  if (isAuthLoading || isAuditPrivilegeLoading) {
-    return <div className="p-6">Loading...</div>;
-  }
+		if (hasFlagsFilter) {
+			const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
+			filtered = filtered.filter((d) => flaggedSet.has(d.id));
+		}
 
-  // If we're on the detail view, show the audit form
-  if (id) {
-    const dataset = datasets?.find((d) => d.id.toString() === id);
+		return filtered;
+	}, [
+		datasets,
+		activeTab,
+		statusFilter,
+		idFilter,
+		selectedMonths,
+		biomeFilter,
+		countryFilter,
+		auditorFilter,
+		contributorFilter,
+		hasFlagsFilter,
+		auditMap,
+		contributorMap,
+		flaggedAgg,
+		hasAboveMinId,
+		referenceDatasetIds,
+	]);
 
-    if (isDatasetLoading) return <div>Loading dataset...</div>;
-    if (!dataset) return <div>Dataset not found</div>;
+	// Update navigation context with filtered dataset IDs (memoized to prevent infinite loop)
+	const filteredIds = useMemo(() => filteredDatasets.map((d) => d.id), [filteredDatasets]);
+	
+	useEffect(() => {
+		setFilteredDatasetIds(filteredIds);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [filteredIds.join(",")]);
 
-    return <DatasetAuditDetail dataset={dataset} />;
-  }
+	// Compute counts for tabs
+	const pendingCount = useMemo(() => {
+		if (!datasets) return 0;
+		const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+		return base.filter((d) => !d.is_audited && isProcessingComplete(d)).length;
+	}, [datasets, hasAboveMinId]);
 
-  const handleStartAudit = async (datasetId: number) => {
-    try {
-      // Quick check if dataset is in audit before navigating
-      const { data, error } = await supabase
-        .from("v2_statuses")
-        .select("is_in_audit")
-        .eq("dataset_id", datasetId)
-        .single();
+	const completedCount = useMemo(() => {
+		if (!datasets) return 0;
+		const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
+		return base.filter((d) => d.is_audited).length;
+	}, [datasets, hasAboveMinId]);
 
-      if (error) {
-        console.error("Error checking audit status:", error);
-        navigate(`/dataset-audit/${datasetId}`); // Navigate anyway, let the detail page handle it
-        return;
-      }
+	const referenceCount = useMemo(() => {
+		if (!datasets) return 0;
+		return datasets.filter((d) => referenceDatasetIds.has(d.id)).length;
+	}, [datasets, referenceDatasetIds]);
 
-      if (data.is_in_audit) {
-        message.warning("Dataset is currently being audited by another user");
-        return;
-      }
+	const needsReviewCount = useMemo(() => {
+		if (!datasets || !audits) return 0;
+		return datasets.filter((d) => {
+			const audit = auditMap.get(d.id);
+			return d.is_audited && audit && !audit.reviewed_at;
+		}).length;
+	}, [datasets, audits, auditMap]);
 
-      navigate(`/dataset-audit/${datasetId}`);
-    } catch (error) {
-      console.error("Error checking audit status:", error);
-      navigate(`/dataset-audit/${datasetId}`); // Navigate anyway, let the detail page handle it
-    }
-  };
+	// Check if user has audit privileges
+	useEffect(() => {
+		if (!isAuthLoading && !isAuditPrivilegeLoading && user && !canAudit) {
+			message.error("You do not have permission to access this page");
+			navigate("/");
+		}
+	}, [user, isAuthLoading, isAuditPrivilegeLoading, canAudit, navigate]);
 
-  // Add Major Issues column for the major-issues filter
-  const baseColumns: ColumnsType<IDataset> = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      sorter: (a: IDataset, b: IDataset) => a.id - b.id,
-      defaultSortOrder: "descend" as const,
-      width: 80,
-    },
-    {
-      title: "User ID",
-      dataIndex: "user_id",
-      key: "user_id",
-      render: (userId: string) => <span className="font-mono text-xs">{userId}</span>,
-    },
-    {
-      title: "Authors",
-      dataIndex: "authors",
-      key: "authors",
-      render: (authors: string[] | null) => {
-        if (!authors || authors.length === 0) return <Tag color="default">No authors</Tag>;
+	// Loading state
+	if (isAuthLoading || isAuditPrivilegeLoading) {
+		return <div className="p-6">Loading...</div>;
+	}
 
-        if (authors.length === 1) {
-          return <Tag color="blue">{authors[0]}</Tag>;
-        }
+	// Detail view
+	if (id) {
+		const dataset = datasets?.find((d) => d.id.toString() === id);
+		if (isDatasetLoading) return <div>Loading dataset...</div>;
+		if (!dataset) return <div>Dataset not found</div>;
+		return <DatasetAuditDetail dataset={dataset} />;
+	}
 
-        return (
-          <Tooltip title={authors.join(", ")}>
-            <Tag color="blue">
-              {authors[0]} +{authors.length - 1}
-            </Tag>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "is_audited",
-      key: "audit_status",
-      render: (isAudited: boolean, record: IDataset) => {
-        if (!isAudited) return <Tag color="red">Not Audited</Tag>;
+	const handleStartAudit = async (datasetId: number) => {
+		try {
+			const { data, error } = await supabase
+				.from("v2_statuses")
+				.select("is_in_audit")
+				.eq("dataset_id", datasetId)
+				.single();
 
-        const audit = auditMap.get(record.id);
-        if (!audit) return <Tag color="red">No Audit Data</Tag>;
+			if (error) {
+				console.error("Error checking audit status:", error);
+				navigate(`/dataset-audit/${datasetId}`);
+				return;
+			}
 
-        switch (audit.final_assessment) {
-          case "no_issues":
-            return <Tag color="green">✓ Ready</Tag>;
-          case "fixable_issues":
-            return <Tag color="yellow">🔧 Fixable</Tag>;
-          case "exclude_completely":
-            return <Tag color="red">🚫 Excluded</Tag>;
-          default:
-            return <Tag color="default">Unknown</Tag>;
-        }
-      },
-      width: 120,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_: unknown, record: IDataset) => {
-        const isComplete = isProcessingComplete(record);
+			if (data.is_in_audit) {
+				message.warning("Dataset is currently being audited by another user");
+				return;
+			}
 
-        return (
-          <Tooltip
-            title={!isComplete ? "Dataset processing must be complete before auditing" : "Start audit for this dataset"}
-          >
-            <Button type="primary" onClick={() => handleStartAudit(record.id)} disabled={!isComplete} size="small">
-              {record.is_audited ? "Re-audit" : "Start Audit"}
-            </Button>
-          </Tooltip>
-        );
-      },
-      width: 120,
-    },
-  ];
+			navigate(`/dataset-audit/${datasetId}`);
+		} catch (error) {
+			console.error("Error checking audit status:", error);
+			navigate(`/dataset-audit/${datasetId}`);
+		}
+	};
 
-  // Conditionally include Reference Patches column only for needs-tiles and training-ready tabs
-  const referencePatchesColumn = {
-    title: "Reference Patches",
-    key: "reference_patches",
-    render: (_: unknown, record: IDataset) => (
-      <Tooltip title="Open Reference Patch Editor for this dataset">
-        <Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/reference-patches`)}>
-          {record.has_ml_tiles ? "Continue Patches" : "Generate Patches"}
-        </Button>
-      </Tooltip>
-    ),
-    width: 180,
-  };
+	// Build columns based on active tab
+	const baseColumns: ColumnsType<IDataset> = [
+		{
+			title: "ID",
+			dataIndex: "id",
+			key: "id",
+			sorter: (a, b) => a.id - b.id,
+			defaultSortOrder: "descend",
+			width: 80,
+		},
+		{
+			title: "Location",
+			key: "location",
+			render: (_, record) => (
+				<Tooltip title={`${record.admin_level_3 || ""}, ${record.admin_level_2 || ""}, ${record.admin_level_1 || ""}`}>
+					<span className="text-sm">{formatLocation(record)}</span>
+				</Tooltip>
+			),
+			width: 180,
+		},
+		{
+			title: "Biome",
+			key: "biome",
+			render: (_, record) => getBiomeBadge(record.biome_name),
+			width: 120,
+		},
+		{
+			title: "Acquisition Date",
+			key: "date",
+			render: (_, record) => <span className="font-mono text-xs">{formatAcquisitionDate(record)}</span>,
+			width: 120,
+		},
+	];
 
-  const columns = [
-    ...baseColumns,
-    // Only show Reference Patches column in "needs-tiles" and "training-ready" tabs
-    ...(auditFilter === "needs-tiles" || auditFilter === "training-ready" ? [referencePatchesColumn] : []),
-  ];
+	// Season column - only for Completed tab (season is determined during audit)
+	const seasonColumn = {
+		title: "Season",
+		key: "season",
+		render: (_: unknown, record: IDataset) => {
+			const audit = auditMap.get(record.id);
+			// has_valid_phenology: true = in season, false = out of season, null = not determined
+			if (!audit || audit.has_valid_phenology === null) {
+				return <Tag color="default">—</Tag>;
+			}
+			return audit.has_valid_phenology ? (
+				<Tag color="green">In Season</Tag>
+			) : (
+				<Tag color="orange">Out of Season</Tag>
+			);
+		},
+		width: 100,
+	};
 
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Title level={3} style={{ margin: 0 }}>
-          Dataset Audits
-        </Title>
-        <p className="mt-2 text-gray-600">
-          Audit datasets that have completed processing. Only datasets with complete processing pipeline can be audited.
-        </p>
-      </div>
+	// Notes/Description column - only for Completed tab
+	const notesColumn = {
+		title: "Notes",
+		key: "notes",
+		render: (_: unknown, record: IDataset) => {
+			const audit = auditMap.get(record.id);
+			const notes = audit?.notes;
+			if (!notes) return <span className="text-gray-400">—</span>;
+			const truncated = notes.length > 40 ? notes.slice(0, 40) + "..." : notes;
+			return (
+				<Tooltip title={notes}>
+					<span className="text-sm text-gray-600 cursor-help">{truncated}</span>
+				</Tooltip>
+			);
+		},
+		width: 200,
+	};
 
-      {/* Filters */}
-      <div className="mb-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <Space size="large">
-            <div>
-              <Segmented
-                value={auditFilter}
-                onChange={(value) => handleTabChange(value as AuditFilter)}
-                options={[
-                  { label: `Needs Audit (${needsAuditCount})`, value: "needs-audit" },
-                  { label: `Audited (${auditedCount})`, value: "audited" },
-                  { label: `Reference Pending (${needsTilesCount})`, value: "needs-tiles" },
-                  { label: `Reference Ready (${trainingReadyCount})`, value: "training-ready" },
-                  { label: `Fixable (${fixableIssuesCount})`, value: "fixable-issues" },
-                  { label: `Excluded (${excludedCount})`, value: "excluded" },
-                  {
-                    label: (
-                      <span>
-                        Flagged ({flaggedCount}){" "}
-                        <Tooltip title="Datasets with user-reported issues visible only to reporters and auditors">
-                          <InfoCircleOutlined />
-                        </Tooltip>
-                      </span>
-                    ),
-                    value: "flagged",
-                  },
-                ]}
-              />
-            </div>
+	const flagsColumn = {
+		title: "Flags",
+		key: "flags",
+		render: (_: unknown, record: IDataset) => {
+			const flagData = flaggedMap.get(record.id);
+			if (!flagData) return null;
+			return (
+				<Tooltip title={`${flagData.flag_count} user-reported issue(s)`}>
+					<Badge count={flagData.flag_count} size="small">
+						<FlagOutlined style={{ color: "#faad14" }} />
+					</Badge>
+				</Tooltip>
+			);
+		},
+		width: 70,
+	};
 
-            <div>
-              <Input
-                placeholder="Filter by ID"
-                prefix={<SearchOutlined />}
-                value={idFilter}
-                onChange={(e) => setIdFilter(e.target.value)}
-                style={{ width: 150 }}
-                allowClear
-              />
-            </div>
-          </Space>
-        </div>
+	const contributorColumn = {
+		title: "Contributor",
+		key: "contributor",
+		render: (_: unknown, record: IDataset) => {
+			// First try contributor map, then fall back to audit map
+			const email = contributorMap.get(record.id) || auditMap.get(record.id)?.uploaded_by_email;
+			if (!email) return <span className="text-gray-400">—</span>;
+			return (
+				<Tooltip title="Click to copy email">
+					<Button
+						type="link"
+						size="small"
+						className="p-0 text-xs"
+						onClick={() => {
+							navigator.clipboard.writeText(email);
+							message.success("Email copied to clipboard");
+						}}
+					>
+						{email}
+					</Button>
+				</Tooltip>
+			);
+		},
+		width: 180,
+	};
 
-        {/* Month Filter */}
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-600">Filter by Month:</span>
-          <Checkbox.Group
-            options={MONTHS}
-            value={selectedMonths}
-            onChange={(checkedValues) => setSelectedMonths(checkedValues as number[])}
-          />
-          {selectedMonths.length > 0 && (
-            <Button size="small" type="link" onClick={() => setSelectedMonths([])}>
-              Clear months
-            </Button>
-          )}
-        </div>
-      </div>
+	const auditorColumn = {
+		title: "Auditor",
+		key: "auditor",
+		render: (_: unknown, record: IDataset) => {
+			const audit = auditMap.get(record.id);
+			if (!audit?.audited_by_email) return <span className="text-gray-400">—</span>;
+			return (
+				<Tooltip title="Click to copy email">
+					<Button
+						type="link"
+						size="small"
+						className="p-0 text-xs"
+						onClick={() => {
+							navigator.clipboard.writeText(audit.audited_by_email!);
+							message.success("Email copied to clipboard");
+						}}
+					>
+						{audit.audited_by_email}
+					</Button>
+				</Tooltip>
+			);
+		},
+		width: 180,
+	};
 
-      <Table
-        dataSource={filteredDatasets}
-        columns={columns}
-        rowKey="id"
-        loading={isDatasetLoading || isAuditsLoading || (auditFilter === "flagged" && isFlaggedLoading)}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
-        }}
-        scroll={{ x: 800 }}
-      />
-    </div>
-  );
+	const statusColumn = {
+		title: "Status",
+		key: "status",
+		render: (_: unknown, record: IDataset) => {
+			const audit = auditMap.get(record.id);
+			if (!audit) return <Tag color="red">No Audit Data</Tag>;
+
+			const isReviewed = !!audit.reviewed_at;
+			let statusTag;
+
+			switch (audit.final_assessment) {
+				case "no_issues":
+					statusTag = <Tag color="green">✓ Ready</Tag>;
+					break;
+				case "fixable_issues":
+					statusTag = <Tag color="yellow">🔧 Fixable</Tag>;
+					break;
+				case "exclude_completely":
+					statusTag = <Tag color="red">🚫 Excluded</Tag>;
+					break;
+				default:
+					statusTag = <Tag color="default">Unknown</Tag>;
+			}
+
+			return (
+				<Space size="small">
+					{statusTag}
+					{isReviewed && (
+						<Tooltip title={`Reviewed by ${audit.reviewed_by_email}`}>
+							<Tag color="blue" className="text-xs">
+								✓ Reviewed
+							</Tag>
+						</Tooltip>
+					)}
+				</Space>
+			);
+		},
+		width: 180,
+	};
+
+	const actionsColumn = {
+		title: "Actions",
+		key: "actions",
+		render: (_: unknown, record: IDataset) => {
+			const isComplete = isProcessingComplete(record);
+			const buttonLabel = record.is_audited ? "Review" : "Start Audit";
+			const tooltipText = !isComplete
+				? "Dataset processing must be complete before auditing"
+				: record.is_audited
+					? "Review this completed audit"
+					: "Start audit for this dataset";
+			return (
+				<Tooltip title={tooltipText}>
+					<Button type="primary" onClick={() => handleStartAudit(record.id)} disabled={!isComplete} size="small">
+						{buttonLabel}
+					</Button>
+				</Tooltip>
+			);
+		},
+		width: 120,
+	};
+
+	const referencePatchesColumn = {
+		title: "Reference Patches",
+		key: "reference_patches",
+		render: (_: unknown, record: IDataset) => (
+			<Tooltip title="Open Reference Patch Editor for this dataset">
+				<Button size="small" onClick={() => navigate(`/dataset-audit/${record.id}/reference-patches`)}>
+					{record.has_ml_tiles ? "Continue Patches" : "Generate Patches"}
+				</Button>
+			</Tooltip>
+		),
+		width: 150,
+	};
+
+	// Assemble columns based on tab
+	let columns: ColumnsType<IDataset>;
+	if (activeTab === "pending") {
+		// Pending: no season (determined during audit), include flags and contributor
+		columns = [...baseColumns, flagsColumn, contributorColumn, actionsColumn];
+	} else if (activeTab === "completed") {
+		// Completed: season, notes, flags, status, auditor
+		columns = [...baseColumns, seasonColumn, notesColumn, flagsColumn, statusColumn, auditorColumn, actionsColumn];
+	} else {
+		// Reference tab
+		columns = [...baseColumns, referencePatchesColumn, actionsColumn];
+	}
+
+	const clearAllFilters = () => {
+		setIdFilter("");
+		setSelectedMonths([]);
+		setBiomeFilter("");
+		setCountryFilter("");
+		setAuditorFilter("");
+		setContributorFilter("");
+		setHasFlagsFilter(false);
+		setStatusFilter("all");
+	};
+
+	const hasActiveFilters =
+		idFilter || selectedMonths.length > 0 || biomeFilter || countryFilter || auditorFilter || contributorFilter || hasFlagsFilter || statusFilter !== "all";
+
+	return (
+		<div className="p-6">
+			{/* Header */}
+			<div className="mb-6">
+				<Title level={3} style={{ margin: 0 }}>
+					Dataset Audits
+				</Title>
+			</div>
+
+			{/* Tabs with badges */}
+			<div className="mb-4">
+				<Segmented
+					value={activeTab}
+					onChange={(value) => {
+						setActiveTab(value as AuditTab);
+						setStatusFilter("all");
+					}}
+					options={[
+						{
+							label: (
+								<Space size={6}>
+									<span>📋 Pending</span>
+									<Badge count={pendingCount} size="small" color="#1890ff" showZero />
+								</Space>
+							),
+							value: "pending",
+						},
+						{
+							label: (
+								<Space size={6}>
+									<span>✓ Completed</span>
+									<Badge count={completedCount} size="small" color="#52c41a" showZero />
+								</Space>
+							),
+							value: "completed",
+						},
+						{
+							label: (
+								<Space size={6}>
+									<span>📌 Reference</span>
+									<Badge count={referenceCount} size="small" color="#722ed1" showZero />
+								</Space>
+							),
+							value: "reference",
+						},
+					]}
+					size="large"
+				/>
+			</div>
+
+			{/* Filters Panel */}
+			<Collapse
+				activeKey={filtersExpanded ? ["filters"] : []}
+				onChange={() => setFiltersExpanded(!filtersExpanded)}
+				className="mb-4"
+				items={[
+					{
+						key: "filters",
+						label: (
+							<Space>
+								<FilterOutlined />
+								<span>Filters</span>
+								{hasActiveFilters && <Badge count="Active" size="small" style={{ backgroundColor: "#1890ff" }} />}
+							</Space>
+						),
+						children: (
+							<div className="space-y-4">
+								{/* Row 1: Status, ID, Biome, Country */}
+								<div className="flex flex-wrap gap-4">
+									{activeTab === "completed" && (
+										<div>
+											<Text type="secondary" className="block mb-1 text-xs">
+												Status
+											</Text>
+											<Select
+												value={statusFilter}
+												onChange={setStatusFilter}
+												style={{ width: 150 }}
+												options={[
+													{ label: "All", value: "all" },
+													{ label: "Ready", value: "ready" },
+													{ label: "Fixable", value: "fixable" },
+													{ label: "Excluded", value: "excluded" },
+													{ label: "Needs Review", value: "needs-review" },
+													{ label: "Reviewed", value: "reviewed" },
+												]}
+											/>
+										</div>
+									)}
+
+									<div>
+										<Text type="secondary" className="block mb-1 text-xs">
+											Dataset ID
+										</Text>
+										<Input
+											placeholder="Filter by ID"
+											prefix={<SearchOutlined />}
+											value={idFilter}
+											onChange={(e) => setIdFilter(e.target.value)}
+											style={{ width: 130 }}
+											allowClear
+										/>
+									</div>
+
+									<div>
+										<Text type="secondary" className="block mb-1 text-xs">
+											Biome
+										</Text>
+										<Select
+											value={biomeFilter}
+											onChange={setBiomeFilter}
+											style={{ width: 200 }}
+											allowClear
+											placeholder="All biomes"
+											showSearch
+											options={uniqueBiomes.map((b) => ({ label: b, value: b }))}
+										/>
+									</div>
+
+									<div>
+										<Text type="secondary" className="block mb-1 text-xs">
+											Country
+										</Text>
+										<Select
+											value={countryFilter}
+											onChange={setCountryFilter}
+											style={{ width: 180 }}
+											allowClear
+											placeholder="All countries"
+											showSearch
+											options={uniqueCountries.map((c) => ({ label: c, value: c }))}
+										/>
+									</div>
+
+									{activeTab === "completed" && (
+										<div>
+											<Text type="secondary" className="block mb-1 text-xs">
+												Auditor
+											</Text>
+											<Select
+												value={auditorFilter}
+												onChange={setAuditorFilter}
+												style={{ width: 180 }}
+												allowClear
+												placeholder="All auditors"
+												showSearch
+												options={uniqueAuditors.map((a) => ({ label: a, value: a }))}
+											/>
+										</div>
+									)}
+
+									<div>
+										<Text type="secondary" className="block mb-1 text-xs">
+											Contributor
+										</Text>
+										<Select
+											value={contributorFilter}
+											onChange={setContributorFilter}
+											style={{ width: 180 }}
+											allowClear
+											placeholder="All contributors"
+											showSearch
+											options={uniqueContributors.map((c) => ({ label: c, value: c }))}
+										/>
+									</div>
+
+									<div className="flex items-end">
+										<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
+											Has flags only
+										</Checkbox>
+									</div>
+								</div>
+
+								{/* Row 2: Acquisition Month Filter */}
+								<div className="flex items-center gap-4">
+									<Text type="secondary" className="text-xs">
+										Acquisition Month:
+									</Text>
+									<Checkbox.Group
+										options={MONTHS}
+										value={selectedMonths}
+										onChange={(checkedValues) => setSelectedMonths(checkedValues as number[])}
+									/>
+									{selectedMonths.length > 0 && (
+										<Button size="small" type="link" onClick={() => setSelectedMonths([])}>
+											Clear months
+										</Button>
+									)}
+								</div>
+
+								{/* Clear all button */}
+								{hasActiveFilters && (
+									<Button size="small" onClick={clearAllFilters}>
+										Clear all filters
+									</Button>
+								)}
+							</div>
+						),
+					},
+				]}
+			/>
+
+			{/* Table */}
+			<Table
+				dataSource={filteredDatasets}
+				columns={columns}
+				rowKey="id"
+				loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading}
+				pagination={{
+					pageSize: 20,
+					showSizeChanger: true,
+					showQuickJumper: true,
+					showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
+				}}
+				scroll={{ x: 1000 }}
+			/>
+		</div>
+	);
 }
