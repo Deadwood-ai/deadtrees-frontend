@@ -562,155 +562,158 @@ export default function DatasetDetails() {
                   isLoading={isLoadingOverlapping}
                 />
               )}
-
-              <div className="mt-6 space-y-3 rounded-md bg-white p-4">
-                <Space direction="vertical" className="w-full">
-                  {isDownloading && currentDownloadId !== dataset.id.toString() && (
-                    <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
-                  )}
-                  <Tooltip
-                    title={
-                      isDownloading
-                        ? currentDownloadId === dataset.id.toString()
-                          ? "This dataset is currently being prepared for download..."
-                          : "Another download is in progress. Only one download can be active at a time."
-                        : isFromGeonadir && !labelsOnly
-                          ? "Dataset download restricted by data provider. Labels/predictions are still available."
-                          : labelsOnly
-                            ? "Download vector data of tree mortality predictions (GPKG format)"
-                            : "Download both orthophoto and tree mortality predictions"
-                    }
-                  >
-                    <Button
-                      type="primary"
-                      icon={<DownloadOutlined />}
-                      className="w-full"
-                      disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
-                      loading={isDownloading && currentDownloadId === dataset.id.toString()}
-                      onClick={() => {
-                        // Prevent downloads for GeoNadir datasets (except labels-only)
-                        if (isFromGeonadir && !labelsOnly) {
-                          message.warning(
-                            "Dataset download restricted by data provider. You can download labels/predictions only.",
-                          );
-                          return;
-                        }
-
-                        // Prevent multiple downloads using global state
-                        if (isDownloading) {
-                          // If this dataset is already being downloaded, don't show an info message
-                          if (currentDownloadId !== dataset.id.toString()) {
-                            message.info("A download is already in progress. Please wait.");
-                          }
-                          return;
-                        }
-
-                        // Try to start the download in the global state
-                        const downloadStarted = startDownload(dataset.id.toString());
-                        if (!downloadStarted) {
-                          return;
-                        }
-
-                        const baseUrl = labelsOnly
-                          ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
-                          : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
-
-                        // Show persistent loading message until download is ready
-                        const downloadMsg = message.loading({
-                          content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
-                          duration: 0,
-                        });
-
-                        // Both dataset.zip and labels.gpkg use the background job approach
-                        // First initiate the download
-                        fetch(baseUrl)
-                          .then((response) => response.json())
-                          .then((data) => {
-                            const jobId = data.job_id;
-
-                            // Build the correct status endpoint based on download type
-                            const statusEndpoint = labelsOnly
-                              ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/status`
-                              : `${Settings.API_URL}/download/datasets/${jobId}/status`;
-
-                            // Build the correct download endpoint based on download type
-                            const downloadEndpoint = labelsOnly
-                              ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/download`
-                              : `${Settings.API_URL}/download/datasets/${jobId}/download`;
-
-                            // Function to check status
-                            const checkStatus = () => {
-                              fetch(statusEndpoint)
-                                .then((response) => response.json())
-                                .then((statusData) => {
-                                  if (statusData.status === "completed") {
-                                    // Download is ready - close loading message
-                                    downloadMsg();
-                                    finishDownload(); // Update global state
-
-                                    // Start actual download
-                                    window.location.href = downloadEndpoint;
-
-                                    // Show success message
-                                    message.success({
-                                      content: `${labelsOnly ? "Predictions" : "Dataset"} download started! The file will be saved to your downloads folder.`,
-                                      duration: 5,
-                                    });
-                                  } else if (statusData.status === "failed") {
-                                    // Handle failure
-                                    downloadMsg();
-                                    finishDownload(); // Update global state
-                                    message.error({
-                                      content: "Download preparation failed. Please try again.",
-                                      duration: 5,
-                                    });
-                                  } else {
-                                    // Still processing, check again in 1 second
-                                    setTimeout(checkStatus, 1000);
-                                  }
-                                })
-                                .catch((error) => {
-                                  // Handle error
-                                  downloadMsg();
-                                  finishDownload(); // Update global state
-                                  message.error({
-                                    content: `Error checking download status: ${error.message}`,
-                                    duration: 5,
-                                  });
-                                });
-                            };
-
-                            // Start checking status
-                            checkStatus();
-                          })
-                          .catch((error) => {
-                            // Handle error initiating download
-                            downloadMsg();
-                            finishDownload(); // Update global state
-                            message.error({
-                              content: `Error initiating download: ${error.message}`,
-                              duration: 5,
-                            });
-                          });
-                      }}
-                    >
-                      {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
-                    </Button>
-                  </Tooltip>
-                  {labelsData && (
-                    <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
-                      <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
-                        Download predictions only
-                      </Checkbox>
-                    </Tooltip>
-                  )}
-                </Space>
-              </div>
             </div>
           ) : (
             <div>Loading...</div>
           )}
         </div>
+          
+          {/* Fixed Download Section at bottom */}
+          {dataset && (
+            <div className="shrink-0 border-t border-gray-200 bg-white p-4 shadow-[0_-2px_4px_-2px_rgba(0,0,0,0.06)]">
+              <Space direction="vertical" className="w-full">
+                {isDownloading && currentDownloadId !== dataset.id.toString() && (
+                  <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
+                )}
+                <Tooltip
+                  title={
+                    isDownloading
+                      ? currentDownloadId === dataset.id.toString()
+                        ? "This dataset is currently being prepared for download..."
+                        : "Another download is in progress. Only one download can be active at a time."
+                      : isFromGeonadir && !labelsOnly
+                        ? "Dataset download restricted by data provider. Labels/predictions are still available."
+                        : labelsOnly
+                          ? "Download vector data of tree mortality predictions (GPKG format)"
+                          : "Download both orthophoto and tree mortality predictions"
+                  }
+                >
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    className="w-full"
+                    disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
+                    loading={isDownloading && currentDownloadId === dataset.id.toString()}
+                    onClick={() => {
+                      // Prevent downloads for GeoNadir datasets (except labels-only)
+                      if (isFromGeonadir && !labelsOnly) {
+                        message.warning(
+                          "Dataset download restricted by data provider. You can download labels/predictions only.",
+                        );
+                        return;
+                      }
+
+                      // Prevent multiple downloads using global state
+                      if (isDownloading) {
+                        // If this dataset is already being downloaded, don't show an info message
+                        if (currentDownloadId !== dataset.id.toString()) {
+                          message.info("A download is already in progress. Please wait.");
+                        }
+                        return;
+                      }
+
+                      // Try to start the download in the global state
+                      const downloadStarted = startDownload(dataset.id.toString());
+                      if (!downloadStarted) {
+                        return;
+                      }
+
+                      const baseUrl = labelsOnly
+                        ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels.gpkg`
+                        : `${Settings.API_URL}/download/datasets/${dataset.id}/dataset.zip`;
+
+                      // Show persistent loading message until download is ready
+                      const downloadMsg = message.loading({
+                        content: `Preparing ${labelsOnly ? "predictions" : "complete dataset"} for download...`,
+                        duration: 0,
+                      });
+
+                      // Both dataset.zip and labels.gpkg use the background job approach
+                      // First initiate the download
+                      fetch(baseUrl)
+                        .then((response) => response.json())
+                        .then((data) => {
+                          const jobId = data.job_id;
+
+                          // Build the correct status endpoint based on download type
+                          const statusEndpoint = labelsOnly
+                            ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/status`
+                            : `${Settings.API_URL}/download/datasets/${jobId}/status`;
+
+                          // Build the correct download endpoint based on download type
+                          const downloadEndpoint = labelsOnly
+                            ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/download`
+                            : `${Settings.API_URL}/download/datasets/${jobId}/download`;
+
+                          // Function to check status
+                          const checkStatus = () => {
+                            fetch(statusEndpoint)
+                              .then((response) => response.json())
+                              .then((statusData) => {
+                                if (statusData.status === "completed") {
+                                  // Download is ready - close loading message
+                                  downloadMsg();
+                                  finishDownload(); // Update global state
+
+                                  // Start actual download
+                                  window.location.href = downloadEndpoint;
+
+                                  // Show success message
+                                  message.success({
+                                    content: `${labelsOnly ? "Predictions" : "Dataset"} download started! The file will be saved to your downloads folder.`,
+                                    duration: 5,
+                                  });
+                                } else if (statusData.status === "failed") {
+                                  // Handle failure
+                                  downloadMsg();
+                                  finishDownload(); // Update global state
+                                  message.error({
+                                    content: "Download preparation failed. Please try again.",
+                                    duration: 5,
+                                  });
+                                } else {
+                                  // Still processing, check again in 1 second
+                                  setTimeout(checkStatus, 1000);
+                                }
+                              })
+                              .catch((error) => {
+                                // Handle error
+                                downloadMsg();
+                                finishDownload(); // Update global state
+                                message.error({
+                                  content: `Error checking download status: ${error.message}`,
+                                  duration: 5,
+                                });
+                              });
+                          };
+
+                          // Start checking status
+                          checkStatus();
+                        })
+                        .catch((error) => {
+                          // Handle error initiating download
+                          downloadMsg();
+                          finishDownload(); // Update global state
+                          message.error({
+                            content: `Error initiating download: ${error.message}`,
+                            duration: 5,
+                          });
+                        });
+                    }}
+                  >
+                    {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
+                  </Button>
+                </Tooltip>
+                {labelsData && (
+                  <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
+                    <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
+                      Download predictions only
+                    </Checkbox>
+                  </Tooltip>
+                )}
+              </Space>
+            </div>
+          )}
       </Col>
       )}
       
