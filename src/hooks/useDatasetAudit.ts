@@ -78,17 +78,34 @@ export interface DatasetAuditUserInfo {
   has_major_issue: boolean | null;
   final_assessment: "no_issues" | "fixable_issues" | "exclude_completely" | null;
   notes: string | null;
+  // Review workflow fields
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  reviewed_by_email: string | null;
 }
 
-// Hook to get all dataset audits
+// Hook to get all dataset audits (with user emails)
 export function useDatasetAudits() {
   return useQuery({
     queryKey: ["dataset-audits"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("dataset_audit").select("*");
+      const { data, error } = await supabase.from("dataset_audit_user_info").select("*");
 
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+// Hook to get contributor emails for all datasets
+export function useDatasetContributors() {
+  return useQuery({
+    queryKey: ["dataset-contributors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("dataset_contributor_info").select("*");
+
+      if (error) throw error;
+      return new Map(data?.map((d: { dataset_id: number; contributor_email: string }) => [d.dataset_id, d.contributor_email]) || []);
     },
   });
 }
@@ -428,5 +445,32 @@ export function useOrthoMetadata(datasetId: number | undefined) {
       return data as OrthoMetadata;
     },
     enabled: !!datasetId,
+  });
+}
+
+// Hook to mark a dataset audit as reviewed
+export function useMarkAsReviewed() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (datasetId: number) => {
+      const { data, error } = await supabase
+        .from("dataset_audit")
+        .update({
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id,
+        })
+        .eq("dataset_id", datasetId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, datasetId) => {
+      queryClient.invalidateQueries({ queryKey: ["dataset-audits"] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-audit", datasetId] });
+    },
   });
 }
