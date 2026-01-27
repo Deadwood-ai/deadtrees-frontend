@@ -9,7 +9,10 @@ import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
 import { Style, Fill, Stroke } from "ol/style";
 import { FeatureLike } from "ol/Feature";
-import { Tag } from "antd";
+import { Card, Button, Tag, Typography, Space } from "antd";
+import { EditOutlined, CloseOutlined } from "@ant-design/icons";
+
+const { Text } = Typography;
 
 import { IDataset } from "../../types/dataset";
 import { Settings } from "../../config";
@@ -39,6 +42,10 @@ interface DatasetDetailsMapProps {
   layerOpacity?: number; // Unified opacity for analysis layers (deadwood + forest cover)
   mapStyle?: string; // 'streets-v12' or 'satellite-streets-v12'
   onMapStyleChange?: (style: string) => void;
+  // Edit callbacks for polygon click interaction
+  onEditDeadwood?: () => void;
+  onEditForestCover?: () => void;
+  isLoggedIn?: boolean;
 }
 
 const DatasetDetailsMap = ({ 
@@ -57,6 +64,10 @@ const DatasetDetailsMap = ({
   layerOpacity,
   mapStyle: externalMapStyle,
   onMapStyleChange,
+  // Edit callbacks
+  onEditDeadwood,
+  onEditForestCover,
+  isLoggedIn = false,
 }: DatasetDetailsMapProps) => {
   // Move hooks before any conditional returns to fix the React Hook errors
   const mapRef = useRef<Map | null>(null);
@@ -71,6 +82,11 @@ const DatasetDetailsMap = ({
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const [tooltipContent, setTooltipContent] = useState<{ type: string; status: string } | null>(null);
   const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
+  
+  // Click popover state - for persistent interaction
+  const clickPopoverRef = useRef<HTMLDivElement | null>(null);
+  const clickOverlayRef = useRef<Overlay | null>(null);
+  const [clickedPolygonInfo, setClickedPolygonInfo] = useState<{ type: string; status: string; layerType: "deadwood" | "forest_cover" } | null>(null);
 
   // Use external props if provided, otherwise use internal state
   const mapStyle = externalMapStyle ?? internalMapStyle;
@@ -255,7 +271,7 @@ const DatasetDetailsMap = ({
               if (deadwoodVectorLayer) layers.push(deadwoodVectorLayer);
               if (selectionLayer) layers.push(selectionLayer);
 
-              // Create tooltip overlay
+              // Create tooltip overlay (non-interactive, for hover)
               if (tooltipRef.current) {
                 const tooltipOverlay = new Overlay({
                   element: tooltipRef.current,
@@ -266,12 +282,27 @@ const DatasetDetailsMap = ({
                 tooltipOverlayRef.current = tooltipOverlay;
               }
 
+              // Create click popover overlay (interactive, for click actions)
+              if (clickPopoverRef.current) {
+                const clickOverlay = new Overlay({
+                  element: clickPopoverRef.current,
+                  positioning: "bottom-center",
+                  offset: [0, -10],
+                  stopEvent: true, // Stop events so popover is interactive
+                  autoPan: false, // Don't move map when showing popover
+                });
+                clickOverlayRef.current = clickOverlay;
+              }
+
               const newMap = new Map({
                 target: mapContainer.current,
                 layers: layers,
                 view: MapView,
                 // maxTilesLoading: 4,
-                overlays: tooltipOverlayRef.current ? [tooltipOverlayRef.current] : [],
+                overlays: [
+                  ...(tooltipOverlayRef.current ? [tooltipOverlayRef.current] : []),
+                  ...(clickOverlayRef.current ? [clickOverlayRef.current] : []),
+                ],
                 controls: [],
               });
 
@@ -345,6 +376,65 @@ const DatasetDetailsMap = ({
                     setHoveredLabelId(null);
                     setTooltipContent(null);
                     tooltipOverlayRef.current?.setPosition(undefined);
+                  }
+                });
+
+                // Add click event handler for polygon click interaction
+                newMap.on("click", (event) => {
+                  // Get current zoom level
+                  const currentZoom = MapView.getZoom();
+                  const MIN_CLICK_ZOOM = 16;
+
+                  // Skip click selection if zoom level is too low
+                  if (!currentZoom || currentZoom < MIN_CLICK_ZOOM) {
+                    setClickedPolygonInfo(null);
+                    clickOverlayRef.current?.setPosition(undefined);
+                    return;
+                  }
+
+                  const pixel = newMap.getEventPixel(event.originalEvent);
+                  
+                  // Check both deadwood and forest cover layers
+                  let hitLayer: VectorTileLayer | null = null;
+                  let layerType: "deadwood" | "forest_cover" = "deadwood";
+                  let displayType = "";
+                  
+                  if (deadwoodVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodVectorLayer })) {
+                    hitLayer = deadwoodVectorLayer;
+                    layerType = "deadwood";
+                    displayType = "Deadwood";
+                  } else if (forestCoverVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === forestCoverVectorLayer })) {
+                    hitLayer = forestCoverVectorLayer;
+                    layerType = "forest_cover";
+                    displayType = "Forest Cover";
+                  }
+
+                  if (hitLayer) {
+                    hitLayer.getFeatures(pixel).then((features) => {
+                      if (features.length > 0) {
+                        const feature = features[0];
+                        const correctionStatus = feature.get("correction_status") || "original";
+                        
+                        setClickedPolygonInfo({
+                          type: displayType,
+                          status: correctionStatus,
+                          layerType: layerType,
+                        });
+                        clickOverlayRef.current?.setPosition(event.coordinate);
+                        
+                        // Hide hover tooltip when showing click popover
+                        setTooltipContent(null);
+                        tooltipOverlayRef.current?.setPosition(undefined);
+                      } else {
+                        // Clicked on empty area - dismiss popover
+                        setClickedPolygonInfo(null);
+                        clickOverlayRef.current?.setPosition(undefined);
+                      }
+                    });
+                  } else {
+                    // Clicked on empty area - dismiss popover
+                    setClickedPolygonInfo(null);
+                    clickOverlayRef.current?.setPosition(undefined);
                   }
                 });
               }
@@ -618,25 +708,111 @@ const DatasetDetailsMap = ({
         ref={mapContainer}
         data-rr-ignore
       >
-        {/* Tooltip overlay element */}
+        {/* Hover tooltip overlay element (non-interactive) - minimal design */}
         <div
           ref={tooltipRef}
-          className="pointer-events-none rounded bg-white px-2 py-1 shadow-lg"
-          style={{ display: tooltipContent ? "block" : "none" }}
+          className="pointer-events-none rounded bg-gray-900/90 px-2 py-1 shadow-md"
+          style={{ display: tooltipContent && !clickedPolygonInfo ? "block" : "none" }}
         >
           {tooltipContent && (
-            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <span className="font-medium">{tooltipContent.type}</span>
-              {tooltipContent.status === "original" ? (
-                <Tag color="default" className="m-0">Original</Tag>
-              ) : tooltipContent.status === "pending" ? (
-                <Tag color="orange" className="m-0">Pending Review</Tag>
-              ) : tooltipContent.status === "approved" ? (
-                <Tag color="green" className="m-0">Approved</Tag>
-              ) : (
-                <Tag color="default" className="m-0">{tooltipContent.status}</Tag>
-              )}
+            <div className="flex items-center gap-1.5 text-xs whitespace-nowrap text-white">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{
+                  backgroundColor:
+                    tooltipContent.status === "original"
+                      ? "#9CA3AF" // gray
+                      : tooltipContent.status === "pending"
+                      ? "#F59E0B" // amber
+                      : "#10B981", // green
+                }}
+              />
+              <span>{tooltipContent.type}</span>
+              {isLoggedIn && <span className="text-gray-400">· click to edit</span>}
             </div>
+          )}
+        </div>
+
+        {/* Click popover overlay element (interactive) - Ant Design Card */}
+        <div
+          ref={clickPopoverRef}
+          style={{ display: clickedPolygonInfo ? "block" : "none" }}
+        >
+          {clickedPolygonInfo && (
+            <Card
+              size="small"
+              className="shadow-xl border-gray-100"
+              style={{ width: 220, borderRadius: 8, overflow: 'hidden' }}
+              title={
+                <Space size={4}>
+                  <Text strong style={{ fontSize: '12px' }}>{clickedPolygonInfo.type}</Text>
+                  <Tag 
+                    color={
+                      clickedPolygonInfo.status === "original" ? "default" :
+                      clickedPolygonInfo.status === "pending" ? "warning" : "success"
+                    }
+                    className="m-0 text-[10px] leading-4 h-4 px-1 border-none"
+                  >
+                    {clickedPolygonInfo.status === "original" ? "Prediction" :
+                     clickedPolygonInfo.status === "pending" ? "Edited" : "Verified"}
+                  </Tag>
+                </Space>
+              }
+              extra={
+                <Button 
+                  type="text" 
+                  size="small" 
+                  className="p-0 h-4 w-4 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                  icon={<CloseOutlined style={{ fontSize: 10 }} />} 
+                  onClick={() => {
+                    setClickedPolygonInfo(null);
+                    clickOverlayRef.current?.setPosition(undefined);
+                  }}
+                />
+              }
+              bodyStyle={{ padding: "10px 12px" }}
+            >
+              <div className="flex flex-col gap-3">
+                <Text type="secondary" style={{ fontSize: '11px', lineHeight: '1.4' }}>
+                  {clickedPolygonInfo.status === "original" 
+                    ? "This is a model prediction. Help improve accuracy by editing."
+                    : clickedPolygonInfo.status === "pending"
+                    ? "This polygon has been edited and is awaiting review."
+                    : "This polygon has been verified and is considered accurate."}
+                </Text>
+                
+                {isLoggedIn ? (
+                  <Button
+                    type="primary"
+                    size="small"
+                    block
+                    icon={<EditOutlined style={{ fontSize: 11 }} />}
+                    onClick={() => {
+                      setClickedPolygonInfo(null);
+                      clickOverlayRef.current?.setPosition(undefined);
+                      if (clickedPolygonInfo.layerType === "deadwood") {
+                        onEditDeadwood?.();
+                      } else {
+                        onEditForestCover?.();
+                      }
+                    }}
+                    className="text-xs h-8 font-medium"
+                  >
+                    Edit {clickedPolygonInfo.type}
+                  </Button>
+                ) : (
+                  <Button 
+                    type="default" 
+                    size="small" 
+                    block
+                    href="/sign-in" 
+                    className="text-xs h-8"
+                  >
+                    Sign in to edit
+                  </Button>
+                )}
+              </div>
+            </Card>
           )}
         </div>
 

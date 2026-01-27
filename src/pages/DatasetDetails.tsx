@@ -26,7 +26,7 @@ import DatasetNavigation from "../components/DatasetDetailsMap/DatasetNavigation
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 import PhenologyBar from "../components/PhenologyBar/PhenologyBar";
 import { usePhenologyData } from "../hooks/usePhenologyData";
-import AuditBadge from "../components/AuditBadge";
+import AuditInfoCard from "../components/AuditInfoCard";
 import { useDatasetAudit } from "../hooks/useDatasetAudit";
 import { Modal, Form, Input } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
@@ -444,14 +444,6 @@ export default function DatasetDetails() {
                   </div>
                 </div>
 
-                {auditInfo?.final_assessment && (
-                  <div className="flex justify-between">
-                    <Typography.Text className="pr-2">Audit Status:</Typography.Text>
-                    <div className="max-w-[70%] text-right">
-                      <AuditBadge datasetId={dataset.id} audit={auditInfo} />
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Environmental Context Box */}
@@ -555,40 +547,10 @@ export default function DatasetDetails() {
                 </div>
               )}
 
-              {/* Removed left-side banner per feedback */}
-
-              {labelsData && (
-                <div className="mt-4 space-y-3 rounded-md bg-white p-4">
-                  <div className="flex justify-between">
-                    <Typography.Text style={{ margin: 0 }}>
-                      <Typography.Text className="pr-2">Label Source: </Typography.Text>
-                    </Typography.Text>
-                    <Tag color="default">
-                      {labelsData.label_source
-                        .replace("_", " ")
-                        .split(" ")
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(" ")}
-                    </Tag>
-                  </div>
-                  <div className="flex justify-between">
-                    <Typography.Text style={{ margin: 0 }}>
-                      <Typography.Text className="pr-2">Label Type: </Typography.Text>
-                    </Typography.Text>
-                    <Tag color="default">
-                      {labelsData.label_type
-                        .replace("_", " ")
-                        .split(" ")
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(" ")}
-                    </Tag>
-                  </div>
-                  <div className="flex justify-between">
-                    <Typography.Text style={{ margin: 0 }}>
-                      <Typography.Text className="pr-2">Label Quality: </Typography.Text>
-                    </Typography.Text>
-                    <Tag color="default">{labelsData.label_quality}</Tag>
-                  </div>
+              {/* Audit Info Card - shows prediction quality */}
+              {auditInfo?.final_assessment && (
+                <div className="mt-4">
+                  <AuditInfoCard audit={auditInfo} />
                 </div>
               )}
 
@@ -793,6 +755,8 @@ export default function DatasetDetails() {
               setShowDroneImagery={setShowDroneImagery}
               hasForestCover={hasForestCover}
               hasDeadwood={hasDeadwood}
+              forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
+              deadwoodQuality={auditInfo?.deadwood_quality as "great" | "sentinel_ok" | "bad" | undefined}
               opacity={layerOpacity}
               setOpacity={setLayerOpacity}
               onReportClick={() => setReportModalOpen(true)}
@@ -841,6 +805,10 @@ export default function DatasetDetails() {
           layerOpacity={layerOpacity}
           mapStyle={mapStyle}
           onMapStyleChange={setMapStyle}
+          // Edit callbacks for polygon click interaction
+          onEditDeadwood={() => handleStartEditing("deadwood")}
+          onEditForestCover={() => handleStartEditing("forest_cover")}
+          isLoggedIn={!!user}
         />
       </Col>
 
