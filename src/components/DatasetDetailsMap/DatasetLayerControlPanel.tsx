@@ -145,55 +145,58 @@ const DatasetLayerControlPanel = ({
         disabled={!showForestCover && !showDeadwood}
       />
 
-      <Divider className="my-3" />
-
       {/* Feedback Section */}
-      <div className="mb-2 text-xs font-medium text-gray-500">Feedback</div>
-      <div className="flex flex-col gap-2">
-        {/* Report button - always visible for logged-in users */}
-        {isLoggedIn && (
-          <Button
-            size="small"
-            icon={<FlagOutlined />}
-            onClick={onReportClick}
-            block
-          >
-            Report Issue
-          </Button>
-        )}
+      <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
+        <div className="mb-1 text-xs font-medium text-blue-700">Feedback</div>
+        <p className="mb-2 text-xs text-blue-600">
+          Help improve predictions by editing or reporting issues
+        </p>
+        <div className="flex flex-col gap-2">
+          {/* Report button - always visible for logged-in users */}
+          {isLoggedIn && (
+            <Button
+              size="small"
+              icon={<FlagOutlined />}
+              onClick={onReportClick}
+              block
+            >
+              Report Issue
+            </Button>
+          )}
 
-        {/* Contextual edit buttons - only show when corresponding layer is checked */}
-        {isLoggedIn && showForestCover && hasForestCover && onEditForestCover && (
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={onEditForestCover}
-            block
-          >
-            Edit Forest Cover
-          </Button>
-        )}
+          {/* Contextual edit buttons - only show when corresponding layer is checked */}
+          {isLoggedIn && showForestCover && hasForestCover && onEditForestCover && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={onEditForestCover}
+              block
+            >
+              Edit Forest Cover
+            </Button>
+          )}
 
-        {isLoggedIn && showDeadwood && hasDeadwood && onEditDeadwood && (
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={onEditDeadwood}
-            block
-          >
-            Edit Deadwood
-          </Button>
-        )}
+          {isLoggedIn && showDeadwood && hasDeadwood && onEditDeadwood && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={onEditDeadwood}
+              block
+            >
+              Edit Deadwood
+            </Button>
+          )}
 
-        {/* Prompt for non-logged-in users */}
-        {!isLoggedIn && (
-          <div className="text-center text-xs text-gray-500">
-            <a href="/sign-in" className="text-blue-500 hover:underline">
-              Sign in
-            </a>
-            {" "}to edit predictions
-          </div>
-        )}
+          {/* Prompt for non-logged-in users */}
+          {!isLoggedIn && (
+            <div className="text-center text-xs text-blue-600">
+              <a href="/sign-in" className="text-blue-600 hover:underline">
+                Sign in
+              </a>
+              {" "}to edit predictions
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
