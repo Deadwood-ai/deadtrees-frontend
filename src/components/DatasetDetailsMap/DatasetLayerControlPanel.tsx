@@ -37,7 +37,7 @@ const QualityIcon = ({ quality }: { quality: QualityRating }) => {
   const config = {
     great: { icon: <CheckCircleOutlined />, color: "text-green-500", tooltip: "Quality: Great" },
     sentinel_ok: { icon: <ExclamationCircleOutlined />, color: "text-yellow-500", tooltip: "Quality: OK for Sentinel" },
-    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor - layer hidden" },
+    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor – layer hidden due to audit" },
   };
   
   const { icon, color, tooltip } = config[quality] || {};

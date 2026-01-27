@@ -85,13 +85,6 @@ const AuditInfoCard: React.FC<Props> = ({ audit }) => {
         <QualityRow label="Deadwood" quality={audit.deadwood_quality} />
       </div>
       
-      {/* Warning if any layer is poor */}
-      {(audit.forest_cover_quality === "bad" || audit.deadwood_quality === "bad") && (
-        <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
-          <WarningOutlined />
-          <span>Poor quality layers are hidden</span>
-        </div>
-      )}
     </div>
   );
 };

@@ -436,7 +436,7 @@ export default function DatasetDetails() {
                           dataset.citation_doi.toLowerCase().includes("zenodo");
                         return isDoi ? "DOI: " : "Link: ";
                       }
-                      return "Source: ";
+                      return "Reference: ";
                     })()}
                   </Typography.Text>
                   <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
