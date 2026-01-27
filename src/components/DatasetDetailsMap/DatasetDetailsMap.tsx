@@ -184,13 +184,16 @@ const DatasetDetailsMap = ({
       });
 
       // Create vector layers conditionally based on data availability AND audit quality flags
+      // Use showCorrectionStyling to enable corrections-aware MVT function for subtle border indicators
       const deadwoodVectorLayer =
-        deadwood.data?.id && allowDeadwoodPredictions ? createDeadwoodVectorLayer(deadwood.data.id) : undefined;
+        deadwood.data?.id && allowDeadwoodPredictions 
+          ? createDeadwoodVectorLayer(deadwood.data.id, { showCorrectionStyling: true }) 
+          : undefined;
 
       // Only create forest cover layer if forest cover processing is done AND labels exist AND audit quality is good
       const forestCoverVectorLayer =
         data.is_forest_cover_done && forestCover.data?.id && allowForestCoverPredictions
-          ? createForestCoverVectorLayer(forestCover.data.id)
+          ? createForestCoverVectorLayer(forestCover.data.id, { showCorrectionStyling: true })
           : undefined;
 
       // Create AOI layer if AOI data exists
@@ -204,18 +207,16 @@ const DatasetDetailsMap = ({
         : undefined;
 
       // Create selection layer for hover effect (only if deadwood layer exists)
+      // Subtle hover - just highlight border, don't change fill
       const selectionLayer = deadwoodVectorLayer
         ? new VectorTileLayer({
             source: deadwoodVectorLayer.getSource()!,
             style: (feature: FeatureLike) => {
               if (feature === hoveredFeature) {
                 return new Style({
-                  fill: new Fill({
-                    color: "rgba(255, 100, 100, 0.9)",
-                  }),
                   stroke: new Stroke({
-                    color: "rgba(255, 255, 255, 1)",
-                    width: 2.5,
+                    color: "#06b6d4", // Cyan - matches editor hover color
+                    width: 3,
                   }),
                 });
               }
@@ -662,18 +663,16 @@ const DatasetDetailsMap = ({
   }, [mapStyle]);
 
   // Add effect to update selection layer style when hover state changes
+  // Subtle hover - just highlight border with cyan, don't change fill
   useEffect(() => {
     if (mapRef.current && layerRefs.current.selectionLayer) {
       layerRefs.current.selectionLayer.setStyle((feature: FeatureLike) => {
         // Check if the feature has the same label_id as the currently hovered feature
         if (hoveredLabelId !== null && feature.get("id") === hoveredLabelId) {
           return new Style({
-            fill: new Fill({
-              color: "rgba(255, 100, 100, 0.9)",
-            }),
             stroke: new Stroke({
-              color: "rgba(255, 100, 100, 1)",
-              width: 2.5,
+              color: "#06b6d4", // Cyan - matches editor hover color
+              width: 3,
             }),
           });
         }
@@ -717,18 +716,26 @@ const DatasetDetailsMap = ({
           {tooltipContent && (
             <div className="flex items-center gap-1.5 text-xs whitespace-nowrap text-white">
               <span
-                className="h-2 w-2 rounded-full"
+                className="h-2 w-2 rounded-full flex-shrink-0"
                 style={{
                   backgroundColor:
-                    tooltipContent.status === "original"
-                      ? "#9CA3AF" // gray
+                    tooltipContent.status === "original" || !tooltipContent.status || tooltipContent.status === "none"
+                      ? "#F59E0B" // orange - default layer color for predictions
                       : tooltipContent.status === "pending"
-                      ? "#F59E0B" // amber
-                      : "#10B981", // green
+                      ? "#60A5FA" // light blue - in review
+                      : "#34D399", // light green - verified
                 }}
               />
               <span>{tooltipContent.type}</span>
-              {isLoggedIn && <span className="text-gray-400">· click to edit</span>}
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-300">
+                {tooltipContent.status === "original" || !tooltipContent.status || tooltipContent.status === "none"
+                  ? "Prediction"
+                  : tooltipContent.status === "pending"
+                  ? "Edited"
+                  : "Verified"}
+              </span>
+              {isLoggedIn && <span className="text-gray-500">· click to edit</span>}
             </div>
           )}
         </div>
