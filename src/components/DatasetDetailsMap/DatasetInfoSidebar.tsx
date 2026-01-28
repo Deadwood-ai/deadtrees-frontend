@@ -134,13 +134,29 @@ export default function DatasetInfoSidebar({
       <div className="mt-4 space-y-3 rounded-md bg-white p-4">
         <div className="flex justify-between">
           <Typography.Text className="pr-2">Platform: </Typography.Text>
-          <Tag color="default">{dataset.platform}</Tag>
+          <Tag color="default">{dataset.platform || "Unknown"}</Tag>
+        </div>
+        <div className="flex justify-between">
+          <Typography.Text className="pr-2">License: </Typography.Text>
+          <Tag color="blue">{dataset.license || "Not specified"}</Tag>
         </div>
         <div className="flex justify-between">
           <Typography.Text className="pr-2">File Size: </Typography.Text>
-          {dataset.ortho_file_size > 1024 * 1024 * 1024
-            ? `${dataset.ortho_file_size.toFixed(1)} MB`
-            : `${dataset.ortho_file_size.toFixed(0)} MB`}
+          <Typography.Text>
+            {dataset.ortho_file_size >= 1024
+              ? `${(dataset.ortho_file_size / 1024).toFixed(1)} GB`
+              : `${dataset.ortho_file_size.toFixed(0)} MB`}
+          </Typography.Text>
+        </div>
+        <div className="flex justify-between">
+          <Typography.Text className="pr-2">Uploaded: </Typography.Text>
+          <Typography.Text>
+            {new Date(dataset.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </Typography.Text>
         </div>
       </div>
 
