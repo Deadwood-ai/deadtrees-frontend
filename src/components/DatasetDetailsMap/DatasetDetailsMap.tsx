@@ -17,6 +17,7 @@ import { Draw, Modify, Select } from "ol/interaction";
 import { Polygon, MultiPolygon } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
 import { click } from "ol/events/condition";
+import { fromLonLat } from "ol/proj";
 
 const { Text } = Typography;
 
@@ -45,6 +46,8 @@ export interface DatasetDetailsMapHandle {
   deleteAOI: () => void;
   deleteSelectedPolygon: () => void;
   refreshVectorLayers: () => void;
+  zoomToExtent: (minLon: number, minLat: number, maxLon: number, maxLat: number, padding?: number) => void;
+  flashLocation: (lon: number, lat: number) => void;
 }
 
 // Latest Wayback release (2024) for satellite imagery
@@ -1121,6 +1124,64 @@ const DatasetDetailsMap = forwardRef<DatasetDetailsMapHandle, DatasetDetailsMapP
     clickOverlayRef.current?.setPosition(undefined);
   };
 
+  // Zoom to a geographic extent (in WGS84 coordinates)
+  const zoomToExtent = (minLon: number, minLat: number, maxLon: number, maxLat: number, padding = 100) => {
+    if (!mapInstanceRef.current) return;
+
+    const minCoord = fromLonLat([minLon, minLat]);
+    const maxCoord = fromLonLat([maxLon, maxLat]);
+
+    mapInstanceRef.current.getView().fit(
+      [minCoord[0], minCoord[1], maxCoord[0], maxCoord[1]],
+      { padding: [padding, padding, padding, padding], duration: 500, maxZoom: 20 }
+    );
+  };
+
+  // Flash a location with a temporary marker
+  const flashLocation = (lon: number, lat: number) => {
+    if (!mapInstanceRef.current) return;
+
+    const coord = fromLonLat([lon, lat]);
+
+    // Create a flash overlay
+    const flashEl = document.createElement("div");
+    flashEl.style.cssText = `
+      width: 40px; height: 40px; 
+      border-radius: 50%; 
+      border: 4px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.3);
+      animation: flash-pulse 1.5s ease-out;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    `;
+
+    // Add animation styles if not already present
+    if (!document.getElementById("flash-animation-style")) {
+      const style = document.createElement("style");
+      style.id = "flash-animation-style";
+      style.textContent = `
+        @keyframes flash-pulse {
+          0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const flashOverlay = new Overlay({
+      element: flashEl,
+      position: coord,
+      positioning: "center-center",
+    });
+
+    mapInstanceRef.current.addOverlay(flashOverlay);
+
+    // Remove after animation
+    setTimeout(() => {
+      mapInstanceRef.current?.removeOverlay(flashOverlay);
+    }, 1500);
+  };
+
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     startDrawing,
@@ -1132,6 +1193,8 @@ const DatasetDetailsMap = forwardRef<DatasetDetailsMapHandle, DatasetDetailsMapP
     deleteAOI,
     deleteSelectedPolygon,
     refreshVectorLayers,
+    zoomToExtent,
+    flashLocation,
   }));
 
   // Sync drawing/editing refs for click handler closure
