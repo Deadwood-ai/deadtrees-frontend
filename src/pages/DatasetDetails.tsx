@@ -29,7 +29,17 @@ export default function DatasetDetails() {
   const { id } = useParams();
   const { user } = useAuth();
   const { data: datasets } = usePublicDatasets();
-  const { setViewport, setNavigationSource, navigatedFrom } = useDatasetDetailsMap();
+  const {
+    setViewport,
+    setNavigationSource,
+    navigatedFrom,
+    layerControl,
+    setMapStyle,
+    setShowForestCover,
+    setShowDeadwood,
+    setShowDroneImagery,
+    setLayerOpacity,
+  } = useDatasetDetailsMap();
 
   // Find current dataset
   const dataset = datasets?.find((d) => d.id.toString() === id);
@@ -37,13 +47,6 @@ export default function DatasetDetails() {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [labelsOnly, setLabelsOnly] = useState(false);
-
-  // Layer control state
-  const [mapStyle, setMapStyle] = useState("streets-v12");
-  const [showForestCover, setShowForestCover] = useState(true);
-  const [showDeadwood, setShowDeadwood] = useState(true);
-  const [showDroneImagery, setShowDroneImagery] = useState(true);
-  const [layerOpacity, setLayerOpacity] = useState(1);
 
   // Report modal state
   const [isReportModalOpen, setReportModalOpen] = useState(false);
@@ -163,19 +166,19 @@ export default function DatasetDetails() {
         {!isEditing && (
           <div className="absolute right-3 top-3 z-10">
             <DatasetLayerControlPanel
-              mapStyle={mapStyle}
+              mapStyle={layerControl.mapStyle}
               onMapStyleChange={setMapStyle}
-              showForestCover={showForestCover}
+              showForestCover={layerControl.showForestCover}
               setShowForestCover={setShowForestCover}
-              showDeadwood={showDeadwood}
+              showDeadwood={layerControl.showDeadwood}
               setShowDeadwood={setShowDeadwood}
-              showDroneImagery={showDroneImagery}
+              showDroneImagery={layerControl.showDroneImagery}
               setShowDroneImagery={setShowDroneImagery}
               hasForestCover={hasForestCover && !!dataset.is_forest_cover_done}
               hasDeadwood={hasDeadwood}
               forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
               deadwoodQuality={auditInfo?.deadwood_quality as "great" | "sentinel_ok" | "bad" | undefined}
-              opacity={layerOpacity}
+              opacity={layerControl.layerOpacity}
               setOpacity={setLayerOpacity}
               onReportClick={() => setReportModalOpen(true)}
               onEditForestCover={() => editing.handleStartEditing("forest_cover")}
@@ -216,12 +219,10 @@ export default function DatasetDetails() {
           hideDeadwoodLayer={isEditing}
           hideForestCoverLayer={isEditing}
           refreshKey={refreshKey}
-          showDeadwood={isEditing ? false : showDeadwood}
-          showForestCover={isEditing ? false : showForestCover}
-          showDroneImagery={showDroneImagery}
-          layerOpacity={layerOpacity}
-          mapStyle={mapStyle}
-          onMapStyleChange={setMapStyle}
+          showDeadwood={isEditing ? false : layerControl.showDeadwood}
+          showForestCover={isEditing ? false : layerControl.showForestCover}
+          showDroneImagery={layerControl.showDroneImagery}
+          layerOpacity={layerControl.layerOpacity}
           onEditDeadwood={() => editing.handleStartEditing("deadwood")}
           onEditForestCover={() => editing.handleStartEditing("forest_cover")}
           isLoggedIn={!!user}

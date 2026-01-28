@@ -35,13 +35,11 @@ interface DatasetDetailsMapProps {
   hideForestCoverLayer?: boolean;
   hideDroneImagery?: boolean;
   refreshKey?: number; // Increment to trigger layer refresh
-  // New unified layer control props
+  // Layer visibility props (opacity and mapStyle come from context)
   showDeadwood?: boolean;
   showForestCover?: boolean;
   showDroneImagery?: boolean;
   layerOpacity?: number; // Unified opacity for analysis layers (deadwood + forest cover)
-  mapStyle?: string; // 'streets-v12' or 'satellite-streets-v12'
-  onMapStyleChange?: (style: string) => void;
   // Edit callbacks for polygon click interaction
   onEditDeadwood?: () => void;
   onEditForestCover?: () => void;
@@ -57,13 +55,11 @@ const DatasetDetailsMap = ({
   hideForestCoverLayer = false,
   hideDroneImagery = false,
   refreshKey = 0,
-  // New props with defaults
+  // Layer visibility props
   showDeadwood,
   showForestCover,
   showDroneImagery,
   layerOpacity,
-  mapStyle: externalMapStyle,
-  onMapStyleChange,
   // Edit callbacks
   onEditDeadwood,
   onEditForestCover,
@@ -75,22 +71,22 @@ const DatasetDetailsMap = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const tooltipOverlayRef = useRef<Overlay | null>(null);
   
-  // Internal state - can be controlled by external props
-  const [internalMapStyle, setInternalMapStyle] = useState("streets-v12");
+  // Internal state
   const [aoiOpacity, setAoiOpacity] = useState<number>(0.8);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const [tooltipContent, setTooltipContent] = useState<{ type: string; status: string } | null>(null);
-  const { viewport, navigatedFrom, setViewport } = useDatasetDetailsMap();
+  
+  // Get layer control state from context (for fast basemap switching)
+  const { viewport, navigatedFrom, setViewport, layerControl } = useDatasetDetailsMap();
   
   // Click popover state - for persistent interaction
   const clickPopoverRef = useRef<HTMLDivElement | null>(null);
   const clickOverlayRef = useRef<Overlay | null>(null);
   const [clickedPolygonInfo, setClickedPolygonInfo] = useState<{ type: string; status: string; layerType: "deadwood" | "forest_cover" } | null>(null);
 
-  // Use external props if provided, otherwise use internal state
-  const mapStyle = externalMapStyle ?? internalMapStyle;
-  const setMapStyle = onMapStyleChange ?? setInternalMapStyle;
+  // Use mapStyle from context for fast switching (avoids parent re-renders)
+  const mapStyle = layerControl.mapStyle;
   
   // Compute effective visibility and opacity from props
   // showDeadwood/showForestCover/showDroneImagery control visibility when provided
