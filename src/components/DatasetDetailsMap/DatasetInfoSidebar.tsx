@@ -32,7 +32,7 @@ export default function DatasetInfoSidebar({
   return (
     <div className="p-2">
       {/* Location Header */}
-      <div className="space-y-3 rounded-md bg-white p-4">
+      <div className="space-y-3 rounded-md bg-gray-50 p-4">
         <div className="flex items-center pb-4">
           <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
           <Tooltip
@@ -45,11 +45,10 @@ export default function DatasetInfoSidebar({
           >
             <Typography.Title style={{ margin: 0 }} level={5}>
               {dataset.admin_level_1
-                ? `${
-                    dataset.admin_level_3 || dataset.admin_level_2
-                      ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
-                      : ""
-                  }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
+                ? `${dataset.admin_level_3 || dataset.admin_level_2
+                  ? `${dataset.admin_level_3 || dataset.admin_level_2}, `
+                  : ""
+                }${countryList[dataset.admin_level_1 as keyof typeof countryList] ?? ""}`
                 : "unknown"}
             </Typography.Title>
           </Tooltip>
@@ -80,10 +79,21 @@ export default function DatasetInfoSidebar({
             <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
           </div>
         </div>
+
+        <div className="flex justify-between">
+          <Typography.Text className="pr-2">Uploaded: </Typography.Text>
+          <Typography.Text>
+            {new Date(dataset.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </Typography.Text>
+        </div>
       </div>
 
       {/* Environmental Context */}
-      <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+      <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
         <div className="flex justify-between">
           <Typography.Text className="pr-2">Biome: </Typography.Text>
           <Tooltip title={dataset.biome_name}>
@@ -131,7 +141,7 @@ export default function DatasetInfoSidebar({
       </div>
 
       {/* Technical Info */}
-      <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+      <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
         <div className="flex justify-between">
           <Typography.Text className="pr-2">Platform: </Typography.Text>
           <Tag color="default">{dataset.platform || "Unknown"}</Tag>
@@ -148,21 +158,11 @@ export default function DatasetInfoSidebar({
               : `${dataset.ortho_file_size.toFixed(0)} MB`}
           </Typography.Text>
         </div>
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Uploaded: </Typography.Text>
-          <Typography.Text>
-            {new Date(dataset.created_at).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </Typography.Text>
-        </div>
       </div>
 
       {/* Additional Information */}
       {dataset.additional_information && (
-        <div className="mt-4 space-y-3 rounded-md bg-white p-4">
+        <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
           <Typography.Text className="pr-2" strong>
             Additional Information:
           </Typography.Text>

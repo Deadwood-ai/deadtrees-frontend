@@ -96,7 +96,7 @@ const BIOME_COLORS: Record<string, { color: string; icon: string }> = {
 
 const getBiomeBadge = (biomeName: string | null) => {
 	if (!biomeName) return <Tag color="default">Unknown</Tag>;
-	
+
 	// Find matching biome type
 	for (const [key, { color, icon }] of Object.entries(BIOME_COLORS)) {
 		if (biomeName.toLowerCase().includes(key.toLowerCase())) {
@@ -315,9 +315,12 @@ export default function DatasetAudit() {
 		referenceDatasetIds,
 	]);
 
-	// Update navigation context with filtered dataset IDs (memoized to prevent infinite loop)
-	const filteredIds = useMemo(() => filteredDatasets.map((d) => d.id), [filteredDatasets]);
-	
+	// Update navigation context with filtered dataset IDs (sorted by ID descending to match table order)
+	const filteredIds = useMemo(
+		() => [...filteredDatasets].sort((a, b) => b.id - a.id).map((d) => d.id),
+		[filteredDatasets]
+	);
+
 	useEffect(() => {
 		setFilteredDatasetIds(filteredIds);
 		// eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map } from "ol";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import { Layer } from "ol/layer";
-import { Button, message } from "antd";
-import { EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import { message } from "antd";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { fromLonLat } from "ol/proj";
@@ -24,12 +23,35 @@ import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../Data
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 
+// State exposed to parent for toolbar rendering
+export interface AOIToolbarState {
+  isDrawing: boolean;
+  isEditing: boolean;
+  hasAOI: boolean;
+  isAOILoading: boolean;
+  selectedFeatureForEdit: boolean;
+  polygonCount: number;
+}
+
+// Handle exposed to parent for toolbar actions
+export interface DatasetAuditMapHandle {
+  startDrawing: () => void;
+  startEditing: () => void;
+  cancelDrawing: () => void;
+  cancelEditing: () => void;
+  saveEditing: () => void;
+  addAnotherPolygon: () => void;
+  deleteAOI: () => void;
+  deleteSelectedPolygon: () => void;
+}
+
 interface DatasetAuditMapProps {
   dataset: IDataset;
   onAOIChange?: (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => void;
+  onToolbarStateChange?: (state: AOIToolbarState) => void;
 }
 
-const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
+const DatasetAuditMap = forwardRef<DatasetAuditMapHandle, DatasetAuditMapProps>(({ dataset, onAOIChange, onToolbarStateChange }, ref) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const aoiLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -378,6 +400,11 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
         console.debug("Modify interaction removed");
       }
     }
+
+    // Reset cursor to default
+    if (mapRef.current) {
+      mapRef.current.style.cursor = "";
+    }
   };
 
   // Load existing AOI when data is available
@@ -530,6 +557,11 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     drawInteractionRef.current = draw;
     setIsDrawing(true);
     setIsEditing(false);
+
+    // Set crosshair cursor for drawing
+    if (mapRef.current) {
+      mapRef.current.style.cursor = "crosshair";
+    }
   };
 
   // Simplified addAnotherPolygon - just calls startDrawing
@@ -647,6 +679,11 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     if (setupEditingInteractions()) {
       setIsEditing(true);
       message.info("Click on a polygon to select and edit it.");
+
+      // Set pointer cursor for editing
+      if (mapRef.current) {
+        mapRef.current.style.cursor = "pointer";
+      }
     } else {
       message.error("Could not start editing. AOI feature might be missing.");
     }
@@ -727,6 +764,36 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
     message.success("AOI deleted.");
   };
 
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    startDrawing,
+    startEditing,
+    cancelDrawing,
+    cancelEditing,
+    saveEditing,
+    addAnotherPolygon,
+    deleteAOI,
+    deleteSelectedPolygon,
+  }));
+
+  // Report state changes to parent for toolbar rendering
+  useEffect(() => {
+    if (onToolbarStateChange) {
+      const polygonCount = currentAOIRef.current?.type === "MultiPolygon"
+        ? currentAOIRef.current.coordinates.length
+        : currentAOIRef.current?.type === "Polygon" ? 1 : 0;
+
+      onToolbarStateChange({
+        isDrawing,
+        isEditing,
+        hasAOI,
+        isAOILoading,
+        selectedFeatureForEdit: !!selectedFeatureForEdit,
+        polygonCount,
+      });
+    }
+  }, [isDrawing, isEditing, hasAOI, isAOILoading, selectedFeatureForEdit, onToolbarStateChange]);
+
   // useEffect for unmount cleanup
   useEffect(() => {
     return () => {
@@ -759,82 +826,7 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       )}
       <div ref={mapRef} className="h-full w-full" />
 
-      {/* Simplified AOI Controls */}
-      <div className="absolute right-4 top-4 z-10 flex flex-col gap-2">
-        {!isDrawing && !isEditing && !hasAOI && !isAOILoading && (
-          <Button type="primary" icon={<EditOutlined />} onClick={startDrawing} size="small">
-            Draw Polygon
-          </Button>
-        )}
-
-        {isDrawing && (
-          <div className="flex flex-col gap-1">
-            <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">Drawing polygon...</div>
-            <Button onClick={cancelDrawing} size="small" danger>
-              Cancel Drawing
-            </Button>
-          </div>
-        )}
-
-        {hasAOI && !isEditing && !isDrawing && (
-          <div className="flex flex-col gap-1">
-            <div className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
-              ✓ AOI {aoiData ? "Loaded" : "Defined"}
-              {/* Show polygon count */}
-              {currentAOIRef.current?.type === "MultiPolygon" && (
-                <div className="text-xs">
-                  ({currentAOIRef.current.coordinates.length} polygon
-                  {currentAOIRef.current.coordinates.length !== 1 ? "s" : ""})
-                </div>
-              )}
-            </div>
-            <div className="flex gap-1 rounded-sm bg-slate-100 p-1">
-              <Button icon={<EditOutlined />} onClick={startEditing} size="small" title="Edit polygons">
-                Edit
-              </Button>
-              <Button icon={<EditOutlined />} onClick={addAnotherPolygon} size="small" title="Add another polygon">
-                Add Another
-              </Button>
-              <Button icon={<DeleteOutlined />} onClick={deleteAOI} size="small" danger title="Delete all polygons">
-                Delete all
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {isEditing && (
-          <div className="flex flex-col gap-1">
-            <div className="rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">
-              {selectedFeatureForEdit ? "Polygon selected - edit or delete it" : "Click polygon to select..."}
-            </div>
-            <div className="flex gap-1 rounded-sm bg-slate-100 p-1">
-              <Button icon={<SaveOutlined />} onClick={saveEditing} size="small" type="primary" title="Save changes">
-                Save
-              </Button>
-              <Button icon={<CloseOutlined />} onClick={cancelEditing} size="small" title="Cancel editing">
-                Cancel
-              </Button>
-
-              {selectedFeatureForEdit && (
-                // <div className="mt-1 flex gap-1">
-                <Button
-                  icon={<DeleteOutlined />}
-                  onClick={deleteSelectedPolygon}
-                  size="small"
-                  danger
-                  title="Delete selected"
-                  className="w-full"
-                >
-                  Delete Selected
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {isAOILoading && <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">Loading AOI...</div>}
-      </div>
-
+      {/* Map style switcher */}
       <div className="absolute left-2 top-4 z-20">
         <MapStyleSwitchButtons
           mapStyle={mapStyle}
@@ -864,6 +856,6 @@ const DatasetAuditMap = ({ dataset, onAOIChange }: DatasetAuditMapProps) => {
       </div>
     </div>
   );
-};
+});
 
 export default DatasetAuditMap;

@@ -17,71 +17,81 @@ function getHemisphere(latitude: number | undefined): string {
 export function generateSeasonPrompt(dataset: DatasetSeasonInfo): string {
 	const hemisphere = getHemisphere(dataset.latitude);
 
-	return `TASK: Classify this aerial/drone image as IN SEASON or OUT OF SEASON
+	return `Classify the attached aerial/drone thumbnail as IN SEASON or OUT OF SEASON.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DATASET:
+Location: ${dataset.admin_level_3 || "Unknown"}, ${dataset.admin_level_2 || "Unknown"}, ${dataset.country || "Unknown"}
+Biome: ${dataset.biome_name || "Unknown"}
+Acquisition: ${dataset.acquisition_date || "Unknown"}
+Latitude: ${dataset.latitude?.toFixed(2) || "Unknown"} (${hemisphere})
 
-DATASET INFO:
-• Location: ${dataset.admin_level_3 || "Unknown"}, ${dataset.admin_level_2 || "Unknown"}, ${dataset.country || "Unknown"}
-• Biome: ${dataset.biome_name || "Unknown"}
-• Acquisition Date: ${dataset.acquisition_date || "Unknown"}
-• Latitude: ${dataset.latitude?.toFixed(2) || "Unknown"}° (${hemisphere})
+RULES:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. TROPICAL/SUBTROPICAL: Always IN SEASON (no leaf-off period).
+   Examples: Brazil, Indonesia, Philippines, Congo, coastal Australia.
 
-CLASSIFICATION RULES:
+2. TEMPERATE/BOREAL: Use hemisphere + acquisition month.
+   Northern (Europe, USA, Canada): IN SEASON May 15 - Oct 15
+   Southern (Australia, Chile, NZ): IN SEASON Oct 15 - May 15
 
-1️⃣ TROPICAL & SUBTROPICAL REGIONS → Always IN SEASON
-   • No true leaf-off period
-   • Do NOT apply month-based filtering
-   • Examples: Brazil, Colombia, Indonesia, Philippines, Belize, 
-     Congo, southern India, northern Australia, coastal Australia
+3. Follow calendar strictly even if vegetation appears green.
+   Spring/Autumn transitional periods count as OUT OF SEASON.
 
-2️⃣ TEMPERATE & BOREAL REGIONS → Use hemisphere + month
+4. Visual confirmation (don't override calendar rules):
+   - Leafless deciduous trees, snow, brown grass = OUT OF SEASON
+   - Full green canopy in summer months = IN SEASON
 
-   🌍 Northern Hemisphere (Europe, USA, Canada, Nepal hills):
-   • IN SEASON: May 15 – October 15
-   • OUT OF SEASON: October 16 – May 14
+5. Edge cases:
+   - Mediterranean: use temperate rules (summer drought may brown grass)
+   - High altitude: shorter season (Jun-Sep)
+   - Mixed forest: classify based on deciduous trees
 
-   🌎 Southern Hemisphere (southern Australia, Chile, New Zealand):
-   • IN SEASON: October 15 – May 15
-   • OUT OF SEASON: May 16 – October 14
+6. If uncertain, determine: location > climate zone > hemisphere > month.
 
-3️⃣ CONSISTENCY RULE
-   • Follow calendar strictly, even if vegetation looks green
-   • "OUT OF SEASON" = leaf-off or low phenological activity
-   • Spring/Autumn count as OUT OF SEASON (transitional periods)
+RESPOND: IN SEASON, OUT OF SEASON, or UNCERTAIN with brief explanation.`;
+}
 
-4️⃣ VISUAL INDICATORS (use to confirm, not override rules)
-   • Deciduous trees without leaves → OUT OF SEASON
-   • Brown/dormant grass in temperate zone → likely OUT OF SEASON
-   • Snow on ground → OUT OF SEASON
-   • Full green canopy in temperate summer → IN SEASON
-
-5️⃣ EDGE CASES
-   • Mediterranean climate (e.g., California, southern Spain): 
-     Use temperate rules, but note summer drought may brown grass
-   • High altitude temperate: Shorter season (June–September)
-   • Coastal temperate: Extended season possible, but use standard dates
-   • Mixed evergreen/deciduous: Classify based on deciduous trees
-
-6️⃣ IF UNCERTAIN
-   Determine in this order:
-   1. Country / location
-   2. Climate zone (tropical/subtropical vs temperate/boreal)
-   3. Hemisphere
-   4. Month
-   
-   If still unsure → respond "UNCERTAIN" with explanation
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-RESPOND WITH EXACTLY ONE OF:
-• IN SEASON
-• OUT OF SEASON
-• UNCERTAIN: [brief explanation]
-
-Then provide a one-line reasoning.`;
+async function fetchImageAsPngBlob(url: string): Promise<Blob> {
+	// Fetch the image
+	const response = await fetch(url);
+	if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+	
+	const originalBlob = await response.blob();
+	
+	// If already PNG, return as-is
+	if (originalBlob.type === "image/png") {
+		return originalBlob;
+	}
+	
+	// Convert to PNG using canvas
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.crossOrigin = "anonymous";
+		
+		img.onload = () => {
+			const canvas = document.createElement("canvas");
+			canvas.width = img.naturalWidth;
+			canvas.height = img.naturalHeight;
+			
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
+				reject(new Error("Failed to get canvas context"));
+				return;
+			}
+			
+			ctx.drawImage(img, 0, 0);
+			canvas.toBlob((blob) => {
+				if (blob) {
+					resolve(blob);
+				} else {
+					reject(new Error("Failed to convert image to PNG"));
+				}
+			}, "image/png");
+		};
+		
+		img.onerror = () => reject(new Error("Failed to load image"));
+		img.src = URL.createObjectURL(originalBlob);
+	});
 }
 
 async function copySeasonPromptWithImage(
@@ -90,26 +100,33 @@ async function copySeasonPromptWithImage(
 ): Promise<void> {
 	const prompt = generateSeasonPrompt(dataset);
 
+	// Check if ClipboardItem is supported
+	if (typeof ClipboardItem === "undefined") {
+		console.debug("ClipboardItem not supported");
+		await navigator.clipboard.writeText(prompt);
+		message.info("Prompt copied (image copy not supported in this browser)");
+		return;
+	}
+
 	try {
-		// Fetch thumbnail as blob
-		const response = await fetch(thumbnailUrl);
-		const blob = await response.blob();
+		// Fetch and convert thumbnail to PNG
+		const pngBlob = await fetchImageAsPngBlob(thumbnailUrl);
 
 		// Create clipboard items with both text and image
 		const clipboardItems = [
 			new ClipboardItem({
 				"text/plain": new Blob([prompt], { type: "text/plain" }),
-				"image/png": blob,
+				"image/png": pngBlob,
 			}),
 		];
 
 		await navigator.clipboard.write(clipboardItems);
 		message.success("Prompt and image copied to clipboard!");
 	} catch (err) {
-		// Fallback: copy text only (Safari, older Firefox)
-		console.debug("Image clipboard not supported, falling back to text only:", err);
+		// Fallback: copy text only
+		console.debug("Image clipboard failed, falling back to text only:", err);
 		await navigator.clipboard.writeText(prompt);
-		message.info("Prompt copied (image copy not supported in this browser)");
+		message.info("Prompt copied (image copy not supported)");
 	}
 }
 
