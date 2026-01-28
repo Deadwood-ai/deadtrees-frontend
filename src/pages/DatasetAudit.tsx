@@ -21,6 +21,7 @@ import {
 	MailOutlined,
 	FilterOutlined,
 	FlagOutlined,
+	EditOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCanAudit } from "../hooks/useUserPrivileges";
@@ -32,11 +33,12 @@ import { supabase } from "../hooks/useSupabase";
 import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
 import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
 import { useAuditNavigation } from "../hooks/useAuditNavigation";
+import { usePendingCorrections } from "../hooks/usePendingCorrections";
 
 const { Title, Text } = Typography;
 
-// New simplified tab structure
-type AuditTab = "pending" | "completed" | "reference";
+// Tab structure including edits & flags
+type AuditTab = "pending" | "completed" | "reference" | "edits-flags";
 
 // Status sub-filter for completed tab
 type CompletedStatusFilter = "all" | "ready" | "fixable" | "excluded" | "needs-review" | "reviewed";
@@ -131,6 +133,7 @@ export default function DatasetAudit() {
 	const { data: flaggedAgg = [], isLoading: isFlaggedLoading } = useFlaggedDatasets();
 	const { data: referenceDatasetIds = new Set() } = useReferenceDatasetIds();
 	const { data: contributorMap = new Map() } = useDatasetContributors();
+	const { data: correctionsMap = new Map(), isLoading: isCorrectionsLoading } = usePendingCorrections();
 
 	// Filter states - initialize from URL params
 	const initialTab = (searchParams.get("tab") as AuditTab) || "pending";
@@ -250,6 +253,12 @@ export default function DatasetAudit() {
 			}
 		} else if (activeTab === "reference") {
 			filtered = filtered.filter((dataset) => referenceDatasetIds.has(dataset.id));
+		} else if (activeTab === "edits-flags") {
+			// Filter for datasets with pending corrections OR user flags
+			const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
+			filtered = filtered.filter((dataset) =>
+				correctionsMap.has(dataset.id) || flaggedSet.has(dataset.id)
+			);
 		}
 
 		// Apply common filters
@@ -351,6 +360,12 @@ export default function DatasetAudit() {
 			return d.is_audited && audit && !audit.reviewed_at;
 		}).length;
 	}, [datasets, audits, auditMap]);
+
+	const editsFlagsCount = useMemo(() => {
+		if (!datasets) return 0;
+		const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
+		return datasets.filter((d) => correctionsMap.has(d.id) || flaggedSet.has(d.id)).length;
+	}, [datasets, flaggedAgg, correctionsMap]);
 
 	// Check if user has audit privileges
 	useEffect(() => {
@@ -487,6 +502,23 @@ export default function DatasetAudit() {
 		width: 70,
 	};
 
+	const correctionsColumn = {
+		title: "Pending Edits",
+		key: "corrections",
+		render: (_: unknown, record: IDataset) => {
+			const count = correctionsMap.get(record.id);
+			if (!count) return <span className="text-gray-400">—</span>;
+			return (
+				<Tooltip title={`${count} pending polygon edit(s) awaiting review`}>
+					<Badge count={count} size="small" color="#1890ff">
+						<EditOutlined style={{ color: "#1890ff" }} />
+					</Badge>
+				</Tooltip>
+			);
+		},
+		width: 100,
+	};
+
 	const contributorColumn = {
 		title: "Contributor",
 		key: "contributor",
@@ -621,6 +653,9 @@ export default function DatasetAudit() {
 	} else if (activeTab === "completed") {
 		// Completed: season, notes, flags, status, auditor
 		columns = [...baseColumns, seasonColumn, notesColumn, flagsColumn, statusColumn, auditorColumn, actionsColumn];
+	} else if (activeTab === "edits-flags") {
+		// Edits & Flags: show corrections and flags counts, with review action
+		columns = [...baseColumns, correctionsColumn, flagsColumn, statusColumn, actionsColumn];
 	} else {
 		// Reference tab
 		columns = [...baseColumns, referencePatchesColumn, actionsColumn];
@@ -675,6 +710,15 @@ export default function DatasetAudit() {
 								</Space>
 							),
 							value: "completed",
+						},
+						{
+							label: (
+								<Space size={6}>
+									<span>🔔 Edits & Flags</span>
+									<Badge count={editsFlagsCount} size="small" color="#faad14" showZero />
+								</Space>
+							),
+							value: "edits-flags",
 						},
 						{
 							label: (
@@ -847,7 +891,7 @@ export default function DatasetAudit() {
 				dataSource={filteredDatasets}
 				columns={columns}
 				rowKey="id"
-				loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading}
+				loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading || isCorrectionsLoading}
 				pagination={{
 					pageSize: 20,
 					showSizeChanger: true,

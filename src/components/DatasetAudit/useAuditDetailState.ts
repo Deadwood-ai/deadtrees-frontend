@@ -18,7 +18,7 @@ import { useAuditNavigation } from "../../hooks/useAuditNavigation";
 import { useDatasetFlags, useUpdateFlagStatus } from "../../hooks/useDatasetFlags";
 import { usePhenologyData } from "../../hooks/usePhenologyData";
 import { useSeasonPrompt, DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
-import { AOIToolbarState } from "./DatasetAuditMap";
+import { AOIToolbarState } from "../DatasetDetailsMap/DatasetDetailsMap";
 
 export interface UseAuditDetailStateProps {
 	dataset: IDataset;

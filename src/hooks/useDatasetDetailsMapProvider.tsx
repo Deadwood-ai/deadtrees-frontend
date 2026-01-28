@@ -9,6 +9,7 @@ interface LayerControlState {
   showForestCover: boolean;
   showDeadwood: boolean;
   showDroneImagery: boolean;
+  showAOI: boolean;
   layerOpacity: number;
 }
 
@@ -22,13 +23,14 @@ interface DatasetDetailsMapContextType {
   navigatedFrom: NavigationSource;
   setViewport: (view: { center: number[]; zoom: number; extent?: number[] }) => void;
   setNavigationSource: (source: NavigationSource) => void;
-  
+
   // Layer control state
   layerControl: LayerControlState;
   setMapStyle: (style: string) => void;
   setShowForestCover: (show: boolean) => void;
   setShowDeadwood: (show: boolean) => void;
   setShowDroneImagery: (show: boolean) => void;
+  setShowAOI: (show: boolean) => void;
   setLayerOpacity: (opacity: number) => void;
 }
 
@@ -37,6 +39,7 @@ const defaultLayerControl: LayerControlState = {
   showForestCover: true,
   showDeadwood: true,
   showDroneImagery: true,
+  showAOI: true,
   layerOpacity: 1,
 };
 
@@ -46,14 +49,15 @@ const DatasetDetailsMapContext = createContext<DatasetDetailsMapContextType>({
     zoom: 2,
   },
   navigatedFrom: null,
-  setViewport: () => {},
-  setNavigationSource: () => {},
+  setViewport: () => { },
+  setNavigationSource: () => { },
   layerControl: defaultLayerControl,
-  setMapStyle: () => {},
-  setShowForestCover: () => {},
-  setShowDeadwood: () => {},
-  setShowDroneImagery: () => {},
-  setLayerOpacity: () => {},
+  setMapStyle: () => { },
+  setShowForestCover: () => { },
+  setShowDeadwood: () => { },
+  setShowDroneImagery: () => { },
+  setShowAOI: () => { },
+  setLayerOpacity: () => { },
 });
 
 export const DatasetDetailsMapProvider = (props: { children: React.ReactNode }) => {
@@ -84,6 +88,10 @@ export const DatasetDetailsMapProvider = (props: { children: React.ReactNode }) 
     setLayerControl((prev) => ({ ...prev, showDroneImagery: show }));
   }, []);
 
+  const setShowAOI = useCallback((show: boolean) => {
+    setLayerControl((prev) => ({ ...prev, showAOI: show }));
+  }, []);
+
   const setLayerOpacity = useCallback((opacity: number) => {
     setLayerControl((prev) => ({ ...prev, layerOpacity: opacity }));
   }, []);
@@ -100,9 +108,10 @@ export const DatasetDetailsMapProvider = (props: { children: React.ReactNode }) 
       setShowForestCover,
       setShowDeadwood,
       setShowDroneImagery,
+      setShowAOI,
       setLayerOpacity,
     }),
-    [viewport, navigatedFrom, layerControl, setMapStyle, setShowForestCover, setShowDeadwood, setShowDroneImagery, setLayerOpacity],
+    [viewport, navigatedFrom, layerControl, setMapStyle, setShowForestCover, setShowDeadwood, setShowDroneImagery, setShowAOI, setLayerOpacity],
   );
 
   return <DatasetDetailsMapContext.Provider value={contextValue}>{props.children}</DatasetDetailsMapContext.Provider>;

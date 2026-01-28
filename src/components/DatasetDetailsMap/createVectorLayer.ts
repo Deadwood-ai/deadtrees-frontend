@@ -104,11 +104,23 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   const getFeatureStyle = (feature: Feature) => {
     // Get correction status from feature properties (only available with corrections-aware MVT)
     const correctionStatus = feature.get("correction_status") as string | undefined;
+    const correctionOperation = feature.get("correction_operation") as string | undefined;
     const isDeleted = feature.get("is_deleted") as boolean | undefined;
 
-    // Hide deleted polygons - they should not be visible to regular users
-    // (Auditors would use a separate view/filter to see pending deletions)
+    // Handle deleted polygons
     if (isDeleted) {
+      // Show pending delete corrections with special styling for auditors
+      if (config.showCorrectionStyling && correctionStatus === "pending" && correctionOperation === "delete") {
+        return new Style({
+          fill: new Fill({ color: "rgba(239, 68, 68, 0.3)" }), // Light red fill
+          stroke: new Stroke({ 
+            color: "#DC2626", // Red border
+            width: 2,
+            lineDash: [6, 4], // Dashed line to indicate pending deletion
+          }),
+        });
+      }
+      // Hide deleted polygons from regular users
       return new Style({}); // Empty style = invisible
     }
 
@@ -233,7 +245,7 @@ export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Po
     source: aoiSource,
     style: new Style({
       stroke: new Stroke({
-        color: "#ff6b35", // Orange stroke to match audit workflow
+        color: "#3b82f6", // Blue stroke for AOI
         width: 2,
       }),
       fill: new Fill({

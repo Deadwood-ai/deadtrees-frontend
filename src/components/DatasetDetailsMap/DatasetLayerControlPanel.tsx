@@ -14,9 +14,12 @@ interface DatasetLayerControlPanelProps {
   setShowDeadwood: (show: boolean) => void;
   showDroneImagery: boolean;
   setShowDroneImagery: (show: boolean) => void;
+  showAOI?: boolean;
+  setShowAOI?: (show: boolean) => void;
   // Layer availability
   hasForestCover: boolean;
   hasDeadwood: boolean;
+  hasAOI?: boolean;
   // Quality ratings from audit
   forestCoverQuality?: QualityRating;
   deadwoodQuality?: QualityRating;
@@ -33,16 +36,16 @@ interface DatasetLayerControlPanelProps {
 // Quality indicator component
 const QualityIcon = ({ quality }: { quality: QualityRating }) => {
   if (!quality) return null;
-  
+
   const config = {
     great: { icon: <CheckCircleOutlined />, color: "text-green-500", tooltip: "Quality: Great" },
     sentinel_ok: { icon: <ExclamationCircleOutlined />, color: "text-yellow-500", tooltip: "Quality: OK for Sentinel" },
     bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor – layer hidden due to audit" },
   };
-  
+
   const { icon, color, tooltip } = config[quality] || {};
   if (!icon) return null;
-  
+
   return (
     <Tooltip title={tooltip} placement="left">
       <span className={`ml-1 ${color}`}>{icon}</span>
@@ -65,8 +68,11 @@ const DatasetLayerControlPanel = ({
   setShowDeadwood,
   showDroneImagery,
   setShowDroneImagery,
+  showAOI,
+  setShowAOI,
   hasForestCover,
   hasDeadwood,
+  hasAOI,
   forestCoverQuality,
   deadwoodQuality,
   opacity,
@@ -77,10 +83,11 @@ const DatasetLayerControlPanel = ({
   isLoggedIn,
 }: DatasetLayerControlPanelProps) => {
   return (
-    <div 
-      className="flex w-52 flex-col rounded-lg bg-white/95 p-3 shadow-lg backdrop-blur-sm"
-      onMouseMove={(e) => e.stopPropagation()}
-      onMouseEnter={(e) => e.stopPropagation()}
+    <div
+      className="flex w-52 flex-col rounded-lg bg-white/95 p-3 shadow-lg backdrop-blur-sm pointer-events-auto"
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
@@ -99,8 +106,8 @@ const DatasetLayerControlPanel = ({
       <div className="flex flex-col gap-1">
         {hasForestCover && (
           <div className="flex items-center justify-between">
-            <Checkbox 
-              checked={showForestCover} 
+            <Checkbox
+              checked={showForestCover}
               onChange={(e) => setShowForestCover(e.target.checked)}
               disabled={forestCoverQuality === "bad"}
             >
@@ -114,8 +121,8 @@ const DatasetLayerControlPanel = ({
         )}
         {hasDeadwood && (
           <div className="flex items-center justify-between">
-            <Checkbox 
-              checked={showDeadwood} 
+            <Checkbox
+              checked={showDeadwood}
               onChange={(e) => setShowDeadwood(e.target.checked)}
               disabled={deadwoodQuality === "bad"}
             >
@@ -127,8 +134,8 @@ const DatasetLayerControlPanel = ({
             <QualityIcon quality={deadwoodQuality} />
           </div>
         )}
-        <Checkbox 
-          checked={showDroneImagery} 
+        <Checkbox
+          checked={showDroneImagery}
           onChange={(e) => setShowDroneImagery(e.target.checked)}
         >
           <span className="flex items-center gap-2">
@@ -136,6 +143,17 @@ const DatasetLayerControlPanel = ({
             <span className="text-xs text-gray-600">Drone Imagery</span>
           </span>
         </Checkbox>
+        {hasAOI && setShowAOI && (
+          <Checkbox
+            checked={showAOI}
+            onChange={(e) => setShowAOI(e.target.checked)}
+          >
+            <span className="flex items-center gap-2">
+              <span style={{ width: 12, height: 12, borderRadius: 2, border: '2px solid #3b82f6', display: 'inline-block' }} />
+              <span className="text-xs text-gray-600">Area of Interest</span>
+            </span>
+          </Checkbox>
+        )}
       </div>
 
       <Divider className="my-3" />

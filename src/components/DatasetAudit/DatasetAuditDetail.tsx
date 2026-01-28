@@ -1,11 +1,18 @@
-import { useRef } from "react";
-import { Form, message } from "antd";
+import { useRef, forwardRef, useImperativeHandle } from "react";
+import { Form, message, Tag, Tooltip } from "antd";
+import { EditOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
-import DatasetAuditMap, { DatasetAuditMapHandle } from "./DatasetAuditMap";
+import DatasetDetailsMap, { DatasetDetailsMapHandle, AOIToolbarState } from "../DatasetDetailsMap/DatasetDetailsMap";
+import { DatasetDetailsMapProvider, useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
+import DatasetLayerControlPanel from "../DatasetDetailsMap/DatasetLayerControlPanel";
 import { useAuditDetailState } from "./useAuditDetailState";
 import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
 import { DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
+import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
+import { useApproveCorrection, useRevertCorrection } from "../../hooks/useSaveCorrections";
+import { useCorrectionStats, useCorrectionContributors } from "../../hooks/usePendingCorrections";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Sub-components
 import AuditHeader from "./AuditHeader";
@@ -22,13 +29,209 @@ import {
 	FinalAssessmentCard,
 } from "./AuditStepCards";
 
+// Inner map component that uses context for layer controls
+interface AuditMapWithControlsProps {
+	dataset: IDataset;
+	onAOIChange: (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => void;
+	onToolbarStateChange: (state: AOIToolbarState) => void;
+}
+
+const AuditMapWithControls = forwardRef<DatasetDetailsMapHandle, AuditMapWithControlsProps>(
+	({ dataset, onAOIChange, onToolbarStateChange }, ref) => {
+		// Internal ref to access map methods (for refreshing after approve/revert)
+		const internalMapRef = useRef<DatasetDetailsMapHandle>(null);
+
+		// Forward the ref while keeping internal access
+		useImperativeHandle(ref, () => internalMapRef.current!, []);
+
+		// Get layer control state from context
+		const {
+			layerControl,
+			setMapStyle,
+			setShowForestCover,
+			setShowDeadwood,
+			setShowDroneImagery,
+			setShowAOI,
+			setLayerOpacity,
+		} = useDatasetDetailsMap();
+
+		// Check if labels exist
+		const { deadwood, forestCover } = useDatasetLabelTypes({
+			datasetId: dataset?.id,
+			enabled: !!dataset?.id,
+		});
+
+		const hasDeadwood = !!deadwood.data?.id;
+		const hasForestCover = !!forestCover.data?.id && !!dataset.is_forest_cover_done;
+
+		// Correction approval/revert mutations
+		const queryClient = useQueryClient();
+		const { mutateAsync: approveCorrection } = useApproveCorrection();
+		const { mutateAsync: revertCorrection } = useRevertCorrection();
+
+		// Handlers for correction review
+		const handleApproveCorrection = async (correctionId: number, _geometryId: number) => {
+			try {
+				const result = await approveCorrection(correctionId);
+				if (result) {
+					message.success("Correction approved");
+					// Invalidate queries to update counts
+					queryClient.invalidateQueries({ queryKey: ["pendingCorrections"] });
+					queryClient.invalidateQueries({ queryKey: ["correctionStats", dataset?.id] });
+					queryClient.invalidateQueries({ queryKey: ["correctionContributors", dataset?.id] });
+					// Refresh MVT tiles to show updated state
+					internalMapRef.current?.refreshVectorLayers();
+				} else {
+					message.error("Failed to approve correction");
+				}
+			} catch (error) {
+				console.error("Error approving correction:", error);
+				message.error("Failed to approve correction");
+			}
+		};
+
+		const handleRevertCorrection = async (correctionId: number, _geometryId: number) => {
+			try {
+				const result = await revertCorrection(correctionId);
+				if (result) {
+					message.success("Correction reverted");
+					// Invalidate queries to update counts
+					queryClient.invalidateQueries({ queryKey: ["pendingCorrections"] });
+					queryClient.invalidateQueries({ queryKey: ["correctionStats", dataset?.id] });
+					queryClient.invalidateQueries({ queryKey: ["correctionContributors", dataset?.id] });
+					// Refresh MVT tiles to show updated state
+					internalMapRef.current?.refreshVectorLayers();
+				} else {
+					message.error("Failed to revert correction");
+				}
+			} catch (error) {
+				console.error("Error reverting correction:", error);
+				message.error("Failed to revert correction");
+			}
+		};
+
+		// Correction stats for this dataset
+		const { data: correctionStats } = useCorrectionStats(dataset?.id);
+		const { data: contributors } = useCorrectionContributors(dataset?.id);
+
+		return (
+			<div className="relative h-full w-full flex-1">
+				{/* Correction Stats Indicator - top left */}
+				{correctionStats && correctionStats.total > 0 && (
+					<div className="absolute left-3 top-3 z-50 pointer-events-auto">
+						<div className="flex flex-col gap-1.5 rounded-lg bg-white/95 p-2.5 shadow-lg backdrop-blur-sm">
+							<div className="text-xs font-medium text-gray-600 mb-1">Edit Review Progress</div>
+							{correctionStats.pending > 0 ? (
+								<Tooltip title={`${correctionStats.pending} edits awaiting review`}>
+									<Tag
+										icon={<EditOutlined />}
+										color="orange"
+										className="m-0"
+									>
+										{correctionStats.pending} pending
+									</Tag>
+								</Tooltip>
+							) : (
+								<Tooltip title="All edits have been reviewed">
+									<Tag
+										icon={<CheckCircleOutlined />}
+										color="green"
+										className="m-0"
+									>
+										All reviewed
+									</Tag>
+								</Tooltip>
+							)}
+							{correctionStats.approved > 0 && (
+								<Tooltip title={`${correctionStats.approved} edits approved`}>
+									<Tag color="green" className="m-0">
+										{correctionStats.approved} approved
+									</Tag>
+								</Tooltip>
+							)}
+							{correctionStats.rejected > 0 && (
+								<Tooltip title={`${correctionStats.rejected} edits reverted`}>
+									<Tag color="default" className="m-0">
+										{correctionStats.rejected} reverted
+									</Tag>
+								</Tooltip>
+							)}
+							{/* Contributors section */}
+							{contributors && contributors.length > 0 && (
+								<>
+									<div className="border-t border-gray-200 mt-1.5 pt-1.5">
+										<div className="text-[10px] text-gray-500 mb-1">Contributors:</div>
+										{contributors.slice(0, 3).map((contributor, idx) => (
+											<div key={idx} className="text-[10px] text-gray-600 truncate" title={contributor.email}>
+												{contributor.email.split('@')[0]} ({contributor.count})
+											</div>
+										))}
+										{contributors.length > 3 && (
+											<div className="text-[10px] text-gray-400">
+												+{contributors.length - 3} more
+											</div>
+										)}
+									</div>
+								</>
+							)}
+						</div>
+					</div>
+				)}
+
+				{/* Layer Control Panel - z-50 to ensure it's above map overlays */}
+				<div className="absolute right-3 top-3 z-50 pointer-events-auto">
+					<DatasetLayerControlPanel
+						mapStyle={layerControl.mapStyle}
+						onMapStyleChange={setMapStyle}
+						showForestCover={layerControl.showForestCover}
+						setShowForestCover={setShowForestCover}
+						showDeadwood={layerControl.showDeadwood}
+						setShowDeadwood={setShowDeadwood}
+						showDroneImagery={layerControl.showDroneImagery}
+						setShowDroneImagery={setShowDroneImagery}
+						showAOI={layerControl.showAOI}
+						setShowAOI={setShowAOI}
+						hasForestCover={hasForestCover}
+						hasDeadwood={hasDeadwood}
+						hasAOI={true}
+						opacity={layerControl.layerOpacity}
+						setOpacity={setLayerOpacity}
+						onReportClick={() => { }} // Not used in audit context
+						isLoggedIn={true}
+					/>
+				</div>
+
+				{/* Map */}
+				<DatasetDetailsMap
+					ref={internalMapRef}
+					data={dataset}
+					isLoggedIn={true}
+					enableAOIEditing={true}
+					onAOIChange={onAOIChange}
+					onToolbarStateChange={onToolbarStateChange}
+					canReviewCorrections={true}
+					showAOI={layerControl.showAOI}
+					onApproveCorrection={handleApproveCorrection}
+					onRevertCorrection={handleRevertCorrection}
+					showDeadwood={layerControl.showDeadwood}
+					showForestCover={layerControl.showForestCover}
+					showDroneImagery={layerControl.showDroneImagery}
+					layerOpacity={layerControl.layerOpacity}
+				/>
+			</div>
+		);
+	}
+);
+
+AuditMapWithControls.displayName = "AuditMapWithControls";
+
 interface DatasetAuditDetailProps {
 	dataset: IDataset;
 }
 
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
 	// Map ref for AOI toolbar controls
-	const mapRef = useRef<DatasetAuditMapHandle>(null);
+	const mapRef = useRef<DatasetDetailsMapHandle>(null);
 
 	// Use the custom hook for all state and logic
 	const {
@@ -261,13 +464,15 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 				</div>
 			</div>
 
-			{/* Map */}
-			<DatasetAuditMap
-				ref={mapRef}
-				dataset={dataset}
-				onAOIChange={handleAOIChange}
-				onToolbarStateChange={setAoiToolbarState}
-			/>
+			{/* Map - wrapped in provider for layer controls */}
+			<DatasetDetailsMapProvider>
+				<AuditMapWithControls
+					ref={mapRef}
+					dataset={dataset}
+					onAOIChange={handleAOIChange}
+					onToolbarStateChange={setAoiToolbarState}
+				/>
+			</DatasetDetailsMapProvider>
 		</div>
 	);
 }

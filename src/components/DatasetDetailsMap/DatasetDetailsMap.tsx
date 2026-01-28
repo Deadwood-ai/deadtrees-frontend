@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, forwardRef, useImperativeHandle } from "react";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import { View, Map, Overlay } from "ol";
@@ -7,16 +7,45 @@ import VectorSource from "ol/source/Vector";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import VectorTileLayer from "ol/layer/VectorTile";
-import { Style, Fill, Stroke } from "ol/style";
+import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import { FeatureLike } from "ol/Feature";
-import { Card, Button, Tag, Typography, Space } from "antd";
-import { EditOutlined, CloseOutlined } from "@ant-design/icons";
+import Feature from "ol/Feature";
+import type { Geometry } from "ol/geom";
+import { Card, Button, Tag, Typography, Space, message } from "antd";
+import { EditOutlined, CloseOutlined, CheckOutlined, UndoOutlined } from "@ant-design/icons";
+import { Draw, Modify, Select } from "ol/interaction";
+import { Polygon, MultiPolygon } from "ol/geom";
+import GeoJSON from "ol/format/GeoJSON";
+import { click } from "ol/events/condition";
 
 const { Text } = Typography;
 
 import { IDataset } from "../../types/dataset";
 import { Settings } from "../../config";
 import { getWaybackTileUrl } from "../../utils/waybackVersions";
+
+// State exposed to parent for AOI toolbar rendering
+export interface AOIToolbarState {
+  isDrawing: boolean;
+  isEditing: boolean;
+  hasAOI: boolean;
+  isAOILoading: boolean;
+  selectedFeatureForEdit: boolean;
+  polygonCount: number;
+}
+
+// Handle exposed to parent for AOI toolbar actions
+export interface DatasetDetailsMapHandle {
+  startDrawing: () => void;
+  startEditing: () => void;
+  cancelDrawing: () => void;
+  cancelEditing: () => void;
+  saveEditing: () => void;
+  addAnotherPolygon: () => void;
+  deleteAOI: () => void;
+  deleteSelectedPolygon: () => void;
+  refreshVectorLayers: () => void;
+}
 
 // Latest Wayback release (2024) for satellite imagery
 const DEFAULT_WAYBACK_RELEASE = 31144;
@@ -39,16 +68,27 @@ interface DatasetDetailsMapProps {
   showDeadwood?: boolean;
   showForestCover?: boolean;
   showDroneImagery?: boolean;
+  showAOI?: boolean;
   layerOpacity?: number; // Unified opacity for analysis layers (deadwood + forest cover)
   // Edit callbacks for polygon click interaction
   onEditDeadwood?: () => void;
   onEditForestCover?: () => void;
   isLoggedIn?: boolean;
+
+  // AOI Editing (for audit - privilege-gated)
+  enableAOIEditing?: boolean;
+  onAOIChange?: (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null) => void;
+  onToolbarStateChange?: (state: AOIToolbarState) => void;
+
+  // Correction Review (for auditors - privilege-gated)
+  canReviewCorrections?: boolean;
+  onApproveCorrection?: (correctionId: number, geometryId: number) => void;
+  onRevertCorrection?: (correctionId: number, geometryId: number) => void;
 }
 
-const DatasetDetailsMap = ({ 
-  data, 
-  onMapReady, 
+const DatasetDetailsMap = forwardRef<DatasetDetailsMapHandle, DatasetDetailsMapProps>(({
+  data,
+  onMapReady,
   onOrthoLayerReady,
   onVectorLayersReady,
   hideDeadwoodLayer = false,
@@ -59,35 +99,67 @@ const DatasetDetailsMap = ({
   showDeadwood,
   showForestCover,
   showDroneImagery,
+  showAOI = true,
   layerOpacity,
   // Edit callbacks
   onEditDeadwood,
   onEditForestCover,
   isLoggedIn = false,
-}: DatasetDetailsMapProps) => {
+  // AOI Editing
+  enableAOIEditing = false,
+  onAOIChange,
+  onToolbarStateChange,
+  // Correction Review
+  canReviewCorrections = false,
+  onApproveCorrection,
+  onRevertCorrection,
+}, ref) => {
   // Move hooks before any conditional returns to fix the React Hook errors
-  const mapRef = useRef<Map | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const tooltipOverlayRef = useRef<Overlay | null>(null);
-  
+
   // Internal state
-  const [aoiOpacity, setAoiOpacity] = useState<number>(0.8);
+  const [aoiOpacity] = useState<number>(0.8);
   const [hoveredFeature, setHoveredFeature] = useState<FeatureLike | null>(null);
   const [hoveredLabelId, setHoveredLabelId] = useState<number | null>(null);
   const [tooltipContent, setTooltipContent] = useState<{ type: string; status: string } | null>(null);
-  
+
+  // AOI Editing state (only used when enableAOIEditing is true)
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasAOI, setHasAOI] = useState(false);
+  const [selectedFeatureForEdit, setSelectedFeatureForEdit] = useState<FeatureLike | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  // AOI interaction refs
+  const drawInteractionRef = useRef<Draw | null>(null);
+  const modifyInteractionRef = useRef<Modify | null>(null);
+  const selectInteractionRef = useRef<Select | null>(null);
+  const currentAOIRef = useRef<GeoJSON.MultiPolygon | GeoJSON.Polygon | null>(null);
+  // Refs to track drawing/editing state for click handler (closure issue)
+  const isDrawingRef = useRef(false);
+  const isEditingRef = useRef(false);
+
   // Get layer control state from context (for fast basemap switching)
   const { viewport, navigatedFrom, setViewport, layerControl } = useDatasetDetailsMap();
-  
+
   // Click popover state - for persistent interaction
   const clickPopoverRef = useRef<HTMLDivElement | null>(null);
   const clickOverlayRef = useRef<Overlay | null>(null);
-  const [clickedPolygonInfo, setClickedPolygonInfo] = useState<{ type: string; status: string; layerType: "deadwood" | "forest_cover" } | null>(null);
+  const [clickedPolygonInfo, setClickedPolygonInfo] = useState<{
+    type: string;
+    status: string;
+    layerType: "deadwood" | "forest_cover";
+    correctionId?: number;
+    geometryId?: number;
+    correctionOperation?: string; // 'create', 'modify', 'delete'
+  } | null>(null);
 
   // Use mapStyle from context for fast switching (avoids parent re-renders)
   const mapStyle = layerControl.mapStyle;
-  
+
   // Compute effective visibility and opacity from props
   // showDeadwood/showForestCover/showDroneImagery control visibility when provided
   // layerOpacity controls opacity of analysis layers when provided
@@ -123,11 +195,12 @@ const DatasetDetailsMap = ({
     selectionLayer?: VectorTileLayer;
     aoiVector?: VectorLayer<VectorSource>;
     aoiMask?: VectorLayer<VectorSource>;
+    editableAOI?: VectorLayer<VectorSource>; // For AOI editing mode
   }>({});
 
   // Main map initialization effect
   useEffect(() => {
-    if (!mapRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
+    if (!mapInstanceRef.current && data?.file_name && !isLoadingLabels && !isAOILoading) {
       // Determine whether to show prediction layers based on audit quality fields from public view
       const allowDeadwoodPredictions = (() => {
         const q: IDataset["deadwood_quality"] | undefined = (data as IDataset).deadwood_quality ?? undefined;
@@ -182,8 +255,8 @@ const DatasetDetailsMap = ({
       // Create vector layers conditionally based on data availability AND audit quality flags
       // Use showCorrectionStyling to enable corrections-aware MVT function for subtle border indicators
       const deadwoodVectorLayer =
-        deadwood.data?.id && allowDeadwoodPredictions 
-          ? createDeadwoodVectorLayer(deadwood.data.id, { showCorrectionStyling: true }) 
+        deadwood.data?.id && allowDeadwoodPredictions
+          ? createDeadwoodVectorLayer(deadwood.data.id, { showCorrectionStyling: true })
           : undefined;
 
       // Only create forest cover layer if forest cover processing is done AND labels exist AND audit quality is good
@@ -192,13 +265,13 @@ const DatasetDetailsMap = ({
           ? createForestCoverVectorLayer(forestCover.data.id, { showCorrectionStyling: true })
           : undefined;
 
-      // Create AOI layer if AOI data exists
-      const aoiVectorLayer = aoiGeometry
+      // Create AOI layer if AOI data exists (skip if editing is enabled - we use editableAOI instead)
+      const aoiVectorLayer = (aoiGeometry && !enableAOIEditing)
         ? createAOIVectorLayer(aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
         : undefined;
 
-      // Create AOI mask layer if AOI data exists - grays out areas outside AOI
-      const aoiMaskLayer = aoiGeometry
+      // Create AOI mask layer if AOI data exists - grays out areas outside AOI (skip if editing)
+      const aoiMaskLayer = (aoiGeometry && !enableAOIEditing)
         ? createAOIMaskLayer(aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon)
         : undefined;
 
@@ -206,21 +279,21 @@ const DatasetDetailsMap = ({
       // Subtle hover - just highlight border, don't change fill
       const selectionLayer = deadwoodVectorLayer
         ? new VectorTileLayer({
-            source: deadwoodVectorLayer.getSource()!,
-            style: (feature: FeatureLike) => {
-              if (feature === hoveredFeature) {
-                return new Style({
-                  stroke: new Stroke({
-                    color: "#06b6d4", // Cyan - matches editor hover color
-                    width: 3,
-                  }),
-                });
-              }
-              return undefined;
-            },
-            renderMode: "vector",
-            renderBuffer: 512,
-          })
+          source: deadwoodVectorLayer.getSource()!,
+          style: (feature: FeatureLike) => {
+            if (feature === hoveredFeature) {
+              return new Style({
+                stroke: new Stroke({
+                  color: "#06b6d4", // Cyan - matches editor hover color
+                  width: 3,
+                }),
+              });
+            }
+            return undefined;
+          },
+          renderMode: "vector",
+          renderBuffer: 512,
+        })
         : undefined;
 
       // Store references
@@ -330,11 +403,11 @@ const DatasetDetailsMap = ({
                   }
 
                   const pixel = newMap.getEventPixel(event.originalEvent);
-                  
+
                   // Check both deadwood and forest cover layers
                   let hitLayer: VectorTileLayer | null = null;
                   let layerType = "";
-                  
+
                   if (deadwoodVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodVectorLayer })) {
                     hitLayer = deadwoodVectorLayer;
                     layerType = "Deadwood";
@@ -356,7 +429,7 @@ const DatasetDetailsMap = ({
                         setHoveredFeature(feature);
                         const polygonId = feature.get("id");
                         setHoveredLabelId(polygonId);
-                        
+
                         // Get correction status from feature
                         const correctionStatus = feature.get("correction_status") || "original";
                         setTooltipContent({ type: layerType, status: correctionStatus });
@@ -378,6 +451,11 @@ const DatasetDetailsMap = ({
 
                 // Add click event handler for polygon click interaction
                 newMap.on("click", (event) => {
+                  // Skip click handling if user is drawing or editing AOI
+                  if (isDrawingRef.current || isEditingRef.current) {
+                    return;
+                  }
+
                   // Get current zoom level
                   const currentZoom = MapView.getZoom();
                   const MIN_CLICK_ZOOM = 16;
@@ -390,12 +468,12 @@ const DatasetDetailsMap = ({
                   }
 
                   const pixel = newMap.getEventPixel(event.originalEvent);
-                  
+
                   // Check both deadwood and forest cover layers
                   let hitLayer: VectorTileLayer | null = null;
                   let layerType: "deadwood" | "forest_cover" = "deadwood";
                   let displayType = "";
-                  
+
                   if (deadwoodVectorLayer && newMap.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodVectorLayer })) {
                     hitLayer = deadwoodVectorLayer;
                     layerType = "deadwood";
@@ -411,14 +489,21 @@ const DatasetDetailsMap = ({
                       if (features.length > 0) {
                         const feature = features[0];
                         const correctionStatus = feature.get("correction_status") || "original";
-                        
+                        // Get correction info for review functionality
+                        const correctionId = feature.get("correction_id");
+                        const geometryId = feature.get("id");
+                        const correctionOperation = feature.get("correction_operation");
+
                         setClickedPolygonInfo({
                           type: displayType,
                           status: correctionStatus,
                           layerType: layerType,
+                          correctionId: correctionId ? Number(correctionId) : undefined,
+                          geometryId: geometryId ? Number(geometryId) : undefined,
+                          correctionOperation: correctionOperation || undefined,
                         });
                         clickOverlayRef.current?.setPosition(event.coordinate);
-                        
+
                         // Hide hover tooltip when showing click popover
                         setTooltipContent(null);
                         tooltipOverlayRef.current?.setPosition(undefined);
@@ -453,12 +538,13 @@ const DatasetDetailsMap = ({
                 MapView.fit(viewOptions.extent);
               }
 
-              mapRef.current = newMap;
-              
+              mapInstanceRef.current = newMap;
+              setIsMapReady(true);
+
               // Notify parent that map and ortho layer are ready
               onMapReady?.(newMap);
               onOrthoLayerReady?.(orthoCogLayer);
-              onVectorLayersReady?.(deadwoodVectorLayer, forestCoverVectorLayer);
+              onVectorLayersReady?.(deadwoodVectorLayer ?? null, forestCoverVectorLayer ?? null);
             }
           })
           .catch(() => {
@@ -468,9 +554,9 @@ const DatasetDetailsMap = ({
     }
 
     return () => {
-      if (mapRef.current) {
+      if (mapInstanceRef.current) {
         // Force WebGL context cleanup
-        // const target = mapRef.current.getTargetElement();
+        // const target = mapInstanceRef.current.getTargetElement();
         // if (target) {
         //   const canvases = target.querySelectorAll("canvas");
         //   canvases.forEach((canvas) => {
@@ -482,7 +568,7 @@ const DatasetDetailsMap = ({
         // }
         if (layerRefs.current.deadwoodVector) {
           // Remove from map
-          mapRef.current.removeLayer(layerRefs.current.deadwoodVector);
+          mapInstanceRef.current.removeLayer(layerRefs.current.deadwoodVector);
 
           // Get and clean the source
           const source = layerRefs.current.deadwoodVector.getSource();
@@ -510,7 +596,7 @@ const DatasetDetailsMap = ({
 
         // Clean up AOI layer specifically
         if (layerRefs.current.aoiVector) {
-          mapRef.current.removeLayer(layerRefs.current.aoiVector);
+          mapInstanceRef.current.removeLayer(layerRefs.current.aoiVector);
           const source = layerRefs.current.aoiVector.getSource();
           if (source) {
             source.clear();
@@ -522,7 +608,7 @@ const DatasetDetailsMap = ({
 
         // Clean up AOI mask layer specifically
         if (layerRefs.current.aoiMask) {
-          mapRef.current.removeLayer(layerRefs.current.aoiMask);
+          mapInstanceRef.current.removeLayer(layerRefs.current.aoiMask);
           const source = layerRefs.current.aoiMask.getSource();
           if (source) {
             source.clear();
@@ -535,7 +621,7 @@ const DatasetDetailsMap = ({
         // Clean up other layers
         Object.values(layerRefs.current).forEach((layer) => {
           if (layer) {
-            mapRef.current?.removeLayer(layer);
+            mapInstanceRef.current?.removeLayer(layer);
             const source = layer.getSource();
             if (source) {
               if ("clear" in source) {
@@ -553,9 +639,10 @@ const DatasetDetailsMap = ({
         layerRefs.current = {};
 
         // Clean up map
-        mapRef.current.setTarget(undefined);
-        mapRef.current.dispose();
-        mapRef.current = null;
+        mapInstanceRef.current.setTarget(undefined);
+        mapInstanceRef.current.dispose();
+        mapInstanceRef.current = null;
+        setIsMapReady(false);
       }
     };
   }, [
@@ -574,7 +661,7 @@ const DatasetDetailsMap = ({
 
   // Update deadwood layer visibility and opacity
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.deadwoodVector) {
+    if (mapInstanceRef.current && layerRefs.current.deadwoodVector) {
       layerRefs.current.deadwoodVector.setVisible(effectiveDeadwoodVisible);
       layerRefs.current.deadwoodVector.setOpacity(effectiveLayerOpacity);
     }
@@ -582,7 +669,7 @@ const DatasetDetailsMap = ({
 
   // Update forest cover layer visibility and opacity
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.forestCoverVector) {
+    if (mapInstanceRef.current && layerRefs.current.forestCoverVector) {
       layerRefs.current.forestCoverVector.setVisible(effectiveForestCoverVisible);
       layerRefs.current.forestCoverVector.setOpacity(effectiveLayerOpacity);
     }
@@ -590,29 +677,38 @@ const DatasetDetailsMap = ({
 
   // Update drone imagery (ortho) visibility
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.orthoCog) {
+    if (mapInstanceRef.current && layerRefs.current.orthoCog) {
       layerRefs.current.orthoCog.setVisible(effectiveDroneImageryVisible);
     }
   }, [effectiveDroneImageryVisible]);
 
-  // Update AOI layer opacity
+  // Update AOI layer visibility and opacity
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.aoiVector) {
+    if (mapInstanceRef.current && layerRefs.current.aoiVector) {
+      layerRefs.current.aoiVector.setVisible(showAOI);
       layerRefs.current.aoiVector.setOpacity(aoiOpacity);
     }
-  }, [aoiOpacity]);
+  }, [showAOI, aoiOpacity]);
 
-  // Update AOI mask layer opacity (synchronized with AOI boundary)
+  // Update AOI mask layer visibility and opacity (synchronized with AOI boundary)
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.aoiMask) {
+    if (mapInstanceRef.current && layerRefs.current.aoiMask) {
+      layerRefs.current.aoiMask.setVisible(showAOI);
       // Synchronized with AOI boundary: higher AOI opacity = stronger focus effect
       layerRefs.current.aoiMask.setOpacity(aoiOpacity);
     }
-  }, [aoiOpacity]);
+  }, [showAOI, aoiOpacity]);
+
+  // Update editable AOI layer visibility (for edit mode)
+  useEffect(() => {
+    if (mapInstanceRef.current && layerRefs.current.editableAOI) {
+      layerRefs.current.editableAOI.setVisible(showAOI);
+    }
+  }, [showAOI]);
 
   // Refresh vector layers when refreshKey changes (after saving edits)
   useEffect(() => {
-    if (refreshKey > 0 && mapRef.current) {
+    if (refreshKey > 0 && mapInstanceRef.current) {
       if (layerRefs.current.deadwoodVector) {
         const source = layerRefs.current.deadwoodVector.getSource();
         if (source) {
@@ -630,8 +726,8 @@ const DatasetDetailsMap = ({
 
   // Update the map style effect to preserve the viewport
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.basemap) {
-      const currentView = mapRef.current.getView();
+    if (mapInstanceRef.current && layerRefs.current.basemap) {
+      const currentView = mapInstanceRef.current.getView();
       const currentCenter = currentView.getCenter();
       const currentZoom = currentView.getZoom();
 
@@ -661,7 +757,7 @@ const DatasetDetailsMap = ({
   // Add effect to update selection layer style when hover state changes
   // Subtle hover - just highlight border with cyan, don't change fill
   useEffect(() => {
-    if (mapRef.current && layerRefs.current.selectionLayer) {
+    if (mapInstanceRef.current && layerRefs.current.selectionLayer) {
       layerRefs.current.selectionLayer.setStyle((feature: FeatureLike) => {
         // Check if the feature has the same label_id as the currently hovered feature
         if (hoveredLabelId !== null && feature.get("id") === hoveredLabelId) {
@@ -689,6 +785,461 @@ const DatasetDetailsMap = ({
     // We don't need to do anything special for 'navigation' source
     // as the viewport is already preserved
   }, [navigatedFrom, setViewport]);
+
+  // ============================================
+  // AOI EDITING LOGIC (when enableAOIEditing is true)
+  // ============================================
+
+  // Helper function to get current geometry from editable AOI layer
+  const getCurrentGeometry = (): GeoJSON.MultiPolygon | GeoJSON.Polygon | null => {
+    if (!layerRefs.current.editableAOI) return null;
+    const source = layerRefs.current.editableAOI.getSource();
+    if (!source) return null;
+
+    const features = source.getFeatures();
+    if (features.length === 0) return null;
+
+    const format = new GeoJSON();
+
+    if (features.length === 1) {
+      const feature = features[0];
+      const geometry = feature.getGeometry();
+
+      if (geometry instanceof Polygon) {
+        const geoJsonGeometry = format.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJSON.Polygon;
+
+        return {
+          type: "MultiPolygon",
+          coordinates: [geoJsonGeometry.coordinates],
+        };
+      } else if (geometry instanceof MultiPolygon) {
+        return format.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJSON.MultiPolygon;
+      }
+    } else if (features.length > 1) {
+      const polygonCoordinates: number[][][][] = [];
+
+      features.forEach((feature) => {
+        const geometry = feature.getGeometry();
+        if (geometry instanceof Polygon) {
+          const geoJsonGeometry = format.writeGeometryObject(geometry, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          }) as GeoJSON.Polygon;
+          polygonCoordinates.push(geoJsonGeometry.coordinates);
+        }
+      });
+
+      if (polygonCoordinates.length > 0) {
+        return {
+          type: "MultiPolygon",
+          coordinates: polygonCoordinates,
+        };
+      }
+    }
+
+    return null;
+  };
+
+  // Update AOI state and notify parent
+  const updateAOIWithGeometry = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon | null, _sourceAction: string) => {
+    currentAOIRef.current = geometry;
+    setHasAOI(!!geometry);
+    onAOIChange?.(geometry);
+  };
+
+  // Clear all drawing/editing interactions
+  const clearInteractions = () => {
+    if (mapInstanceRef.current) {
+      if (drawInteractionRef.current) {
+        mapInstanceRef.current.removeInteraction(drawInteractionRef.current);
+        drawInteractionRef.current = null;
+      }
+      if (selectInteractionRef.current) {
+        mapInstanceRef.current.removeInteraction(selectInteractionRef.current);
+        selectInteractionRef.current = null;
+      }
+      if (modifyInteractionRef.current) {
+        mapInstanceRef.current.removeInteraction(modifyInteractionRef.current);
+        modifyInteractionRef.current = null;
+      }
+    }
+
+    // Reset cursor to default
+    if (mapContainer.current) {
+      mapContainer.current.style.cursor = "";
+    }
+  };
+
+  // Start drawing a new polygon
+  const startDrawing = () => {
+    if (!enableAOIEditing) return;
+    clearInteractions();
+    if (!mapInstanceRef.current || !layerRefs.current.editableAOI) return;
+    const source = layerRefs.current.editableAOI.getSource();
+    if (!source) return;
+
+    const draw = new Draw({
+      source: source,
+      type: "Polygon",
+      style: new Style({
+        stroke: new Stroke({
+          color: "#3b82f6",
+          width: 2,
+          lineDash: [5, 5],
+        }),
+        fill: new Fill({
+          color: "rgba(255, 107, 53, 0.1)",
+        }),
+      }),
+    });
+
+    draw.on("drawend", () => {
+      setTimeout(() => {
+        clearInteractions();
+        setIsDrawing(false);
+        const currentGeometry = getCurrentGeometry();
+        updateAOIWithGeometry(currentGeometry, "drawEnd");
+        message.success("Polygon drawn successfully.");
+      }, 10);
+    });
+
+    mapInstanceRef.current.addInteraction(draw);
+    drawInteractionRef.current = draw;
+    setIsDrawing(true);
+    setIsEditing(false);
+
+    if (mapContainer.current) {
+      mapContainer.current.style.cursor = "crosshair";
+    }
+  };
+
+  // Add another polygon (same as startDrawing)
+  const addAnotherPolygon = () => startDrawing();
+
+  // Cancel drawing
+  const cancelDrawing = () => {
+    clearInteractions();
+    setIsDrawing(false);
+    message.info("Drawing cancelled");
+  };
+
+  // Setup editing interactions
+  const setupEditingInteractions = () => {
+    if (!mapInstanceRef.current || !layerRefs.current.editableAOI) return false;
+    const source = layerRefs.current.editableAOI.getSource();
+    if (!source || source.getFeatures().length === 0) {
+      console.warn("setupEditingInteractions: No features in source to edit.");
+      return false;
+    }
+
+    clearInteractions();
+
+    const select = new Select({
+      condition: click,
+      layers: [layerRefs.current.editableAOI],
+      style: new Style({
+        stroke: new Stroke({ color: "#00FFFF", width: 3 }),
+        fill: new Fill({ color: "rgba(0, 255, 255, 0.1)" }),
+      }),
+    });
+
+    select.on("select", (event) => {
+      const selectedFeatures = event.target.getFeatures();
+      if (selectedFeatures.getLength() > 0) {
+        setSelectedFeatureForEdit(selectedFeatures.item(0));
+      } else {
+        setSelectedFeatureForEdit(null);
+      }
+    });
+
+    const modify = new Modify({
+      features: select.getFeatures(),
+      style: new Style({
+        image: new CircleStyle({
+          radius: 5,
+          fill: new Fill({ color: "#00FFFF" }),
+          stroke: new Stroke({ color: "white", width: 1 }),
+        }),
+      }),
+    });
+
+    modify.on("modifyend", () => {
+      const currentGeometry = getCurrentGeometry();
+      if (currentGeometry) {
+        updateAOIWithGeometry(currentGeometry, "modifyEndSuccess");
+      }
+    });
+
+    mapInstanceRef.current.addInteraction(select);
+    mapInstanceRef.current.addInteraction(modify);
+    selectInteractionRef.current = select;
+    modifyInteractionRef.current = modify;
+    return true;
+  };
+
+  // Delete selected polygon
+  const deleteSelectedPolygon = () => {
+    if (!selectedFeatureForEdit || !layerRefs.current.editableAOI) {
+      message.error("No polygon selected for deletion.");
+      return;
+    }
+
+    const source = layerRefs.current.editableAOI.getSource();
+    if (!source) return;
+
+    source.removeFeature(selectedFeatureForEdit as Feature<Geometry>);
+    setSelectedFeatureForEdit(null);
+
+    const currentGeometry = getCurrentGeometry();
+    updateAOIWithGeometry(currentGeometry, "deleteSelectedPolygon");
+
+    if (currentGeometry) {
+      message.success("Selected polygon deleted.");
+    } else {
+      setIsEditing(false);
+      clearInteractions();
+      message.success("Last polygon deleted. Exiting edit mode.");
+    }
+  };
+
+  // Start editing existing AOI
+  const startEditing = () => {
+    if (!enableAOIEditing) return;
+    if (!hasAOI) {
+      message.error("No AOI to edit.");
+      return;
+    }
+    setIsDrawing(false);
+    setSelectedFeatureForEdit(null);
+    if (setupEditingInteractions()) {
+      setIsEditing(true);
+      message.info("Click on a polygon to select and edit it.");
+
+      if (mapContainer.current) {
+        mapContainer.current.style.cursor = "pointer";
+      }
+    } else {
+      message.error("Could not start editing. AOI feature might be missing.");
+    }
+  };
+
+  // Save editing (apply changes)
+  const saveEditing = () => {
+    clearInteractions();
+    setIsEditing(false);
+    setSelectedFeatureForEdit(null);
+    message.success("AOI edits applied. Save audit to persist.");
+  };
+
+  // Cancel editing (restore original)
+  const cancelEditing = () => {
+    clearInteractions();
+    setIsEditing(false);
+    setSelectedFeatureForEdit(null);
+
+    // Reload original AOI if available
+    if (aoiGeometry && layerRefs.current.editableAOI) {
+      const source = layerRefs.current.editableAOI.getSource();
+      source?.clear();
+
+      try {
+        const format = new GeoJSON();
+        const loadedGeometry = aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+
+        if (loadedGeometry.type === "MultiPolygon") {
+          loadedGeometry.coordinates.forEach((polygonCoords) => {
+            const polygonGeometry: GeoJSON.Polygon = {
+              type: "Polygon",
+              coordinates: polygonCoords,
+            };
+
+            const features = format.readFeatures(polygonGeometry, {
+              dataProjection: "EPSG:4326",
+              featureProjection: "EPSG:3857",
+            });
+
+            features.forEach(f => {
+              if (f && f.getGeometry()) {
+                source?.addFeature(f);
+              }
+            });
+          });
+        } else if (loadedGeometry.type === "Polygon") {
+          const features = format.readFeatures(loadedGeometry, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          features.forEach(f => {
+            if (f && f.getGeometry()) {
+              source?.addFeature(f);
+            }
+          });
+        }
+
+        updateAOIWithGeometry(aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon, "cancelEditingRestore");
+      } catch (error) {
+        console.error("Error restoring AOI after cancel:", error);
+      }
+    }
+
+    message.info("Editing cancelled.");
+  };
+
+  // Delete entire AOI
+  const deleteAOI = () => {
+    if (!enableAOIEditing) return;
+    clearInteractions();
+    const source = layerRefs.current.editableAOI?.getSource();
+    source?.clear();
+    updateAOIWithGeometry(null, "deleteAOI");
+    setIsEditing(false);
+    setIsDrawing(false);
+    message.success("AOI deleted.");
+  };
+
+  // Refresh vector tile layers (e.g., after approve/revert corrections)
+  const refreshVectorLayers = () => {
+    const deadwoodSource = layerRefs.current.deadwoodVector?.getSource();
+    const forestCoverSource = layerRefs.current.forestCoverVector?.getSource();
+
+    if (deadwoodSource) {
+      deadwoodSource.refresh();
+    }
+    if (forestCoverSource) {
+      forestCoverSource.refresh();
+    }
+
+    // Also dismiss any open popover since the state may have changed
+    setClickedPolygonInfo(null);
+    clickOverlayRef.current?.setPosition(undefined);
+  };
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    startDrawing,
+    startEditing,
+    cancelDrawing,
+    cancelEditing,
+    saveEditing,
+    addAnotherPolygon,
+    deleteAOI,
+    deleteSelectedPolygon,
+    refreshVectorLayers,
+  }));
+
+  // Sync drawing/editing refs for click handler closure
+  useEffect(() => {
+    isDrawingRef.current = isDrawing;
+    isEditingRef.current = isEditing;
+  }, [isDrawing, isEditing]);
+
+  // Report AOI state changes to parent for toolbar rendering
+  useEffect(() => {
+    if (!enableAOIEditing || !onToolbarStateChange) return;
+
+    const polygonCount = currentAOIRef.current?.type === "MultiPolygon"
+      ? currentAOIRef.current.coordinates.length
+      : currentAOIRef.current?.type === "Polygon" ? 1 : 0;
+
+    onToolbarStateChange({
+      isDrawing,
+      isEditing,
+      hasAOI,
+      isAOILoading,
+      selectedFeatureForEdit: !!selectedFeatureForEdit,
+      polygonCount,
+    });
+  }, [enableAOIEditing, isDrawing, isEditing, hasAOI, isAOILoading, selectedFeatureForEdit, onToolbarStateChange]);
+
+  // Create editable AOI layer when enableAOIEditing is true
+  useEffect(() => {
+    if (!enableAOIEditing || !isMapReady || !mapInstanceRef.current) return;
+
+    // Create editable AOI layer if not already created
+    if (!layerRefs.current.editableAOI) {
+      const editableAOISource = new VectorSource();
+      const editableAOILayer = new VectorLayer({
+        source: editableAOISource,
+        style: new Style({
+          stroke: new Stroke({
+            color: "#3b82f6",
+            width: 3,
+          }),
+          fill: new Fill({
+            color: "rgba(255, 107, 53, 0.1)",
+          }),
+        }),
+        zIndex: 100, // Ensure it's on top
+      });
+
+      mapInstanceRef.current.addLayer(editableAOILayer);
+      layerRefs.current.editableAOI = editableAOILayer;
+
+      // Load existing AOI if available
+      if (aoiGeometry) {
+        try {
+          const format = new GeoJSON();
+          const loadedGeometry = aoiGeometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+
+          if (loadedGeometry.type === "MultiPolygon") {
+            loadedGeometry.coordinates.forEach((polygonCoords) => {
+              const polygonGeometry: GeoJSON.Polygon = {
+                type: "Polygon",
+                coordinates: polygonCoords,
+              };
+
+              const features = format.readFeatures(polygonGeometry, {
+                dataProjection: "EPSG:4326",
+                featureProjection: "EPSG:3857",
+              });
+
+              features.forEach(f => {
+                if (f && f.getGeometry()) {
+                  editableAOISource.addFeature(f);
+                }
+              });
+            });
+          } else if (loadedGeometry.type === "Polygon") {
+            const features = format.readFeatures(loadedGeometry, {
+              dataProjection: "EPSG:4326",
+              featureProjection: "EPSG:3857",
+            });
+
+            features.forEach(f => {
+              if (f && f.getGeometry()) {
+                editableAOISource.addFeature(f);
+              }
+            });
+          }
+
+          currentAOIRef.current = loadedGeometry;
+          setHasAOI(true);
+          // Notify parent that AOI was loaded from database
+          onAOIChange?.(loadedGeometry);
+        } catch (error) {
+          console.error("Error loading existing AOI for editing:", error);
+        }
+      }
+    }
+
+    return () => {
+      clearInteractions();
+    };
+  }, [enableAOIEditing, isMapReady, aoiGeometry, onAOIChange]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearInteractions();
+    };
+  }, []);
 
   if (!data) return null;
 
@@ -718,8 +1269,8 @@ const DatasetDetailsMap = ({
                     tooltipContent.status === "original" || !tooltipContent.status || tooltipContent.status === "none"
                       ? "#F59E0B" // orange - default layer color for predictions
                       : tooltipContent.status === "pending"
-                      ? "#60A5FA" // light blue - in review
-                      : "#34D399", // light green - verified
+                        ? "#60A5FA" // light blue - in review
+                        : "#34D399", // light green - verified
                 }}
               />
               <span>{tooltipContent.type}</span>
@@ -728,8 +1279,8 @@ const DatasetDetailsMap = ({
                 {tooltipContent.status === "original" || !tooltipContent.status || tooltipContent.status === "none"
                   ? "Prediction"
                   : tooltipContent.status === "pending"
-                  ? "Edited"
-                  : "Verified"}
+                    ? "Edited"
+                    : "Verified"}
               </span>
               {isLoggedIn && <span className="text-gray-500">· click to edit</span>}
             </div>
@@ -749,24 +1300,31 @@ const DatasetDetailsMap = ({
               title={
                 <Space size={4}>
                   <Text strong style={{ fontSize: '12px' }}>{clickedPolygonInfo.type}</Text>
-                  <Tag 
+                  <Tag
                     color={
                       clickedPolygonInfo.status === "original" ? "default" :
-                      clickedPolygonInfo.status === "pending" ? "warning" : "success"
+                        clickedPolygonInfo.status === "pending"
+                          ? clickedPolygonInfo.correctionOperation === "delete" ? "error" : "warning"
+                          : "success"
                     }
                     className="m-0 text-[10px] leading-4 h-4 px-1 border-none"
                   >
                     {clickedPolygonInfo.status === "original" ? "Prediction" :
-                     clickedPolygonInfo.status === "pending" ? "Edited" : "Verified"}
+                      clickedPolygonInfo.status === "pending"
+                        ? clickedPolygonInfo.correctionOperation === "create" ? "Added"
+                          : clickedPolygonInfo.correctionOperation === "delete" ? "Deleted"
+                            : clickedPolygonInfo.correctionOperation === "modify" ? "Modified"
+                              : "Edited"
+                        : "Verified"}
                   </Tag>
                 </Space>
               }
               extra={
-                <Button 
-                  type="text" 
-                  size="small" 
+                <Button
+                  type="text"
+                  size="small"
                   className="p-0 h-4 w-4 flex items-center justify-center text-gray-400 hover:text-gray-600"
-                  icon={<CloseOutlined style={{ fontSize: 10 }} />} 
+                  icon={<CloseOutlined style={{ fontSize: 10 }} />}
                   onClick={() => {
                     setClickedPolygonInfo(null);
                     clickOverlayRef.current?.setPosition(undefined);
@@ -777,13 +1335,52 @@ const DatasetDetailsMap = ({
             >
               <div className="flex flex-col gap-3">
                 <Text type="secondary" style={{ fontSize: '11px', lineHeight: '1.4' }}>
-                  {clickedPolygonInfo.status === "original" 
+                  {clickedPolygonInfo.status === "original"
                     ? "This is a model prediction. Help improve accuracy by editing."
                     : clickedPolygonInfo.status === "pending"
-                    ? "This polygon has been edited and is awaiting review."
-                    : "This polygon has been verified and is considered accurate."}
+                      ? clickedPolygonInfo.correctionOperation === "create"
+                        ? "This polygon has been added and is awaiting review."
+                        : clickedPolygonInfo.correctionOperation === "delete"
+                          ? "This polygon has been marked for deletion and is awaiting review."
+                          : clickedPolygonInfo.correctionOperation === "modify"
+                            ? "This polygon has been modified and is awaiting review."
+                            : "This polygon has been edited and is awaiting review."
+                      : "This polygon has been verified and is considered accurate."}
                 </Text>
-                
+
+                {/* Correction Review Actions (for auditors reviewing pending edits) */}
+                {canReviewCorrections && clickedPolygonInfo.status === "pending" && clickedPolygonInfo.correctionId && clickedPolygonInfo.geometryId && (
+                  <div className="flex gap-2">
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<CheckOutlined style={{ fontSize: 11 }} />}
+                      onClick={() => {
+                        onApproveCorrection?.(clickedPolygonInfo.correctionId!, clickedPolygonInfo.geometryId!);
+                        setClickedPolygonInfo(null);
+                        clickOverlayRef.current?.setPosition(undefined);
+                      }}
+                      className="text-xs h-7 flex-1"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      danger
+                      size="small"
+                      icon={<UndoOutlined style={{ fontSize: 11 }} />}
+                      onClick={() => {
+                        onRevertCorrection?.(clickedPolygonInfo.correctionId!, clickedPolygonInfo.geometryId!);
+                        setClickedPolygonInfo(null);
+                        clickOverlayRef.current?.setPosition(undefined);
+                      }}
+                      className="text-xs h-7 flex-1"
+                    >
+                      Revert
+                    </Button>
+                  </div>
+                )}
+
+                {/* Edit Action (for logged-in users) */}
                 {isLoggedIn ? (
                   <Button
                     type="primary"
@@ -804,11 +1401,11 @@ const DatasetDetailsMap = ({
                     Edit {clickedPolygonInfo.type}
                   </Button>
                 ) : (
-                  <Button 
-                    type="default" 
-                    size="small" 
+                  <Button
+                    type="default"
+                    size="small"
                     block
-                    href="/sign-in" 
+                    href="/sign-in"
                     className="text-xs h-8"
                   >
                     Sign in to edit
@@ -823,6 +1420,8 @@ const DatasetDetailsMap = ({
       </div>
     </div>
   );
-};
+});
+
+DatasetDetailsMap.displayName = "DatasetDetailsMap";
 
 export default DatasetDetailsMap;
