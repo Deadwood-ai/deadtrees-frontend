@@ -393,12 +393,11 @@ export function useSaveDatasetAudit() {
         auditResult = data;
       }
 
-      // Update the v2_statuses table to mark as audited AND clear audit lock
+      // Clear the audit lock (is_audited is now computed from dataset_audit table)
       const { error: statusError } = await supabase
         .from("v2_statuses")
         .update({
-          is_audited: true,
-          is_in_audit: false, // Clear the audit lock
+          is_in_audit: false,
           updated_at: new Date().toISOString(),
         })
         .eq("dataset_id", auditData.dataset_id);

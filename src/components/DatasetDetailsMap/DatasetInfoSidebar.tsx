@@ -1,23 +1,184 @@
 import { Typography, Tooltip, Tag } from "antd";
-import { EnvironmentOutlined } from "@ant-design/icons";
+import { EnvironmentOutlined, CheckCircleOutlined, ExclamationCircleOutlined, WarningOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { IDataset } from "../../types/dataset";
 import type { DatasetAuditUserInfo } from "../../hooks/useDatasetAudit";
+import type { PhenologyMetadata } from "../../types/phenology";
 import countryList from "../../utils/countryList";
 import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../../utils/datasetUtils";
 import { sanitizeText } from "../../utils/textUtils";
 import PublicationLink from "../PublicationLink";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
-import AuditInfoCard from "../AuditInfoCard";
 import DatasetNavigation from "./DatasetNavigation";
 
 interface DatasetInfoSidebarProps {
   dataset: IDataset;
-  phenologyData: unknown;
+  phenologyData: PhenologyMetadata | null | undefined;
   isPhenologyLoading: boolean;
   auditInfo: DatasetAuditUserInfo | null | undefined;
   overlappingDatasets: IDataset[];
   isLoadingOverlapping: boolean;
 }
+
+// === Shared Row Components ===
+
+interface InfoRowProps {
+  label: string;
+  children: React.ReactNode;
+  tooltip?: string;
+}
+
+const InfoRow = ({ label, children, tooltip }: InfoRowProps) => {
+  const content = (
+    <div className={`flex justify-between items-center gap-4 rounded hover:bg-black/5 transition-colors px-1 -mx-1 ${tooltip ? "cursor-help" : ""}`}>
+      <Typography.Text className="text-gray-600 shrink-0">{label}</Typography.Text>
+      <div className="text-right min-w-0">{children}</div>
+    </div>
+  );
+
+  if (tooltip) {
+    return (
+      <Tooltip title={tooltip} placement="left">
+        {content}
+      </Tooltip>
+    );
+  }
+
+  return content;
+};
+
+// Section container with consistent styling
+const Section = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`rounded-md bg-gray-50 p-4 space-y-3 ${className}`}>
+    {children}
+  </div>
+);
+
+// === Audit Info Components ===
+
+const qualityConfig = {
+  great: { icon: "🟢", label: "Great" },
+  sentinel_ok: { icon: "🟡", label: "OK" },
+  bad: { icon: "🔴", label: "Poor" },
+};
+
+const assessmentConfig = {
+  no_issues: {
+    icon: <CheckCircleOutlined />,
+    bgColor: "bg-green-100",
+    textColor: "text-green-700",
+    label: "Quality Verified",
+    rowLabel: "Ready",
+    rowIcon: "🟢",
+  },
+  fixable_issues: {
+    icon: <ExclamationCircleOutlined />,
+    bgColor: "bg-yellow-100",
+    textColor: "text-yellow-700",
+    label: "Has Fixable Issues",
+    rowLabel: "Fixable",
+    rowIcon: "🟡",
+  },
+  exclude_completely: {
+    icon: <WarningOutlined />,
+    bgColor: "bg-red-100",
+    textColor: "text-red-700",
+    label: "Excluded from Analysis",
+    rowLabel: "Excluded",
+    rowIcon: "🔴",
+  },
+};
+
+const tooltips = {
+  forestCover: "Quality of the AI forest cover segmentation. Great = highly accurate boundaries.",
+  deadwood: "Quality of the AI deadwood detection. Great = dead trees accurately identified.",
+  inSeason: "Whether the imagery was captured during the growing season when leaves are present.",
+  finalAssessment: "Overall quality assessment. Ready = suitable for analysis, Fixable = has correctable issues, Excluded = not suitable.",
+};
+
+interface QualityValueProps {
+  quality: string | null | undefined;
+}
+
+const QualityValue = ({ quality }: QualityValueProps) => {
+  const config = quality ? qualityConfig[quality as keyof typeof qualityConfig] : null;
+  if (!config) return <Typography.Text className="text-gray-400">—</Typography.Text>;
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <Typography.Text>{config.label}</Typography.Text>
+      <span>{config.icon}</span>
+    </span>
+  );
+};
+
+const BooleanValue = ({ value }: { value: boolean | null | undefined }) => {
+  if (value === null || value === undefined) {
+    return <Typography.Text className="text-gray-400">—</Typography.Text>;
+  }
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <Typography.Text>{value ? "Yes" : "No"}</Typography.Text>
+      <span>{value ? "🟢" : "🔴"}</span>
+    </span>
+  );
+};
+
+interface AuditSectionProps {
+  audit: DatasetAuditUserInfo | null | undefined;
+}
+
+const AuditSection = ({ audit }: AuditSectionProps) => {
+  // Show pending state
+  if (!audit || !audit.final_assessment) {
+    return (
+      <Section className="mt-4">
+        <div className="flex items-center gap-2 text-gray-500">
+          <ClockCircleOutlined className="animate-pulse" />
+          <Typography.Text strong>Audit Pending</Typography.Text>
+        </div>
+        <Typography.Text className="text-xs text-gray-400">
+          Quality information will appear here once reviewed.
+        </Typography.Text>
+      </Section>
+    );
+  }
+
+  const config = assessmentConfig[audit.final_assessment as keyof typeof assessmentConfig] || assessmentConfig.no_issues;
+
+  return (
+    <div className="mt-4 rounded-md bg-gray-50 overflow-hidden">
+      {/* Colored header */}
+      <div className={`${config.bgColor} px-4 py-2 flex items-center gap-2 ${config.textColor}`}>
+        {config.icon}
+        <Typography.Text strong className={config.textColor}>
+          {config.label}
+        </Typography.Text>
+      </div>
+
+      {/* Content rows */}
+      <div className="p-4 space-y-3">
+        <InfoRow label="Forest Cover Prediction" tooltip={tooltips.forestCover}>
+          <QualityValue quality={audit.forest_cover_quality} />
+        </InfoRow>
+        <InfoRow label="Deadwood Prediction" tooltip={tooltips.deadwood}>
+          <QualityValue quality={audit.deadwood_quality} />
+        </InfoRow>
+        <InfoRow label="In Growing Season" tooltip={tooltips.inSeason}>
+          <BooleanValue value={audit.has_valid_phenology} />
+        </InfoRow>
+        <InfoRow label="Final Assessment" tooltip={tooltips.finalAssessment}>
+          <span className="flex items-center gap-1.5">
+            <Typography.Text>{config.rowLabel}</Typography.Text>
+            <span>{config.rowIcon}</span>
+          </span>
+        </InfoRow>
+      </div>
+    </div>
+  );
+};
+
+// === Main Sidebar Component ===
 
 export default function DatasetInfoSidebar({
   dataset,
@@ -32,8 +193,8 @@ export default function DatasetInfoSidebar({
   return (
     <div className="p-2">
       {/* Location Header */}
-      <div className="space-y-3 rounded-md bg-gray-50 p-4">
-        <div className="flex items-center pb-4">
+      <Section>
+        <div className="flex items-center pb-1">
           <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
           <Tooltip
             title={
@@ -54,34 +215,32 @@ export default function DatasetInfoSidebar({
           </Tooltip>
         </div>
 
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Author: </Typography.Text>
-          <Tooltip title={dataset.authors?.join(", ") + (isFromGeonadir ? " (via GeoNadir)" : "")}>
-            <Typography.Text strong>
-              {getTruncatedAuthorDisplay(dataset.authors, isFromGeonadir)}
-            </Typography.Text>
-          </Tooltip>
-        </div>
+        <InfoRow label="Author" tooltip={`Dataset author(s): ${dataset.authors?.join(", ") || "Unknown"}${isFromGeonadir ? " (via GeoNadir)" : ""}`}>
+          <Typography.Text strong>
+            {getTruncatedAuthorDisplay(dataset.authors, isFromGeonadir)}
+          </Typography.Text>
+        </InfoRow>
 
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">
-            {dataset.freidata_doi
-              ? "DOI: "
+        <InfoRow
+          label={
+            dataset.freidata_doi
+              ? "DOI"
               : dataset.citation_doi
                 ? dataset.citation_doi.includes("doi.org") ||
                   /^10\.\d{4,}\//.test(dataset.citation_doi) ||
                   dataset.citation_doi.toLowerCase().includes("zenodo")
-                  ? "DOI: "
-                  : "Link: "
-                : "Reference: "}
-          </Typography.Text>
-          <div style={{ maxWidth: "70%", textAlign: "right", overflow: "hidden" }}>
+                  ? "DOI"
+                  : "Link"
+                : "Reference"
+          }
+          tooltip="Link to the publication or data repository where this dataset is referenced."
+        >
+          <div style={{ maxWidth: "160px", overflow: "hidden" }}>
             <PublicationLink freidataDoI={dataset.freidata_doi} citationDoi={dataset.citation_doi} />
           </div>
-        </div>
+        </InfoRow>
 
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Uploaded: </Typography.Text>
+        <InfoRow label="Uploaded" tooltip="Date when the dataset was uploaded to the platform.">
           <Typography.Text>
             {new Date(dataset.created_at).toLocaleDateString("en-US", {
               year: "numeric",
@@ -89,40 +248,35 @@ export default function DatasetInfoSidebar({
               day: "numeric",
             })}
           </Typography.Text>
-        </div>
-      </div>
+        </InfoRow>
+      </Section>
 
       {/* Environmental Context */}
-      <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Biome: </Typography.Text>
-          <Tooltip title={dataset.biome_name}>
-            <Tag color="default" className="m-0">
-              {dataset.biome_name
-                ? dataset.biome_name.slice(0, 30) + (dataset.biome_name.length > 30 ? "..." : "")
-                : "Unknown"}
-            </Tag>
-          </Tooltip>
-        </div>
+      <Section className="mt-4">
+        <InfoRow label="Biome" tooltip={`Ecological biome classification: ${dataset.biome_name || "Unknown"}`}>
+          <Tag color="default" style={{ margin: 0 }}>
+            {dataset.biome_name
+              ? dataset.biome_name.slice(0, 25) + (dataset.biome_name.length > 25 ? "..." : "")
+              : "Unknown"}
+          </Tag>
+        </InfoRow>
 
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Acquisition Date: </Typography.Text>
+        <InfoRow label="Acquisition Date" tooltip="Date when the drone imagery was captured.">
           <Typography.Text strong>
             {new Date(
-              dataset.aquisition_year,
-              dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-              dataset.aquisition_day ?? 1
+              Number(dataset.aquisition_year),
+              dataset.aquisition_month ? Number(dataset.aquisition_month) - 1 : 0,
+              dataset.aquisition_day ? Number(dataset.aquisition_day) : 1
             ).toLocaleDateString("en-US", {
               year: "numeric",
               ...(dataset.aquisition_month && { month: "long" }),
               ...(dataset.aquisition_day && { day: "numeric" }),
             })}
           </Typography.Text>
-        </div>
+        </InfoRow>
 
-        <div className="flex justify-between">
-          <Typography.Text className="pr-4">Phenology: </Typography.Text>
-          <div className="max-w-[200px] flex-1">
+        <InfoRow label="Phenology">
+          <div className="w-[180px]">
             {isPhenologyLoading ? (
               <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
             ) : phenologyData ? (
@@ -137,36 +291,31 @@ export default function DatasetInfoSidebar({
               <Typography.Text className="text-gray-500">Not available</Typography.Text>
             )}
           </div>
-        </div>
-      </div>
+        </InfoRow>
+      </Section>
 
       {/* Technical Info */}
-      <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">Platform: </Typography.Text>
-          <Tag color="default">{dataset.platform || "Unknown"}</Tag>
-        </div>
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">License: </Typography.Text>
-          <Tag color="blue">{dataset.license || "Not specified"}</Tag>
-        </div>
-        <div className="flex justify-between">
-          <Typography.Text className="pr-2">File Size: </Typography.Text>
+      <Section className="mt-4">
+        <InfoRow label="Platform" tooltip="Type of platform used to capture the imagery (e.g., drone, satellite).">
+          <Tag color="default" style={{ margin: 0 }}>{dataset.platform || "Unknown"}</Tag>
+        </InfoRow>
+        <InfoRow label="License" tooltip="Data license governing usage and distribution rights.">
+          <Tag color="blue" style={{ margin: 0 }}>{dataset.license || "Not specified"}</Tag>
+        </InfoRow>
+        <InfoRow label="File Size" tooltip="Size of the orthomosaic file.">
           <Typography.Text>
             {dataset.ortho_file_size >= 1024
               ? `${(dataset.ortho_file_size / 1024).toFixed(1)} GB`
               : `${dataset.ortho_file_size.toFixed(0)} MB`}
           </Typography.Text>
-        </div>
-      </div>
+        </InfoRow>
+      </Section>
 
       {/* Additional Information */}
       {dataset.additional_information && (
-        <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
-          <Typography.Text className="pr-2" strong>
-            Additional Information:
-          </Typography.Text>
-          <div className="mt-2 block whitespace-pre-wrap break-words text-sm text-gray-500">
+        <Section className="mt-4">
+          <Typography.Text strong>Additional Information</Typography.Text>
+          <div className="whitespace-pre-wrap break-words text-sm text-gray-500">
             {sanitizeText(dataset.additional_information)
               .split(/(https?:\/\/[^\s]+)/g)
               .map((part: string, index: number) =>
@@ -186,15 +335,11 @@ export default function DatasetInfoSidebar({
                 )
               )}
           </div>
-        </div>
+        </Section>
       )}
 
       {/* Audit Info */}
-      {auditInfo?.final_assessment && (
-        <div className="mt-4">
-          <AuditInfoCard audit={auditInfo} />
-        </div>
-      )}
+      <AuditSection audit={auditInfo} />
 
       {/* Navigation */}
       {dataset.id && (

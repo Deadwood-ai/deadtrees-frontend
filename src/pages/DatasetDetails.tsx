@@ -38,6 +38,7 @@ export default function DatasetDetails() {
     setShowForestCover,
     setShowDeadwood,
     setShowDroneImagery,
+    setShowAOI,
     setLayerOpacity,
   } = useDatasetDetailsMap();
 
@@ -174,8 +175,11 @@ export default function DatasetDetails() {
               setShowDeadwood={setShowDeadwood}
               showDroneImagery={layerControl.showDroneImagery}
               setShowDroneImagery={setShowDroneImagery}
+              showAOI={layerControl.showAOI}
+              setShowAOI={setShowAOI}
               hasForestCover={hasForestCover && !!dataset.is_forest_cover_done}
               hasDeadwood={hasDeadwood}
+              hasAOI={true}
               forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
               deadwoodQuality={auditInfo?.deadwood_quality as "great" | "sentinel_ok" | "bad" | undefined}
               opacity={layerControl.layerOpacity}
@@ -222,6 +226,7 @@ export default function DatasetDetails() {
           showDeadwood={isEditing ? false : layerControl.showDeadwood}
           showForestCover={isEditing ? false : layerControl.showForestCover}
           showDroneImagery={layerControl.showDroneImagery}
+          showAOI={layerControl.showAOI}
           layerOpacity={layerControl.layerOpacity}
           onEditDeadwood={() => editing.handleStartEditing("deadwood")}
           onEditForestCover={() => editing.handleStartEditing("forest_cover")}
