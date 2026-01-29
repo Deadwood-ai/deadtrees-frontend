@@ -5,7 +5,7 @@ import { AUDIT_INFO, createConditionalRule, formatAcquisitionDate } from "./audi
 import { IDataset } from "../../types/dataset";
 import { OrthoMetadata } from "../../hooks/useDatasetAudit";
 import { DatasetFlag, FlagStatus } from "../../types/flags";
-import { AOIToolbarState, DatasetDetailsMapHandle } from "../DatasetDetailsMap/DatasetDetailsMap";
+import { AOIToolbarState, AuditMapWithControlsHandle } from "./AuditMapWithControls";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
@@ -375,7 +375,7 @@ export function ThumbnailCard({ thumbnailUrl }: ThumbnailCardProps) {
 // === AOI Card (Step 7) ===
 interface AOICardProps {
 	aoiToolbarState: AOIToolbarState;
-	mapRef: React.RefObject<DatasetDetailsMapHandle>;
+	mapRef: React.RefObject<AuditMapWithControlsHandle>;
 }
 
 export function AOICard({ aoiToolbarState, mapRef }: AOICardProps) {
