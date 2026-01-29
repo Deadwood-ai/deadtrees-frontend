@@ -68,11 +68,6 @@ const createVectorLayer = (config: VectorLayerConfig) => {
             featureProjection: "EPSG:3857",
           });
 
-          // const decodeTime = performance.now() - decodeStart;
-          // console.log(
-          // `[Tile Processed] z=${z}, x=${x}, y=${y}, features=${features.length}, decode=${decodeTime.toFixed(0)}ms`,
-          // );
-
           // Log any extremely large features that might cause issues
           // features.forEach((feature, i) => {
           //   const geom = feature.getGeometry();
