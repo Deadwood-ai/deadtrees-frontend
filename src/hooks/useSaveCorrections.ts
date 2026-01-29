@@ -122,9 +122,13 @@ export function buildSavePayload(
   currentFeatures: Feature<Geometry>[],
   geoJson: GeoJSON
 ): { deletions: Deletion[]; additions: Addition[] } {
-  const initialIds = new Set(
-    initialFeatures.map((f) => f.get("geometry_id") as number).filter(Boolean)
-  );
+  // Build a map of initial features by geometry_id for quick lookup
+  const initialFeatureMap = new Map<number, Feature<Geometry>>();
+  initialFeatures.forEach((f) => {
+    const id = f.get("geometry_id") as number;
+    if (id) initialFeatureMap.set(id, f);
+  });
+
   const currentIds = new Set(
     currentFeatures
       .filter((f) => !f.get("is_new"))
@@ -132,11 +136,24 @@ export function buildSavePayload(
       .filter(Boolean)
   );
 
-  // Deletions: in initial but not in current (or marked as deleted)
+  // Collect IDs that are being replaced by modified features
+  // These should NOT be in deletions - the 'modify' operation handles soft-delete on approval
+  const replacedIds = new Set<number>();
+  currentFeatures.forEach((f) => {
+    const replacesId = f.get("replaces_geometry_id") as number;
+    if (replacesId) replacedIds.add(replacesId);
+  });
+
+  // Deletions: ONLY features explicitly deleted (not in current, not being replaced by modify)
+  // Modified features use 'modify' operation which handles soft-delete on approval
   const deletions: Deletion[] = initialFeatures
     .filter((f) => {
       const id = f.get("geometry_id") as number;
-      return id && !currentIds.has(id);
+      if (!id) return false;
+      // Skip if being replaced by a modify - handled by 'modify' operation
+      if (replacedIds.has(id)) return false;
+      // Only include explicitly deleted (not in current)
+      return !currentIds.has(id);
     })
     .map((f) => ({
       id: f.get("geometry_id") as number,

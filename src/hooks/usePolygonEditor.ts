@@ -588,8 +588,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       return;
     }
     // keep id from first feature, mark as modified for save detection
+    const originalGeometryId = a.get("geometry_id");
     a.setGeometry(merged);
     a.set("is_modified", true);
+    // Set replaces_geometry_id so backend knows to soft-delete the original
+    if (originalGeometryId) {
+      a.set("replaces_geometry_id", originalGeometryId);
+    }
     source.removeFeature(b);
     select.getFeatures().clear();
     select.getFeatures().push(a);
@@ -666,8 +671,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
     // Update the larger polygon with clipped result, remove the smaller polygon
     console.debug("Setting clipped geometry on larger feature and removing smaller feature");
+    const originalGeometryId = largerFeature.get("geometry_id");
     largerFeature.setGeometry(clipped);
     largerFeature.set("is_modified", true);
+    // Set replaces_geometry_id so backend knows to soft-delete the original
+    if (originalGeometryId) {
+      largerFeature.set("replaces_geometry_id", originalGeometryId);
+    }
     source.removeFeature(smallerFeature);
     select.getFeatures().clear();
     select.getFeatures().push(largerFeature);
@@ -794,11 +804,17 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
             message.success(`Polygon split into ${newFeatures.length} separate pieces!`);
             console.debug("=== END CUT OPERATION DEBUG (SUCCESS - MultiPolygon) ===");
           } else {
-            // Single polygon result - update original feature
-            console.debug("Single Polygon result - updating original feature");
-            target.setGeometry(diff);
-            target.set("is_modified", true);
-            message.success("Polygon cut successfully!");
+          // Single polygon result - update original feature
+          console.debug("Single Polygon result - updating original feature");
+          const originalGeometryId = target.get("geometry_id");
+          target.setGeometry(diff);
+          target.set("is_modified", true);
+          // Set replaces_geometry_id so backend knows to soft-delete the original
+          // and create the modified version (prevents dual-layer issue)
+          if (originalGeometryId) {
+            target.set("replaces_geometry_id", originalGeometryId);
+          }
+          message.success("Polygon cut successfully!");
             console.debug("=== END CUT OPERATION DEBUG (SUCCESS - Polygon) ===");
           }
 
