@@ -184,9 +184,18 @@ export function useSaveCorrections() {
       });
 
       if (error) throw error;
+      if (!data) {
+        throw new Error("No response from save_prediction_corrections");
+      }
 
       // RPC returns an array with one row
       const result = Array.isArray(data) ? data[0] : data;
+      
+      // Validate response format
+      if (!result || typeof result.success !== "boolean") {
+        throw new Error("Unexpected response format from save_prediction_corrections");
+      }
+      
       return result as SaveCorrectionsResult;
     },
     onSuccess: (_, params) => {

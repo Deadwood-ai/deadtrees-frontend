@@ -1,4 +1,4 @@
-import { useRef, forwardRef, useImperativeHandle, useState } from "react";
+import { useRef, forwardRef, useImperativeHandle, useState, useEffect } from "react";
 import { Form, message, Tag, Tooltip } from "antd";
 import { EditOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { IDataset } from "../../types/dataset";
@@ -76,12 +76,10 @@ const AuditMapWithControls = forwardRef<DatasetDetailsMapHandle, AuditMapWithCon
 		const editing = useDatasetEditing({ datasetId: dataset?.id, user });
 		const { isEditing, editingLayerType, editor, ai, refreshKey } = editing;
 
-		// Notify parent of editing state changes
-		const prevIsEditingRef = useRef(isEditing);
-		if (prevIsEditingRef.current !== isEditing) {
-			prevIsEditingRef.current = isEditing;
+		// Notify parent of editing state changes via useEffect (not during render)
+		useEffect(() => {
 			onEditingStateChange?.(isEditing, editingLayerType);
-		}
+		}, [isEditing, editingLayerType, onEditingStateChange]);
 
 		// Correction approval/revert mutations
 		const queryClient = useQueryClient();

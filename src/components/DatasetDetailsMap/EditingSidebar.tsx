@@ -79,23 +79,23 @@ export default function EditingSidebar({ layerType }: EditingSidebarProps) {
         </Typography.Text>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">D</Tag>
+            <Tag className="m-0 font-mono text-[10px]">A</Tag>
             <span className="text-gray-600">Draw mode</span>
           </div>
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">Del</Tag>
+            <Tag className="m-0 font-mono text-[10px]">D</Tag>
             <span className="text-gray-600">Delete</span>
           </div>
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">M</Tag>
+            <Tag className="m-0 font-mono text-[10px]">G</Tag>
             <span className="text-gray-600">Merge</span>
           </div>
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">C</Tag>
+            <Tag className="m-0 font-mono text-[10px]">X</Tag>
             <span className="text-gray-600">Clip</span>
           </div>
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">H</Tag>
+            <Tag className="m-0 font-mono text-[10px]">C</Tag>
             <span className="text-gray-600">Cut hole</span>
           </div>
           <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function EditingSidebar({ layerType }: EditingSidebarProps) {
             <span className="text-gray-600">Undo</span>
           </div>
           <div className="flex items-center gap-2">
-            <Tag className="m-0 font-mono text-[10px]">A</Tag>
+            <Tag className="m-0 font-mono text-[10px]">S</Tag>
             <span className="text-gray-600">AI assist</span>
           </div>
           <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export default function EditingSidebar({ layerType }: EditingSidebarProps) {
         <ul className="m-0 list-inside list-disc space-y-1 pl-0 text-xs text-amber-700">
           <li>Click on polygons to select them</li>
           <li>Hold Shift to select multiple polygons</li>
-          <li>Use AI assist (A) to auto-detect boundaries</li>
+          <li>Use AI assist (S) to auto-detect boundaries</li>
           <li>Remember to save your changes</li>
         </ul>
       </div>

@@ -138,7 +138,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
 
         // Use viewport from context if available (preserves position from dataset details)
         const hasViewport = viewport.center[0] !== 0 && viewport.zoom !== 2;
-        
+
         const mapView = new View({
           center: hasViewport ? viewport.center : viewOptions.center,
           zoom: hasViewport ? viewport.zoom : undefined,
@@ -171,10 +171,29 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
 
     return () => {
       if (mapRef.current) {
+        // Properly dispose layers and sources before disposing map
+        mapRef.current.getLayers().forEach((layer) => {
+          const source = layer.getSource?.();
+          if (source) {
+            if ("clear" in source && typeof source.clear === "function") {
+              source.clear();
+            }
+            if ("dispose" in source && typeof source.dispose === "function") {
+              source.dispose();
+            }
+          }
+          if ("dispose" in layer && typeof layer.dispose === "function") {
+            layer.dispose();
+          }
+        });
         mapRef.current.setTarget(undefined);
         mapRef.current.dispose();
         mapRef.current = null;
       }
+      // Clear layer refs
+      orthoLayerRef.current = null;
+      deadwoodLayerRef.current = null;
+      forestCoverLayerRef.current = null;
     };
   }, [dataset.cog_path, dataset.is_forest_cover_done, deadwood.data?.id, forestCover.data?.id]);
 
@@ -264,7 +283,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       editor.getOverlayLayer()?.getSource()?.clear();
       setIsEditing(false);
       setInitialFeatures([]);
-      
+
       // Navigate back to dataset details
       onClose();
     } catch (error) {
@@ -449,11 +468,19 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       !isLoadingLabel &&
       !isLoadingGeometries
     ) {
-      hasAutoStarted.current = true;
       // Small delay to ensure editor is fully initialized with the map
-      setTimeout(() => {
-        handleStartEditing();
+      const timeoutId = setTimeout(() => {
+        // Set flag inside callback to avoid race condition
+        hasAutoStarted.current = true;
+        try {
+          handleStartEditing();
+        } catch (error) {
+          console.error("Failed to auto-start editing:", error);
+          hasAutoStarted.current = false; // Allow retry on failure
+        }
       }, 100);
+
+      return () => clearTimeout(timeoutId);
     }
   }, [initialLayerType, isEditing, isMapReady, predictionLabel?.id, loadedGeometries, isLoadingLabels, isLoadingLabel, isLoadingGeometries, handleStartEditing]);
 
