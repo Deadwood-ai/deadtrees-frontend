@@ -17,6 +17,8 @@ export interface UseVectorLayersOptions {
 	isForestCoverDone?: boolean;
 	/** Enable correction styling (color-coded by status) */
 	showCorrectionStyling?: boolean;
+	/** Filter by correction status: 'all' shows everything including deleted, 'pending' shows only pending */
+	filterCorrectionStatus?: string | null;
 	/** Visibility control function - called to get current visibility state */
 	getDeadwoodVisible?: () => boolean;
 	/** Visibility control function */
@@ -64,6 +66,7 @@ export function useVectorLayers({
 	forestCoverLabelId,
 	isForestCoverDone = false,
 	showCorrectionStyling = true,
+	filterCorrectionStatus,
 	getDeadwoodVisible,
 	getForestCoverVisible,
 	opacity = 1,
@@ -107,7 +110,8 @@ export function useVectorLayers({
 		// Create deadwood layer
 		if (deadwoodLabelId && allowDeadwood) {
 			const deadwoodLayer = createDeadwoodVectorLayer(deadwoodLabelId, { 
-				showCorrectionStyling 
+				showCorrectionStyling,
+				filterCorrectionStatus,
 			});
 			map.addLayer(deadwoodLayer);
 			deadwoodLayerRef.current = deadwoodLayer;
@@ -133,7 +137,8 @@ export function useVectorLayers({
 		// Create forest cover layer
 		if (forestCoverLabelId && isForestCoverDone && allowForestCover) {
 			const forestCoverLayer = createForestCoverVectorLayer(forestCoverLabelId, { 
-				showCorrectionStyling 
+				showCorrectionStyling,
+				filterCorrectionStatus,
 			});
 			map.addLayer(forestCoverLayer);
 			forestCoverLayerRef.current = forestCoverLayer;
@@ -174,7 +179,7 @@ export function useVectorLayers({
 	// Note: getDeadwoodVisible/getForestCoverVisible intentionally excluded from deps
 	// They're only used for initial visibility - updates handled by separate effects below
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [map, deadwoodLabelId, forestCoverLabelId, isForestCoverDone, showCorrectionStyling, allowDeadwood, allowForestCover]);
+	}, [map, deadwoodLabelId, forestCoverLabelId, isForestCoverDone, showCorrectionStyling, filterCorrectionStatus, allowDeadwood, allowForestCover]);
 
 	// Visibility controls
 	const setDeadwoodVisible = useCallback((visible: boolean) => {

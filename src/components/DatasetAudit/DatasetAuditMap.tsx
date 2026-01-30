@@ -149,6 +149,7 @@ const DatasetAuditMap = forwardRef<DatasetAuditMapHandle, DatasetAuditMapProps>(
 	const getForestCoverVisible = useCallback(() => effectiveForestCoverVisible, [effectiveForestCoverVisible]);
 
 	// Vector layers - visibility controlled by editing state
+	// Use filterCorrectionStatus: 'all' to show deleted polygons for auditors
 	const {
 		deadwoodLayer,
 		forestCoverLayer,
@@ -160,6 +161,7 @@ const DatasetAuditMap = forwardRef<DatasetAuditMapHandle, DatasetAuditMapProps>(
 		forestCoverLabelId: forestCover.data?.id,
 		isForestCoverDone: data?.is_forest_cover_done,
 		showCorrectionStyling: true,
+		filterCorrectionStatus: 'all', // Show all polygons including pending deletions
 		getDeadwoodVisible,
 		getForestCoverVisible,
 		opacity: layerControl.layerOpacity,
