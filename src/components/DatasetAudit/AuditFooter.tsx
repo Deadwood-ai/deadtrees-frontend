@@ -51,19 +51,19 @@ export default function AuditFooter({
 	const hasNext = nextDatasetId !== null;
 	const idx = currentDatasetIndex;
 
-	// Build position indicator
-	const positionText = idx >= 0 && totalCount > 0 ? `(${idx + 1}/${totalCount})` : "";
+	// Build position indicator - show current position in filtered list
+	const positionText = idx >= 0 && totalCount > 0 ? `${idx + 1} of ${totalCount}` : "";
 
 	// Tooltip text for Save & Next
 	const saveNextTooltip = hasNext
-		? `Next: Dataset #${nextDatasetId}`
+		? `Save and go to dataset #${nextDatasetId} (${positionText} in current filter)`
 		: idx >= 0
-			? `Last dataset in filter ${positionText}`
+			? `Last dataset in filter (${positionText})`
 			: "No datasets in filter";
 
 	// Tooltip text for Review & Next
 	const reviewNextTooltip = hasNext
-		? `Mark reviewed and go to #${nextDatasetId}`
+		? `Mark reviewed and go to #${nextDatasetId} (${positionText} in current filter)`
 		: "Mark reviewed and return to list";
 
 	return (
@@ -100,7 +100,7 @@ export default function AuditFooter({
 							icon={<RightOutlined />}
 							disabled={isDisabled || !hasNext}
 						>
-							Save & Next {positionText}
+							Save & Next
 						</Button>
 					</Tooltip>
 				)}
@@ -114,7 +114,7 @@ export default function AuditFooter({
 							loading={isMarkingReviewed}
 							icon={<CheckCircleOutlined />}
 						>
-							{hasNext ? "Review & Next" : "Review"} {positionText}
+							{hasNext ? "Review & Next" : "Mark Reviewed"}
 						</Button>
 					</Tooltip>
 				)}
@@ -124,7 +124,7 @@ export default function AuditFooter({
 }
 
 // Wrapper component that uses Form.Item to get field values
-interface AuditFooterWrapperProps extends Omit<AuditFooterProps, "getFieldValue"> {}
+interface AuditFooterWrapperProps extends Omit<AuditFooterProps, "getFieldValue"> { }
 
 export function AuditFooterFormItem(props: AuditFooterWrapperProps) {
 	return (

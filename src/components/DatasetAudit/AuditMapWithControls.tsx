@@ -115,6 +115,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 					queryClient.invalidateQueries({ queryKey: ["pendingCorrections"] });
 					queryClient.invalidateQueries({ queryKey: ["correctionStats", dataset?.id] });
 					queryClient.invalidateQueries({ queryKey: ["correctionContributors", dataset?.id] });
+					queryClient.invalidateQueries({ queryKey: ["pendingCorrectionLocations", dataset?.id] });
 					mapRef.current?.refreshVectorLayers();
 				} else {
 					message.error("Failed to approve correction");
@@ -133,6 +134,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 					queryClient.invalidateQueries({ queryKey: ["pendingCorrections"] });
 					queryClient.invalidateQueries({ queryKey: ["correctionStats", dataset?.id] });
 					queryClient.invalidateQueries({ queryKey: ["correctionContributors", dataset?.id] });
+					queryClient.invalidateQueries({ queryKey: ["pendingCorrectionLocations", dataset?.id] });
 					mapRef.current?.refreshVectorLayers();
 				} else {
 					message.error("Failed to revert correction");
