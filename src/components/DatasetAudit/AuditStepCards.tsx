@@ -155,7 +155,7 @@ export function AcquisitionDateCard({ dataset }: AcquisitionDateCardProps) {
 // === Phenology Card (Step 3) ===
 interface PhenologyCardProps {
 	dataset: IDataset;
-	phenologyData: { phenology_curve: number[] } | null | undefined;
+	phenologyData: { phenology_curve: number[]; source?: string; version?: string } | null | undefined;
 	isPhenologyLoading: boolean;
 	thumbnailUrl: string | null;
 	onCopySeasonPrompt: () => void;
@@ -163,7 +163,7 @@ interface PhenologyCardProps {
 
 export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thumbnailUrl, onCopySeasonPrompt }: PhenologyCardProps) {
 	return (
-		<Card size="small" className="mb-3 shadow-sm">
+		<Card size="small" className="mb-3 overflow-visible shadow-sm">
 			<div className="mb-2 flex items-center justify-between">
 				<div className="flex items-center">
 					<Text strong className="text-xs">3. Phenology / Season</Text>
@@ -174,10 +174,13 @@ export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thum
 			{isPhenologyLoading ? (
 				<div className="mb-2 text-xs text-gray-500">Loading phenology data...</div>
 			) : phenologyData?.phenology_curve ? (
-				<div className="mb-3">
+				<div className="mb-3 overflow-visible">
 					<PhenologyBar
-						values={phenologyData.phenology_curve}
-						month={dataset.aquisition_month ? Number(dataset.aquisition_month) : null}
+						phenologyData={phenologyData}
+						acquisitionYear={dataset.aquisition_year}
+						acquisitionMonth={dataset.aquisition_month}
+						acquisitionDay={dataset.aquisition_day}
+						showTooltips={false}
 					/>
 				</div>
 			) : (
