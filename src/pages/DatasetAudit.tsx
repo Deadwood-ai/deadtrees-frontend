@@ -363,9 +363,10 @@ export default function DatasetAudit() {
 
 	const editsFlagsCount = useMemo(() => {
 		if (!datasets) return 0;
+		const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
 		const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
-		return datasets.filter((d) => correctionsMap.has(d.id) || flaggedSet.has(d.id)).length;
-	}, [datasets, flaggedAgg, correctionsMap]);
+		return base.filter((d) => correctionsMap.has(d.id) || flaggedSet.has(d.id)).length;
+	}, [datasets, flaggedAgg, correctionsMap, hasAboveMinId]);
 
 	// Check if user has audit privileges
 	useEffect(() => {
@@ -575,7 +576,7 @@ export default function DatasetAudit() {
 		key: "status",
 		render: (_: unknown, record: IDataset) => {
 			const audit = auditMap.get(record.id);
-			if (!audit) return <Tag color="red">No Audit Data</Tag>;
+			if (!audit) return <Tag color="orange">Not audited yet</Tag>;
 
 			const isReviewed = !!audit.reviewed_at;
 			let statusTag;

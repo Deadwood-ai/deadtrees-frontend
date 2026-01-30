@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Card, Typography, Form, Radio, Input, Space, Tooltip, Tag, Button, Image, Collapse, message } from "antd";
-import { InfoCircleOutlined, CopyOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, SaveOutlined } from "@ant-design/icons";
-import { AUDIT_INFO, createConditionalRule, formatAcquisitionDate } from "./auditConstants";
+import { CopyOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, SaveOutlined } from "@ant-design/icons";
+import { createConditionalRule, formatAcquisitionDate } from "./auditConstants";
 import { IDataset } from "../../types/dataset";
 import { OrthoMetadata } from "../../hooks/useDatasetAudit";
 import { DatasetFlag, FlagStatus } from "../../types/flags";
@@ -13,15 +13,6 @@ import { isGeonadirDataset } from "../../utils/datasetUtils";
 const { Text } = Typography;
 const { TextArea } = Input;
 const { Panel } = Collapse;
-
-// Reusable info icon component
-function InfoIcon({ content }: { content: string }) {
-	return (
-		<Tooltip title={content} placement="right">
-			<InfoCircleOutlined className="ml-1 cursor-help text-blue-500" />
-		</Tooltip>
-	);
-}
 
 // === User Flags Card ===
 interface UserFlagsCardProps {
@@ -110,7 +101,6 @@ export function GeoreferencingCard() {
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">1. Georeferencing Accuracy</Text>
-				<InfoIcon content={AUDIT_INFO.georeferencing} />
 			</div>
 			<Form.Item
 				name="is_georeferenced"
@@ -138,7 +128,6 @@ export function AcquisitionDateCard({ dataset }: AcquisitionDateCardProps) {
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">2. Acquisition Date</Text>
-				<InfoIcon content={AUDIT_INFO.acquisitionDate} />
 			</div>
 			<div className="mb-2 text-xs">
 				<Text type="secondary">Reported date: </Text>
@@ -178,7 +167,6 @@ export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thum
 			<div className="mb-2 flex items-center justify-between">
 				<div className="flex items-center">
 					<Text strong className="text-xs">3. Phenology / Season</Text>
-					<InfoIcon content={AUDIT_INFO.phenology} />
 				</div>
 			</div>
 
@@ -241,7 +229,6 @@ export function PredictionQualityCard() {
 			<div className="mb-3">
 				<div className="mb-1 flex items-center">
 					<Text className="text-xs font-medium">Deadwood Segmentation</Text>
-					<InfoIcon content={AUDIT_INFO.deadwoodQuality} />
 				</div>
 				<Form.Item
 					name="deadwood_quality"
@@ -265,7 +252,6 @@ export function PredictionQualityCard() {
 			<div>
 				<div className="mb-1 flex items-center">
 					<Text className="text-xs font-medium">Forest Cover Segmentation</Text>
-					<InfoIcon content={AUDIT_INFO.forestCoverQuality} />
 				</div>
 				<Form.Item
 					name="forest_cover_quality"
@@ -294,7 +280,6 @@ export function COGQualityCard() {
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">5. Cloud-Optimized GeoTIFF</Text>
-				<InfoIcon content={AUDIT_INFO.cogIssues} />
 			</div>
 
 			<Form.Item
@@ -331,7 +316,6 @@ export function ThumbnailCard({ thumbnailUrl }: ThumbnailCardProps) {
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">6. Thumbnail</Text>
-				<InfoIcon content={AUDIT_INFO.thumbnailIssues} />
 			</div>
 
 			{thumbnailUrl && (
@@ -383,7 +367,6 @@ export function AOICard({ aoiToolbarState, mapRef }: AOICardProps) {
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">7. Area of Interest (AOI)</Text>
-				<InfoIcon content={AUDIT_INFO.aoi} />
 			</div>
 
 			{/* AOI Status */}
@@ -535,7 +518,6 @@ export function FinalAssessmentCard({
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center">
 				<Text strong className="text-xs">8. Final Assessment</Text>
-				<InfoIcon content={AUDIT_INFO.finalAssessment} />
 			</div>
 
 			<Form.Item

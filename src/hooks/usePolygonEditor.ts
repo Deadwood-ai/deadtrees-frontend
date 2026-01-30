@@ -102,9 +102,9 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         strokeColor = "#60A5FA"; // light blue
         strokeWidth = 2;
       } else {
-        // Original/Prediction: Thin gray border (default, no special styling)
-        strokeColor = "#9CA3AF"; // gray-400
-        strokeWidth = 1;
+        // Original/Prediction: Medium gray border for visibility in editing mode
+        strokeColor = "#6B7280"; // gray-500 (darker for better visibility)
+        strokeWidth = 2;
       }
 
       return new Style({
