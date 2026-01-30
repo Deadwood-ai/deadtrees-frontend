@@ -678,10 +678,19 @@ export default function DatasetAudit() {
 	return (
 		<div className="p-6">
 			{/* Header */}
-			<div className="mb-6">
+			<div className="mb-6 flex items-center justify-between">
 				<Title level={3} style={{ margin: 0 }}>
 					Dataset Audits
 				</Title>
+				<Button
+					type="link"
+					href="https://docs.google.com/document/d/1EQ52zDOU6X6ze1g-xKd381IPziv72Pt4QV18YDYqIUo/edit"
+					target="_blank"
+					rel="noopener noreferrer"
+					icon={<span className="mr-1">📋</span>}
+				>
+					Audit Protocol
+				</Button>
 			</div>
 
 			{/* Tabs with badges */}
