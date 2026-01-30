@@ -163,7 +163,7 @@ interface PhenologyCardProps {
 
 export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thumbnailUrl, onCopySeasonPrompt }: PhenologyCardProps) {
 	return (
-		<Card size="small" className="mb-3 overflow-visible shadow-sm">
+		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center justify-between">
 				<div className="flex items-center">
 					<Text strong className="text-xs">3. Phenology / Season</Text>
@@ -174,13 +174,13 @@ export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thum
 			{isPhenologyLoading ? (
 				<div className="mb-2 text-xs text-gray-500">Loading phenology data...</div>
 			) : phenologyData?.phenology_curve ? (
-				<div className="mb-3 overflow-visible">
+				<div className="mb-8 mt-3 overflow-visible">
 					<PhenologyBar
 						phenologyData={phenologyData}
 						acquisitionYear={dataset.aquisition_year}
 						acquisitionMonth={dataset.aquisition_month}
 						acquisitionDay={dataset.aquisition_day}
-						showTooltips={false}
+						showTooltips={true}
 					/>
 				</div>
 			) : (
