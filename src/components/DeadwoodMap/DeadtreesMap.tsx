@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Alert, Modal, Input, message } from "antd";
 import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "ol/ol.css";
@@ -69,10 +70,10 @@ const forestSourceCache: Record<string, GeoTIFF> = {};
 // Get or create cached deadwood source
 const getCachedDeadwoodSource = (year: string): GeoTIFF => {
   if (!deadwoodSourceCache[year]) {
-    console.log(`[Cache] Creating new deadwood source for ${year}`);
+    console.debug(`[Cache] Creating new deadwood source for ${year}`);
     deadwoodSourceCache[year] = createDeadwoodSource(year);
   } else {
-    console.log(`[Cache] Reusing cached deadwood source for ${year}`);
+    console.debug(`[Cache] Reusing cached deadwood source for ${year}`);
   }
   return deadwoodSourceCache[year];
 };
@@ -80,10 +81,10 @@ const getCachedDeadwoodSource = (year: string): GeoTIFF => {
 // Get or create cached forest source
 const getCachedForestSource = (year: string): GeoTIFF => {
   if (!forestSourceCache[year]) {
-    console.log(`[Cache] Creating new forest source for ${year}`);
+    console.debug(`[Cache] Creating new forest source for ${year}`);
     forestSourceCache[year] = createForestSource(year);
   } else {
-    console.log(`[Cache] Reusing cached forest source for ${year}`);
+    console.debug(`[Cache] Reusing cached forest source for ${year}`);
   }
   return forestSourceCache[year];
 };
@@ -150,8 +151,15 @@ const DeadtreesMap = () => {
 
   // Auth and flags hooks
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: mapFlags = [] } = useMapFlags();
   const createFlagMutation = useCreateMapFlag();
+
+  // Handler for anonymous users clicking flag button
+  const handleLoginRequired = useCallback(() => {
+    // Pass current path as returnTo so user comes back to map after sign-in
+    navigate("/sign-in?returnTo=/deadtrees");
+  }, [navigate]);
 
   // handler functions
   const handleClick = async (event: { coordinate: number[] }, year: string, skipIfDrawing: boolean) => {
@@ -782,8 +790,13 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       >
-        {/* Top Left - Layer Controls */}
+        {/* Top Left - Location Controls */}
         <div className="absolute left-2 top-24 z-50">
+          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
+        </div>
+
+        {/* Top Right - Layer Controls */}
+        <div className="absolute right-2 top-24 z-50">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
@@ -793,18 +806,15 @@ const DeadtreesMap = () => {
             setShowDeadwood={setShowDeadwood}
             opacity={sliderValue}
             setOpacity={setSliderValue}
-            showFlagsControls={!!user}
+            showFlagsControls={true}
+            isLoggedIn={!!user}
             isDrawingFlag={isDrawingFlag}
             onFlagClick={handleFlagClick}
+            onLoginRequired={handleLoginRequired}
             showFlagsLayer={showFlagsLayer}
             setShowFlagsLayer={setShowFlagsLayer}
             flagsCount={mapFlags.length}
           />
-        </div>
-
-        {/* Top Right - Location Controls */}
-        <div className="absolute right-2 top-24 z-50">
-          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
         </div>
 
         {/* Top Center - Processing Stats */}

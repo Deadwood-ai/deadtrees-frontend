@@ -62,7 +62,7 @@ function PublicationLink({ freidataDoI, citationDoi }: PublicationLinkProps) {
   }
 
   // No publication available
-  return <Tag color="default">Not published</Tag>;
+  return <Tag color="default" style={{ margin: 0 }}>Not published</Tag>;
 }
 
 export default PublicationLink;

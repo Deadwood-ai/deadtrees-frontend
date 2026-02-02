@@ -19,6 +19,8 @@ interface VectorLayerConfig {
     strokeWidth: number;
   };
   labelId?: number | null;
+  filterCorrectionStatus?: string | null; // 'all', 'pending', or null (default)
+  showCorrectionStyling?: boolean; // Enable different colors for pending/deleted
 }
 
 const createVectorLayer = (config: VectorLayerConfig) => {
@@ -39,13 +41,18 @@ const createVectorLayer = (config: VectorLayerConfig) => {
 
       try {
         const startTime = performance.now();
-        const { data, error } = await supabase.rpc(config.rpcFunctionName, {
+        const rpcParams: Record<string, unknown> = {
           z,
           x,
           y,
           resolution: 4096,
           filter_label_id: config.labelId || null,
-        });
+        };
+        // Add correction filter if using correction-aware functions
+        if (config.rpcFunctionName.includes("_with_corrections")) {
+          rpcParams.filter_correction_status = config.filterCorrectionStatus || null;
+        }
+        const { data, error } = await supabase.rpc(config.rpcFunctionName, rpcParams);
         // const fetchTime = performance.now() - startTime;
 
         if (error) throw error;
@@ -60,11 +67,6 @@ const createVectorLayer = (config: VectorLayerConfig) => {
             extent: tile.extent,
             featureProjection: "EPSG:3857",
           });
-
-          // const decodeTime = performance.now() - decodeStart;
-          // console.log(
-          // `[Tile Processed] z=${z}, x=${x}, y=${y}, features=${features.length}, decode=${decodeTime.toFixed(0)}ms`,
-          // );
 
           // Log any extremely large features that might cause issues
           // features.forEach((feature, i) => {
@@ -93,17 +95,57 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     transition: 0, // Disable transition for instant rendering
   });
 
+  // Create style function for correction-aware styling
+  const getFeatureStyle = (feature: Feature) => {
+    // Get correction status from feature properties (only available with corrections-aware MVT)
+    const correctionStatus = feature.get("correction_status") as string | undefined;
+    const correctionOperation = feature.get("correction_operation") as string | undefined;
+    const isDeleted = feature.get("is_deleted") as boolean | undefined;
+
+    // Handle deleted polygons
+    if (isDeleted) {
+      // Show pending delete corrections with special styling for auditors
+      if (config.showCorrectionStyling && correctionStatus === "pending" && correctionOperation === "delete") {
+        return new Style({
+          fill: new Fill({ color: "rgba(239, 68, 68, 0.3)" }), // Light red fill
+          stroke: new Stroke({ 
+            color: "#DC2626", // Red border
+            width: 2,
+            lineDash: [6, 4], // Dashed line to indicate pending deletion
+          }),
+        });
+      }
+      // Hide deleted polygons from regular users
+      return new Style({}); // Empty style = invisible
+    }
+
+    // Default style values - keep original fill, only change border for corrections
+    let fillColor = config.style.fillColor;
+    let strokeColor = config.style.strokeColor;
+    let strokeWidth = config.style.strokeWidth;
+
+    if (config.showCorrectionStyling && correctionStatus) {
+      if (correctionStatus === "pending") {
+        // Pending correction - keep original fill, subtle blue border
+        strokeColor = "#60A5FA"; // Light blue - "in review"
+        strokeWidth = 2;
+      } else if (correctionStatus === "approved") {
+        // Approved correction - keep original fill, subtle green border
+        strokeColor = "#34D399"; // Light green - "verified"
+        strokeWidth = 2;
+      }
+      // 'none' or 'rejected' use default style (original predictions)
+    }
+
+    return new Style({
+      fill: new Fill({ color: fillColor }),
+      stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+    });
+  };
+
   const vectorLayer = new VectorTileLayer({
     source: vectorSource,
-    style: new Style({
-      fill: new Fill({
-        color: config.style.fillColor,
-      }),
-      stroke: new Stroke({
-        color: config.style.strokeColor,
-        width: config.style.strokeWidth,
-      }),
-    }),
+    style: getFeatureStyle,
     maxZoom: 23,
     className: config.className,
     renderMode: "hybrid", // Use hybrid mode for better performance (GPU acceleration)
@@ -118,21 +160,34 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   return vectorLayer;
 };
 
-export const createDeadwoodVectorLayer = (labelId?: number | null) =>
+interface LayerOptions {
+  showCorrectionStyling?: boolean;
+  filterCorrectionStatus?: string | null;
+}
+
+export const createDeadwoodVectorLayer = (labelId?: number | null, options?: LayerOptions) =>
   createVectorLayer({
-    rpcFunctionName: "get_deadwood_vector_tiles_perf1",
+    // Use original perf function for default, corrections-aware function when styling requested
+    rpcFunctionName: options?.showCorrectionStyling 
+      ? "get_deadwood_tiles_with_corrections" 
+      : "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
-      fillColor: "rgba(255, 50, 50, 0.8)",
-      strokeColor: "rgba(200, 50, 0, 1)",
+      fillColor: "rgba(255, 179, 28, 0.7)", // Orange (#FFB31C) matching DeadtreesMap
+      strokeColor: "#F59E0B", // Darker orange for stroke
       strokeWidth: 1.5,
     },
     labelId: labelId || undefined,
+    showCorrectionStyling: options?.showCorrectionStyling,
+    filterCorrectionStatus: options?.filterCorrectionStatus,
   });
 
-export const createForestCoverVectorLayer = (labelId?: number) =>
+export const createForestCoverVectorLayer = (labelId?: number, options?: LayerOptions) =>
   createVectorLayer({
-    rpcFunctionName: "get_forest_cover_vector_tiles_perf",
+    // Use original perf function for default, corrections-aware function when styling requested
+    rpcFunctionName: options?.showCorrectionStyling 
+      ? "get_forest_cover_tiles_with_corrections" 
+      : "get_forest_cover_vector_tiles_perf",
     className: "forest-cover-vector",
     style: {
       fillColor: "rgba(34, 197, 94, 0.5)", // Green with high opacity
@@ -140,6 +195,8 @@ export const createForestCoverVectorLayer = (labelId?: number) =>
       strokeWidth: 1,
     },
     labelId,
+    showCorrectionStyling: options?.showCorrectionStyling,
+    filterCorrectionStatus: options?.filterCorrectionStatus,
   });
 
 export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Polygon) => {
@@ -183,7 +240,7 @@ export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Po
     source: aoiSource,
     style: new Style({
       stroke: new Stroke({
-        color: "#ff6b35", // Orange stroke to match audit workflow
+        color: "#3b82f6", // Blue stroke for AOI
         width: 2,
       }),
       fill: new Fill({

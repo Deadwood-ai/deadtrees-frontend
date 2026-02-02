@@ -20,7 +20,7 @@ const buildThumbnail = async (dataset_id: number, token: string) => {
     }
 
     const data = await res.json(); // Parse the response body as JSON
-    console.log("Build-thumbnail response data:", data);
+    console.debug("Build-thumbnail response data:", data);
     return data;
   } catch (error) {
     console.error("Build-thumbnail error:", error);

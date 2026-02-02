@@ -92,28 +92,28 @@ export const useAISegmentation = ({
   const ensureResultLayer = useCallback(() => {
     const map = mapRef.current;
     if (!map) {
-      console.log("[AI Seg] ensureResultLayer: no map");
+      console.debug("[AI Seg] ensureResultLayer: no map");
       return;
     }
 
     // If caller provides a target vector source (e.g., polygon editor overlay), always use it
     const targetSource = getTargetVectorSource?.();
-    console.log("[AI Seg] ensureResultLayer: targetSource =", !!targetSource);
+    console.debug("[AI Seg] ensureResultLayer: targetSource =", !!targetSource);
     if (targetSource) {
       resultSourceRef.current = targetSource;
       resultLayerRef.current = null; // not owned here
-      console.log("[AI Seg] Using provided target source");
+      console.debug("[AI Seg] Using provided target source");
       return;
     }
 
     // Early return only if we already have our own layer (not using target source)
     if (resultLayerRef.current && resultSourceRef.current) {
-      console.log("[AI Seg] Already have result layer");
+      console.debug("[AI Seg] Already have result layer");
       return;
     }
 
     // Fallback: create a temporary result layer owned by this hook
-    console.log("[AI Seg] Creating fallback AI layer");
+    console.debug("[AI Seg] Creating fallback AI layer");
     const source = new VectorSource();
     const layer = new VectorLayer<VectorSource>({
       source,
@@ -324,17 +324,19 @@ export const useAISegmentation = ({
           const fc = normalizeToFeatureCollection(raw);
           const filtered = fc ? keepLargestPolygon(fc) : null;
           const created = filtered ? convertPixelGeoJSONToMapFeatures(filtered, map) : [];
-          console.log("[AI Seg] Created features:", created.length);
+          console.debug("[AI Seg] Created features:", created.length);
           ensureResultLayer();
-          console.log("[AI Seg] resultSourceRef.current =", !!resultSourceRef.current);
+          console.debug("[AI Seg] resultSourceRef.current =", !!resultSourceRef.current);
           if (resultSourceRef.current && created.length) {
             // Save history before adding AI-generated features (for undo)
             if (onBeforeAddFeatures) {
               onBeforeAddFeatures();
             }
-            console.log("[AI Seg] Adding", created.length, "features to source");
+            // Mark all AI-generated features as new (for save detection)
+            created.forEach((f) => f.set("is_new", true));
+            console.debug("[AI Seg] Adding", created.length, "features to source");
             resultSourceRef.current.addFeatures(created);
-            console.log(
+            console.debug(
               "[AI Seg] Features added. Source now has",
               resultSourceRef.current.getFeatures().length,
               "features",

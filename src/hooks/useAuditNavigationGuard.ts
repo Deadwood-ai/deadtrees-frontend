@@ -104,7 +104,7 @@ export function useAuditNavigationGuard({
     const handleVisibilityChange = () => {
       // If page becomes hidden and we're in audit, start a cleanup timer
       if (document.hidden && isActive) {
-        console.log("Page hidden during audit - starting cleanup timer");
+        console.debug("Page hidden during audit - starting cleanup timer");
       }
     };
 

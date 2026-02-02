@@ -1,19 +1,21 @@
 import { SignIn as SignInAuthUI } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "../../hooks/useSupabase";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "../../hooks/useAuthProvider";
 
 const SignIn = () => {
   const { session, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/profile";
 
   useEffect(() => {
     if (session) {
-      navigate("/profile");
+      navigate(returnTo);
     }
-  }, [session, navigate]);
+  }, [session, navigate, returnTo]);
 
   return (
     <div className="m-auto flex h-full  max-w-7xl items-center justify-center">
@@ -23,11 +25,11 @@ const SignIn = () => {
           supabaseClient={supabase}
           providers={[]}
           appearance={{ theme: ThemeSupa }}
-          redirectTo={window.origin + "/profile"}
+          redirectTo={window.origin + returnTo}
         />
         <div className="pt-4 text-center">
           Not registered yet?{" "}
-          <Link to="/sign-up" className="text-blue-500 underline">
+          <Link to={`/sign-up${returnTo !== "/profile" ? `?returnTo=${returnTo}` : ""}`} className="text-blue-500 underline">
             Create an account
           </Link>
         </div>

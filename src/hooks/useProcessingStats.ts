@@ -15,7 +15,7 @@ export interface IProcessingStats {
 export const isSentinelConfigured = Boolean(Settings.SUPABASE_SENTINEL_URL && Settings.SUPABASE_SENTINEL_ANON_KEY);
 
 // Debug: log configuration status
-console.log("[ProcessingStats] Sentinel configured:", isSentinelConfigured, {
+console.debug("[ProcessingStats] Sentinel configured:", isSentinelConfigured, {
   hasUrl: Boolean(Settings.SUPABASE_SENTINEL_URL),
   hasKey: Boolean(Settings.SUPABASE_SENTINEL_ANON_KEY),
 });

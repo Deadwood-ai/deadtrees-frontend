@@ -17,7 +17,7 @@ const ResetPassword = () => {
   const onFormSubmit = async () => {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      console.log(error);
+      console.debug(error);
     } else {
       navigate("/profile");
       message.success("Password updated successfully");

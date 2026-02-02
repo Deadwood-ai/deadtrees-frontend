@@ -24,8 +24,7 @@ import Feature from "ol/Feature";
 import type TileLayerWebGL from "ol/layer/WebGLTile";
 import ReferencePatchMap from "./ReferencePatchMap";
 import PatchDetailSidebar from "./PatchDetailSidebar";
-import LayerRadioButtons, { LayerSelection } from "./LayerRadioButtons";
-import EditorToolbar from "./EditorToolbar";
+import { LayerRadioButtons, EditorToolbar, type LayerSelection } from "../PolygonEditor";
 
 interface Props {
   dataset: IDataset;
@@ -157,7 +156,7 @@ export default function ReferencePatchEditorView({
   const selectedBasePatch = useMemo(() => {
     if (!selectedPatch) return null;
     if (selectedPatch.resolution_cm === 20) {
-      console.log("[Editor] selectedBasePatch updated (20cm):", {
+      console.debug("[Editor] selectedBasePatch updated (20cm):", {
         id: selectedPatch.id,
         deadwoodLabel: selectedPatch.reference_deadwood_label_id,
         forestCoverLabel: selectedPatch.reference_forest_cover_label_id,
@@ -168,7 +167,7 @@ export default function ReferencePatchEditorView({
     const baseIndex = selectedPatch.patch_index.split("_")[0] + "_" + selectedPatch.patch_index.split("_")[1];
     const basePatch = basePatches.find((p) => p.patch_index === baseIndex) || null;
     if (basePatch) {
-      console.log("[Editor] selectedBasePatch updated (child patch):", {
+      console.debug("[Editor] selectedBasePatch updated (child patch):", {
         id: basePatch.id,
         deadwoodLabel: basePatch.reference_deadwood_label_id,
         forestCoverLabel: basePatch.reference_forest_cover_label_id,
@@ -313,9 +312,9 @@ export default function ReferencePatchEditorView({
   const handleEditLayer = useCallback(async () => {
     if (!selectedPatchId || layerSelection === "ortho_only") return;
 
-    console.log("=== Starting Edit Mode ===");
-    console.log("Map ref:", mapRef.current);
-    console.log("Editor:", editor);
+    console.debug("=== Starting Edit Mode ===");
+    console.debug("Map ref:", mapRef.current);
+    console.debug("Editor:", editor);
 
     // Check if map is ready
     if (!mapRef.current) {
@@ -377,16 +376,16 @@ export default function ReferencePatchEditorView({
         }
       }
 
-      console.log("Loaded features:", features.length);
+      console.debug("Loaded features:", features.length);
 
       // Enter editing mode FIRST to initialize the overlay layer
-      console.log("Starting editor...");
+      console.debug("Starting editor...");
       editor.startEditing();
       setEditingMode(layerType);
 
       // NOW get the overlay layer (it's been created by startEditing)
       const overlayLayer = editor.getOverlayLayer();
-      console.log("Overlay layer after startEditing:", overlayLayer);
+      console.debug("Overlay layer after startEditing:", overlayLayer);
 
       if (!overlayLayer) {
         console.error("Overlay layer not found even after startEditing!");
@@ -405,12 +404,12 @@ export default function ReferencePatchEditorView({
       source.clear();
       if (features.length > 0) {
         source.addFeatures(features);
-        console.log("Added features to overlay, count:", source.getFeatures().length);
+        console.debug("Added features to overlay, count:", source.getFeatures().length);
       }
 
-      console.log("Editor isEditing:", editor.isEditing);
-      console.log("Overlay layer visible:", overlayLayer.getVisible());
-      console.log("Overlay layer z-index:", overlayLayer.getZIndex());
+      console.debug("Editor isEditing:", editor.isEditing);
+      console.debug("Overlay layer visible:", overlayLayer.getVisible());
+      console.debug("Overlay layer z-index:", overlayLayer.getZIndex());
 
       message.info(
         `Editing ${layerType === "deadwood" ? "Deadwood" : "Forest Cover"} - ${features.length} polygons loaded`,
@@ -482,12 +481,12 @@ export default function ReferencePatchEditorView({
 
       // Refetch patches to get updated reference label IDs BEFORE exiting editing mode
       // This ensures the map has fresh data when we exit editing
-      console.log("[Editor] Before refetch, selectedBasePatch:", selectedBasePatch);
+      console.debug("[Editor] Before refetch, selectedBasePatch:", selectedBasePatch);
       const refetchResult = await refetchPatches();
-      console.log("[Editor] After refetch, patches count:", refetchResult.data?.length);
+      console.debug("[Editor] After refetch, patches count:", refetchResult.data?.length);
 
       const updatedPatch = refetchResult.data?.find((p) => p.id === basePatch.id);
-      console.log("[Editor] Updated patch label IDs:", {
+      console.debug("[Editor] Updated patch label IDs:", {
         deadwood: updatedPatch?.reference_deadwood_label_id,
         forestCover: updatedPatch?.reference_forest_cover_label_id,
       });
@@ -675,7 +674,7 @@ export default function ReferencePatchEditorView({
   // Callback to receive map reference from child component
   const handleGetMapRef = useCallback((map: OLMap | null) => {
     mapRef.current = map;
-    console.log("Map reference received:", map);
+    console.debug("Map reference received:", map);
   }, []);
 
   // Callback to receive ortho layer getter from child component
@@ -688,7 +687,7 @@ export default function ReferencePatchEditorView({
   const autoCopyPredictionsAsReference = useCallback(
     async (basePatch: IReferencePatch) => {
       try {
-        console.log("[Auto-copy] Starting batch processing for patch:", basePatch.id);
+        console.debug("[Auto-copy] Starting batch processing for patch:", basePatch.id);
 
         // Fetch model prediction labels for deadwood and forest_cover
         const { data: deadwoodLabel } = await supabase
@@ -716,7 +715,7 @@ export default function ReferencePatchEditorView({
 
         // Process deadwood geometries in batches
         if (deadwoodLabel) {
-          console.log("[Auto-copy] Processing deadwood geometries");
+          console.debug("[Auto-copy] Processing deadwood geometries");
 
           const deadwoodGeoms = await clipGeometriesInBatches({
             labelId: deadwoodLabel.id,
@@ -735,7 +734,7 @@ export default function ReferencePatchEditorView({
           });
 
           if (deadwoodGeoms.length > 0) {
-            console.log(`[Auto-copy] Saving ${deadwoodGeoms.length} deadwood geometries`);
+            console.debug(`[Auto-copy] Saving ${deadwoodGeoms.length} deadwood geometries`);
             await saveGeometries({
               patchId: basePatch.id,
               datasetId: dataset.id,
@@ -743,13 +742,13 @@ export default function ReferencePatchEditorView({
               geometries: deadwoodGeoms,
             });
           } else {
-            console.log("[Auto-copy] No deadwood geometries found in patch area");
+            console.debug("[Auto-copy] No deadwood geometries found in patch area");
           }
         }
 
         // Process forest cover geometries in batches
         if (forestCoverLabel) {
-          console.log("[Auto-copy] Processing forest cover geometries");
+          console.debug("[Auto-copy] Processing forest cover geometries");
 
           const forestCoverGeoms = await clipGeometriesInBatches({
             labelId: forestCoverLabel.id,
@@ -768,7 +767,7 @@ export default function ReferencePatchEditorView({
           });
 
           if (forestCoverGeoms.length > 0) {
-            console.log(`[Auto-copy] Saving ${forestCoverGeoms.length} forest cover geometries`);
+            console.debug(`[Auto-copy] Saving ${forestCoverGeoms.length} forest cover geometries`);
             await saveGeometries({
               patchId: basePatch.id,
               datasetId: dataset.id,
@@ -776,13 +775,13 @@ export default function ReferencePatchEditorView({
               geometries: forestCoverGeoms,
             });
           } else {
-            console.log("[Auto-copy] No forest cover geometries found in patch area");
+            console.debug("[Auto-copy] No forest cover geometries found in patch area");
           }
         }
 
         // Clear progress state
         setBatchProgress(null);
-        console.log("[Auto-copy] Reference data auto-copied successfully");
+        console.debug("[Auto-copy] Reference data auto-copied successfully");
       } catch (error) {
         // Clear progress on error
         setBatchProgress(null);
@@ -929,21 +928,21 @@ export default function ReferencePatchEditorView({
               isAIActive={ai.isActive}
               isAIProcessing={ai.isProcessing}
               onToggleDraw={() => {
-                console.log("Toggle draw clicked, current isDrawing:", editor.isDrawing);
+                console.debug("Toggle draw clicked, current isDrawing:", editor.isDrawing);
                 editor.toggleDraw();
-                console.log("After toggle, isDrawing:", editor.isDrawing);
+                console.debug("After toggle, isDrawing:", editor.isDrawing);
               }}
               onCutHole={editor.cutHoleWithDrawn}
               onMerge={editor.mergeSelected}
               onClip={editor.clipSelected}
               onToggleAI={() => {
-                console.log("Toggle AI clicked, current isActive:", ai.isActive);
+                console.debug("Toggle AI clicked, current isActive:", ai.isActive);
                 if (ai.isActive) {
                   ai.disable();
                 } else {
                   ai.enable();
                 }
-                console.log("After toggle, isActive:", ai.isActive);
+                console.debug("After toggle, isActive:", ai.isActive);
               }}
               onDeleteSelected={editor.deleteSelected}
               onUndo={editor.undo}

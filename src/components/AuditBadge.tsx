@@ -49,39 +49,43 @@ function buildTooltip(audit: DatasetAuditUserInfo) {
       ? "Acquisition likely outside growing season"
       : "Acquisition season unknown";
 
+  const rows = [
+    { label: "Final assessment", value: assessmentToVisual(audit.final_assessment).text },
+    { label: "Audit date", value: audit.audit_date ? dayjs(audit.audit_date).format("YYYY-MM-DD") : "—" },
+    { label: "Georeferenced", value: renderBool(audit.is_georeferenced) },
+    { label: "Valid acquisition date", value: renderBool(audit.has_valid_acquisition_date) },
+    { label: "Phenology", value: `${renderBool(audit.has_valid_phenology)}`, hint: acquisitionHint },
+    { label: "Deadwood quality", value: renderQuality(audit.deadwood_quality || null) },
+    { label: "Forest cover quality", value: renderQuality(audit.forest_cover_quality || null) },
+  ];
+
   return (
-    <div className="space-y-1 text-sm">
-      <div>
-        <strong>Final assessment:</strong> {assessmentToVisual(audit.final_assessment).text}
-      </div>
-      <div>
-        <strong>Audit date:</strong> {audit.audit_date ? dayjs(audit.audit_date).format("YYYY-MM-DD") : "—"}
-      </div>
-      <div>
-        <strong>Georeferenced:</strong> {renderBool(audit.is_georeferenced)}
-      </div>
-      <div>
-        <strong>Valid acquisition date:</strong> {renderBool(audit.has_valid_acquisition_date)}
-      </div>
-      <div>
-        <strong>Phenology:</strong> {renderBool(audit.has_valid_phenology)} ({acquisitionHint})
-      </div>
-      <div>
-        <strong>Deadwood quality:</strong> {renderQuality(audit.deadwood_quality || null)}
-      </div>
-      <div>
-        <strong>Forest cover quality:</strong> {renderQuality(audit.forest_cover_quality || null)}
-      </div>
-      {audit.has_cog_issue && (
-        <div>
-          <strong>COG issues:</strong> {audit.cog_issue_notes}
-        </div>
-      )}
-      {audit.has_thumbnail_issue && (
-        <div>
-          <strong>Thumbnail issues:</strong> {audit.thumbnail_issue_notes}
-        </div>
-      )}
+    <div className="text-sm">
+      <table className="w-full">
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className="border-b border-gray-700 last:border-0">
+              <td className="py-1 pr-4 text-gray-300">{row.label}</td>
+              <td className="py-1 text-right font-medium">
+                {row.value}
+                {row.hint && <div className="text-xs font-normal text-gray-400">({row.hint})</div>}
+              </td>
+            </tr>
+          ))}
+          {audit.has_cog_issue && (
+            <tr className="border-b border-gray-700 last:border-0">
+              <td className="py-1 pr-4 text-gray-300">COG issues</td>
+              <td className="py-1 text-right font-medium">{audit.cog_issue_notes}</td>
+            </tr>
+          )}
+          {audit.has_thumbnail_issue && (
+            <tr className="border-b border-gray-700 last:border-0">
+              <td className="py-1 pr-4 text-gray-300">Thumbnail issues</td>
+              <td className="py-1 text-right font-medium">{audit.thumbnail_issue_notes}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

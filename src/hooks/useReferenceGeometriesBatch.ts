@@ -43,11 +43,11 @@ export async function clipGeometriesInBatches({
   let totalCount: number | null = null;
   const layerType = geometryTable.includes("deadwood") ? "deadwood" : "forest_cover";
 
-  console.log(`[Batch Clipping] Starting for ${layerType}, label ${labelId}`);
+  console.debug(`[Batch Clipping] Starting for ${layerType}, label ${labelId}`);
 
   let hasMoreData = true;
   while (hasMoreData) {
-    console.log(`[Batch Clipping] Fetching batch at offset ${offset}`);
+    console.debug(`[Batch Clipping] Fetching batch at offset ${offset}`);
 
     // Call the optimized batch RPC
     const { data, error } = await supabase.rpc("get_clipped_geometries_batch", {
@@ -69,7 +69,7 @@ export async function clipGeometriesInBatches({
     }
 
     if (!data || data.length === 0) {
-      console.log(`[Batch Clipping] No more data at offset ${offset}`);
+      console.debug(`[Batch Clipping] No more data at offset ${offset}`);
       hasMoreData = false;
       break;
     }
@@ -77,7 +77,7 @@ export async function clipGeometriesInBatches({
     // Extract total count from first batch
     if (totalCount === null && data.length > 0) {
       totalCount = (data[0] as BatchResult).total_count;
-      console.log(`[Batch Clipping] Total intersecting geometries: ${totalCount}`);
+      console.debug(`[Batch Clipping] Total intersecting geometries: ${totalCount}`);
     }
 
     // Extract geometries from batch results
@@ -97,7 +97,7 @@ export async function clipGeometriesInBatches({
 
     // If we got fewer results than batch size, we're done
     if (data.length < batchSize) {
-      console.log(`[Batch Clipping] Completed - got ${data.length} in final batch`);
+      console.debug(`[Batch Clipping] Completed - got ${data.length} in final batch`);
       hasMoreData = false;
       break;
     }
@@ -105,6 +105,6 @@ export async function clipGeometriesInBatches({
     offset += batchSize;
   }
 
-  console.log(`[Batch Clipping] Complete - ${allGeometries.length} geometries clipped`);
+  console.debug(`[Batch Clipping] Complete - ${allGeometries.length} geometries clipped`);
   return allGeometries;
 }

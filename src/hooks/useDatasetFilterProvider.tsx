@@ -34,7 +34,7 @@ const DatasetFilterContext = createContext<DatasetFilterContextType>({
   setAdvancedFilters: () => {},
   searchInput: "",
   setSearchInput: () => {},
-  sortDirection: "asc",
+  sortDirection: "desc",
   setSortDirection: () => {},
   filterByViewport: true,
   setFilterByViewport: () => {},
@@ -52,7 +52,7 @@ export const DatasetFilterProvider = (props: { children: React.ReactNode }) => {
     dateRange: [2010, new Date().getFullYear()],
   });
   const [searchInput, setSearchInput] = useState("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [filterByViewport, setFilterByViewport] = useState(true);
 
   return (
