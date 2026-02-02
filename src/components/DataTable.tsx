@@ -12,7 +12,6 @@ import {
   MinusOutlined,
   DeleteOutlined,
   EyeOutlined,
-  EyeInvisibleOutlined,
 } from "@ant-design/icons";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
@@ -239,24 +238,23 @@ const DataTable: React.FC<DataTableProps> = ({
     setDatasetToArchive(null);
   };
 
-  // Toggle visibility (public/private) handler
-  const handleToggleVisibility = async (record: Dataset) => {
-    const newAccess = record.data_access === "public" ? "private" : "public";
+  // Make dataset public handler
+  const handleMakePublic = async (record: Dataset) => {
     try {
       const { error } = await supabase
         .from("v2_datasets")
-        .update({ data_access: newAccess })
+        .update({ data_access: "public" })
         .eq("id", record.id);
 
       if (error) throw error;
 
-      message.success(`Dataset visibility changed to ${newAccess}`);
+      message.success("Dataset is now public");
       // Invalidate queries to refresh the data
       await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
       await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
     } catch (error) {
-      console.error("Error toggling visibility:", error);
-      message.error("Failed to change dataset visibility");
+      console.error("Error making dataset public:", error);
+      message.error("Failed to make dataset public");
     }
   };
 
@@ -281,14 +279,16 @@ const DataTable: React.FC<DataTableProps> = ({
         onClick: () => handleAddToSelection(record),
       };
 
-    // Visibility toggle action
-    const isPublic = record.data_access === "public";
-    const visibilityAction = {
-      key: "visibility",
-      label: isPublic ? "Make Private" : "Make Public",
-      icon: isPublic ? <EyeInvisibleOutlined /> : <EyeOutlined />,
-      onClick: () => handleToggleVisibility(record),
-    };
+    // Visibility action - only show "Make Public" for private datasets
+    const isPrivate = record.data_access === "private";
+    const visibilityAction = isPrivate
+      ? {
+        key: "visibility",
+        label: "Make Public",
+        icon: <EyeOutlined />,
+        onClick: () => handleMakePublic(record),
+      }
+      : null;
 
     // Archive action
     const archiveAction = {
@@ -321,7 +321,8 @@ const DataTable: React.FC<DataTableProps> = ({
         icon: <EditOutlined />,
         onClick: () => handleEditDataset(record),
       },
-      visibilityAction,
+      // Only show "Make Public" for private datasets
+      ...(visibilityAction ? [visibilityAction] : []),
       // Only show publish/remove action if not already published
       ...(!isPublished ? [publishAction] : []),
       { type: "divider" as const },
@@ -608,8 +609,8 @@ const DataTable: React.FC<DataTableProps> = ({
           Are you sure you want to archive <strong>{datasetToArchive?.file_name}</strong>?
         </p>
         <p className="text-gray-500 text-sm mt-2">
-          This will hide the dataset from your profile. The data will be preserved and can be restored by contacting
-          support.
+          This will hide the dataset from your profile. It will no longer be visible on the public map or used for
+          analysis. The data will be preserved and can be restored by contacting support.
         </p>
       </Modal>
     </>
