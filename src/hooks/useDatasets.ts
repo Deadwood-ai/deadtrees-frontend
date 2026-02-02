@@ -47,7 +47,7 @@ export function useDatasetById(datasetId: number | undefined) {
   });
 }
 
-// User-specific datasets - uses public view to exclude their own excluded datasets
+// User-specific datasets - uses public view to exclude excluded and archived datasets
 export function useUserDatasets() {
   const { session } = useAuth();
 
@@ -57,7 +57,8 @@ export function useUserDatasets() {
       const { data, error } = await supabase
         .from(Settings.DATA_TABLE_PUBLIC)
         .select("*")
-        .eq("user_id", session?.user.id);
+        .eq("user_id", session?.user.id)
+        .eq("archived", false);
       if (error) throw error;
       return data;
     },

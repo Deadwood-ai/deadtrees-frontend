@@ -61,6 +61,7 @@ export interface IDataset {
   additional_information: string | null;
   data_access: IDataAccess;
   citation_doi: string | null;
+  archived: boolean;
   ortho_file_name: string | null;
   ortho_file_size: number;
   bbox: string | null;

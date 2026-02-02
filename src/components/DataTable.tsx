@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 
-import { Button, Table, Tag, Tooltip, Dropdown, MenuProps } from "antd";
+import { Button, Table, Tag, Tooltip, Dropdown, MenuProps, Modal, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
 import {
@@ -10,6 +10,9 @@ import {
   DownOutlined,
   EditOutlined,
   MinusOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
 } from "@ant-design/icons";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
@@ -49,6 +52,8 @@ interface Dataset {
   is_deadwood_done?: boolean;
   is_forest_cover_done?: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
+  data_access?: "public" | "private" | "viewonly";
+  archived?: boolean;
 }
 
 interface DataTableProps {
@@ -70,6 +75,11 @@ const DataTable: React.FC<DataTableProps> = ({
   // State for edit modal
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedDatasetForEdit, setSelectedDatasetForEdit] = useState<Dataset | null>(null);
+
+  // State for archive confirmation modal
+  const [archiveModalVisible, setArchiveModalVisible] = useState(false);
+  const [datasetToArchive, setDatasetToArchive] = useState<Dataset | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const nav = useNavigate();
   const queryClient = useQueryClient();
@@ -193,6 +203,63 @@ const DataTable: React.FC<DataTableProps> = ({
     setSelectedDatasetForEdit(null);
   };
 
+  // Archive dataset handlers
+  const handleArchiveClick = (record: Dataset) => {
+    setDatasetToArchive(record);
+    setArchiveModalVisible(true);
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (!datasetToArchive) return;
+
+    setIsArchiving(true);
+    try {
+      const { error } = await supabase
+        .from("v2_datasets")
+        .update({ archived: true })
+        .eq("id", datasetToArchive.id);
+
+      if (error) throw error;
+
+      message.success(`Dataset "${datasetToArchive.file_name}" has been archived`);
+      // Invalidate queries to refresh the data
+      await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
+    } catch (error) {
+      console.error("Error archiving dataset:", error);
+      message.error("Failed to archive dataset");
+    } finally {
+      setIsArchiving(false);
+      setArchiveModalVisible(false);
+      setDatasetToArchive(null);
+    }
+  };
+
+  const handleArchiveCancel = () => {
+    setArchiveModalVisible(false);
+    setDatasetToArchive(null);
+  };
+
+  // Toggle visibility (public/private) handler
+  const handleToggleVisibility = async (record: Dataset) => {
+    const newAccess = record.data_access === "public" ? "private" : "public";
+    try {
+      const { error } = await supabase
+        .from("v2_datasets")
+        .update({ data_access: newAccess })
+        .eq("id", record.id);
+
+      if (error) throw error;
+
+      message.success(`Dataset visibility changed to ${newAccess}`);
+      // Invalidate queries to refresh the data
+      await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
+    } catch (error) {
+      console.error("Error toggling visibility:", error);
+      message.error("Failed to change dataset visibility");
+    }
+  };
+
   const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
     const canView = isDatasetViewable(record);
     const canPublish = isDatasetPublishEligible(record);
@@ -201,18 +268,36 @@ const DataTable: React.FC<DataTableProps> = ({
 
     const publishAction = isSelected
       ? {
-          key: "remove-publish",
-          label: "Remove from Publication",
-          icon: <MinusOutlined />,
-          onClick: () => handleRemoveFromSelection(record),
-        }
+        key: "remove-publish",
+        label: "Remove from Publication",
+        icon: <MinusOutlined />,
+        onClick: () => handleRemoveFromSelection(record),
+      }
       : {
-          key: "publish",
-          label: "Quick Publish",
-          icon: <PlusOutlined />,
-          disabled: !canPublish || isPublished,
-          onClick: () => handleAddToSelection(record),
-        };
+        key: "publish",
+        label: "Quick Publish",
+        icon: <PlusOutlined />,
+        disabled: !canPublish || isPublished,
+        onClick: () => handleAddToSelection(record),
+      };
+
+    // Visibility toggle action
+    const isPublic = record.data_access === "public";
+    const visibilityAction = {
+      key: "visibility",
+      label: isPublic ? "Make Private" : "Make Public",
+      icon: isPublic ? <EyeInvisibleOutlined /> : <EyeOutlined />,
+      onClick: () => handleToggleVisibility(record),
+    };
+
+    // Archive action
+    const archiveAction = {
+      key: "archive",
+      label: "Archive Dataset",
+      icon: <DeleteOutlined />,
+      danger: true,
+      onClick: () => handleArchiveClick(record),
+    };
 
     return [
       {
@@ -236,8 +321,11 @@ const DataTable: React.FC<DataTableProps> = ({
         icon: <EditOutlined />,
         onClick: () => handleEditDataset(record),
       },
+      visibilityAction,
       // Only show publish/remove action if not already published
       ...(!isPublished ? [publishAction] : []),
+      { type: "divider" as const },
+      archiveAction,
     ];
   };
 
@@ -505,6 +593,25 @@ const DataTable: React.FC<DataTableProps> = ({
       {selectedDatasetForEdit && (
         <EditDatasetModal visible={editModalVisible} onClose={handleCloseEditModal} dataset={selectedDatasetForEdit} />
       )}
+
+      {/* Archive Confirmation Modal */}
+      <Modal
+        title="Archive Dataset"
+        open={archiveModalVisible}
+        onOk={handleArchiveConfirm}
+        onCancel={handleArchiveCancel}
+        okText="Archive"
+        okButtonProps={{ danger: true, loading: isArchiving }}
+        cancelButtonProps={{ disabled: isArchiving }}
+      >
+        <p>
+          Are you sure you want to archive <strong>{datasetToArchive?.file_name}</strong>?
+        </p>
+        <p className="text-gray-500 text-sm mt-2">
+          This will hide the dataset from your profile. The data will be preserved and can be restored by contacting
+          support.
+        </p>
+      </Modal>
     </>
   );
 };
