@@ -25,6 +25,10 @@ export interface UseMapCoreOptions {
 	onMapReady?: (map: Map) => void;
 	/** Callback when ortho layer is ready */
 	onOrthoLayerReady?: (layer: TileLayerWebGL) => void;
+	/** Minimum zoom level */
+	minZoom?: number;
+	/** Maximum zoom level */
+	maxZoom?: number;
 	/** Whether to wait for external dependencies before initializing */
 	isReady?: boolean;
 }
@@ -66,6 +70,8 @@ export function useMapCore({
 	onViewportChange,
 	onMapReady,
 	onOrthoLayerReady,
+	minZoom = 14,
+	maxZoom = 23,
 	isReady = true,
 }: UseMapCoreOptions): UseMapCoreReturn {
 	const mapRef = useRef<Map | null>(null);
@@ -150,8 +156,8 @@ export function useMapCore({
 				center: hasValidViewport ? initialViewport.center : viewOptions.center,
 				zoom: hasValidViewport && initialViewport.zoom !== 2 ? initialViewport.zoom : undefined,
 				extent: cogExtent,
-				minZoom: 14,
-				maxZoom: 23,
+				minZoom,
+				maxZoom,
 				projection: "EPSG:3857",
 				constrainOnlyCenter: true,
 			});

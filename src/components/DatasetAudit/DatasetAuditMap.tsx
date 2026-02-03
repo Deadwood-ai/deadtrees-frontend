@@ -133,6 +133,7 @@ const DatasetAuditMap = forwardRef<DatasetAuditMapHandle, DatasetAuditMapProps>(
 		onViewportChange: setViewport,
 		onMapReady,
 		onOrthoLayerReady,
+		minZoom: 2,
 		isReady: !isLoadingLabels && !isAOILoading && !!data?.file_name,
 	});
 
