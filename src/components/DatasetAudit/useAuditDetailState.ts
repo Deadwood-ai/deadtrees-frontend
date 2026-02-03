@@ -10,6 +10,7 @@ import {
 	useClearAuditLock,
 	useOrthoMetadata,
 	useMarkAsReviewed,
+	useDatasetAOI,
 } from "../../hooks/useDatasetAudit";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDownload } from "../../hooks/useDownloadProvider";
@@ -55,6 +56,7 @@ export function useAuditDetailState({ dataset }: UseAuditDetailStateProps) {
 	const { mutateAsync: markAsReviewed, isPending: isMarkingReviewed } = useMarkAsReviewed();
 	const { data: orthoMetadata, isLoading: isOrthoLoading } = useOrthoMetadata(dataset.id);
 	const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset.id);
+	const { data: aoiData, isLoading: isAOIDataLoading } = useDatasetAOI(dataset.id);
 
 	// Navigation context
 	const { getNextDatasetId, currentIndex, totalCount } = useAuditNavigation();
@@ -144,6 +146,21 @@ export function useAuditDetailState({ dataset }: UseAuditDetailStateProps) {
 		setHasAOI(!!geometry);
 		setIsAOILoaded(true);
 	}, []);
+
+	// Mark AOI as loaded once the AOI query completes (even if empty)
+	useEffect(() => {
+		if (isAOIDataLoading || isAOILoaded) return;
+
+		if (aoiData?.geometry) {
+			currentAOIGeometry.current = aoiData.geometry as GeoJSON.MultiPolygon | GeoJSON.Polygon;
+			setHasAOI(true);
+		} else {
+			currentAOIGeometry.current = null;
+			setHasAOI(false);
+		}
+
+		setIsAOILoaded(true);
+	}, [isAOIDataLoading, isAOILoaded, aoiData]);
 
 	// Form submit handler
 	const handleSubmit = async (values: AuditFormValues) => {

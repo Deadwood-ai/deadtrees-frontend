@@ -1,5 +1,13 @@
+import { useState } from "react";
 import { Segmented, Slider, Checkbox, Button, Divider, Tooltip } from "antd";
-import { FlagOutlined, EditOutlined, WarningOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import {
+  FlagOutlined,
+  EditOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 
 type QualityRating = "great" | "sentinel_ok" | "bad" | null | undefined;
 
@@ -82,6 +90,9 @@ const DatasetLayerControlPanel = ({
   onEditDeadwood,
   isLoggedIn,
 }: DatasetLayerControlPanelProps) => {
+  const [showAttributions, setShowAttributions] = useState(false);
+  const hasModelInfo = hasDeadwood || hasForestCover;
+
   return (
     <div
       className="flex w-52 flex-col rounded-lg bg-white/95 p-3 shadow-lg backdrop-blur-sm pointer-events-auto"
@@ -169,6 +180,56 @@ const DatasetLayerControlPanel = ({
         tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%` }}
         disabled={!showForestCover && !showDeadwood}
       />
+
+      {hasModelInfo && (
+        <>
+          <Divider className="my-3" />
+          <div className="mb-1 text-xs font-medium text-gray-500">Model Info</div>
+          <div className="flex items-center gap-2">
+            <Tooltip title="View model attributions and papers">
+              <Button
+                type="link"
+                size="small"
+                icon={<InfoCircleOutlined />}
+                onClick={() => setShowAttributions((prev) => !prev)}
+                className="m-0 p-0 text-xs"
+              >
+                {showAttributions ? "Hide Citations" : "View Citations"}
+              </Button>
+            </Tooltip>
+          </div>
+          {showAttributions && (
+            <div className="mt-2 space-y-2 rounded bg-gray-50 p-2 text-xs">
+              {hasDeadwood && (
+                <div>
+                  <div className="font-semibold text-gray-800">Deadwood Detection:</div>
+                  <a
+                    href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
+                    className="text-blue-600 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Mohring et al., 2025 (ISPRS Open)
+                  </a>
+                </div>
+              )}
+              {hasForestCover && (
+                <div>
+                  <div className="font-semibold text-gray-800">Forest Cover:</div>
+                  <a
+                    href="https://proceedings.neurips.cc/paper_files/paper/2024/file/58efdd77196fa8159062afa0408245da-Paper-Datasets_and_Benchmarks_Track.pdf"
+                    className="text-blue-600 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Veitch-Michaelis et al. (2024)
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Feedback Section */}
       <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
