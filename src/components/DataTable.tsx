@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 
 import { Button, Table, Tag, Tooltip, Dropdown, MenuProps, Modal, message } from "antd";
+import type { SortOrder } from "antd/es/table/interface";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
 import {
@@ -22,7 +23,6 @@ import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
 import { useQueuePositions } from "../hooks/useQueuePositions";
 import { isDatasetViewable } from "../utils/datasetVisibility";
-import { useDatasetAuditsByIds } from "../hooks/useDatasetAudit";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -37,22 +37,28 @@ interface Dataset {
   additional_information?: string;
   citation_doi?: string;
   freidata_doi?: string;
-  admin_level_1?: string;
-  admin_level_2?: string;
-  admin_level_3?: string;
+  admin_level_1: string | null;
+  admin_level_2: string | null;
+  admin_level_3: string | null;
   current_status?: string;
-  has_error?: boolean;
+  has_error: boolean;
   error_message?: string;
-  is_upload_done?: boolean;
-  is_ortho_done?: boolean;
-  is_cog_done?: boolean;
-  is_thumbnail_done?: boolean;
-  is_metadata_done?: boolean;
-  is_deadwood_done?: boolean;
-  is_forest_cover_done?: boolean;
+  is_upload_done: boolean;
+  is_ortho_done: boolean;
+  is_cog_done: boolean;
+  is_thumbnail_done: boolean;
+  is_metadata_done: boolean;
+  is_deadwood_done: boolean;
+  is_forest_cover_done: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
   data_access?: "public" | "private" | "viewonly";
   archived?: boolean;
+  final_assessment?: "ready" | "fixable_issues" | "no_issues" | "exclude_completely" | null;
+  audit_date?: string | null;
+  deadwood_quality?: "great" | "sentinel_ok" | "bad" | null;
+  forest_cover_quality?: "great" | "sentinel_ok" | "bad" | null;
+  has_valid_phenology?: boolean | null;
+  has_valid_acquisition_date?: boolean | null;
 }
 
 interface DataTableProps {
@@ -92,7 +98,6 @@ const DataTable: React.FC<DataTableProps> = ({
   // Queue positions for user datasets
   const datasetIds = useMemo(() => (userData ? (userData as Dataset[]).map((d) => d.id) : []), [userData]);
   const { data: queueById } = useQueuePositions(datasetIds);
-  const { data: auditsById } = useDatasetAuditsByIds(datasetIds);
 
   // Effect to reset selection when requested
   useEffect(() => {
@@ -336,7 +341,7 @@ const DataTable: React.FC<DataTableProps> = ({
       dataIndex: "id",
       key: "id",
       defaultSortOrder: "descend" as const,
-      sortDirections: ["descend", "ascend"] as const,
+      sortDirections: ["descend", "ascend"] as SortOrder[],
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
       width: 80,
     },
@@ -552,7 +557,17 @@ const DataTable: React.FC<DataTableProps> = ({
         const progress = <ProcessingProgress dataset={record} queueInfo={queueById?.[record.id]} />;
 
         const isComplete = isDatasetComplete(record);
-        const audit = auditsById?.get(record.id);
+        const normalizedAssessment = record.final_assessment === "ready" ? "no_issues" : record.final_assessment;
+        const audit = normalizedAssessment
+          ? {
+            final_assessment: normalizedAssessment,
+            audit_date: record.audit_date ?? null,
+            deadwood_quality: record.deadwood_quality ?? null,
+            forest_cover_quality: record.forest_cover_quality ?? null,
+            has_valid_phenology: record.has_valid_phenology ?? null,
+            has_valid_acquisition_date: record.has_valid_acquisition_date ?? null,
+          }
+          : null;
 
         if (isComplete && audit?.final_assessment) {
           return <AuditBadge datasetId={record.id} audit={audit} />;

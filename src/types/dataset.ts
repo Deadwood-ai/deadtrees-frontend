@@ -100,6 +100,8 @@ export interface IDataset {
   forest_cover_quality: "great" | "sentinel_ok" | "bad" | null;
   has_major_issue: boolean | null;
   audit_date: string | null;
+  has_valid_acquisition_date?: boolean | null;
+  has_valid_phenology?: boolean | null;
   audited_by: string | null;
   audited_by_email: string | null;
 
@@ -157,8 +159,3 @@ export interface IStats {
   contributors_count: number;
 }
 
-export interface ICollaborators {
-  id: number;
-  created_at: string;
-  collaborator_text: string;
-}

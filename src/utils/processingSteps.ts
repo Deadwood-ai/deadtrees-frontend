@@ -36,6 +36,12 @@ export interface DatasetProgress {
   is_forest_cover_done?: boolean;
   has_error?: boolean;
   current_status?: string;
+  final_assessment?: "ready" | "fixable_issues" | "no_issues" | "exclude_completely" | null;
+  audit_date?: string | null;
+  deadwood_quality?: "great" | "sentinel_ok" | "bad" | null;
+  forest_cover_quality?: "great" | "sentinel_ok" | "bad" | null;
+  has_valid_phenology?: boolean | null;
+  has_valid_acquisition_date?: boolean | null;
 }
 
 /**

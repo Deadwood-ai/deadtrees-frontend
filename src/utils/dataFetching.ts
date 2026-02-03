@@ -7,9 +7,3 @@ export const fetchData = async () => {
   if (error) throw error;
   return data;
 };
-
-export const fetchCollaborators = async () => {
-  const { data, error } = await supabase.from("collaborators").select("*");
-  if (error) throw error;
-  return data;
-};

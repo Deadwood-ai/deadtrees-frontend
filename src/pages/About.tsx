@@ -66,8 +66,8 @@ export default function About() {
   const navigate = useNavigate();
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
-  const { collaborators } = useData();
-  // console.log("collaborators:", collaborators);
+  const { authors } = useData();
+  const contributorNames = (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b));
 
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -187,18 +187,10 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
               label: <span className="m-0 pt-6 text-lg text-gray-500">Want to see all contributors?</span>,
               children: (
                 <div>
-                  <p className="text-md font-semibold">Data Contributors and collaborators:</p>
-                  <ul className="text-md">
-                    {collaborators && collaborators.length > 0 ? (
-                      collaborators
-                        .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
-                        .map((collaborator) => {
-                          return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
-                        })
-                    ) : (
-                      <li>Loading collaborators...</li>
-                    )}
-                  </ul>
+                  <p className="text-md font-semibold">Data contributors:</p>
+                  <p className="text-md">
+                    {contributorNames.length > 0 ? contributorNames.join(", ") : "Loading contributors..."}
+                  </p>
                 </div>
               ),
               style: {

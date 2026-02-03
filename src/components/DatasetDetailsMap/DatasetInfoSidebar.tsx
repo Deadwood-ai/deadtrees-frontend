@@ -1,7 +1,6 @@
 import { Typography, Tooltip, Tag } from "antd";
 import { EnvironmentOutlined, CheckCircleOutlined, ExclamationCircleOutlined, WarningOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import type { IDataset } from "../../types/dataset";
-import type { DatasetAuditUserInfo } from "../../hooks/useDatasetAudit";
 import type { PhenologyMetadata } from "../../types/phenology";
 import countryList from "../../utils/countryList";
 import { isGeonadirDataset, getTruncatedAuthorDisplay } from "../../utils/datasetUtils";
@@ -14,7 +13,7 @@ interface DatasetInfoSidebarProps {
   dataset: IDataset;
   phenologyData: PhenologyMetadata | null | undefined;
   isPhenologyLoading: boolean;
-  auditInfo: DatasetAuditUserInfo | null | undefined;
+  auditInfo: AuditInfo | null | undefined;
   overlappingDatasets: IDataset[];
   isLoadingOverlapping: boolean;
 }
@@ -125,7 +124,7 @@ const BooleanValue = ({ value }: { value: boolean | null | undefined }) => {
 };
 
 interface AuditSectionProps {
-  audit: DatasetAuditUserInfo | null | undefined;
+  audit: AuditInfo | null | undefined;
 }
 
 const AuditSection = ({ audit }: AuditSectionProps) => {
@@ -176,6 +175,13 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
       </div>
     </div>
   );
+};
+
+type AuditInfo = {
+  final_assessment: "no_issues" | "fixable_issues" | "exclude_completely" | "ready" | null;
+  forest_cover_quality: "great" | "sentinel_ok" | "bad" | null;
+  deadwood_quality: "great" | "sentinel_ok" | "bad" | null;
+  has_valid_phenology: boolean | null | undefined;
 };
 
 // === Main Sidebar Component ===

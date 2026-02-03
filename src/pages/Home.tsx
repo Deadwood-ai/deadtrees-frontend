@@ -23,7 +23,8 @@ const logos = [
 ];
 
 const FAQ = () => {
-  const { collaborators } = useData();
+  const { authors } = useData();
+  const contributorNames = (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b));
 
   const FAQItems = [
     {
@@ -41,18 +42,10 @@ const FAQ = () => {
             <a href="https://uni-freiburg.de/enr-geosense/team/janusch_vajna_jehle/">Janusch Vajna-Jehle</a> and
             <a href="https://hydrocode.de/home"> hydrocode. </a>
           </p>
-          <p className="text-md font-semibold">Data Contributors and collaborators:</p>
-          <ul className="text-md">
-            {collaborators && collaborators.length > 0 ? (
-              collaborators
-                .sort((a, b) => a.collaborator_text.localeCompare(b.collaborator_text))
-                .map((collaborator) => {
-                  return <li key={collaborator.id}>{collaborator.collaborator_text}</li>;
-                })
-            ) : (
-              <li>Loading collaborators...</li>
-            )}
-          </ul>
+          <p className="text-md font-semibold">Data contributors:</p>
+          <p className="text-md">
+            {contributorNames.length > 0 ? contributorNames.join(", ") : "Loading contributors..."}
+          </p>
         </div>
       ),
       style: {

@@ -4,7 +4,6 @@ import { SyncOutlined, CloseCircleOutlined, ScheduleOutlined } from "@ant-design
 import { calculateProcessingProgress, DatasetProgress } from "../utils/processingSteps";
 import { QueueInfo } from "../hooks/useQueuePositions";
 import AuditBadge from "./AuditBadge";
-import { useDatasetAudit } from "../hooks/useDatasetAudit";
 
 interface ProcessingProgressProps {
   dataset: DatasetProgress;
@@ -14,7 +13,17 @@ interface ProcessingProgressProps {
 
 const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDetails = true, queueInfo }) => {
   const progress = calculateProcessingProgress(dataset);
-  const { data: audit } = useDatasetAudit((dataset as DatasetProgress & { id: number }).id);
+  const normalizedAssessment = dataset.final_assessment === "ready" ? "no_issues" : dataset.final_assessment;
+  const audit = normalizedAssessment
+    ? {
+      final_assessment: normalizedAssessment,
+      audit_date: dataset.audit_date ?? null,
+      deadwood_quality: dataset.deadwood_quality ?? null,
+      forest_cover_quality: dataset.forest_cover_quality ?? null,
+      has_valid_phenology: dataset.has_valid_phenology ?? null,
+      has_valid_acquisition_date: dataset.has_valid_acquisition_date ?? null,
+    }
+    : null;
 
   // Handle error state
   if (dataset.has_error) {
@@ -30,11 +39,11 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
   // Handle pending state (uploaded, not started yet → queued)
   const hasStartedAnyStep = Boolean(
     dataset.is_odm_done ||
-      dataset.is_ortho_done ||
-      dataset.is_metadata_done ||
-      dataset.is_cog_done ||
-      dataset.is_deadwood_done ||
-      dataset.is_forest_cover_done,
+    dataset.is_ortho_done ||
+    dataset.is_metadata_done ||
+    dataset.is_cog_done ||
+    dataset.is_deadwood_done ||
+    dataset.is_forest_cover_done,
   );
 
   // If the queue reports active processing, prefer that over local flags
@@ -44,9 +53,9 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
     !isActivelyProcessing &&
     Boolean(
       dataset.is_upload_done &&
-        !hasStartedAnyStep &&
-        !dataset.has_error &&
-        (dataset.current_status === "idle" || dataset.current_status === undefined || dataset.current_status === null),
+      !hasStartedAnyStep &&
+      !dataset.has_error &&
+      (dataset.current_status === "idle" || dataset.current_status === undefined || dataset.current_status === null),
     );
 
   if (isQueued) {

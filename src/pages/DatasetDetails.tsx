@@ -10,7 +10,6 @@ import { useDownload } from "../hooks/useDownloadProvider";
 import { useOverlappingDatasets } from "../hooks/useOverlappingDatasets";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
 import { usePhenologyData } from "../hooks/usePhenologyData";
-import { useDatasetAudit } from "../hooks/useDatasetAudit";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag } from "../hooks/useDatasetFlags";
 import { useDatasetEditing } from "../hooks/useDatasetEditing";
@@ -67,7 +66,16 @@ export default function DatasetDetails() {
     enabled: !!dataset?.id,
   });
   const { data: phenologyData, isLoading: isPhenologyLoading } = usePhenologyData(dataset?.id);
-  const { data: auditInfo } = useDatasetAudit(dataset?.id);
+  const auditInfo = dataset
+    ? {
+      final_assessment: dataset.final_assessment,
+      forest_cover_quality: dataset.forest_cover_quality,
+      deadwood_quality: dataset.deadwood_quality,
+      has_valid_phenology: dataset.has_valid_phenology ?? null,
+      has_valid_acquisition_date: dataset.has_valid_acquisition_date ?? null,
+      audit_date: dataset.audit_date ?? null,
+    }
+    : null;
 
   // Back button handler
   const handleBackClick = useCallback(() => {

@@ -1,8 +1,6 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePublicDatasets, useUserDatasets, useAuthors, useCollaborators } from "./useDatasets";
-import { IDataset, IThumbnail, ICollaborators } from "../types/dataset";
-import { useAuth } from "./useAuthProvider";
+import { usePublicDatasets, useUserDatasets, useAuthors } from "./useDatasets";
+import { IDataset, IThumbnail } from "../types/dataset";
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -19,7 +17,6 @@ type DataContextType = {
   setFilter: (filter: string) => void;
   setFilterTag: (filterTag: string) => void;
   thumbnails: IThumbnail[] | undefined;
-  collaborators: ICollaborators[] | undefined;
   authors: AuthorOption[] | undefined;
   userData: IDataset[] | undefined;
   isLoading: boolean;
@@ -28,21 +25,17 @@ type DataContextType = {
 const DataContext = createContext<DataContextType>({
   data: undefined,
   filter: "",
-  setFilter: () => {},
-  setFilterTag: () => {},
+  setFilter: () => { },
+  setFilterTag: () => { },
   authors: undefined,
   thumbnails: undefined,
-  collaborators: undefined,
   userData: undefined,
   isLoading: false,
 });
 
 const DataProvider = ({ children }: DataProviderProps) => {
-  const { session } = useAuth();
-  const queryClient = useQueryClient();
 
   const { data: rawData, isLoading: isLoadingRawData } = usePublicDatasets();
-  const { data: collaborators, isLoading: isLoadingCollaborators } = useCollaborators();
   const { data: authors } = useAuthors();
   const { data: userData } = useUserDatasets();
 
@@ -77,10 +70,9 @@ const DataProvider = ({ children }: DataProviderProps) => {
       filter,
       setFilter,
       setFilterTag,
-      collaborators,
-      isLoading: isLoadingRawData || isLoadingCollaborators,
+      isLoading: isLoadingRawData,
     }),
-    [filteredData, userData, authors, filter, collaborators, isLoadingRawData, isLoadingCollaborators],
+    [filteredData, userData, authors, filter, isLoadingRawData],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

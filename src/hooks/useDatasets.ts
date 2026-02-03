@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCollaborators } from "../utils/dataFetching";
 import { useAuth } from "./useAuthProvider";
 import { supabase } from "./useSupabase";
 import { Settings } from "../config";
 import { IDataset } from "../types/dataset";
+import { fixTextEncoding } from "../utils/textUtils";
 
 // Base datasets hook - includes ALL datasets (for admin/audit use)
 export function useDatasets() {
@@ -77,22 +77,18 @@ export function useAuthors() {
     enabled: !!datasets,
     queryFn: () => {
       // Flatten all authors arrays and remove duplicates
-      const allAuthors = datasets?.flatMap((item) => item.authors || []).filter(Boolean);
+      const allAuthors = datasets
+        ?.flatMap((item) => item.authors || [])
+        .filter(Boolean)
+        .map((author) => fixTextEncoding(author).replace(/\s+/g, " ").trim())
+        .filter(Boolean);
 
-      const authorsUnique = [...new Set(allAuthors)];
+      const authorsUnique = [...new Set(allAuthors)].sort((a, b) => a.localeCompare(b));
 
       return authorsUnique.map((author) => ({
         label: author,
         value: author,
       }));
     },
-  });
-}
-
-// Collaborators
-export function useCollaborators() {
-  return useQuery({
-    queryKey: ["collaborators"],
-    queryFn: fetchCollaborators,
   });
 }

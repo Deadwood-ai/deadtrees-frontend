@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { Tag, Tooltip } from "antd";
 import dayjs from "dayjs";
-import { useDatasetAudit, DatasetAuditUserInfo } from "../hooks/useDatasetAudit";
+import type { DatasetAuditUserInfo } from "../hooks/useDatasetAudit";
 
 type Props = {
   datasetId: number;
-  audit?: DatasetAuditUserInfo | null;
+  audit?: Partial<DatasetAuditUserInfo> | null;
   size?: "small" | "default";
 };
 
@@ -90,10 +90,8 @@ function buildTooltip(audit: DatasetAuditUserInfo) {
   );
 }
 
-const AuditBadge: React.FC<Props> = ({ datasetId, audit: auditProp }) => {
-  const { data: auditFetched } = useDatasetAudit(datasetId);
-
-  const audit = (auditProp ?? auditFetched) as DatasetAuditUserInfo | null;
+const AuditBadge: React.FC<Props> = ({ datasetId: _datasetId, audit: auditProp }) => {
+  const audit = (auditProp ?? null) as DatasetAuditUserInfo | null;
   const show = Boolean(audit && audit.final_assessment);
 
   const visual = useMemo(() => assessmentToVisual(audit?.final_assessment ?? null), [audit?.final_assessment]);
