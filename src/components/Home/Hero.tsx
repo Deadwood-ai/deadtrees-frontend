@@ -28,68 +28,27 @@ const Hero = () => {
 
     setIsSubmitting(true);
 
-    // First check if the email exists
     const normalizedEmail = email.trim().toLowerCase();
-    const { data: existingEmails, error: checkError } = await supabase
-      .from(Settings.NEWSLETTER_TABLE)
-      .select("email")
-      .eq("email", normalizedEmail);
 
-    if (checkError) {
-      console.error("Error checking email:", checkError);
-      notification.error({
-        message: "Error",
-        description: "There was a problem checking your email. Please try again.",
-        placement: "topRight",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    // If email already exists, notify user and exit
-    if (existingEmails && existingEmails.length > 0) {
-      notification.info({
-        message: "Already subscribed",
-        description: "This email is already subscribed to our newsletter.",
-        placement: "topRight",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Get highest ID to manually increment
-    const { data: maxIdData, error: maxIdError } = await supabase
-      .from(Settings.NEWSLETTER_TABLE)
-      .select("id")
-      .order("id", { ascending: false })
-      .limit(1);
-
-    if (maxIdError) {
-      console.error("Error getting max ID:", maxIdError);
-      notification.error({
-        message: "Error",
-        description: "An error occurred while processing your subscription.",
-        placement: "topRight",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Calculate next ID (or use 1 if no records exist)
-    const nextId = maxIdData && maxIdData.length > 0 ? maxIdData[0].id + 1 : 1;
-
-    // Insert with explicit ID
     const { error: insertError } = await supabase
       .from(Settings.NEWSLETTER_TABLE)
-      .insert([{ id: nextId, email: normalizedEmail }]);
+      .insert([{ email: normalizedEmail }]);
 
     if (insertError) {
-      notification.error({
-        message: "Error",
-        description: "An error occurred while adding the subscriber.",
-        placement: "topRight",
-      });
-      console.error("Error adding subscriber:", insertError);
+      if (insertError.code === "23505") {
+        notification.info({
+          message: "Already subscribed",
+          description: "This email is already subscribed to our newsletter.",
+          placement: "topRight",
+        });
+      } else {
+        notification.error({
+          message: "Error",
+          description: "An error occurred while adding the subscriber.",
+          placement: "topRight",
+        });
+        console.error("Error adding subscriber:", insertError);
+      }
     } else {
       notification.success({
         message: "Thank you!",
