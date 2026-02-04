@@ -59,6 +59,8 @@ const MONTHS = [
 	{ label: "Dec", value: 12 },
 ];
 
+const BADGE_OVERFLOW_COUNT = 999999;
+
 // Helper function to check if dataset processing is complete
 const isProcessingComplete = (dataset: IDataset) => {
 	return (
@@ -494,7 +496,7 @@ export default function DatasetAudit() {
 			if (!flagData) return null;
 			return (
 				<Tooltip title={`${flagData.flag_count} user-reported issue(s)`}>
-					<Badge count={flagData.flag_count} size="small">
+					<Badge count={flagData.flag_count} size="small" overflowCount={BADGE_OVERFLOW_COUNT}>
 						<FlagOutlined style={{ color: "#faad14" }} />
 					</Badge>
 				</Tooltip>
@@ -511,7 +513,7 @@ export default function DatasetAudit() {
 			if (!count) return <span className="text-gray-400">—</span>;
 			return (
 				<Tooltip title={`${count} pending polygon edit(s) awaiting review`}>
-					<Badge count={count} size="small" color="#1890ff">
+					<Badge count={count} size="small" color="#1890ff" overflowCount={BADGE_OVERFLOW_COUNT}>
 						<EditOutlined style={{ color: "#1890ff" }} />
 					</Badge>
 				</Tooltip>
@@ -707,7 +709,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>📋 Pending</span>
-									<Badge count={pendingCount} size="small" color="#1890ff" showZero />
+									<Badge count={pendingCount} size="small" color="#1890ff" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "pending",
@@ -716,7 +718,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>✓ Completed</span>
-									<Badge count={completedCount} size="small" color="#52c41a" showZero />
+									<Badge count={completedCount} size="small" color="#52c41a" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "completed",
@@ -725,7 +727,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>🔔 Edits & Flags</span>
-									<Badge count={editsFlagsCount} size="small" color="#faad14" showZero />
+									<Badge count={editsFlagsCount} size="small" color="#faad14" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "edits-flags",
@@ -734,7 +736,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>📌 Reference</span>
-									<Badge count={referenceCount} size="small" color="#722ed1" showZero />
+									<Badge count={referenceCount} size="small" color="#722ed1" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "reference",

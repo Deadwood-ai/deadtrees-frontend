@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Form, message } from "antd";
+import { Form, message, notification } from "antd";
+import confetti from "canvas-confetti";
 import { IDataset } from "../../types/dataset";
 import {
 	useDatasetAudit,
@@ -18,12 +19,91 @@ import { useAuditNavigationGuard } from "../../hooks/useAuditNavigationGuard";
 import { useAuditNavigation } from "../../hooks/useAuditNavigation";
 import { useDatasetFlags, useUpdateFlagStatus } from "../../hooks/useDatasetFlags";
 import { usePhenologyData } from "../../hooks/usePhenologyData";
-import { useSeasonPrompt, DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
+import { useSeasonPrompt } from "../../hooks/useSeasonPrompt";
+import { supabase } from "../../hooks/useSupabase";
 import { AOIToolbarState } from "../DatasetDetailsMap/DatasetDetailsMap";
 
 export interface UseAuditDetailStateProps {
 	dataset: IDataset;
 }
+
+const GRATITUDE_MESSAGES = [
+	"Thank you! That was careful work, and it shows. 🌲",
+	"Grateful for your effort - this is the hard part. 🙌",
+	"Thanks for the precision. It really adds up. 🎯",
+	"Appreciate the care. One more dataset, way better. ✨",
+	"Thank you for doing the unglamorous, important bit. 🧠",
+	"Thanks - your sharp eyes just helped a lot. 👀",
+	"Grateful for the patience. The data is cleaner now. 🧼",
+	"Thanks! The forest data owes you a coffee. ☕",
+	"Appreciate you. This work genuinely matters. 💚",
+	"Thank you! That was brainwork, not busywork. 🧠",
+	"Thanks for the focus - and the accuracy boost. 🎯",
+	"Grateful for the hustle. Quality is up. 📈",
+	"Thank you for the detail work. Seriously. 🔎",
+	"Thanks! You just made the map kinder to truth. 🗺️",
+	"Appreciate the craft. That was solid. 🪵",
+	"Thank you. That was not easy, and you did it well. 💪",
+	"Thanks - another dataset made less chaotic. 🧹",
+	"Grateful for your time. The trees approve. 🌳",
+	"Thank you! That is the kind of audit that counts. ✅",
+	"Thanks for the care. The canopy salutes you. 🌿",
+	"Appreciate the effort. Signal-to-noise just improved. 📡",
+	"Thank you! Your work makes this trustworthy. 🔒",
+	"Grateful for the grind - and the win. 🏆",
+	"Thanks. You just leveled up data quality. 🎉",
+];
+
+const getRandomGratitudeMessage = () => {
+	if (GRATITUDE_MESSAGES.length === 0) {
+		return "Thank you. That was meaningful work. 🌲";
+	}
+	const idx = Math.floor(Math.random() * GRATITUDE_MESSAGES.length);
+	return GRATITUDE_MESSAGES[idx];
+};
+
+const getLocalDayRangeIso = () => {
+	const now = new Date();
+	const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+	const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+	return { startIso: start.toISOString(), endIso: end.toISOString() };
+};
+
+const getDailyAuditCount = async (userId: string) => {
+	const { startIso, endIso } = getLocalDayRangeIso();
+	const { count, error } = await supabase
+		.from("dataset_audit")
+		.select("dataset_id", { count: "exact", head: true })
+		.eq("audited_by", userId)
+		.gte("audit_date", startIso)
+		.lte("audit_date", endIso);
+	if (error) throw error;
+	return count ?? 0;
+};
+
+const fireConfetti = (count: number) => {
+	const safeCount = Math.max(1, count);
+	const intensity = Math.min(safeCount, 25);
+	const particleCount = 25 + intensity * 4;
+	const spread = 55 + intensity * 1.6;
+	const startVelocity = 22 + intensity * 0.6;
+	const ticks = 140 + intensity * 6;
+	const scalar = 0.85 + intensity * 0.01;
+	try {
+		confetti({
+			particleCount,
+			spread,
+			startVelocity,
+			gravity: 0.9,
+			decay: 0.9,
+			scalar,
+			ticks,
+			origin: { y: 0.7 },
+		});
+	} catch (error) {
+		console.debug("Confetti skipped", error);
+	}
+};
 
 export function useAuditDetailState({ dataset }: UseAuditDetailStateProps) {
 	const navigate = useNavigate();
@@ -199,8 +279,31 @@ export function useAuditDetailState({ dataset }: UseAuditDetailStateProps) {
 				aoiGeometry: currentAOIGeometry.current || undefined,
 			};
 
+			const isCompletion = !auditData;
 			await saveAudit(auditPayload);
-			message.success(auditData ? "Audit data updated successfully" : "Audit data saved successfully");
+			if (!isCompletion) {
+				message.success("Audit data updated successfully");
+			}
+
+			let dailyCountText = "";
+			let dailyCountForConfetti = 1;
+			if (user?.id) {
+				try {
+					const dailyCount = await getDailyAuditCount(user.id);
+					dailyCountText = ` You have audited ${dailyCount} today. 🎉`;
+					dailyCountForConfetti = dailyCount || 1;
+				} catch (error) {
+					console.debug("Failed to load daily audit count", error);
+				}
+			}
+
+			fireConfetti(dailyCountForConfetti);
+			notification.success({
+				message: "Thank you 🌲✨",
+				description: `${getRandomGratitudeMessage()}${dailyCountText}`,
+				placement: "top",
+				duration: 6,
+			});
 
 			setHasFormChanges(false);
 
