@@ -113,6 +113,7 @@ export function useVectorLayers({
 				showCorrectionStyling,
 				filterCorrectionStatus,
 			});
+			deadwoodLayer.setZIndex(13);
 			map.addLayer(deadwoodLayer);
 			deadwoodLayerRef.current = deadwoodLayer;
 
@@ -130,6 +131,7 @@ export function useVectorLayers({
 				renderMode: "vector",
 				renderBuffer: 512,
 			});
+			selectionLayer.setZIndex(14);
 			map.addLayer(selectionLayer);
 			selectionLayerRef.current = selectionLayer;
 		}
@@ -140,6 +142,7 @@ export function useVectorLayers({
 				showCorrectionStyling,
 				filterCorrectionStatus,
 			});
+			forestCoverLayer.setZIndex(12);
 			map.addLayer(forestCoverLayer);
 			forestCoverLayerRef.current = forestCoverLayer;
 		}
