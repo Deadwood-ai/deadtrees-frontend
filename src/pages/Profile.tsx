@@ -126,7 +126,7 @@ export default function ProfilePage() {
                       70%-side overlap
                     </li>
                     <li>
-                      📏 <strong>Requirements:</strong> RGB/NIRRGB, &gt;10cm resolution, any coordinate reference system
+                      📏 <strong>Requirements:</strong> RGB/NIRRGB, {"<"}10cm resolution, any coordinate reference system
                     </li>
                     <li>
                       🏆 <strong>Publishing:</strong> After upload, click "request DOI" and "Publish Data". No direct
