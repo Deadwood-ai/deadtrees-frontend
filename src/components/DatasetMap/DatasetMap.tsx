@@ -50,6 +50,30 @@ const hoverMarkerStyle = new Style({
   }),
 });
 
+const formatAcquisitionDate = (dataset: IDataset): string => {
+  const year = Number.parseInt(dataset.aquisition_year, 10);
+  if (Number.isNaN(year)) return "Unknown date";
+
+  const month = dataset.aquisition_month ? Number.parseInt(dataset.aquisition_month, 10) : 1;
+  const day = dataset.aquisition_day ? Number.parseInt(dataset.aquisition_day, 10) : 1;
+
+  return new Date(year, Math.max(month - 1, 0), Math.max(day, 1)).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: dataset.aquisition_month ? "long" : undefined,
+    day: dataset.aquisition_day ? "numeric" : undefined,
+  });
+};
+
+const buildTooltipTitle = (dataset: IDataset): string => {
+  const place = dataset.admin_level_3 || dataset.admin_level_2 || "";
+  const country = dataset.admin_level_1 || "";
+
+  if (place && country) return `${place}, ${country}`;
+  if (place) return place;
+  if (country) return country;
+  return `Dataset #${dataset.id}`;
+};
+
 interface MapRef extends Map {
   moveEndListener?: () => void;
   pointerMoveListener?: (evt: any) => void;
@@ -307,15 +331,9 @@ const DatasetMapOL = ({
             const extentFeature = new Feature(fromExtent(parsedBBox).transform("EPSG:4326", "EPSG:3857"));
             extentFeature.setProperties({
               id: dataset.id,
-              title: dataset.admin_level_3 + "_" + dataset.admin_level_1 + "_" + dataset.id,
+              title: buildTooltipTitle(dataset),
               thumbnail_path: dataset.thumbnail_path,
-              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-                .toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-                .toString(),
+              date: formatAcquisitionDate(dataset),
             });
             extentFeature.setStyle(defaultExtendStyle);
             vectorSourceExtend.addFeature(extentFeature);
@@ -324,14 +342,8 @@ const DatasetMapOL = ({
             const pointFeature = new Feature(point);
             pointFeature.setProperties({
               id: dataset.id,
-              title: `${dataset.admin_level_3}_${dataset.admin_level_1}_${dataset.id}`.replace(/\s+/g, "_"),
-              date: new Date(dataset.aquisition_year, dataset.aquisition_month, dataset.aquisition_day)
-                .toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-                .toString(),
+              title: buildTooltipTitle(dataset),
+              date: formatAcquisitionDate(dataset),
             });
             pointFeature.setStyle(defaultMarkerStyle);
             vectorSourceMarker.addFeature(pointFeature);
