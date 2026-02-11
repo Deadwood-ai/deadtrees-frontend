@@ -131,7 +131,17 @@ const PublicationsTable: React.FC = () => {
     );
   }
 
-  return <Table dataSource={publications} columns={columns} rowKey="id" pagination={{ pageSize: 10 }} />;
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <Table
+        dataSource={publications}
+        columns={columns}
+        rowKey="id"
+        scroll={{ x: "max-content" }}
+        pagination={{ pageSize: 10 }}
+      />
+    </div>
+  );
 };
 
 export default PublicationsTable;

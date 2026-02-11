@@ -191,10 +191,12 @@ export default function ProfilePage() {
                   <Typography.Paragraph type="secondary">
                     User-reported issues you've filed. Only you and auditors can view them.
                   </Typography.Paragraph>
-                  <Table
-                    rowKey="id"
-                    dataSource={myFlags}
-                    columns={[
+                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <Table
+                      rowKey="id"
+                      dataSource={myFlags}
+                      scroll={{ x: "max-content" }}
+                      columns={[
                       {
                         title: "Dataset ID",
                         dataIndex: "dataset_id",
@@ -250,9 +252,10 @@ export default function ProfilePage() {
                           </Button>
                         ),
                       },
-                    ]}
-                    pagination={{ pageSize: 10 }}
-                  />
+                      ]}
+                      pagination={{ pageSize: 10 }}
+                    />
+                  </div>
                 </>
               )}
             </div>

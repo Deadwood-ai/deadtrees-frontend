@@ -594,17 +594,20 @@ const DataTable: React.FC<DataTableProps> = ({
 
   return (
     <>
-      <Table
-        rowKey={"id"}
-        dataSource={sortedUserData}
-        columns={columns}
-        pagination={{ pageSize: 50 }}
-        loading={isLoadingData}
-        rowClassName={(record) => {
-          const isSelected = selectedRowKeys.includes(record.id);
-          return isSelected ? "bg-blue-50 hover:bg-blue-100" : "";
-        }}
-      />
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <Table
+          rowKey={"id"}
+          dataSource={sortedUserData}
+          columns={columns}
+          scroll={{ x: "max-content" }}
+          pagination={{ pageSize: 50 }}
+          loading={isLoadingData}
+          rowClassName={(record) => {
+            const isSelected = selectedRowKeys.includes(record.id);
+            return isSelected ? "bg-blue-50 hover:bg-blue-100" : "";
+          }}
+        />
+      </div>
 
       {selectedDatasetForEdit && (
         <EditDatasetModal visible={editModalVisible} onClose={handleCloseEditModal} dataset={selectedDatasetForEdit} />
