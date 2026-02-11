@@ -10,7 +10,7 @@ interface LogoBannerProps {
 
 export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
   return (
-    <div className="pt-0 md:pt-12">
+    <div className="py-4 md:py-8">
       <p className="text-md mb-8 text-center text-gray-600">{title}</p>
       <div className="logo-scroll">
         <div className="logo-container">

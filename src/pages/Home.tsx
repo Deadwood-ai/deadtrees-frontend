@@ -226,14 +226,20 @@ const FAQ = () => {
 
 export default function HomePage() {
   return (
-    <div className="m-auto max-w-6xl px-4 pb-1 md:px-0">
+    <div className="pb-1">
       <Hero />
-      <LogoBannerBand logos={logos} title="Supported by" />
-      <DataGallery />
-      <Features />
-      <Roadmap />
-      <GetInContact />
-      <FAQ />
+      <section className="w-full border-y border-slate-100 bg-white">
+        <div className="m-auto max-w-6xl px-4 md:px-0">
+          <LogoBannerBand logos={logos} title="Supported by" />
+        </div>
+      </section>
+      <div className="m-auto max-w-6xl px-4 md:px-0">
+        <DataGallery />
+        <Features />
+        <Roadmap />
+        <GetInContact />
+        <FAQ />
+      </div>
     </div>
   );
 }

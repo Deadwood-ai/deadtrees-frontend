@@ -62,9 +62,9 @@ const Hero = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center pb-12">
-      <div className="absolute inset-0 hidden bg-[radial-gradient(600px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-white md:block"></div>
-      <div className="relative z-10">
+    <section className="relative w-full overflow-hidden">
+      <div className="absolute inset-0 hidden bg-[radial-gradient(900px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-white md:block"></div>
+      <div className="relative z-10 m-auto flex max-w-6xl flex-col items-center px-4 pb-12 md:px-0">
         <div className="md:hidden">
           <Alert
             message="Mobile version is limited"
@@ -82,7 +82,7 @@ const Hero = () => {
         <h1 className="m-0 bg-gradient-to-br from-blue-800 via-blue-600 via-purple-500 to-purple-700 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent drop-shadow-sm md:text-7xl">
           deadtrees.earth
         </h1>
-        <p className="m-auto text-center text-xl text-gray-500 md:max-w-xl">
+        <p className="mx-auto text-center text-xl text-gray-500 md:max-w-xl">
           An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality
           data.
         </p>
@@ -111,9 +111,8 @@ const Hero = () => {
             </Button>
           </div>
         </div>
-      </div>
-      {/* Video Section */}
-      <div className="relative mx-auto mt-12 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-32">
+        {/* Video Section */}
+        <div className="relative mx-auto mt-10 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-14">
         {!isPlaying && (
           <PlayCircleFilled
             onClick={(e) => {
@@ -141,8 +140,9 @@ const Hero = () => {
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
         />
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 
