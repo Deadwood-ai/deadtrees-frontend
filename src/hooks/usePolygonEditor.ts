@@ -14,6 +14,7 @@ import type { FeatureLike } from "ol/Feature";
 import GeoJSON from "ol/format/GeoJSON";
 import { union as geomUnion, difference as geomDifference } from "../utils/geometry";
 import { message } from "antd";
+import { palette } from "../theme/palette";
 
 export interface UsePolygonEditorParams {
   mapRef: React.RefObject<Map | null>;
@@ -78,8 +79,8 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const hasEdits = isNew || isModified || correctionStatus === "pending";
       const isApproved = correctionStatus === "approved";
 
-      // Fill color - very light, consistent across states
-      const fillColor = "rgba(100, 100, 100, 0.08)"; // neutral gray @ 8%
+      // Fill color - high contrast for bright/dark canopy backgrounds
+      const fillColor = "rgba(0, 200, 255, 0.14)"; // light cyan @ 14%
 
       // Determine stroke color based on correction state
       let strokeColor: string;
@@ -87,24 +88,24 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
       if (isSelected) {
         // Selected: Orange, thick stroke (interaction state takes priority)
-        strokeColor = "#f97316"; // orange-500
+        strokeColor = palette.state.selected;
         strokeWidth = 4;
       } else if (isHovered) {
         // Hover: Cyan, medium stroke (interaction state takes priority)
-        strokeColor = "#06b6d4"; // cyan-500
+        strokeColor = palette.state.hover;
         strokeWidth = 3;
       } else if (isApproved) {
         // Approved/Verified: Green border
-        strokeColor = "#34D399"; // green
+        strokeColor = palette.forest[600];
         strokeWidth = 2;
       } else if (hasEdits) {
         // Edited/Pending: Blue border
-        strokeColor = "#60A5FA"; // light blue
+        strokeColor = palette.primary[500];
         strokeWidth = 2;
       } else {
-        // Original/Prediction: Medium gray border for visibility in editing mode
-        strokeColor = "#6B7280"; // gray-500 (darker for better visibility)
-        strokeWidth = 2;
+        // Original/Prediction: Cyan border for better contrast in editing mode
+        strokeColor = "#00C8FF";
+        strokeWidth = 2.5;
       }
 
       return new Style({
@@ -503,7 +504,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
         // Style for the sketch (polygon being drawn) - very visible
         const sketchStyle = new Style({
           fill: new Fill({ color: "rgba(255, 200, 0, 0.05)" }), // Bright yellow-orange @ 60% - highly visible for labeling
-          stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
+          stroke: new Stroke({ color: palette.state.selected, width: 4 }), // Orange, thick stroke
         });
 
         const draw = new Draw({
@@ -712,7 +713,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     // Style for the sketch (polygon being drawn) - very visible
     const sketchStyle = new Style({
       fill: new Fill({ color: "rgba(255, 200, 0, 0.6)" }), // Bright yellow-orange @ 60% - highly visible for labeling
-      stroke: new Stroke({ color: "#FFA500", width: 4 }), // Orange, thick stroke
+      stroke: new Stroke({ color: palette.state.selected, width: 4 }), // Orange, thick stroke
     });
 
     const draw = new Draw({
