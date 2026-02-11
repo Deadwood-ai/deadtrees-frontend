@@ -113,33 +113,33 @@ const Hero = () => {
         </div>
         {/* Video Section */}
         <div className="relative mx-auto mt-10 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-14">
-        {!isPlaying && (
-          <PlayCircleFilled
-            onClick={(e) => {
-              setIsPlaying(true);
-            }}
-            className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-1 text-6xl text-blue-600 transition-colors hover:text-blue-900"
-          />
-        )}
-        <ReactPlayer
-          url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
-          width="100%"
-          height="100%"
-          controls={true}
-          playsinline
-          loop={true}
-          light="https://data2.deadtrees.earth/assets/v1/image.png" // Add this line with your thumbnail image path
-          config={{
-            file: {
-              attributes: {
-                controlsList: "nodownload",
+          {!isPlaying && (
+            <PlayCircleFilled
+              onClick={(e) => {
+                setIsPlaying(true);
+              }}
+              className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-1 text-6xl text-blue-600 transition-colors hover:text-blue-900"
+            />
+          )}
+          <ReactPlayer
+            url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
+            width="100%"
+            height="100%"
+            controls={true}
+            playsinline
+            loop={true}
+            light="https://data2.deadtrees.earth/assets/v1/image.png" // Add this line with your thumbnail image path
+            config={{
+              file: {
+                attributes: {
+                  controlsList: "nodownload",
+                },
               },
-            },
-          }}
-          playing={isPlaying}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-        />
+            }}
+            playing={isPlaying}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
         </div>
       </div>
     </section>

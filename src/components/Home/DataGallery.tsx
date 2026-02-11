@@ -248,9 +248,9 @@ const DataGallery = () => {
                           <span className="max-w-[70%] truncate font-semibold">
                             {item.admin_level_3 || item.admin_level_2
                               ? // If we have level 2 or 3, show it with country
-                                `${(item.admin_level_3 || item.admin_level_2).slice(0, 10)}${(item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : ""}${item.admin_level_1 ? `, ${countryList[item.admin_level_1 as keyof typeof countryList]}` : ""}`
+                              `${(item.admin_level_3 || item.admin_level_2).slice(0, 10)}${(item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : ""}${item.admin_level_1 ? `, ${countryList[item.admin_level_1 as keyof typeof countryList]}` : ""}`
                               : // If we only have level 1, just show the country
-                                item.admin_level_1
+                              item.admin_level_1
                                 ? countryList[item.admin_level_1 as keyof typeof countryList]
                                 : ""}
                           </span>

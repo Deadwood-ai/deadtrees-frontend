@@ -403,7 +403,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                   </div>
                 }
                 name="author"
-                // extra="Add each author separately
+              // extra="Add each author separately
               >
                 {authors?.at(0)?.label ? (
                   <Select
