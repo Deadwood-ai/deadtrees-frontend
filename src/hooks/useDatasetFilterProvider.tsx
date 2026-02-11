@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext } from "react";
 import { AdvancedFilters } from "../components/FilterModal";
 
-type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
+type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
 
 interface DatasetFilterContextType {
   filter: string;

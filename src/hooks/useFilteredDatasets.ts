@@ -24,6 +24,11 @@ export function useFilteredDatasets(datasets: IDataset[] | undefined) {
             return item.admin_level_1 === filter;
           case "admin_level_3":
             return item.admin_level_3 === filter;
+          case "biome":
+            if (filter === "Unknown") {
+              return !item.biome_name;
+            }
+            return item.biome_name === filter;
           default:
             return false;
         }

@@ -12,7 +12,7 @@ import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 import { isDatasetViewable } from "../utils/datasetVisibility";
 
 type SortDirection = "asc" | "desc";
-type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3";
+type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
 
 export default function Dataset() {
   const { data: allData } = usePublicDatasets();

@@ -10,7 +10,7 @@ interface DataListProps {
   visibleFeatures: string[];
   onFilterClick: (
     filterValue: string,
-    filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3",
+    filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome",
   ) => void;
   searchValue: string;
   filterByViewport: boolean;
