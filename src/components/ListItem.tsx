@@ -4,6 +4,7 @@ import { IDataset } from "../types/dataset";
 import { Settings } from "../config";
 import countryList from "../utils/countryList";
 import { useDatasetDetailsMap } from "../hooks/useDatasetDetailsMapProvider";
+import { getBiomeEmoji, getBiomeTagColor, truncateBiomeLabel } from "../utils/biomeDisplay";
 
 interface ListItemProps {
   item: IDataset;
@@ -15,11 +16,6 @@ interface ListItemProps {
     filterType: "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome",
   ) => void;
 }
-
-const BIOME_BADGE_MAPPING: Record<string, { color: string; icon: string }> = {
-  Tropical: { color: "green", icon: "🌴" },
-  Temperate: { color: "blue", icon: "🌲" },
-};
 
 const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: ListItemProps) => {
   const navigate = useNavigate();
@@ -55,13 +51,9 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
   const adminLevel1 = item.admin_level_1 || "";
   const firstAuthor = item.authors?.[0] || "";
   const biomeName = item.biome_name;
-  const normalizedBiomeFilter = biomeName || "Unknown";
-  const matchedBiomeEntry = biomeName
-    ? Object.entries(BIOME_BADGE_MAPPING).find(([key]) => biomeName.toLowerCase().includes(key.toLowerCase()))
-    : null;
-  const biomeLabel = matchedBiomeEntry?.[0] || biomeName || "Unknown";
-  const biomeColor = matchedBiomeEntry?.[1].color || "default";
-  const biomeIcon = matchedBiomeEntry?.[1].icon || "";
+  const biomeLabel = biomeName || "Unknown";
+  const biomeColor = getBiomeTagColor(biomeName);
+  const biomeIcon = getBiomeEmoji(biomeName);
 
   return (
     <div
@@ -140,10 +132,13 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
             <Tag
               color={biomeColor}
               className="m-0 cursor-pointer select-none"
-              onClick={(e) => onClickFilterHandler(e, normalizedBiomeFilter, "biome")}
+              onClick={(e) => {
+                if (!biomeName) return;
+                onClickFilterHandler(e, biomeName, "biome");
+              }}
             >
-              {biomeIcon ? `${biomeIcon} ` : ""}
-              {biomeLabel.slice(0, 15) + (biomeLabel.length > 15 ? "..." : "")}
+              {`${biomeIcon} `}
+              {truncateBiomeLabel(biomeLabel)}
             </Tag>
           </Tooltip>
         </div>

@@ -35,6 +35,7 @@ import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
 import { useAuditNavigation } from "../hooks/useAuditNavigation";
 import { usePendingCorrections } from "../hooks/usePendingCorrections";
 import { palette } from "../theme/palette";
+import { getBiomeEmoji, getBiomeTagColor, truncateBiomeLabel } from "../utils/biomeDisplay";
 
 const { Title, Text } = Typography;
 
@@ -90,33 +91,14 @@ const formatAcquisitionDate = (dataset: IDataset): string => {
 	return parts.join("-");
 };
 
-// Biome badge colors
-const BIOME_COLORS: Record<string, { color: string; icon: string }> = {
-	"Tropical": { color: "green", icon: "🌴" },
-	"Subtropical": { color: "lime", icon: "🌴" },
-	"Temperate": { color: "blue", icon: "🌲" },
-	"Boreal": { color: "cyan", icon: "🌲" },
-	"Mediterranean": { color: "orange", icon: "🌿" },
-};
-
 const getBiomeBadge = (biomeName: string | null) => {
 	if (!biomeName) return <Tag color="default">Unknown</Tag>;
 
-	// Find matching biome type
-	for (const [key, { color, icon }] of Object.entries(BIOME_COLORS)) {
-		if (biomeName.toLowerCase().includes(key.toLowerCase())) {
-			return (
-				<Tooltip title={biomeName}>
-					<Tag color={color}>
-						{icon} {key}
-					</Tag>
-				</Tooltip>
-			);
-		}
-	}
 	return (
 		<Tooltip title={biomeName}>
-			<Tag color="default">{biomeName.slice(0, 15)}...</Tag>
+			<Tag color={getBiomeTagColor(biomeName)}>
+				{getBiomeEmoji(biomeName)} {truncateBiomeLabel(biomeName)}
+			</Tag>
 		</Tooltip>
 	);
 };
@@ -812,7 +794,7 @@ export default function DatasetAudit() {
 											allowClear
 											placeholder="All biomes"
 											showSearch
-											options={uniqueBiomes.map((b) => ({ label: b, value: b }))}
+											options={uniqueBiomes.map((b) => ({ label: `${getBiomeEmoji(b)} ${b}`, value: b }))}
 										/>
 									</div>
 

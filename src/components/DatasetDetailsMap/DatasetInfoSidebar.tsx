@@ -9,6 +9,7 @@ import PublicationLink from "../PublicationLink";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import DatasetNavigation from "./DatasetNavigation";
 import { palette } from "../../theme/palette";
+import { getBiomeEmoji, getBiomeTagColor, truncateBiomeLabel } from "../../utils/biomeDisplay";
 
 interface DatasetInfoSidebarProps {
   dataset: IDataset;
@@ -261,9 +262,10 @@ export default function DatasetInfoSidebar({
       {/* Environmental Context */}
       <Section className="mt-4">
         <InfoRow label="Biome" tooltip={`Ecological biome classification: ${dataset.biome_name || "Unknown"}`}>
-          <Tag color="default" style={{ margin: 0 }}>
+          <Tag color={getBiomeTagColor(dataset.biome_name)} style={{ margin: 0 }}>
+            {getBiomeEmoji(dataset.biome_name)}{" "}
             {dataset.biome_name
-              ? dataset.biome_name.slice(0, 25) + (dataset.biome_name.length > 25 ? "..." : "")
+              ? truncateBiomeLabel(dataset.biome_name)
               : "Unknown"}
           </Tag>
         </InfoRow>

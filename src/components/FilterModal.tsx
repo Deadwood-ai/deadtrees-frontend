@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Modal, Form, Checkbox, Select, Radio, Slider, Button, Divider } from "antd";
 import { IBiome } from "../types/dataset";
 import { useData } from "../hooks/useDataProvider";
+import { getBiomeEmoji } from "../utils/biomeDisplay";
 
 interface FilterModalProps {
   isVisible: boolean;
@@ -64,7 +65,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
 
   // Get all Biome options from the enum
   const biomeOptions: Array<{ label: string; value: string }> = Object.values(IBiome).map((value) => ({
-    label: value,
+    label: `${getBiomeEmoji(value)} ${value}`,
     value: value,
   }));
   biomeOptions.unshift({ label: "All", value: "" });
