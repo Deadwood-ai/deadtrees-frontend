@@ -1,4 +1,6 @@
 import { EnvironmentOutlined } from "@ant-design/icons";
+import { mapColors } from "../../theme/mapColors";
+import { palette } from "../../theme/palette";
 
 interface ClickedValues {
   forestPct: number;
@@ -50,15 +52,15 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
         <div>
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-sm bg-green-500" />
+              <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
               <span className="text-xs text-gray-600">Tree</span>
             </div>
             <span className="text-xs text-gray-400">0–100%</span>
           </div>
           <GradientBar
-            gradientClass="bg-gradient-to-r from-green-100 via-green-400 to-green-700"
+            gradientClass={`bg-gradient-to-r ${mapColors.forest.gradient}`}
             value={clickedValues?.forestPct ?? null}
-            indicatorColor="#000"
+            indicatorColor={palette.neutral[900]}
           />
         </div>
       )}
@@ -69,15 +71,15 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
         <div>
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
+              <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
               <span className="text-xs text-gray-600">Standing Deadwood</span>
             </div>
             <span className="text-xs text-gray-400">0–100%</span>
           </div>
           <GradientBar
-            gradientClass="bg-gradient-to-r from-[#fff4d9] via-[#FFB31C] to-[#cc8f16]"
+            gradientClass={`bg-gradient-to-r ${mapColors.deadwood.gradient}`}
             value={clickedValues?.deadwoodPct ?? null}
-            indicatorColor="#000"
+            indicatorColor={palette.neutral[900]}
           />
         </div>
       )}
@@ -94,13 +96,17 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
             {showForest && (
               <div className="flex items-center gap-1">
                 <span className="text-gray-500">Tree:</span>
-                <span className="font-semibold text-green-600">{clickedValues.forestPct}%</span>
+                <span className="font-semibold" style={{ color: mapColors.forest.text }}>
+                  {clickedValues.forestPct}%
+                </span>
               </div>
             )}
             {showDeadwood && (
               <div className="flex items-center gap-1">
                 <span className="text-gray-500">Deadwood:</span>
-                <span className="font-semibold text-[#cc8f16]">{clickedValues.deadwoodPct}%</span>
+                <span className="font-semibold" style={{ color: mapColors.deadwood.text }}>
+                  {clickedValues.deadwoodPct}%
+                </span>
               </div>
             )}
           </div>

@@ -23,6 +23,7 @@ import { Style, Stroke, Fill } from "ol/style";
 import type { StyleFunction as OLStyleFunction } from "ol/style/Style";
 import type { IDataset } from "../types/dataset";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
+import { palette } from "../theme/palette";
 
 type StyleFn = (f: Feature<Geometry>) => Style | null | undefined;
 
@@ -172,7 +173,7 @@ export default function DatasetLabelEditor() {
       // Install stable style function that reads from refs
       const hoverStyle = new Style({
         fill: new Fill({ color: "rgba(234,179,8,0.15)" }),
-        stroke: new Stroke({ color: "#eab308", width: 3, lineDash: [4, 2] }),
+        stroke: new Stroke({ color: palette.deadwood[500], width: 3, lineDash: [4, 2] }),
       });
       const styleFn: StyleFn = (feature) => {
         const idVal = feature.get("id");

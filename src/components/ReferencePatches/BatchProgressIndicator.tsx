@@ -1,4 +1,5 @@
 import { Progress, Typography } from "antd";
+import { palette } from "../../theme/palette";
 
 interface BatchProgressProps {
   layer: "deadwood" | "forest_cover";
@@ -19,8 +20,8 @@ export default function BatchProgressIndicator({ layer, current, total, percenta
         percent={percentage}
         status="active"
         strokeColor={{
-          "0%": "#108ee9",
-          "100%": "#87d068",
+          "0%": palette.primary[500],
+          "100%": palette.forest[500],
         }}
       />
       <Typography.Text type="secondary" className="mt-2 block text-sm">

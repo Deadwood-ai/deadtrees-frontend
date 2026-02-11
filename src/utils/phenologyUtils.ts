@@ -1,3 +1,5 @@
+import { palette } from "../theme/palette";
+
 /**
  * Calculate day of year from date components
  * Handles different date granularities (year only, year+month, full date)
@@ -70,7 +72,7 @@ export function mapPhenologyValueToColor(value: number): string {
 
   // Simple gradient from light grey to dark green
   const ratio = clampedValue / 255;
-  return interpolateColor("#F5F5F5", "#388E3C", ratio);
+  return interpolateColor(palette.neutral[100], palette.forest[700], ratio);
 }
 
 /**
@@ -78,7 +80,7 @@ export function mapPhenologyValueToColor(value: number): string {
  */
 export function generatePhenologyGradient(phenologyCurve: number[]): string {
   if (!phenologyCurve || phenologyCurve.length === 0) {
-    return "linear-gradient(to right, #F5F5F5, #F5F5F5)";
+    return `linear-gradient(to right, ${palette.neutral[100]}, ${palette.neutral[100]})`;
   }
 
   // Sample points for gradient (every ~7 days to keep gradient manageable)

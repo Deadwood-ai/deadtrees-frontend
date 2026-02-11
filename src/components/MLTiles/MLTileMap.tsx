@@ -28,6 +28,7 @@ import {
   createAOIMaskLayer,
 } from "../DatasetDetailsMap/createVectorLayer";
 import { Settings } from "../../config";
+import { palette } from "../../theme/palette";
 
 interface Props {
   datasetId: number;
@@ -168,18 +169,18 @@ export default function MLTileMap({
       style: (feature) => {
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = "#9ca3af"; // gray for pending
+        let strokeColor = palette.state.pending;
         let strokeWidth = 3; // Thicker borders for better visibility
 
         if (status === "good") {
-          strokeColor = "#22c55e"; // green
+          strokeColor = palette.state.success;
         } else if (status === "bad") {
-          strokeColor = "#ef4444"; // red
+          strokeColor = palette.state.error;
         }
 
         // Highlight selected tile with thicker blue border
         if (isSelected) {
-          strokeColor = "#1890ff"; // blue
+          strokeColor = palette.primary[500];
           strokeWidth = 5; // Extra thick for selected tile
         }
 
@@ -242,17 +243,17 @@ export default function MLTileMap({
         // Use the same style as the vector layer (no fill, just stroke)
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = "#9ca3af";
+        let strokeColor = palette.state.pending;
         let strokeWidth = 3;
 
         if (status === "good") {
-          strokeColor = "#22c55e";
+          strokeColor = palette.state.success;
         } else if (status === "bad") {
-          strokeColor = "#ef4444";
+          strokeColor = palette.state.error;
         }
 
         if (isSelected) {
-          strokeColor = "#1890ff";
+          strokeColor = palette.primary[500];
           strokeWidth = 5;
         }
 

@@ -2,6 +2,7 @@ import { SignUp as SignUpAuthUI } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "../../hooks/useSupabase";
 import { Link, useSearchParams } from "react-router-dom";
+import { palette } from "../../theme/palette";
 
 const SignUp = () => {
   const [searchParams] = useSearchParams();
@@ -14,7 +15,19 @@ const SignUp = () => {
         <SignUpAuthUI
           providers={[]}
           supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              default: {
+                colors: {
+                  brand: palette.primary[500],
+                  brandAccent: palette.primary[600],
+                  defaultButtonBackground: palette.primary[500],
+                  defaultButtonBackgroundHover: palette.primary[600],
+                },
+              },
+            },
+          }}
           redirectTo={window.origin + returnTo}
         />
         <div className="pt-4 text-center">

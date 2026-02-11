@@ -8,6 +8,7 @@ import { sanitizeText } from "../../utils/textUtils";
 import PublicationLink from "../PublicationLink";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
 import DatasetNavigation from "./DatasetNavigation";
+import { palette } from "../../theme/palette";
 
 interface DatasetInfoSidebarProps {
   dataset: IDataset;
@@ -201,7 +202,7 @@ export default function DatasetInfoSidebar({
       {/* Location Header */}
       <Section>
         <div className="flex items-center pb-1">
-          <EnvironmentOutlined style={{ fontSize: 24, color: "#1890ff" }} className="pr-2" />
+          <EnvironmentOutlined style={{ fontSize: 24, color: palette.primary[500] }} className="pr-2" />
           <Tooltip
             title={
               <div>

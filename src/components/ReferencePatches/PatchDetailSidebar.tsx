@@ -12,6 +12,7 @@ import {
 import { IReferencePatch, PatchResolution, PatchStatus } from "../../types/referencePatches";
 import type { LayerSelection } from "./LayerRadioButtons";
 import BatchProgressIndicator from "./BatchProgressIndicator";
+import { palette } from "../../theme/palette";
 
 interface Props {
   basePatch: IReferencePatch;
@@ -517,7 +518,7 @@ export default function PatchDetailSidebar({
               </div>
               <Progress
                 percent={basePatchProgress.deadwoodPercent}
-                strokeColor={currentLayer === "deadwood" ? "#1890ff" : undefined}
+                strokeColor={currentLayer === "deadwood" ? palette.primary[500] : undefined}
                 strokeWidth={currentLayer === "deadwood" ? 12 : 8}
                 className={currentLayer === "deadwood" ? "font-semibold" : ""}
               />
@@ -531,7 +532,7 @@ export default function PatchDetailSidebar({
               </div>
               <Progress
                 percent={basePatchProgress.forestCoverPercent}
-                strokeColor={currentLayer === "forest_cover" ? "#52c41a" : undefined}
+                strokeColor={currentLayer === "forest_cover" ? palette.state.success : undefined}
                 strokeWidth={currentLayer === "forest_cover" ? 12 : 8}
                 className={currentLayer === "forest_cover" ? "font-semibold" : ""}
               />

@@ -34,6 +34,7 @@ import { useFlaggedDatasets } from "../hooks/useDatasetFlags";
 import { useReferenceDatasetIds } from "../hooks/useReferencePatches";
 import { useAuditNavigation } from "../hooks/useAuditNavigation";
 import { usePendingCorrections } from "../hooks/usePendingCorrections";
+import { palette } from "../theme/palette";
 
 const { Title, Text } = Typography;
 
@@ -220,8 +221,9 @@ export default function DatasetAudit() {
 
 		let filtered = datasets;
 
-		// Apply minimum ID filter (except for Reference tab)
-		if (activeTab !== "reference" && hasAboveMinId) {
+		// Apply minimum ID filter only for core audit workflow tabs.
+		// Edits & Flags and Reference should include legacy dataset IDs.
+		if ((activeTab === "pending" || activeTab === "completed") && hasAboveMinId) {
 			filtered = filtered.filter((dataset) => dataset.id > MIN_AUDIT_DATASET_ID);
 		}
 
@@ -365,10 +367,9 @@ export default function DatasetAudit() {
 
 	const editsFlagsCount = useMemo(() => {
 		if (!datasets) return 0;
-		const base = hasAboveMinId ? datasets.filter((d) => d.id > MIN_AUDIT_DATASET_ID) : datasets;
 		const flaggedSet = new Set(flaggedAgg.map((f) => f.dataset_id));
-		return base.filter((d) => correctionsMap.has(d.id) || flaggedSet.has(d.id)).length;
-	}, [datasets, flaggedAgg, correctionsMap, hasAboveMinId]);
+		return datasets.filter((d) => correctionsMap.has(d.id) || flaggedSet.has(d.id)).length;
+	}, [datasets, flaggedAgg, correctionsMap]);
 
 	// Check if user has audit privileges
 	useEffect(() => {
@@ -497,7 +498,7 @@ export default function DatasetAudit() {
 			return (
 				<Tooltip title={`${flagData.flag_count} user-reported issue(s)`}>
 					<Badge count={flagData.flag_count} size="small" overflowCount={BADGE_OVERFLOW_COUNT}>
-						<FlagOutlined style={{ color: "#faad14" }} />
+						<FlagOutlined style={{ color: palette.state.warning }} />
 					</Badge>
 				</Tooltip>
 			);
@@ -513,8 +514,8 @@ export default function DatasetAudit() {
 			if (!count) return <span className="text-gray-400">—</span>;
 			return (
 				<Tooltip title={`${count} pending polygon edit(s) awaiting review`}>
-					<Badge count={count} size="small" color="#1890ff" overflowCount={BADGE_OVERFLOW_COUNT}>
-						<EditOutlined style={{ color: "#1890ff" }} />
+					<Badge count={count} size="small" color={palette.primary[500]} overflowCount={BADGE_OVERFLOW_COUNT}>
+						<EditOutlined style={{ color: palette.primary[500] }} />
 					</Badge>
 				</Tooltip>
 			);
@@ -709,7 +710,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>📋 Pending</span>
-									<Badge count={pendingCount} size="small" color="#1890ff" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									<Badge count={pendingCount} size="small" color={palette.primary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "pending",
@@ -718,7 +719,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>✓ Completed</span>
-									<Badge count={completedCount} size="small" color="#52c41a" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									<Badge count={completedCount} size="small" color={palette.state.success} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "completed",
@@ -727,7 +728,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>🔔 Edits & Flags</span>
-									<Badge count={editsFlagsCount} size="small" color="#faad14" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									<Badge count={editsFlagsCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "edits-flags",
@@ -736,7 +737,7 @@ export default function DatasetAudit() {
 							label: (
 								<Space size={6}>
 									<span>📌 Reference</span>
-									<Badge count={referenceCount} size="small" color="#722ed1" showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									<Badge count={referenceCount} size="small" color={palette.secondary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
 								</Space>
 							),
 							value: "reference",
@@ -758,7 +759,7 @@ export default function DatasetAudit() {
 							<Space>
 								<FilterOutlined />
 								<span>Filters</span>
-								{hasActiveFilters && <Badge count="Active" size="small" style={{ backgroundColor: "#1890ff" }} />}
+								{hasActiveFilters && <Badge count="Active" size="small" style={{ backgroundColor: palette.primary[500] }} />}
 							</Space>
 						),
 						children: (

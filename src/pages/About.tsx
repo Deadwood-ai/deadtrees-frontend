@@ -363,8 +363,8 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
         </Tabs>
       </div>
       {/* Mission Section */}
-      <Card className="mb-16 bg-slate-100 text-white">
-        <Title level={2} className="text-white">
+      <Card className="mb-16 bg-slate-100">
+        <Title level={2}>
           A Glimpse into Our Mission
         </Title>
         <Paragraph className="text-gray-600">

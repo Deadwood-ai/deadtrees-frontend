@@ -4,7 +4,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   padding: 15px;
   border-radius: 10px;
-  border: 1px solid #cccccc;
+  border: 1px solid var(--dt-surface-soft);
   bottom: 12px;
   text-align: center;
   left: -50px;
@@ -30,7 +30,7 @@
 }
 
 .ol-popup:before {
-  border-top-color: #cccccc;
+  border-top-color: var(--dt-surface-soft);
   border-width: 11px;
   left: 48px;
   margin-left: -11px;

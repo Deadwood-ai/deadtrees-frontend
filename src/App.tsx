@@ -26,6 +26,7 @@ import Impressum from "./pages/Impressum";
 import Footer from "./components/Footer";
 import Datenschutzerklaerung from "./pages/Datenschutzerklaerung";
 import TermsOfService from "./pages/TermsOfService";
+import { antdTheme } from "./theme/antdTheme";
 const { Content } = Layout;
 
 function LayoutWrapper() {
@@ -55,11 +56,16 @@ function LayoutWrapper() {
           margin: "0 auto",
           paddingTop: 16,
           height: shouldUseFullHeight ? "100vh" : "auto",
-          backgroundColor: "transparent",
+          backgroundColor: "var(--dt-surface-base)",
         }}
       >
         <Navigation />
-        <Content style={{ height: shouldUseFullHeight ? "calc(100vh - 80px)" : "auto" }}>
+        <Content
+          style={{
+            height: shouldUseFullHeight ? "calc(100vh - 80px)" : "auto",
+            backgroundColor: "var(--dt-surface-base)",
+          }}
+        >
           <Outlet />
         </Content>
         {!shouldUseFullHeight && <Footer />}
@@ -115,17 +121,10 @@ function AppWithTracking() {
   );
 }
 
-// Global Ant Design theme with light green primary color
-const globalTheme = {
-  token: {
-    // colorPrimary: "#7CE380",
-  },
-};
-
 // Main App component that doesn't use hooks directly
 export default function App() {
   return (
-    <ConfigProvider theme={globalTheme}>
+    <ConfigProvider theme={antdTheme}>
       <BrowserRouter>
         <AOIProvider>
           <AuditNavigationProvider>

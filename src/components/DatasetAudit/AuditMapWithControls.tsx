@@ -16,6 +16,7 @@ import { useApproveCorrection, useRevertCorrection } from "../../hooks/useSaveCo
 import { useCorrectionStats, useCorrectionContributors, usePendingCorrectionLocations } from "../../hooks/usePendingCorrections";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDatasetEditing } from "../../hooks/useDatasetEditing";
+import { mapColors } from "../../theme/mapColors";
 
 interface AuditMapWithControlsProps {
 	dataset: IDataset;
@@ -213,7 +214,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 													className="flex items-center gap-1.5 text-[10px] text-gray-600 cursor-pointer hover:text-orange-600"
 													onClick={() => handleFlashPending("deadwood")}
 												>
-													<span className="h-2 w-2 rounded-sm bg-[#FFB31C]" />
+													<span className="h-2 w-2 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
 													<span>{pendingDeadwood} deadwood</span>
 												</div>
 											</Tooltip>

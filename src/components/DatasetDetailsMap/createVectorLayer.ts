@@ -9,6 +9,8 @@ import { Polygon } from "ol/geom";
 import { supabase } from "../../hooks/useSupabase";
 import { base64ToArrayBuffer } from "../../utils/base64ToArrayBuffer";
 import Feature from "ol/Feature";
+import { palette } from "../../theme/palette";
+import { mapColors } from "../../theme/mapColors";
 
 interface VectorLayerConfig {
   rpcFunctionName: string;
@@ -109,7 +111,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
         return new Style({
           fill: new Fill({ color: "rgba(239, 68, 68, 0.3)" }), // Light red fill
           stroke: new Stroke({ 
-            color: "#DC2626", // Red border
+            color: palette.state.error,
             width: 2,
             lineDash: [6, 4], // Dashed line to indicate pending deletion
           }),
@@ -127,11 +129,11 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     if (config.showCorrectionStyling && correctionStatus) {
       if (correctionStatus === "pending") {
         // Pending correction - keep original fill, subtle blue border
-        strokeColor = "#60A5FA"; // Light blue - "in review"
+        strokeColor = palette.primary[500];
         strokeWidth = 2;
       } else if (correctionStatus === "approved") {
         // Approved correction - keep original fill, subtle green border
-        strokeColor = "#34D399"; // Light green - "verified"
+        strokeColor = palette.forest[600];
         strokeWidth = 2;
       }
       // 'none' or 'rejected' use default style (original predictions)
@@ -173,8 +175,8 @@ export const createDeadwoodVectorLayer = (labelId?: number | null, options?: Lay
       : "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
-      fillColor: "rgba(255, 179, 28, 0.7)", // Orange (#FFB31C) matching DeadtreesMap
-      strokeColor: "#F59E0B", // Darker orange for stroke
+      fillColor: "rgba(255, 179, 28, 0.7)",
+      strokeColor: mapColors.deadwood.text,
       strokeWidth: 1.5,
     },
     labelId: labelId || undefined,
@@ -191,7 +193,7 @@ export const createForestCoverVectorLayer = (labelId?: number, options?: LayerOp
     className: "forest-cover-vector",
     style: {
       fillColor: "rgba(34, 197, 94, 0.5)", // Green with high opacity
-      strokeColor: "#16a34a", // Darker green for stroke
+      strokeColor: mapColors.forest.fill,
       strokeWidth: 1,
     },
     labelId,
@@ -240,7 +242,7 @@ export const createAOIVectorLayer = (geometry: GeoJSON.MultiPolygon | GeoJSON.Po
     source: aoiSource,
     style: new Style({
       stroke: new Stroke({
-        color: "#3b82f6", // Blue stroke for AOI
+        color: mapColors.aoi.stroke,
         width: 2,
       }),
       fill: new Fill({

@@ -1,6 +1,7 @@
 import { notification, Button } from "antd";
 import { CheckCircleOutlined, UserOutlined } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
+import { palette } from "../theme/palette";
 
 export const useProcessingNotification = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export const useProcessingNotification = () => {
           )}
         </div>
       ),
-      icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+      icon: <CheckCircleOutlined style={{ color: palette.state.success }} />,
       duration: 10, // Auto-dismiss after 10 seconds
       placement: "topRight",
     });

@@ -2,6 +2,7 @@ import { ForgottenPassword as ForgotpasswordAuthUI } from "@supabase/auth-ui-rea
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "../../hooks/useSupabase";
 import { Link } from "react-router-dom";
+import { palette } from "../../theme/palette";
 
 const Forgotpassword = () => {
   return (
@@ -10,7 +11,19 @@ const Forgotpassword = () => {
         <h1 className="mb-8 text-3xl font-semibold text-gray-600"> Forgot Password</h1>
         <ForgotpasswordAuthUI
           supabaseClient={supabase}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              default: {
+                colors: {
+                  brand: palette.primary[500],
+                  brandAccent: palette.primary[600],
+                  defaultButtonBackground: palette.primary[500],
+                  defaultButtonBackgroundHover: palette.primary[600],
+                },
+              },
+            },
+          }}
           redirectTo={window.origin + "/reset-password"}
         />
 

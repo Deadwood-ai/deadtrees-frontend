@@ -14,6 +14,7 @@ import {
 } from "../hooks/useReferencePatches";
 import { useAuth } from "../hooks/useAuthProvider";
 import ReferencePatchEditorView from "../components/ReferencePatches/ReferencePatchEditorView";
+import { palette } from "../theme/palette";
 
 export default function DatasetReferencePatchEditor() {
   const { id } = useParams();
@@ -239,7 +240,7 @@ export default function DatasetReferencePatchEditor() {
               type="circle"
               percent={overallProgress}
               size={48}
-              strokeColor={{ "0%": "#108ee9", "100%": "#87d068" }}
+              strokeColor={{ "0%": palette.primary[500], "100%": palette.forest[500] }}
             />
 
             {/* Complete & Exit Button - only show when all patches are marked */}

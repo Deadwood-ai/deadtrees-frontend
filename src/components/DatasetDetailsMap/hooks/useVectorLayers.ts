@@ -3,6 +3,7 @@ import type { Map as OLMap } from "ol";
 import type VectorTileLayer from "ol/layer/VectorTile";
 import { Style, Stroke } from "ol/style";
 import type { FeatureLike } from "ol/Feature";
+import { palette } from "../../../theme/palette";
 
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../createVectorLayer";
 
@@ -123,7 +124,7 @@ export function useVectorLayers({
 				style: (feature: FeatureLike) => {
 					if (hoveredLabelIdRef.current !== null && feature.get("id") === hoveredLabelIdRef.current) {
 						return new Style({
-							stroke: new Stroke({ color: "#06b6d4", width: 3 }),
+							stroke: new Stroke({ color: palette.state.hover, width: 3 }),
 						});
 					}
 					return undefined;

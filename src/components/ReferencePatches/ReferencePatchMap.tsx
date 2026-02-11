@@ -39,6 +39,8 @@ import {
   createUtmSquare,
   getTargetGroundSize,
 } from "../../utils/utm";
+import { palette } from "../../theme/palette";
+import { mapColors } from "../../theme/mapColors";
 
 interface Props {
   datasetId: number;
@@ -186,18 +188,18 @@ export default function ReferencePatchMap({
       style: (feature) => {
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = "#9ca3af"; // gray for pending
+        let strokeColor = palette.state.pending;
         let strokeWidth = 3; // Thicker borders for better visibility
 
         if (status === "good") {
-          strokeColor = "#22c55e"; // green
+          strokeColor = palette.state.success;
         } else if (status === "bad") {
-          strokeColor = "#ef4444"; // red
+          strokeColor = palette.state.error;
         }
 
         // Highlight selected patch with thicker blue border
         if (isSelected) {
-          strokeColor = "#1890ff"; // blue
+          strokeColor = palette.primary[500];
           strokeWidth = 5; // Extra thick for selected patch
         }
 
@@ -260,17 +262,17 @@ export default function ReferencePatchMap({
         // Use the same style as the vector layer (no fill, just stroke)
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = "#9ca3af";
+        let strokeColor = palette.state.pending;
         let strokeWidth = 3;
 
         if (status === "good") {
-          strokeColor = "#22c55e";
+          strokeColor = palette.state.success;
         } else if (status === "bad") {
-          strokeColor = "#ef4444";
+          strokeColor = palette.state.error;
         }
 
         if (isSelected) {
-          strokeColor = "#1890ff";
+          strokeColor = palette.primary[500];
           strokeWidth = 5;
         }
 
@@ -384,13 +386,13 @@ export default function ReferencePatchMap({
           color: "rgba(255, 255, 255, 0.2)",
         }),
         stroke: new Stroke({
-          color: "#ffcc33",
+          color: palette.state.measure,
           width: 3,
         }),
         image: new CircleStyle({
           radius: 5,
           fill: new Fill({
-            color: "#ffcc33",
+            color: palette.state.measure,
           }),
         }),
       }),
@@ -878,8 +880,8 @@ export default function ReferencePatchMap({
           const layer = new VectorLayer({
             source,
             style: new Style({
-              stroke: new Stroke({ color: "#8B4513", width: 3 }), // Brown for deadwood, thicker
-              fill: new Fill({ color: "rgba(139, 69, 19, 0.15)" }), // Light brown fill
+              stroke: new Stroke({ color: mapColors.deadwood.text, width: 3 }),
+              fill: new Fill({ color: "rgba(204, 143, 22, 0.15)" }),
             }),
             zIndex: 100, // Higher z-index to ensure visibility above ortho/MVT layers
           });
@@ -931,8 +933,8 @@ export default function ReferencePatchMap({
           const layer = new VectorLayer({
             source,
             style: new Style({
-              stroke: new Stroke({ color: "#228B22", width: 3 }), // Green for forest cover, thicker
-              fill: new Fill({ color: "rgba(34, 139, 34, 0.15)" }), // Light green fill
+              stroke: new Stroke({ color: mapColors.forest.fill, width: 3 }),
+              fill: new Fill({ color: "rgba(41, 210, 128, 0.15)" }),
             }),
             zIndex: 100, // Higher z-index to ensure visibility above ortho/MVT layers
           });

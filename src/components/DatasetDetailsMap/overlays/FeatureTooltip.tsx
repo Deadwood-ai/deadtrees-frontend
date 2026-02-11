@@ -1,4 +1,6 @@
 import { forwardRef } from "react";
+import { mapColors } from "../../../theme/mapColors";
+import { palette } from "../../../theme/palette";
 
 interface FeatureTooltipProps {
 	content: { type: string; status: string } | null;
@@ -25,10 +27,10 @@ const FeatureTooltip = forwardRef<HTMLDivElement, FeatureTooltipProps>(
 							style={{
 								backgroundColor:
 									content.status === "original" || !content.status || content.status === "none"
-										? "#F59E0B" // orange - default layer color for predictions
+										? mapColors.deadwood.text
 										: content.status === "pending"
-											? "#60A5FA" // light blue - in review
-											: "#34D399", // light green - verified
+											? palette.primary[500]
+											: palette.forest[600],
 							}}
 						/>
 						<span>{content.type}</span>

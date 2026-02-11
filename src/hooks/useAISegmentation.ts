@@ -12,6 +12,7 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 // import View from "ol/View";
 import { Settings } from "../config";
 import Overlay from "ol/Overlay";
+import { palette } from "../theme/palette";
 
 type GetOrthoLayerFn = () => TileLayerWebGL | undefined;
 
@@ -119,7 +120,7 @@ export const useAISegmentation = ({
       source,
       style: new Style({
         fill: new Fill({ color: "rgba(0, 200, 255, 0.25)" }),
-        stroke: new Stroke({ color: "#00c8ff", width: 2 }),
+        stroke: new Stroke({ color: palette.state.hover, width: 2 }),
       }),
       className: "ai-segmentation-layer",
     });
@@ -276,7 +277,7 @@ export const useAISegmentation = ({
           }
           tempFeature.setStyle(
             new Style({
-              stroke: new Stroke({ color: "#00c8ff", width: 2, lineDash: [6, 4] }),
+              stroke: new Stroke({ color: palette.state.hover, width: 2, lineDash: [6, 4] }),
               fill: new Fill({ color: "rgba(0,200,255,0.06)" }),
             }),
           );
@@ -505,7 +506,7 @@ function drawPixelGeoJSONOnCanvas(
 
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "#00c8ff";
+  ctx.strokeStyle = palette.state.hover;
   ctx.lineWidth = 2;
   ctx.fillStyle = "rgba(0,200,255,0.15)";
 

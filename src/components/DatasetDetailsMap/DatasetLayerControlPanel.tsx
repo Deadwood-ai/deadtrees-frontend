@@ -8,6 +8,7 @@ import {
   ExclamationCircleOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
+import { mapColors } from "../../theme/mapColors";
 
 type QualityRating = "great" | "sentinel_ok" | "bad" | null | undefined;
 
@@ -123,7 +124,7 @@ const DatasetLayerControlPanel = ({
               disabled={forestCoverQuality === "bad"}
             >
               <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" ? "opacity-50" : ""}`}>
-                <span className="h-3 w-3 rounded-sm bg-green-500" />
+                <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
                 <span className="text-xs text-gray-600">Forest Cover</span>
               </span>
             </Checkbox>
@@ -138,7 +139,7 @@ const DatasetLayerControlPanel = ({
               disabled={deadwoodQuality === "bad"}
             >
               <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" ? "opacity-50" : ""}`}>
-                <span className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
+                <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
                 <span className="text-xs text-gray-600">Deadwood</span>
               </span>
             </Checkbox>
@@ -160,7 +161,15 @@ const DatasetLayerControlPanel = ({
             onChange={(e) => setShowAOI(e.target.checked)}
           >
             <span className="flex items-center gap-2">
-              <span style={{ width: 12, height: 12, borderRadius: 2, border: '2px solid #3b82f6', display: 'inline-block' }} />
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 2,
+                  border: `2px solid ${mapColors.aoi.stroke}`,
+                  display: "inline-block",
+                }}
+              />
               <span className="text-xs text-gray-600">Area of Interest</span>
             </span>
           </Checkbox>

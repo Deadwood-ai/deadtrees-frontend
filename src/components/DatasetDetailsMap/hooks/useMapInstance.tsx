@@ -6,6 +6,7 @@ import type VectorLayer from "ol/layer/Vector";
 import type VectorSource from "ol/source/Vector";
 import { Overlay } from "ol";
 import { fromLonLat } from "ol/proj";
+import { palette } from "../../../theme/palette";
 
 /**
  * Map instance context - replaces forwardRef pattern for sharing map methods
@@ -88,7 +89,7 @@ export function MapInstanceProvider({ children }: { children: ReactNode }) {
 		flashEl.style.cssText = `
 			width: 40px; height: 40px; 
 			border-radius: 50%; 
-			border: 4px solid #3b82f6;
+			border: 4px solid ${palette.primary[500]};
 			background: rgba(59, 130, 246, 0.3);
 			animation: flash-pulse 1.5s ease-out;
 			pointer-events: none;

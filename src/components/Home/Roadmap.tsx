@@ -1,11 +1,11 @@
 import { Timeline } from "antd";
 
 const RoadmapItemDate = ({ date }: { date: string }) => {
-  return <span className="text-xl font-semibold">{date}</span>;
+  return <span className="text-xl font-semibold text-gray-800">{date}</span>;
 };
 
 const RoadmapItemLabel = ({ label }: { label: string }) => {
-  return <span className="m-0 pt-4 text-lg text-gray-500">{label}</span>;
+  return <span className="m-0 pt-4 text-lg text-gray-600">{label}</span>;
 };
 
 const Roadmap = () => {
@@ -13,7 +13,7 @@ const Roadmap = () => {
     <div className="m-auto flex max-w-4xl flex-col pt-24 md:flex-row">
       <div className="mb-8 text-center md:text-left">
         <p className="m-auto text-2xl font-semibold text-blue-600 md:mt-0">OUR ROADMAP</p>
-        <p className="text-lg text-gray-500">Our vision and goals for the future</p>
+        <p className="text-lg text-gray-600">Our vision and goals for the future</p>
       </div>
       <Timeline
         mode="left"

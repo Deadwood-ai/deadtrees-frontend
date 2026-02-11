@@ -1,5 +1,6 @@
 import { Segmented, Slider, Switch, Button, Divider, Checkbox } from "antd";
 import { FlagOutlined, LoginOutlined } from "@ant-design/icons";
+import { mapColors } from "../../theme/mapColors";
 
 interface LayerControlPanelProps {
   // Basemap
@@ -67,13 +68,13 @@ const LayerControlPanel = ({
       <div className="flex flex-col gap-1">
         <Checkbox checked={showForest} onChange={(e) => setShowForest(e.target.checked)}>
           <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-sm bg-green-500" />
+            <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
             <span className="text-xs text-gray-600">Tree</span>
           </span>
         </Checkbox>
         <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
           <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-sm bg-[#FFB31C]" />
+            <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
             <span className="text-xs text-gray-600">Standing Deadwood</span>
           </span>
         </Checkbox>

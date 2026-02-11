@@ -33,6 +33,8 @@ import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
 import { useWaybackItemsDebounced } from "../../hooks/useWaybackItems";
 import type { IMapFlag } from "../../types/mapFlags";
+import { mapColors } from "../../theme/mapColors";
+import { palette } from "../../theme/palette";
 
 interface ClickedValues {
   forestPct: number;
@@ -214,23 +216,23 @@ const DeadtreesMap = () => {
           const layerParts: string[] = [];
           if (showForest) {
             layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 2px; background: #22c55e;"></span>
-                <span style="color: #6b7280;">Tree</span>
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: ${mapColors.forest.fill};"></span>
+                <span style="color: ${palette.neutral[700]};">Tree</span>
                 <span style="font-weight: 600;">${forestPct}%</span>
               </span>`);
           }
           if (showDeadwood) {
             layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 2px; background: #FFB31C;"></span>
-                <span style="color: #6b7280;">Deadwood</span>
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: ${mapColors.deadwood.fill};"></span>
+                <span style="color: ${palette.neutral[700]};">Deadwood</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
               </span>`);
           }
 
           tooltipElement.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px; color: #374151;">
+            <div style="display: flex; align-items: center; gap: 12px; color: ${palette.neutral[800]};">
               ${layerParts.join("")}
-              <button id="close-cell-tooltip" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; padding: 0 0 0 4px;">&times;</button>
+              <button id="close-cell-tooltip" style="background: none; border: none; cursor: pointer; color: ${palette.neutral[500]}; font-size: 16px; line-height: 1; padding: 0 0 0 4px;">&times;</button>
             </div>
           `;
           // Add close button handler
@@ -305,7 +307,7 @@ const DeadtreesMap = () => {
         },
       });
 
-      // Deadwood layer: Selective Yellow (#FFB31C) spectrum with enhanced visibility for high values
+      // Deadwood layer: selective yellow spectrum with enhanced visibility for high values
       // Low values are more transparent, high values are more visible
       const deadwoodLayer = new TileLayerWebGL({
         source: getCachedDeadwoodSource(selectedYear),
@@ -351,8 +353,8 @@ const DeadtreesMap = () => {
       const clickedCellLayer = new VectorLayer({
         source: clickedCellSource,
         style: new Style({
-          fill: new Fill({ color: "rgba(59, 130, 246, 0.2)" }),
-          stroke: new Stroke({ color: "#3b82f6", width: 2 }),
+          fill: new Fill({ color: mapColors.aoi.fill }),
+          stroke: new Stroke({ color: mapColors.aoi.stroke, width: 2 }),
         }),
         zIndex: 50,
       });
@@ -545,15 +547,15 @@ const DeadtreesMap = () => {
           geometry: centerPoint, // Render at center point instead of polygon
           image: new CircleStyle({
             radius: 8,
-            fill: new Fill({ color: "#1677ff" }),
-            stroke: new Stroke({ color: "#ffffff", width: 2 }),
+            fill: new Fill({ color: mapColors.flag.fill }),
+            stroke: new Stroke({ color: palette.neutral[0], width: 2 }),
           }),
         });
       } else {
         // Bbox style
         return new Style({
           fill: new Fill({ color: "rgba(22, 119, 255, 0.15)" }),
-          stroke: new Stroke({ color: "#1677ff", width: 2 }),
+          stroke: new Stroke({ color: mapColors.flag.stroke, width: 2 }),
         });
       }
     },
@@ -592,8 +594,8 @@ const DeadtreesMap = () => {
           if (popupElement) {
             popupElement.innerHTML = `
               <div style="font-family: system-ui, sans-serif;">
-                <div style="font-weight: 600; color: #1677ff; margin-bottom: 4px;">Flag #${flagId}</div>
-                <div style="color: #374151; line-height: 1.4;">${description}</div>
+                <div style="font-weight: 600; color: ${mapColors.flag.stroke}; margin-bottom: 4px;">Flag #${flagId}</div>
+                <div style="color: ${palette.neutral[800]}; line-height: 1.4;">${description}</div>
               </div>
             `;
           }
@@ -681,8 +683,8 @@ const DeadtreesMap = () => {
       type: "Circle",
       geometryFunction: createBox(),
       style: new Style({
-        fill: new Fill({ color: "rgba(22, 119, 255, 0.2)" }),
-        stroke: new Stroke({ color: "#1677ff", width: 2, lineDash: [5, 5] }),
+        fill: new Fill({ color: mapColors.aoi.fill }),
+        stroke: new Stroke({ color: mapColors.flag.stroke, width: 2, lineDash: [5, 5] }),
       }),
     });
 

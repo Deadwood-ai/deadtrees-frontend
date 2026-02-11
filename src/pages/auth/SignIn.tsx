@@ -4,6 +4,7 @@ import { supabase } from "../../hooks/useSupabase";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "../../hooks/useAuthProvider";
+import { palette } from "../../theme/palette";
 
 const SignIn = () => {
   const { session, user } = useAuth();
@@ -24,7 +25,19 @@ const SignIn = () => {
         <SignInAuthUI
           supabaseClient={supabase}
           providers={[]}
-          appearance={{ theme: ThemeSupa }}
+          appearance={{
+            theme: ThemeSupa,
+            variables: {
+              default: {
+                colors: {
+                  brand: palette.primary[500],
+                  brandAccent: palette.primary[600],
+                  defaultButtonBackground: palette.primary[500],
+                  defaultButtonBackgroundHover: palette.primary[600],
+                },
+              },
+            },
+          }}
           redirectTo={window.origin + returnTo}
         />
         <div className="pt-4 text-center">

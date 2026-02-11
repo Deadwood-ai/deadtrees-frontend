@@ -4,6 +4,7 @@ import { PlusOutlined, DeleteOutlined, SearchOutlined, ClockCircleOutlined } fro
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import { processOrcidInput } from "../utils/orcidUtils";
+import { palette } from "../theme/palette";
 
 interface Author {
   id?: number;
@@ -428,7 +429,10 @@ const PublicationModal: React.FC<PublicationModalProps> = ({ visible, onCancel, 
           </Row>
 
           {authors.map((author, index) => (
-            <div key={index} style={{ marginBottom: 16, padding: 16, border: "1px solid #f0f0f0", borderRadius: 4 }}>
+            <div
+              key={index}
+              style={{ marginBottom: 16, padding: 16, border: `1px solid ${palette.neutral[100]}`, borderRadius: 4 }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <div>
                   <Typography.Text strong>Author {index + 1}</Typography.Text>

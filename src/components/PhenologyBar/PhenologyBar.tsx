@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Tooltip } from "antd";
 import { PhenologyMetadata } from "../../types/phenology";
 import { generatePhenologyGradient, getAcquisitionPeriod, formatPhenologyTooltip } from "../../utils/phenologyUtils";
+import { palette } from "../../theme/palette";
 
 interface PhenologyBarProps {
   phenologyData?: PhenologyMetadata;
@@ -25,7 +26,7 @@ export default function PhenologyBar({
   // Generate gradient from phenology data
   const gradient = useMemo(() => {
     if (!phenologyData?.phenology_curve) {
-      return "linear-gradient(to right, #F5F5F5, #F5F5F5)";
+      return `linear-gradient(to right, ${palette.neutral[100]}, ${palette.neutral[100]})`;
     }
     return generatePhenologyGradient(phenologyData.phenology_curve);
   }, [phenologyData]);

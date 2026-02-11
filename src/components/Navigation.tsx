@@ -103,16 +103,18 @@ export default function Navigation() {
   };
 
   return (
-    <div className="hidden rounded-lg bg-slate-200 md:block">
+    <div className="hidden md:block">
       <Header
         style={{
           display: "flex",
           alignItems: "center",
-          background: "#f8fafc",
+          background: "var(--dt-surface-raised, #ffffff)",
           position: "sticky",
           top: 0,
-          zIndex: 1,
+          zIndex: 50,
           borderRadius: "0 0 8px 8px",
+          borderBottom: "1px solid rgb(var(--dt-primary-rgb) / 0.15)",
+          boxShadow: "0 1px 8px rgb(var(--dt-primary-rgb) / 0.08)",
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
@@ -124,7 +126,7 @@ export default function Navigation() {
           />
           {/* <Tag color="warning">BETA</Tag> */}
         </div>
-        <div style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+        <div style={{ flex: 1, backgroundColor: "var(--dt-surface-raised, #ffffff)" }}>
           <Menu
             mode="horizontal"
             selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
@@ -134,7 +136,7 @@ export default function Navigation() {
               justifyContent: "end",
               minWidth: 0,
               borderBottom: "none",
-              backgroundColor: "#f8fafc",
+              backgroundColor: "var(--dt-surface-raised, #ffffff)",
               width: "100%",
             }}
           />
