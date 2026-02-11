@@ -343,13 +343,13 @@ const DataTable: React.FC<DataTableProps> = ({
       defaultSortOrder: "descend" as const,
       sortDirections: ["descend", "ascend"] as SortOrder[],
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
-      width: 80,
+      width: 70,
     },
     {
       title: "Date",
       dataIndex: "aquisition_day",
       key: "aquisition_day",
-      width: 120,
+      width: 95,
       sorter: (a: Dataset, b: Dataset) => {
         // Create comparable date values (YYYYMMDD format for sorting)
         const dateA = (a.aquisition_year || 0) * 10000 + (a.aquisition_month || 0) * 100 + (a.aquisition_day || 0);
@@ -368,7 +368,8 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "File Name",
       dataIndex: "file_name",
       key: "file_name",
-      width: 200,
+      width: 165,
+      ellipsis: true,
       sorter: (a: Dataset, b: Dataset) => {
         // Case-insensitive string comparison
         const fileNameA = a.file_name?.toLowerCase() || "";
@@ -377,7 +378,7 @@ const DataTable: React.FC<DataTableProps> = ({
       },
       render: (fileName: string) => (
         <Tooltip title={fileName}>
-          <span className="block max-w-[180px] truncate">{fileName}</span>
+          <span className="block max-w-[145px] truncate">{fileName}</span>
         </Tooltip>
       ),
     },
@@ -385,14 +386,14 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Platform",
       dataIndex: "platform",
       key: "platform",
-      width: 100,
+      width: 85,
       render: (tag: string | undefined) => (tag ? <Tag color="blue">{tag}</Tag> : null),
     },
     {
       title: "Authors",
       dataIndex: "authors",
       key: "authors",
-      width: 200,
+      width: 150,
       render: (authors: string[] | undefined, record: Dataset) => {
         if (!authors || authors.length === 0) return null;
 
@@ -439,7 +440,8 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Info",
       dataIndex: "additional_information",
       key: "additional_information",
-      width: 200,
+      width: 130,
+      ellipsis: true,
       render: (info: string | undefined) => {
         if (!info) return null;
 
@@ -449,7 +451,7 @@ const DataTable: React.FC<DataTableProps> = ({
 
         return (
           <Tooltip title={cleanedInfo}>
-            <span className="block max-w-[180px] truncate">{cleanedInfo}</span>
+            <span className="block max-w-[115px] truncate">{cleanedInfo}</span>
           </Tooltip>
         );
       },
@@ -458,6 +460,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Publication",
       dataIndex: "freidata_doi",
       key: "publication_status",
+      width: 145,
       render: (freidataDoiValue: string | undefined, record: Dataset) => {
         // Dataset has a FreiDATA DOI
         if (freidataDoiValue) {
@@ -541,7 +544,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
-      width: 220,
+      width: 160,
       render: (tag: string | undefined, record: Dataset) => {
         // Handle audit status separately as it's not part of the main processing pipeline
         if (tag === "audit_in_progress") {
@@ -580,6 +583,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Actions",
       dataIndex: "id",
       key: "id",
+      width: 110,
       render: (_: number, record: Dataset) => {
         return (
           <Dropdown menu={{ items: getActionMenuItems(record) }} trigger={["click"]} placement="bottomRight">
