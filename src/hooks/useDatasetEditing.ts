@@ -24,9 +24,47 @@ interface UseDatasetEditingOptions {
   user: User | null;
 }
 
+type EditDebugEvent = {
+  ts: string;
+  datasetId: number | undefined;
+  phase: string;
+  details?: Record<string, unknown>;
+};
+
+const MASS_DELETE_MIN_INITIAL = 100;
+const MASS_DELETE_MIN_RATIO = 0.6;
+
+declare global {
+  interface Window {
+    __DT_EDIT_DEBUG_EVENTS__?: EditDebugEvent[];
+    __DT_EDIT_DEBUG_ENABLED__?: boolean;
+  }
+}
+
 export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions) {
   const navigate = useNavigate();
   const geoJson = useMemo(() => new GeoJSON(), []);
+
+  const emitDebugEvent = useCallback((phase: string, details?: Record<string, unknown>) => {
+    if (typeof window === "undefined") return;
+    const event: EditDebugEvent = {
+      ts: new Date().toISOString(),
+      datasetId,
+      phase,
+      details,
+    };
+    if (!window.__DT_EDIT_DEBUG_EVENTS__) {
+      window.__DT_EDIT_DEBUG_EVENTS__ = [];
+    }
+    window.__DT_EDIT_DEBUG_EVENTS__.push(event);
+    // Keep bounded history
+    if (window.__DT_EDIT_DEBUG_EVENTS__.length > 500) {
+      window.__DT_EDIT_DEBUG_EVENTS__.shift();
+    }
+    if (import.meta.env.DEV || window.__DT_EDIT_DEBUG_ENABLED__) {
+      console.debug(`[DT_EDIT_DEBUG] ${JSON.stringify(event)}`);
+    }
+  }, [datasetId]);
 
   // State
   const [isEditing, setIsEditing] = useState(false);
@@ -74,6 +112,13 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
   // Start editing
   const handleStartEditing = useCallback(
     (layerType: LayerType) => {
+      emitDebugEvent("start-editing:requested", {
+        layerType,
+        hasUser: !!user,
+        hasMap: !!mapRef.current,
+        hasDeadwood,
+        hasForestCover,
+      });
       if (!user) {
         message.info("Please login to edit predictions");
         navigate("/sign-in");
@@ -82,8 +127,16 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
       setEditingLayerType(layerType);
       setIsEditing(true);
       editor.startEditing();
+      const overlaySource = editor.getOverlayLayer()?.getSource();
+      emitDebugEvent("start-editing:after-editor-start", {
+        layerType,
+        hasMap: !!mapRef.current,
+        hasOverlayLayer: !!editor.getOverlayLayer(),
+        hasOverlaySource: !!overlaySource,
+        overlayFeatureCount: overlaySource?.getFeatures()?.length ?? null,
+      });
     },
-    [user, navigate, editor]
+    [user, navigate, editor, emitDebugEvent, hasDeadwood, hasForestCover]
   );
 
   // Cancel editing
@@ -103,7 +156,39 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
     setIsSaving(true);
     try {
       const currentFeatures = editor.getOverlayLayer()?.getSource()?.getFeatures() || [];
+      emitDebugEvent("save:before-diff", {
+        labelId: predictionLabel.id,
+        layerType: editingLayerType,
+        initialCount: initialFeatures.length,
+        currentCount: currentFeatures.length,
+        hasOverlayLayer: !!editor.getOverlayLayer(),
+        hasOverlaySource: !!editor.getOverlayLayer()?.getSource(),
+      });
       const { deletions, additions } = buildSavePayload(initialFeatures, currentFeatures, geoJson);
+      const deleteRatio = initialFeatures.length > 0 ? deletions.length / initialFeatures.length : 0;
+      const isSuspiciousMassDelete =
+        initialFeatures.length >= MASS_DELETE_MIN_INITIAL &&
+        additions.length === 0 &&
+        deletions.length > 0 &&
+        deleteRatio >= MASS_DELETE_MIN_RATIO;
+      emitDebugEvent("save:after-diff", {
+        deletions: deletions.length,
+        additions: additions.length,
+        deleteRatio,
+        suspiciousMassDelete: isSuspiciousMassDelete,
+      });
+
+      if (isSuspiciousMassDelete) {
+        emitDebugEvent("save:blocked-suspicious-mass-delete", {
+          initialCount: initialFeatures.length,
+          currentCount: currentFeatures.length,
+          deletions: deletions.length,
+          additions: additions.length,
+          deleteRatio,
+      });
+        message.error("Save blocked: suspicious mass deletion detected. Please reload and try again.");
+        return;
+      }
 
       if (deletions.length === 0 && additions.length === 0) {
         message.info("No changes to save");
@@ -117,6 +202,11 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
         layerType: editingLayerType,
         deletions,
         additions,
+      });
+      emitDebugEvent("save:rpc-result", {
+        success: result.success,
+        message: result.message,
+        conflictCount: result.conflict_ids?.length ?? 0,
       });
 
       if (!result.success) {
@@ -138,6 +228,9 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
       setRefreshKey((k) => k + 1);
     } catch (error) {
       console.error("Failed to save corrections:", error);
+      emitDebugEvent("save:error", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
       message.error("Failed to save corrections");
     } finally {
       setIsSaving(false);
@@ -147,7 +240,14 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
   // Load geometries into editor when editing starts
   useEffect(() => {
     if (isEditing && loadedGeometries && editingLayerType && mapRef.current && !hasLoadedFeatures.current) {
-      hasLoadedFeatures.current = true;
+      emitDebugEvent("load-geometries:effect-enter", {
+        layerType: editingLayerType,
+        loadedCount: loadedGeometries.length,
+        hasMap: !!mapRef.current,
+        hasLoadedFeatures: hasLoadedFeatures.current,
+        hasOverlayLayer: !!editor.getOverlayLayer(),
+        hasOverlaySource: !!editor.getOverlayLayer()?.getSource(),
+      });
 
       // Clone features for diff calculation
       const clonedFeatures = loadedGeometries.map((f) => {
@@ -161,14 +261,25 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
       // Load into editor overlay
       const overlaySource = editor.getOverlayLayer()?.getSource();
       if (overlaySource) {
+        hasLoadedFeatures.current = true;
         overlaySource.clear();
         loadedGeometries.forEach((f) => overlaySource.addFeature(f));
+        emitDebugEvent("load-geometries:overlay-populated", {
+          loadedCount: loadedGeometries.length,
+          overlayCount: overlaySource.getFeatures().length,
+        });
+      } else {
+        emitDebugEvent("load-geometries:overlay-missing-window", {
+          loadedCount: loadedGeometries.length,
+          note: "Potential race window: initialFeatures set but overlay source missing",
+        });
       }
     }
     if (!isEditing) {
       hasLoadedFeatures.current = false;
+      emitDebugEvent("load-geometries:editing-stopped");
     }
-  }, [isEditing, loadedGeometries, editingLayerType, editor]);
+  }, [isEditing, loadedGeometries, editingLayerType, editor, emitDebugEvent]);
 
   // Keyboard shortcuts
   useEffect(() => {

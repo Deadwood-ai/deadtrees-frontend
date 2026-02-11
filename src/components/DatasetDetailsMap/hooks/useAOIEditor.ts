@@ -11,6 +11,8 @@ import Feature from "ol/Feature";
 import type { Geometry } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
 import type { FeatureLike } from "ol/Feature";
+import { palette } from "../../../theme/palette";
+import { mapColors } from "../../../theme/mapColors";
 
 export interface AOIToolbarState {
 	isDrawing: boolean;
@@ -163,11 +165,17 @@ export function useAOIEditor({
 		}
 	}, [mapRef, mapContainerRef]);
 
+	// Keep editable AOI layer hidden unless the AOI editor is actively being used.
+	const setEditableLayerVisibility = useCallback((visible: boolean) => {
+		editableAOILayerRef.current?.setVisible(visible);
+	}, []);
+
 	// Start drawing a new polygon
 	const startDrawing = useCallback(() => {
 		if (!enabled) return;
 		clearInteractions();
 		if (!mapRef.current || !editableAOILayerRef.current) return;
+		setEditableLayerVisibility(true);
 		const source = editableAOILayerRef.current.getSource();
 		if (!source) return;
 
@@ -176,12 +184,12 @@ export function useAOIEditor({
 			type: "Polygon",
 			style: new Style({
 				stroke: new Stroke({
-					color: "#3b82f6",
+					color: mapColors.aoi.stroke,
 					width: 2,
 					lineDash: [5, 5],
 				}),
 				fill: new Fill({
-					color: "rgba(255, 107, 53, 0.1)",
+					color: mapColors.aoi.fill,
 				}),
 			}),
 		});
@@ -204,7 +212,7 @@ export function useAOIEditor({
 		if (mapContainerRef.current) {
 			mapContainerRef.current.style.cursor = "crosshair";
 		}
-	}, [enabled, mapRef, mapContainerRef, clearInteractions, getCurrentGeometry, updateAOIWithGeometry]);
+	}, [enabled, mapRef, mapContainerRef, clearInteractions, getCurrentGeometry, updateAOIWithGeometry, setEditableLayerVisibility]);
 
 	// Add another polygon
 	const addAnotherPolygon = useCallback(() => startDrawing(), [startDrawing]);
@@ -231,7 +239,7 @@ export function useAOIEditor({
 			condition: click,
 			layers: [editableAOILayerRef.current],
 			style: new Style({
-				stroke: new Stroke({ color: "#00FFFF", width: 3 }),
+				stroke: new Stroke({ color: palette.state.hover, width: 3 }),
 				fill: new Fill({ color: "rgba(0, 255, 255, 0.1)" }),
 			}),
 		});
@@ -250,7 +258,7 @@ export function useAOIEditor({
 			style: new Style({
 				image: new CircleStyle({
 					radius: 5,
-					fill: new Fill({ color: "#00FFFF" }),
+					fill: new Fill({ color: palette.state.hover }),
 					stroke: new Stroke({ color: "white", width: 1 }),
 				}),
 			}),
@@ -277,6 +285,7 @@ export function useAOIEditor({
 			message.error("No AOI to edit.");
 			return;
 		}
+		setEditableLayerVisibility(true);
 		setIsDrawing(false);
 		setSelectedFeatureForEdit(null);
 		if (setupEditingInteractions()) {
@@ -289,20 +298,22 @@ export function useAOIEditor({
 		} else {
 			message.error("Could not start editing. AOI feature might be missing.");
 		}
-	}, [enabled, hasAOI, mapContainerRef, setupEditingInteractions]);
+	}, [enabled, hasAOI, mapContainerRef, setupEditingInteractions, setEditableLayerVisibility]);
 
 	// Save editing
 	const saveEditing = useCallback(() => {
 		clearInteractions();
 		setIsEditing(false);
+		setEditableLayerVisibility(false);
 		setSelectedFeatureForEdit(null);
 		message.success("AOI edits applied. Save audit to persist.");
-	}, [clearInteractions]);
+	}, [clearInteractions, setEditableLayerVisibility]);
 
 	// Cancel editing (restore original)
 	const cancelEditing = useCallback(() => {
 		clearInteractions();
 		setIsEditing(false);
+		setEditableLayerVisibility(false);
 		setSelectedFeatureForEdit(null);
 
 		// Reload original AOI if available
@@ -352,7 +363,7 @@ export function useAOIEditor({
 		}
 
 		message.info("Editing cancelled.");
-	}, [clearInteractions, initialAOI, updateAOIWithGeometry]);
+	}, [clearInteractions, initialAOI, updateAOIWithGeometry, setEditableLayerVisibility]);
 
 	// Delete selected polygon
 	const deleteSelectedPolygon = useCallback(() => {
@@ -383,13 +394,14 @@ export function useAOIEditor({
 	const deleteAOI = useCallback(() => {
 		if (!enabled) return;
 		clearInteractions();
+		setEditableLayerVisibility(false);
 		const source = editableAOILayerRef.current?.getSource();
 		source?.clear();
 		updateAOIWithGeometry(null);
 		setIsEditing(false);
 		setIsDrawing(false);
 		message.success("AOI deleted.");
-	}, [enabled, clearInteractions, updateAOIWithGeometry]);
+	}, [enabled, clearInteractions, updateAOIWithGeometry, setEditableLayerVisibility]);
 
 	// Initialize editable AOI layer when enabled and map is ready
 	useEffect(() => {
@@ -402,15 +414,16 @@ export function useAOIEditor({
 				source: editableAOISource,
 				style: new Style({
 					stroke: new Stroke({
-						color: "#3b82f6",
+						color: mapColors.aoi.stroke,
 						width: 3,
 					}),
 					fill: new Fill({
-						color: "rgba(255, 107, 53, 0.1)",
+						color: mapColors.aoi.fill,
 					}),
 				}),
 				zIndex: 100,
 			});
+			editableAOILayer.setVisible(false);
 
 			mapRef.current.addLayer(editableAOILayer);
 			editableAOILayerRef.current = editableAOILayer;
@@ -465,6 +478,15 @@ export function useAOIEditor({
 			clearInteractions();
 		};
 	}, [enabled, mapRef, initialAOI, onAOIChange, clearInteractions]);
+
+	// Ensure visibility tracks AOI editing mode only.
+	useEffect(() => {
+		if (!enabled) {
+			setEditableLayerVisibility(false);
+			return;
+		}
+		setEditableLayerVisibility(isDrawing || isEditing);
+	}, [enabled, isDrawing, isEditing, setEditableLayerVisibility]);
 
 	// Report state changes to parent
 	useEffect(() => {
