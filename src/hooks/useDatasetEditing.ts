@@ -337,9 +337,6 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
             editor.clipSelected();
           }
           break;
-        case "escape":
-          handleCancelEditing();
-          break;
       }
     };
 
