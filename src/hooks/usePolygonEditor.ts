@@ -143,6 +143,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     const geoJsonFormatter = new GeoJSON();
 
     // Serialize all features to GeoJSON (excluding temporary features like AI bbox)
+    // IMPORTANT: preserve all metadata needed for save diffing (geometry_id, updated_at, etc.)
     const featuresGeoJSON = features
       .filter((f) => {
         // Exclude temporary features (like AI segmentation bbox)
@@ -159,6 +160,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
           properties: {
             label_data: f.get("label_data"),
             patch_id: f.get("patch_id"),
+            geometry_id: f.get("geometry_id") ?? null,
+            updated_at: f.get("updated_at") ?? null,
+            is_new: f.get("is_new") ?? false,
+            is_modified: f.get("is_modified") ?? false,
+            replaces_geometry_id: f.get("replaces_geometry_id") ?? null,
           },
         };
       });
@@ -194,7 +200,7 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
     // Clear current features
     source.clear();
 
-    // Restore features
+    // Restore features with all preserved metadata
     featuresData.forEach((featureData: { geometry: unknown; properties: Record<string, unknown> }) => {
       const geometry = geoJsonFormatter.readGeometry(featureData.geometry, {
         dataProjection: "EPSG:3857",
@@ -203,6 +209,11 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
       const feature = new Feature(geometry);
       feature.set("label_data", featureData.properties.label_data);
       feature.set("patch_id", featureData.properties.patch_id);
+      if (featureData.properties.geometry_id) feature.set("geometry_id", featureData.properties.geometry_id);
+      if (featureData.properties.updated_at) feature.set("updated_at", featureData.properties.updated_at);
+      if (featureData.properties.is_new) feature.set("is_new", featureData.properties.is_new);
+      if (featureData.properties.is_modified) feature.set("is_modified", featureData.properties.is_modified);
+      if (featureData.properties.replaces_geometry_id) feature.set("replaces_geometry_id", featureData.properties.replaces_geometry_id);
       source.addFeature(feature);
     });
 

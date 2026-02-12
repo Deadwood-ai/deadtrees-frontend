@@ -31,8 +31,6 @@ type EditDebugEvent = {
   details?: Record<string, unknown>;
 };
 
-const MASS_DELETE_MIN_INITIAL = 100;
-const MASS_DELETE_MIN_RATIO = 0.6;
 
 declare global {
   interface Window {
@@ -165,30 +163,10 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
         hasOverlaySource: !!editor.getOverlayLayer()?.getSource(),
       });
       const { deletions, additions } = buildSavePayload(initialFeatures, currentFeatures, geoJson);
-      const deleteRatio = initialFeatures.length > 0 ? deletions.length / initialFeatures.length : 0;
-      const isSuspiciousMassDelete =
-        initialFeatures.length >= MASS_DELETE_MIN_INITIAL &&
-        additions.length === 0 &&
-        deletions.length > 0 &&
-        deleteRatio >= MASS_DELETE_MIN_RATIO;
       emitDebugEvent("save:after-diff", {
         deletions: deletions.length,
         additions: additions.length,
-        deleteRatio,
-        suspiciousMassDelete: isSuspiciousMassDelete,
       });
-
-      if (isSuspiciousMassDelete) {
-        emitDebugEvent("save:blocked-suspicious-mass-delete", {
-          initialCount: initialFeatures.length,
-          currentCount: currentFeatures.length,
-          deletions: deletions.length,
-          additions: additions.length,
-          deleteRatio,
-      });
-        message.error("Save blocked: suspicious mass deletion detected. Please reload and try again.");
-        return;
-      }
 
       if (deletions.length === 0 && additions.length === 0) {
         message.info("No changes to save");
