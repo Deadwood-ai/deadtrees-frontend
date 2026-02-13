@@ -46,17 +46,12 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
     dataset.is_forest_cover_done,
   );
 
-  // If the queue reports active processing, prefer that over local flags
-  const isActivelyProcessing = queueInfo?.is_processing === true;
-
-  const isQueued =
-    !isActivelyProcessing &&
-    Boolean(
-      dataset.is_upload_done &&
-      !hasStartedAnyStep &&
-      !dataset.has_error &&
-      (dataset.current_status === "idle" || dataset.current_status === undefined || dataset.current_status === null),
-    );
+  const isQueued = Boolean(
+    dataset.is_upload_done &&
+    !hasStartedAnyStep &&
+    !dataset.has_error &&
+    (dataset.current_status === "idle" || dataset.current_status === undefined || dataset.current_status === null),
+  );
 
   if (isQueued) {
     const positionText =

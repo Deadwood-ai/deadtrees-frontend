@@ -5,7 +5,6 @@ export interface QueueInfo {
   dataset_id: number;
   current_position: number | null;
   estimated_time: number | null;
-  is_processing: boolean | null;
   task_types: string[] | null;
 }
 
@@ -33,7 +32,7 @@ export function useQueuePositions(datasetIds: number[] | undefined) {
         chunks.map(async (ids) => {
           const { data, error } = await supabase
             .from("v2_queue_positions")
-            .select("dataset_id,current_position,estimated_time,is_processing,task_types")
+            .select("dataset_id,current_position,estimated_time,task_types")
             .in("dataset_id", ids);
           if (error) throw error;
           return data as unknown as QueueInfo[];
