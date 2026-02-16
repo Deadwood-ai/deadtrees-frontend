@@ -31,16 +31,18 @@ const ChangeIndicator = ({ change }: { change: { pct: number; direction: "up" | 
 };
 
 const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStatsModalProps) => {
+  const threshold = data?.cover_threshold_pct ?? 20;
+
   // Transform data for area chart (hectares over time)
   const chartData = data?.stats
-    .filter((s) => s.forest_area_ha !== null || s.deadwood_area_ha !== null)
+    .filter((s) => s.tree_cover_area_ha !== null || s.deadwood_area_ha !== null)
     .flatMap((s) => {
       const items: { year: string; value: number; category: string }[] = [];
-      if (s.forest_area_ha !== null) {
-        items.push({ year: String(s.year), value: s.forest_area_ha, category: "Forest Cover" });
+      if (s.tree_cover_area_ha !== null) {
+        items.push({ year: String(s.year), value: s.tree_cover_area_ha, category: "Tree Cover" });
       }
       if (s.deadwood_area_ha !== null) {
-        items.push({ year: String(s.year), value: s.deadwood_area_ha, category: "Deadwood" });
+        items.push({ year: String(s.year), value: s.deadwood_area_ha, category: "Standing Deadwood" });
       }
       return items;
     }) ?? [];
@@ -48,16 +50,15 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
   // Compute summary values
   const firstStats = data?.stats[0] ?? null;
   const latestStats = data?.stats[data.stats.length - 1] ?? null;
-  const forestChange = computeChange(firstStats?.forest_area_ha ?? null, latestStats?.forest_area_ha ?? null);
+  const treeCoverChange = computeChange(firstStats?.tree_cover_area_ha ?? null, latestStats?.tree_cover_area_ha ?? null);
   const deadwoodChange = computeChange(firstStats?.deadwood_area_ha ?? null, latestStats?.deadwood_area_ha ?? null);
-  const forestPct = latestStats?.forest_mean_pct ?? null;
 
   return (
     <Modal
       title={
         <div className="flex items-center gap-2">
           <AreaChartOutlined style={{ color: palette.primary[500] }} />
-          <span>Polygon Time-Series Statistics</span>
+          <span>Area Statistics</span>
         </div>
       }
       open={open}
@@ -91,27 +92,25 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
           >
             {/* Area */}
             <div>
-              <div className="text-xs" style={{ color: palette.neutral[500] }}>Area</div>
+              <div className="text-xs" style={{ color: palette.neutral[500] }}>Selected Area</div>
               <div className="text-lg font-semibold" style={{ color: palette.neutral[800] }}>
                 {data.polygon_area_km2.toFixed(2)} km²
               </div>
-              {forestPct !== null && (
-                <span style={{ color: palette.neutral[500], fontSize: 13, fontWeight: 500 }}>
-                  {forestPct.toFixed(1)}% forested
-                </span>
-              )}
+              <span style={{ color: palette.neutral[400], fontSize: 12 }}>
+                threshold: &gt;{threshold}% cover
+              </span>
             </div>
-            {/* Forest Cover */}
+            {/* Tree Cover */}
             <div>
-              <div className="text-xs" style={{ color: palette.forest[600] }}>Forest Cover</div>
+              <div className="text-xs" style={{ color: palette.forest[600] }}>Tree Cover</div>
               <div className="text-lg font-semibold" style={{ color: palette.forest[600] }}>
-                {latestStats?.forest_area_ha !== null ? `${latestStats!.forest_area_ha.toFixed(1)} ha` : "–"}
+                {latestStats?.tree_cover_area_ha !== null ? `${latestStats!.tree_cover_area_ha.toFixed(1)} ha` : "–"}
               </div>
-              {forestChange && <ChangeIndicator change={forestChange} />}
+              {treeCoverChange && <ChangeIndicator change={treeCoverChange} />}
             </div>
-            {/* Deadwood */}
+            {/* Standing Deadwood */}
             <div>
-              <div className="text-xs" style={{ color: palette.deadwood[500] }}>Deadwood</div>
+              <div className="text-xs" style={{ color: palette.deadwood[500] }}>Standing Deadwood</div>
               <div className="text-lg font-semibold" style={{ color: palette.deadwood[500] }}>
                 {latestStats?.deadwood_area_ha !== null ? `${latestStats!.deadwood_area_ha.toFixed(1)} ha` : "–"}
               </div>
@@ -124,7 +123,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
             <Alert
               type="info"
               message="No coverage data available"
-              description="The drawn polygon does not overlap with any coverage data. Try drawing in an area where the forest/deadwood layers are visible on the map."
+              description="The drawn polygon does not overlap with any coverage data. Try drawing in an area where the tree cover / deadwood layers are visible on the map."
               showIcon
             />
           )}
