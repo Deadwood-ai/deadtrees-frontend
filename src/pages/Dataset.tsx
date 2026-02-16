@@ -38,6 +38,8 @@ export default function Dataset() {
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  // Incremented on explicit filter actions to trigger map zoom
+  const [filterZoomTrigger, setFilterZoomTrigger] = useState(0);
 
   // Debounced search handler
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function Dataset() {
   const handleFilterClick = (filterValue: string, filterType: FilterTag) => {
     setFilter(filterValue);
     setFilterTag(filterType);
+    setFilterZoomTrigger((n) => n + 1);
   };
 
   const handleFilterButtonClick = () => {
@@ -67,6 +70,7 @@ export default function Dataset() {
 
   const handleApplyFilters = (newFilters: AdvancedFilters) => {
     setAdvancedFilters(newFilters);
+    setFilterZoomTrigger((n) => n + 1);
   };
 
   const processedData = useMemo(() => {
@@ -219,6 +223,7 @@ export default function Dataset() {
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             setVisibleFeatures={setVisibleFeatures}
+            filterZoomTrigger={filterZoomTrigger}
           />
         )}
       </Col>

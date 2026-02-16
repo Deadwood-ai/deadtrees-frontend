@@ -14,7 +14,7 @@ const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: Locatio
   const segmentedValue = selectedSite || null;
 
   return (
-    <div className="flex w-72 flex-col gap-2 rounded-lg bg-white/95 p-3 backdrop-blur-sm">
+    <div className="flex min-w-72 flex-col gap-2 rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Address Search */}
       <div className="text-xs font-medium text-gray-500">Location</div>
       <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
@@ -28,12 +28,11 @@ const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: Locatio
       <div className="text-xs font-medium text-gray-500">Quick Access</div>
       <Segmented
         size="small"
-        block
         value={segmentedValue as string}
         onChange={(value) => onSiteChange(value as string)}
         options={[
           { value: "Harz", label: "Harz" },
-          { value: "Waldshut", label: "Waldshut" },
+          { value: "Schwarzwald", label: "Schwarzwald" },
           { value: "Bayern", label: "Bavaria" },
         ]}
       />

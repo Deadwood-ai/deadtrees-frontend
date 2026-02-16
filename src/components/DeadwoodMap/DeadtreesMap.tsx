@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Modal, Input, message } from "antd";
+import { Modal, Input, message } from "antd";
 import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
+import { defaults as defaultInteractions } from "ol/interaction";
 import { Attribution } from "ol/control";
 import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
@@ -28,10 +29,12 @@ import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
 import MapLegend from "./MapLegend";
 import YearImagerySelector from "./YearImagerySelector";
+import PolygonStatsModal from "./PolygonStatsModal";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
 import { useWaybackItemsDebounced } from "../../hooks/useWaybackItems";
+import { usePolygonAnalysis } from "../../hooks/usePolygonAnalysis";
 import type { IMapFlag } from "../../types/mapFlags";
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
@@ -60,9 +63,9 @@ const createForestSource = (year: string) => {
 };
 
 const sites: Record<string, number[]> = {
-  Waldshut: [8.174864507120049, 47.682517904265666],
   Harz: [10.668224826784524, 51.78688853393797],
   Bayern: [13.330993298074588, 49.03963187270776],
+  Schwarzwald: [8.35, 48.55],
 };
 
 // Source caches - persist across renders to reuse already-loaded sources
@@ -121,6 +124,9 @@ const DeadtreesMap = () => {
   const [showForest, setShowForest] = useState(true);
   const [showDeadwood, setShowDeadwood] = useState(true);
   const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] = useState(false);
+
+  // Polygon analysis (drawing + stats)
+  const polygonAnalysis = usePolygonAnalysis(mapRef);
 
   // Wayback imagery state - using debounced location-based query
   // Default to a recent Wayback release (31144 = 2024) for immediate satellite display
@@ -366,6 +372,7 @@ const DeadtreesMap = () => {
         layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer],
         view: initialView,
         overlays: [],
+        interactions: defaultInteractions({ doubleClickZoom: false }),
         controls: [
           new Attribution({
             collapsible: true,
@@ -494,7 +501,7 @@ const DeadtreesMap = () => {
   useEffect(() => {
     if (mapRef.current) {
       // Add a new click listener with the current selectedYear
-      const clickHandler = (event) => handleClick(event, selectedYear, isDrawingFlag);
+      const clickHandler = (event) => handleClick(event, selectedYear, isDrawingFlag || polygonAnalysis.isDrawing);
       mapRef.current.on("click", clickHandler);
 
       // Clean up function to remove the listener
@@ -504,7 +511,7 @@ const DeadtreesMap = () => {
         }
       };
     }
-  }, [selectedYear, isDrawingFlag]);
+  }, [selectedYear, isDrawingFlag, polygonAnalysis.isDrawing]);
 
   // Update sources when year changes (use cached sources for instant switching)
   useEffect(() => {
@@ -808,6 +815,8 @@ const DeadtreesMap = () => {
             setShowDeadwood={setShowDeadwood}
             opacity={sliderValue}
             setOpacity={setSliderValue}
+            isDrawingPolygon={polygonAnalysis.isDrawing}
+            onPolygonStatsClick={polygonAnalysis.toggle}
             showFlagsControls={true}
             isLoggedIn={!!user}
             isDrawingFlag={isDrawingFlag}
@@ -913,6 +922,15 @@ const DeadtreesMap = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Polygon stats modal */}
+      <PolygonStatsModal
+        open={polygonAnalysis.modalOpen}
+        onClose={polygonAnalysis.closeModal}
+        data={polygonAnalysis.stats.data}
+        loading={polygonAnalysis.stats.loading}
+        error={polygonAnalysis.stats.error}
+      />
     </div>
   );
 };

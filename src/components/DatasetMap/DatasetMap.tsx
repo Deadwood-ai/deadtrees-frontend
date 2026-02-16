@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { Map, View } from "ol";
+import { defaults as defaultInteractions } from "ol/interaction";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
@@ -19,7 +20,6 @@ import Overlay from "ol/Overlay";
 import Select from "ol/interaction/Select.js";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import "./tooltip.css";
-import { useData } from "../../hooks/useDataProvider";
 import { debounce } from "lodash";
 import { Settings } from "../../config";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
@@ -87,11 +87,13 @@ const DatasetMapOL = ({
   hoveredItem,
   setHoveredItem,
   setVisibleFeatures,
+  filterZoomTrigger = 0,
 }: {
   data: IDataset[];
   hoveredItem: number | null;
   setHoveredItem: (id: number | null) => void;
   setVisibleFeatures: (ids: string[]) => void;
+  filterZoomTrigger?: number;
 }) => {
   const navigate = useNavigate();
   const mapRef = useRef<MapRef | null>(null);
@@ -99,7 +101,8 @@ const DatasetMapOL = ({
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
-  const { filter, setFilter } = useData();
+  // Track previous trigger value to only zoom on explicit filter actions
+  const prevZoomTriggerRef = useRef(filterZoomTrigger);
   const [userInteracted, setUserInteracted] = useState(false);
   const { setNavigationSource } = useDatasetDetailsMap();
 
@@ -141,6 +144,7 @@ const DatasetMapOL = ({
         target: mapContainer.current,
         layers: [basemapLayer],
         controls: [],
+        interactions: defaultInteractions({ doubleClickZoom: false }),
         view: initialView,
       });
 
@@ -350,19 +354,22 @@ const DatasetMapOL = ({
           }
         }
       });
-      if (filter) {
-        // Add '!userInteracted' condition
+      // Only zoom when triggered by an explicit filter action (counter changed)
+      if (filterZoomTrigger !== prevZoomTriggerRef.current) {
+        prevZoomTriggerRef.current = filterZoomTrigger;
         if (vectorLayerExtendRef.current && mapRef.current) {
-          // console.log("fit extend to filter");
-          const extent = vectorLayerExtendRef.current.getSource().getExtent();
-          mapRef.current.getView().fit(extent, {
-            padding: [50, 50, 50, 50],
-            maxZoom: 18,
-          });
+          const source = vectorLayerExtendRef.current.getSource();
+          if (source.getFeatures().length > 0) {
+            const extent = source.getExtent();
+            mapRef.current.getView().fit(extent, {
+              padding: [50, 50, 50, 50],
+              maxZoom: 18,
+            });
+          }
         }
       }
     }
-  }, [data]);
+  }, [data, filterZoomTrigger]);
 
   // Handle feature highlighting separately
   useEffect(() => {

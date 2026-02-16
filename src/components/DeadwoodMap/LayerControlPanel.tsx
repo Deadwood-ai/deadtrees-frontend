@@ -1,6 +1,7 @@
 import { Segmented, Slider, Switch, Button, Divider, Checkbox } from "antd";
-import { FlagOutlined, LoginOutlined } from "@ant-design/icons";
+import { AreaChartOutlined, FlagOutlined, LoginOutlined } from "@ant-design/icons";
 import { mapColors } from "../../theme/mapColors";
+import { palette } from "../../theme/palette";
 
 interface LayerControlPanelProps {
   // Basemap
@@ -14,6 +15,9 @@ interface LayerControlPanelProps {
   // Opacity
   opacity: number;
   setOpacity: (value: number) => void;
+  // Polygon stats
+  isDrawingPolygon?: boolean;
+  onPolygonStatsClick?: () => void;
   // Flags
   showFlagsControls?: boolean;
   isLoggedIn?: boolean;
@@ -40,6 +44,8 @@ const LayerControlPanel = ({
   setShowDeadwood,
   opacity,
   setOpacity,
+  isDrawingPolygon,
+  onPolygonStatsClick,
   showFlagsControls,
   isLoggedIn,
   isDrawingFlag,
@@ -90,8 +96,34 @@ const LayerControlPanel = ({
         step={0.01}
         value={opacity}
         onChange={setOpacity}
-        tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%` }}
+        tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%`, placement: "left" }}
       />
+
+      {/* Polygon Stats Section */}
+      {onPolygonStatsClick && (
+        <>
+          <Divider className="my-3" />
+          <div className="mb-1 text-xs font-medium text-gray-500">Analytics</div>
+          <Button
+            size="small"
+            type={isDrawingPolygon ? "primary" : "default"}
+            danger={isDrawingPolygon}
+            icon={<AreaChartOutlined />}
+            onClick={onPolygonStatsClick}
+            block
+            style={
+              !isDrawingPolygon
+                ? { borderColor: palette.primary[500], color: palette.primary[500] }
+                : undefined
+            }
+          >
+            {isDrawingPolygon ? "Cancel Drawing" : "Analyze Area"}
+          </Button>
+          <p className="mt-1 text-xs text-gray-400">
+            Draw a polygon to see time-series stats
+          </p>
+        </>
+      )}
 
       {/* Flags Section - shown to all users */}
       {showFlagsControls && (

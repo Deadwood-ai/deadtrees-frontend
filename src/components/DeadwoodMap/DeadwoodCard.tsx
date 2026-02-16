@@ -81,7 +81,7 @@ const DeadwoodCard = ({
               value={Number(sliderValue.toFixed(2))}
               onChange={(value) => setSliderValue(value as number)}
               min={0}
-              tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%` }}
+              tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%`, placement: "left" }}
             />
             <span className="text-[9px] text-gray-400">100%</span>
           </div>
