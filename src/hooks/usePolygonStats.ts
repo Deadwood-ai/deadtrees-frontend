@@ -4,10 +4,16 @@ import { Settings } from "../config";
 
 export interface YearStats {
   year: number;
+  // Threshold-based (binary)
   deadwood_pixel_count: number | null;
   deadwood_area_ha: number | null;
   tree_cover_pixel_count: number | null;
   tree_cover_area_ha: number | null;
+  // Continuous (fractional)
+  deadwood_continuous_area_ha: number | null;
+  deadwood_mean_pct: number | null;
+  tree_cover_continuous_area_ha: number | null;
+  tree_cover_mean_pct: number | null;
 }
 
 export interface PolygonStatsResponse {

@@ -1,8 +1,11 @@
-import { Modal, Spin, Alert } from "antd";
-import { AreaChartOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Modal, Spin, Alert, Segmented, Tooltip } from "antd";
+import { AreaChartOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { Line } from "@ant-design/charts";
-import type { PolygonStatsResponse } from "../../hooks/usePolygonStats";
+import type { PolygonStatsResponse, YearStats } from "../../hooks/usePolygonStats";
 import { palette } from "../../theme/palette";
+
+type ViewMode = "threshold" | "continuous";
 
 interface PolygonStatsModalProps {
   open: boolean;
@@ -30,28 +33,57 @@ const ChangeIndicator = ({ change }: { change: { pct: number; direction: "up" | 
   );
 };
 
+function getTreeCoverHa(s: YearStats, mode: ViewMode): number | null {
+  return mode === "threshold" ? s.tree_cover_area_ha : s.tree_cover_continuous_area_ha;
+}
+
+function getDeadwoodHa(s: YearStats, mode: ViewMode): number | null {
+  return mode === "threshold" ? s.deadwood_area_ha : s.deadwood_continuous_area_ha;
+}
+
+const VIEW_TOOLTIPS: Record<ViewMode, string> = {
+  threshold:
+    "Total area of pixels classified as tree-covered or mortality-affected " +
+    "where cover exceeds the threshold. Suitable for detecting discrete " +
+    "disturbances such as clearings or mortality patches.",
+  continuous:
+    "Sum of fractional cover within the selected area. Each pixel contributes " +
+    "proportionally according to its canopy cover percentage (e.g., 30% of a " +
+    "pixel contributes 30% of its area).",
+};
+
 const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStatsModalProps) => {
+  const [viewMode, setViewMode] = useState<ViewMode>("threshold");
   const threshold = data?.cover_threshold_pct ?? 20;
 
-  // Transform data for area chart (hectares over time)
   const chartData = data?.stats
-    .filter((s) => s.tree_cover_area_ha !== null || s.deadwood_area_ha !== null)
+    .filter((s) => getTreeCoverHa(s, viewMode) !== null || getDeadwoodHa(s, viewMode) !== null)
     .flatMap((s) => {
       const items: { year: string; value: number; category: string }[] = [];
-      if (s.tree_cover_area_ha !== null) {
-        items.push({ year: String(s.year), value: s.tree_cover_area_ha, category: "Tree Cover" });
+      const treeHa = getTreeCoverHa(s, viewMode);
+      const deadHa = getDeadwoodHa(s, viewMode);
+      if (treeHa !== null) {
+        items.push({ year: String(s.year), value: treeHa, category: "Tree Cover" });
       }
-      if (s.deadwood_area_ha !== null) {
-        items.push({ year: String(s.year), value: s.deadwood_area_ha, category: "Standing Deadwood" });
+      if (deadHa !== null) {
+        items.push({ year: String(s.year), value: deadHa, category: "Standing Deadwood" });
       }
       return items;
     }) ?? [];
 
-  // Compute summary values
   const firstStats = data?.stats[0] ?? null;
   const latestStats = data?.stats[data.stats.length - 1] ?? null;
-  const treeCoverChange = computeChange(firstStats?.tree_cover_area_ha ?? null, latestStats?.tree_cover_area_ha ?? null);
-  const deadwoodChange = computeChange(firstStats?.deadwood_area_ha ?? null, latestStats?.deadwood_area_ha ?? null);
+  const treeCoverChange = computeChange(
+    firstStats ? getTreeCoverHa(firstStats, viewMode) : null,
+    latestStats ? getTreeCoverHa(latestStats, viewMode) : null,
+  );
+  const deadwoodChange = computeChange(
+    firstStats ? getDeadwoodHa(firstStats, viewMode) : null,
+    latestStats ? getDeadwoodHa(latestStats, viewMode) : null,
+  );
+
+  const latestTreeHa = latestStats ? getTreeCoverHa(latestStats, viewMode) : null;
+  const latestDeadHa = latestStats ? getDeadwoodHa(latestStats, viewMode) : null;
 
   return (
     <Modal
@@ -85,6 +117,21 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
 
       {data && !loading && (
         <div className="flex flex-col gap-4">
+          {/* View mode toggle */}
+          <div className="flex items-center gap-2">
+            <Segmented
+              value={viewMode}
+              onChange={(v) => setViewMode(v as ViewMode)}
+              options={[
+                { value: "threshold", label: `Affected Area (>${threshold}%)` },
+                { value: "continuous", label: "Canopy Cover (continuous)" },
+              ]}
+            />
+            <Tooltip title={VIEW_TOOLTIPS[viewMode]}>
+              <InfoCircleOutlined style={{ color: palette.neutral[500], fontSize: 14 }} />
+            </Tooltip>
+          </div>
+
           {/* Summary stats */}
           <div
             className="grid grid-cols-3 gap-4 rounded-lg p-4"
@@ -96,15 +143,22 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
               <div className="text-lg font-semibold" style={{ color: palette.neutral[800] }}>
                 {data.polygon_area_km2.toFixed(2)} km²
               </div>
-              <span style={{ color: palette.neutral[400], fontSize: 12 }}>
-                threshold: &gt;{threshold}% cover
-              </span>
+              {viewMode === "continuous" && latestStats?.tree_cover_mean_pct != null && (
+                <span style={{ color: palette.neutral[500], fontSize: 12 }}>
+                  {latestStats.tree_cover_mean_pct.toFixed(1)}% mean cover
+                </span>
+              )}
+              {viewMode === "threshold" && (
+                <span style={{ color: palette.neutral[500], fontSize: 12 }}>
+                  threshold: &gt;{threshold}% cover
+                </span>
+              )}
             </div>
             {/* Tree Cover */}
             <div>
               <div className="text-xs" style={{ color: palette.forest[600] }}>Tree Cover</div>
               <div className="text-lg font-semibold" style={{ color: palette.forest[600] }}>
-                {latestStats?.tree_cover_area_ha !== null ? `${latestStats!.tree_cover_area_ha.toFixed(1)} ha` : "–"}
+                {latestTreeHa !== null ? `${latestTreeHa.toFixed(1)} ha` : "–"}
               </div>
               {treeCoverChange && <ChangeIndicator change={treeCoverChange} />}
             </div>
@@ -112,7 +166,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
             <div>
               <div className="text-xs" style={{ color: palette.deadwood[500] }}>Standing Deadwood</div>
               <div className="text-lg font-semibold" style={{ color: palette.deadwood[500] }}>
-                {latestStats?.deadwood_area_ha !== null ? `${latestStats!.deadwood_area_ha.toFixed(1)} ha` : "–"}
+                {latestDeadHa !== null ? `${latestDeadHa.toFixed(1)} ha` : "–"}
               </div>
               {deadwoodChange && <ChangeIndicator change={deadwoodChange} />}
             </div>
