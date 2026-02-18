@@ -383,13 +383,6 @@ const DataTable: React.FC<DataTableProps> = ({
       ),
     },
     {
-      title: "Platform",
-      dataIndex: "platform",
-      key: "platform",
-      width: 85,
-      render: (tag: string | undefined) => (tag ? <Tag color="blue">{tag}</Tag> : null),
-    },
-    {
       title: "Authors",
       dataIndex: "authors",
       key: "authors",
@@ -454,6 +447,23 @@ const DataTable: React.FC<DataTableProps> = ({
             <span className="block max-w-[115px] truncate">{cleanedInfo}</span>
           </Tooltip>
         );
+      },
+    },
+    {
+      title: "Access",
+      dataIndex: "data_access",
+      key: "data_access",
+      width: 85,
+      filters: [
+        { text: "Public", value: "public" },
+        { text: "Private", value: "private" },
+      ],
+      onFilter: (value: unknown, record: Dataset) => record.data_access === value,
+      render: (access: string | undefined) => {
+        if (access === "public") return <Tag color="green">Public</Tag>;
+        if (access === "private") return <Tag color="default">Private</Tag>;
+        if (access === "viewonly") return <Tag color="orange">View Only</Tag>;
+        return <Tag color="default">Private</Tag>;
       },
     },
     {

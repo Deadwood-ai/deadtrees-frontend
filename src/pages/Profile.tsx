@@ -19,7 +19,7 @@ interface ProfileAvatarProps {
 interface DatasetType {
   id: number;
   file_name: string;
-  platform?: string;
+  data_access?: "public" | "private" | "viewonly";
   aquisition_year?: number;
   citation_doi?: string;
   freidata_doi?: string;
