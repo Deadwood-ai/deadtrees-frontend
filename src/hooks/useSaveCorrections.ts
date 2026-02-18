@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
+import { isTokenExpiringSoon } from "../utils/isTokenExpiringSoon";
 import type Feature from "ol/Feature";
 import type { Geometry } from "ol/geom";
 import GeoJSON from "ol/format/GeoJSON";
@@ -178,13 +179,21 @@ export function buildSavePayload(
  * Hook to save prediction corrections
  */
 export function useSaveCorrections() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (params: SaveCorrectionsParams): Promise<SaveCorrectionsResult> => {
       if (!user?.id) {
         throw new Error("User must be logged in to save corrections");
+      }
+
+      // Refresh token if needed — long editing sessions can outlive the access token
+      if (isTokenExpiringSoon(session)) {
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          throw new Error("Session expired. Please sign in again.");
+        }
       }
 
       const sessionId = crypto.randomUUID();

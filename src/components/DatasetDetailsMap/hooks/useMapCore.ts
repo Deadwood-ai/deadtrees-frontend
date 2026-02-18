@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Map, View, Overlay } from "ol";
+import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import type { Layer } from "ol/layer";
@@ -168,6 +169,7 @@ export function useMapCore({
 				layers: [orthoCogLayer],
 				view: mapView,
 				controls: [],
+				interactions: defaultInteractions({ doubleClickZoom: false }),
 			});
 
 			// Viewport change handler - use "moveend" to only fire when movement stops

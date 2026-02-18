@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button, Space, message, Radio } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import Map from "ol/Map";
+import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
@@ -110,6 +111,7 @@ export default function DatasetLabelEditor() {
       layers: orthoCogLayer ? [basemapLayer, orthoCogLayer] : [basemapLayer],
       view,
       controls: [],
+      interactions: defaultInteractions({ doubleClickZoom: false }),
     });
 
     mapRef.current = map;

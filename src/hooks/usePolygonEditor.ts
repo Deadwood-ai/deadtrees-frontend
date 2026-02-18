@@ -546,6 +546,13 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
           mapRef.current.removeInteraction(drawRef.current);
           drawRef.current = null;
           setIsDrawing(false);
+
+          // Force layer repaint so the completed polygon is immediately visible.
+          // Without this, updateWhileInteracting:false can leave the layer stale
+          // on some browsers/devices when the user doesn't move the mouse after drawing.
+          setTimeout(() => {
+            overlayLayerRef.current?.getSource()?.changed();
+          }, 0);
         });
       } else {
         if (!drawRef.current) return;

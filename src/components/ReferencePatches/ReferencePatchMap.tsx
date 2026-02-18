@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { Map, View } from "ol";
+import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import TileLayer from "ol/layer/Tile";
 import { XYZ } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile";
@@ -247,6 +248,7 @@ export default function ReferencePatchMap({
       layers,
       view,
       controls: [],
+      interactions: defaultInteractions({ doubleClickZoom: false }),
     });
 
     setTimeout(() => map.updateSize(), 0);

@@ -206,10 +206,14 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
       setRefreshKey((k) => k + 1);
     } catch (error) {
       console.error("Failed to save corrections:", error);
-      emitDebugEvent("save:error", {
-        message: error instanceof Error ? error.message : "unknown",
-      });
-      message.error("Failed to save corrections");
+      const errorMsg = error instanceof Error ? error.message : "unknown";
+      emitDebugEvent("save:error", { message: errorMsg });
+
+      if (errorMsg.includes("Session expired") || errorMsg.includes("JWT")) {
+        message.error("Your session expired. Please sign in again and retry.");
+      } else {
+        message.error("Failed to save corrections");
+      }
     } finally {
       setIsSaving(false);
     }

@@ -288,7 +288,12 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       onClose();
     } catch (error) {
       console.error("Failed to save corrections:", error);
-      message.error("Failed to save corrections");
+      const errorMsg = error instanceof Error ? error.message : "unknown";
+      if (errorMsg.includes("Session expired") || errorMsg.includes("JWT")) {
+        message.error("Your session expired. Please sign in again and retry.");
+      } else {
+        message.error("Failed to save corrections");
+      }
     } finally {
       setIsSaving(false);
     }
