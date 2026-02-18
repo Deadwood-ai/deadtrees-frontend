@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Modal, Spin, Alert, Segmented, Tooltip } from "antd";
-import { AreaChartOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Modal, Spin, Alert, Segmented } from "antd";
+import { AreaChartOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from "@ant-design/icons";
 import { Line } from "@ant-design/charts";
 import type { PolygonStatsResponse, YearStats } from "../../hooks/usePolygonStats";
 import { palette } from "../../theme/palette";
@@ -41,15 +41,11 @@ function getDeadwoodHa(s: YearStats, mode: ViewMode): number | null {
   return mode === "threshold" ? s.deadwood_area_ha : s.deadwood_continuous_area_ha;
 }
 
-const VIEW_TOOLTIPS: Record<ViewMode, string> = {
+const VIEW_DESCRIPTIONS: Record<ViewMode, string> = {
   threshold:
-    "Total area of pixels classified as tree-covered or mortality-affected " +
-    "where cover exceeds the threshold. Suitable for detecting discrete " +
-    "disturbances such as clearings or mortality patches.",
+    "Pixels above the cover threshold are counted as fully covered. Best for detecting clearings and mortality patches.",
   continuous:
-    "Sum of fractional cover within the selected area. Each pixel contributes " +
-    "proportionally according to its canopy cover percentage (e.g., 30% of a " +
-    "pixel contributes 30% of its area).",
+    "Each pixel contributes proportionally to its cover value. Captures gradual canopy changes but is sensitive to prediction variability.",
 };
 
 const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStatsModalProps) => {
@@ -117,19 +113,23 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
 
       {data && !loading && (
         <div className="flex flex-col gap-4">
-          {/* View mode toggle */}
-          <div className="flex items-center gap-2">
+          {/* View mode toggle + description */}
+          <div className="flex flex-col gap-2">
             <Segmented
               value={viewMode}
               onChange={(v) => setViewMode(v as ViewMode)}
+              style={{ alignSelf: "flex-start" }}
               options={[
                 { value: "threshold", label: `Affected Area (>${threshold}%)` },
                 { value: "continuous", label: "Canopy Cover (continuous)" },
               ]}
             />
-            <Tooltip title={VIEW_TOOLTIPS[viewMode]}>
-              <InfoCircleOutlined style={{ color: palette.neutral[500], fontSize: 14 }} />
-            </Tooltip>
+            <div
+              className="text-xs"
+              style={{ color: palette.neutral[500] }}
+            >
+              {VIEW_DESCRIPTIONS[viewMode]}
+            </div>
           </div>
 
           {/* Summary stats */}
