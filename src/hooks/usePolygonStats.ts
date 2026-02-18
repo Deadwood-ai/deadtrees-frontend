@@ -18,7 +18,8 @@ export interface YearStats {
 
 export interface PolygonStatsResponse {
   polygon_area_km2: number;
-  cover_threshold_pct: number;
+  tree_cover_threshold_pct: number;
+  deadwood_threshold_pct: number;
   available_years: number[];
   stats: YearStats[];
 }

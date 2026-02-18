@@ -41,16 +41,17 @@ function getDeadwoodHa(s: YearStats, mode: ViewMode): number | null {
   return mode === "threshold" ? s.deadwood_area_ha : s.deadwood_continuous_area_ha;
 }
 
-const VIEW_DESCRIPTIONS: Record<ViewMode, string> = {
-  threshold:
-    "Pixels above the cover threshold are counted as fully covered. Best for detecting clearings and mortality patches.",
-  continuous:
+const VIEW_DESCRIPTIONS: Record<ViewMode, (treeThreshold: number, deadwoodThreshold: number) => string> = {
+  threshold: (tree, dead) =>
+    `Pixels above a cover threshold are counted as fully covered (tree cover >${tree}%, deadwood >${dead}%). Best for detecting clearings and mortality patches.`,
+  continuous: () =>
     "Each pixel contributes proportionally to its cover value. Captures gradual canopy changes but is sensitive to prediction variability.",
 };
 
 const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStatsModalProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>("threshold");
-  const threshold = data?.cover_threshold_pct ?? 20;
+  const treeThreshold = data?.tree_cover_threshold_pct ?? 10;
+  const deadwoodThreshold = data?.deadwood_threshold_pct ?? 50;
 
   const chartData = data?.stats
     .filter((s) => getTreeCoverHa(s, viewMode) !== null || getDeadwoodHa(s, viewMode) !== null)
@@ -86,7 +87,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
       title={
         <div className="flex items-center gap-2">
           <AreaChartOutlined style={{ color: palette.primary[500] }} />
-          <span>Area Statistics</span>
+          <span>Area Statistics <span style={{ color: palette.neutral[500], fontWeight: 400, fontSize: 13 }}>(experimental)</span></span>
         </div>
       }
       open={open}
@@ -120,7 +121,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
               onChange={(v) => setViewMode(v as ViewMode)}
               style={{ alignSelf: "flex-start" }}
               options={[
-                { value: "threshold", label: `Affected Area (>${threshold}%)` },
+                { value: "threshold", label: "Affected Area (threshold)" },
                 { value: "continuous", label: "Canopy Cover (continuous)" },
               ]}
             />
@@ -128,7 +129,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
               className="text-xs"
               style={{ color: palette.neutral[500] }}
             >
-              {VIEW_DESCRIPTIONS[viewMode]}
+              {VIEW_DESCRIPTIONS[viewMode](treeThreshold, deadwoodThreshold)}
             </div>
           </div>
 
@@ -150,7 +151,7 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
               )}
               {viewMode === "threshold" && (
                 <span style={{ color: palette.neutral[500], fontSize: 12 }}>
-                  threshold: &gt;{threshold}% cover
+                  tree &gt;{treeThreshold}%, deadwood &gt;{deadwoodThreshold}%
                 </span>
               )}
             </div>
@@ -184,26 +185,31 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
 
           {/* Coverage area over time chart */}
           {chartData.length > 0 && (
-            <Line
-              data={chartData}
-              xField="year"
-              yField="value"
-              colorField="category"
-              height={300}
-              autoFit
-              shapeField="smooth"
-              style={{ lineWidth: 2.5 }}
-              point={{ shapeField: "circle", sizeField: 4 }}
-              scale={{ color: { range: [palette.forest[600], palette.deadwood[500]] } }}
-              axis={{
-                y: { title: "Area (ha)", titleFontSize: 12 },
-                x: { title: false },
-              }}
-              legend={{ color: { position: "top" } }}
-              area={{
-                style: { fillOpacity: 0.15 },
-              }}
-            />
+            <>
+              <Line
+                data={chartData}
+                xField="year"
+                yField="value"
+                colorField="category"
+                height={300}
+                autoFit
+                shapeField="smooth"
+                style={{ lineWidth: 2.5 }}
+                point={{ shapeField: "circle", sizeField: 4 }}
+                scale={{ color: { range: [palette.forest[600], palette.deadwood[500]] } }}
+                axis={{
+                  y: { title: "Area (ha)", titleFontSize: 12 },
+                  x: { title: false },
+                }}
+                legend={{ color: { position: "top" } }}
+                area={{
+                  style: { fillOpacity: 0.15 },
+                }}
+              />
+              <div className="text-xs" style={{ color: palette.neutral[500] }}>
+                Note: 2017 and 2018 values may show systematic underestimation due to differences in the training data used for those years.
+              </div>
+            </>
           )}
         </div>
       )}
