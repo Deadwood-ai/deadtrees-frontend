@@ -4,6 +4,7 @@ import { useAuth } from "./useAuthProvider";
 import { isTokenExpiringSoon } from "../utils/isTokenExpiringSoon";
 import type Feature from "ol/Feature";
 import type { Geometry } from "ol/geom";
+import MultiPolygon from "ol/geom/MultiPolygon";
 import GeoJSON from "ol/format/GeoJSON";
 
 export type LayerType = "deadwood" | "forest_cover";
@@ -162,15 +163,35 @@ export function buildSavePayload(
     }));
 
   // Additions: new features OR modified features
-  const additions: Addition[] = currentFeatures
-    .filter((f) => f.get("is_new") || f.get("is_modified"))
-    .map((f) => ({
-      geometry: geoJson.writeGeometryObject(f.getGeometry()!, {
-        dataProjection: "EPSG:4326",
-        featureProjection: "EPSG:3857",
-      }),
-      original_geometry_id: (f.get("replaces_geometry_id") as number) || null,
-    }));
+  // MultiPolygon geometries are decomposed into individual Polygon additions
+  // because the DB columns are typed geometry(Polygon, 4326).
+  const additions: Addition[] = [];
+  for (const f of currentFeatures) {
+    if (!f.get("is_new") && !f.get("is_modified")) continue;
+    const geom = f.getGeometry()!;
+    const originalId = (f.get("replaces_geometry_id") as number) || null;
+
+    if (geom instanceof MultiPolygon) {
+      const polys = geom.getPolygons();
+      for (let i = 0; i < polys.length; i++) {
+        additions.push({
+          geometry: geoJson.writeGeometryObject(polys[i], {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          }),
+          original_geometry_id: i === 0 ? originalId : null,
+        });
+      }
+    } else {
+      additions.push({
+        geometry: geoJson.writeGeometryObject(geom, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }),
+        original_geometry_id: originalId,
+      });
+    }
+  }
 
   return { deletions, additions };
 }
