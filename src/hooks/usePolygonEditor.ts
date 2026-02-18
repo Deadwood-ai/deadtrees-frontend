@@ -537,22 +537,32 @@ export default function usePolygonEditor({ mapRef }: UsePolygonEditorParams): Us
 
         // Auto-exit draw mode after polygon completion
         draw.once("drawend", (evt) => {
-          // Mark newly drawn feature as new (for save detection)
-          const drawnFeature = evt.feature;
+          const drawnFeature = evt.feature as Feature<Geometry> | undefined;
           if (drawnFeature) {
             drawnFeature.set("is_new", true);
           }
-          if (!mapRef.current || !drawRef.current) return;
-          mapRef.current.removeInteraction(drawRef.current);
-          drawRef.current = null;
-          setIsDrawing(false);
 
-          // Force layer repaint so the completed polygon is immediately visible.
-          // Without this, updateWhileInteracting:false can leave the layer stale
-          // on some browsers/devices when the user doesn't move the mouse after drawing.
-          setTimeout(() => {
-            overlayLayerRef.current?.getSource()?.changed();
-          }, 0);
+          // IMPORTANT: defer interaction removal to the next microtask.
+          // Calling removeInteraction() during drawend triggers OL's
+          // updateState_() → abortDrawing() which races with finishDrawing()
+          // adding the feature to the source, leaving the layer stale on
+          // some browsers.
+          const drawToRemove = drawRef.current;
+          drawRef.current = null;
+
+          queueMicrotask(() => {
+            if (mapRef.current && drawToRemove) {
+              mapRef.current.removeInteraction(drawToRemove);
+            }
+            setIsDrawing(false);
+
+            // Ensure the drawn feature is on the overlay source (safety net)
+            const src = overlayLayerRef.current?.getSource();
+            if (drawnFeature && src && !src.getFeatures().includes(drawnFeature)) {
+              src.addFeature(drawnFeature);
+            }
+            src?.changed();
+          });
         });
       } else {
         if (!drawRef.current) return;
