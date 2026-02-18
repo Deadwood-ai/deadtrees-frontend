@@ -206,9 +206,11 @@ const PolygonStatsModal = ({ open, onClose, data, loading, error }: PolygonStats
                   style: { fillOpacity: 0.15 },
                 }}
               />
-              <div className="text-xs" style={{ color: palette.neutral[500] }}>
-                Note: 2017 and 2018 values may show systematic underestimation due to differences in the training data used for those years.
-              </div>
+              {viewMode === "continuous" && (
+                <div className="text-xs" style={{ color: palette.neutral[500] }}>
+                  Note: 2017 and 2018 values may show systematic underestimation of tree cover.
+                </div>
+              )}
             </>
           )}
         </div>
