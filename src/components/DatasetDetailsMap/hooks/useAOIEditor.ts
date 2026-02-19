@@ -72,6 +72,7 @@ export function useAOIEditor({
 	const [isEditing, setIsEditing] = useState(false);
 	const [hasAOI, setHasAOI] = useState(false);
 	const [selectedFeatureForEdit, setSelectedFeatureForEdit] = useState<FeatureLike | null>(null);
+	const [showEditableLayer, setShowEditableLayer] = useState(false);
 
 	// Refs
 	const editableAOILayerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -198,6 +199,7 @@ export function useAOIEditor({
 			setTimeout(() => {
 				clearInteractions();
 				setIsDrawing(false);
+				setShowEditableLayer(true);
 				const currentGeometry = getCurrentGeometry();
 				updateAOIWithGeometry(currentGeometry);
 				message.success("Polygon drawn successfully.");
@@ -221,6 +223,7 @@ export function useAOIEditor({
 	const cancelDrawing = useCallback(() => {
 		clearInteractions();
 		setIsDrawing(false);
+		setShowEditableLayer(false);
 		message.info("Drawing cancelled");
 	}, [clearInteractions]);
 
@@ -304,16 +307,16 @@ export function useAOIEditor({
 	const saveEditing = useCallback(() => {
 		clearInteractions();
 		setIsEditing(false);
-		setEditableLayerVisibility(false);
 		setSelectedFeatureForEdit(null);
+		setShowEditableLayer(true);
 		message.success("AOI edits applied. Save audit to persist.");
-	}, [clearInteractions, setEditableLayerVisibility]);
+	}, [clearInteractions]);
 
 	// Cancel editing (restore original)
 	const cancelEditing = useCallback(() => {
 		clearInteractions();
 		setIsEditing(false);
-		setEditableLayerVisibility(false);
+		setShowEditableLayer(false);
 		setSelectedFeatureForEdit(null);
 
 		// Reload original AOI if available
@@ -363,7 +366,7 @@ export function useAOIEditor({
 		}
 
 		message.info("Editing cancelled.");
-	}, [clearInteractions, initialAOI, updateAOIWithGeometry, setEditableLayerVisibility]);
+	}, [clearInteractions, initialAOI, updateAOIWithGeometry]);
 
 	// Delete selected polygon
 	const deleteSelectedPolygon = useCallback(() => {
@@ -385,6 +388,7 @@ export function useAOIEditor({
 			message.success("Selected polygon deleted.");
 		} else {
 			setIsEditing(false);
+			setShowEditableLayer(false);
 			clearInteractions();
 			message.success("Last polygon deleted. Exiting edit mode.");
 		}
@@ -394,14 +398,14 @@ export function useAOIEditor({
 	const deleteAOI = useCallback(() => {
 		if (!enabled) return;
 		clearInteractions();
-		setEditableLayerVisibility(false);
 		const source = editableAOILayerRef.current?.getSource();
 		source?.clear();
 		updateAOIWithGeometry(null);
 		setIsEditing(false);
 		setIsDrawing(false);
+		setShowEditableLayer(false);
 		message.success("AOI deleted.");
-	}, [enabled, clearInteractions, updateAOIWithGeometry, setEditableLayerVisibility]);
+	}, [enabled, clearInteractions, updateAOIWithGeometry]);
 
 	// Initialize editable AOI layer when enabled and map is ready
 	useEffect(() => {
@@ -485,8 +489,8 @@ export function useAOIEditor({
 			setEditableLayerVisibility(false);
 			return;
 		}
-		setEditableLayerVisibility(isDrawing || isEditing);
-	}, [enabled, isDrawing, isEditing, setEditableLayerVisibility]);
+		setEditableLayerVisibility(isDrawing || isEditing || showEditableLayer);
+	}, [enabled, isDrawing, isEditing, showEditableLayer, setEditableLayerVisibility]);
 
 	// Report state changes to parent
 	useEffect(() => {
