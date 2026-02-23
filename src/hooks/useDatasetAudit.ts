@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
+import { useCanAudit } from "./useUserPrivileges";
 import { useMemo } from "react";
 import { IDataset } from "../types/dataset";
 
@@ -84,51 +85,61 @@ export interface DatasetAuditUserInfo {
   reviewed_by_email: string | null;
 }
 
-// Hook to get all dataset audits (with user emails)
+// Auditor-only: get all dataset audits (includes user emails)
 export function useDatasetAudits() {
+  const { user } = useAuth();
+  const { canAudit } = useCanAudit();
+
   return useQuery({
     queryKey: ["dataset-audits"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("dataset_audit_user_info").select("*");
+      const { data, error } = await supabase.rpc("get_dataset_audits_with_emails");
 
       if (error) throw error;
-      return data;
+      return (data || []) as DatasetAuditUserInfo[];
     },
+    enabled: !!user?.id && canAudit,
   });
 }
 
-// Hook to get contributor emails for all datasets
+// Auditor-only: get contributor emails for all datasets
 export function useDatasetContributors() {
+  const { user } = useAuth();
+  const { canAudit } = useCanAudit();
+
   return useQuery({
     queryKey: ["dataset-contributors"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("dataset_contributor_info").select("*");
+      const { data, error } = await supabase.rpc("get_dataset_contributors_with_emails");
 
       if (error) throw error;
-      return new Map(data?.map((d: { dataset_id: number; contributor_email: string }) => [d.dataset_id, d.contributor_email]) || []);
+      const rows = (data || []) as { dataset_id: number; contributor_email: string | null }[];
+      return new Map(rows.map((d) => [d.dataset_id, d.contributor_email || ""]));
     },
+    enabled: !!user?.id && canAudit,
   });
 }
 
-// Hook to get a specific dataset audit
+// Auditor-only: get a specific dataset audit (includes emails)
 export function useDatasetAudit(datasetId: number | undefined) {
+  const { user } = useAuth();
+  const { canAudit } = useCanAudit();
+
   return useQuery({
     queryKey: ["dataset-audit", datasetId],
     queryFn: async () => {
       if (!datasetId) return null;
 
-      const { data, error } = await supabase
-        .from("dataset_audit_user_info")
-        .select("*")
-        .eq("dataset_id", datasetId)
-        .limit(1);
+      const { data, error } = await supabase.rpc("get_dataset_audit_with_emails", {
+        p_dataset_id: datasetId,
+      });
 
       if (error) throw error;
 
-      // Return the first item if it exists, otherwise null
-      return data && data.length > 0 ? (data[0] as DatasetAuditUserInfo) : null;
+      const rows = (Array.isArray(data) ? data : []) as DatasetAuditUserInfo[];
+      return rows.length > 0 ? rows[0] : null;
     },
-    enabled: !!datasetId,
+    enabled: !!datasetId && !!user?.id && canAudit,
   });
 }
 
@@ -139,26 +150,18 @@ export function useDatasetAuditsByIds(datasetIds: number[]) {
     [datasetIds],
   );
 
+  const { user } = useAuth();
+  const { canAudit } = useCanAudit();
+
   return useQuery({
     queryKey: ["dataset-audits-by-ids", idsKey],
-    enabled: idsKey.length > 0,
+    enabled: idsKey.length > 0 && !!user?.id && canAudit,
     queryFn: async () => {
-      // Chunk to avoid URL length issues
-      const chunkSize = 200;
-      const chunks: number[][] = [];
-      for (let i = 0; i < idsKey.length; i += chunkSize) {
-        chunks.push(idsKey.slice(i, i + chunkSize));
-      }
+      // We already need auditor privileges for emails; fetch once then filter locally.
+      const { data, error } = await supabase.rpc("get_dataset_audits_with_emails");
+      if (error) throw error;
 
-      const results = await Promise.all(
-        chunks.map(async (ids) => {
-          const { data, error } = await supabase.from("dataset_audit_user_info").select("*").in("dataset_id", ids);
-          if (error) throw error;
-          return (data || []) as DatasetAuditUserInfo[];
-        }),
-      );
-
-      const rows = results.flat();
+      const rows = ((data || []) as DatasetAuditUserInfo[]).filter((row) => idsKey.includes(row.dataset_id));
       const map = new Map<number, DatasetAuditUserInfo>();
       rows.forEach((row) => map.set(row.dataset_id, row));
       return map;

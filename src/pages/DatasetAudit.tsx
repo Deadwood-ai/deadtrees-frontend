@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
 	Table,
 	Button,
+	Result,
+	Spin,
 	Typography,
 	message,
 	Tag,
@@ -104,6 +106,40 @@ const getBiomeBadge = (biomeName: string | null) => {
 };
 
 export default function DatasetAudit() {
+	const navigate = useNavigate();
+	const { user } = useAuth();
+	const { canAudit, isLoading: isAuditPrivilegeLoading } = useCanAudit();
+
+	if (isAuditPrivilegeLoading) {
+		return (
+			<div className="flex h-full w-full items-center justify-center" style={{ minHeight: "60vh" }}>
+				<Spin size="large" />
+			</div>
+		);
+	}
+
+	if (!user || !canAudit) {
+		return (
+			<Result
+				status="403"
+				title="Forbidden"
+				subTitle="Auditor access is required to view this page."
+				extra={[
+					<Button key="home" onClick={() => navigate("/")} type="primary">
+						Home
+					</Button>,
+					<Button key="datasets" onClick={() => navigate("/dataset")}>
+						Datasets
+					</Button>,
+				]}
+			/>
+		);
+	}
+
+	return <DatasetAuditInner />;
+}
+
+function DatasetAuditInner() {
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
