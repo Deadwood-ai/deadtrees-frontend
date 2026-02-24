@@ -213,7 +213,7 @@ const DatasetLayerControlPanel = ({
                 <div>
                   <div className="font-semibold text-gray-800">Deadwood Detection:</div>
                   <a
-                    href="https://www.techrxiv.org/users/897974/articles/1273930-global-multi-scale-standing-deadwood-segmentation-in-centimeter-scale-aerial-images"
+                    href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
                     className="text-blue-600 underline"
                     target="_blank"
                     rel="noopener noreferrer"
