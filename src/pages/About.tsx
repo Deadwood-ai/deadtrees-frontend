@@ -213,6 +213,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
           If you use datasets from deadtrees.earth, please cite each dataset by its DOI. You can find the DOI on the
           dataset page (look for the DOI badge and link).
         </Paragraph>
+        <Title level={4} className="mt-4 text-gray-700">
+          1) Database (drone products)
+        </Title>
         <Title level={5} className="mt-4 text-gray-600">
           BibTeX:
         </Title>
@@ -258,6 +261,30 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
             style={{ whiteSpace: "pre-wrap", overflowX: "auto", width: "100%" }}
           />
         </div>
+        <Title level={4} className="mt-6 text-gray-700">
+          2) Segmentation model
+        </Title>
+        <Paragraph className="text-gray-600">
+          For deadwood segmentation predictions, please cite{" "}
+          <a
+            href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mohring et al., 2025 (ISPRS Open Journal of Photogrammetry and Remote Sensing)
+          </a>
+          .
+        </Paragraph>
+        <Title level={4} className="mt-6 text-gray-700">
+          3) Satellite products (Sentinel maps)
+        </Title>
+        <Paragraph className="text-gray-600">
+          For the satellite products shown in the DeadTrees map, please cite{" "}
+          <a href="https://eartharxiv.org/repository/view/11912/" target="_blank" rel="noopener noreferrer">
+            Mosig et al., 2026 (EarthArXiv preprint)
+          </a>
+          .
+        </Paragraph>
       </div>
       {/* Publications Section */}
       <div className="mb-16">

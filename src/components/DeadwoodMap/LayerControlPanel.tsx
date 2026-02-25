@@ -1,5 +1,6 @@
-import { Segmented, Slider, Switch, Button, Divider, Checkbox } from "antd";
-import { AreaChartOutlined, FlagOutlined, LoginOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Segmented, Slider, Switch, Button, Divider, Checkbox, Tooltip } from "antd";
+import { AreaChartOutlined, FlagOutlined, LoginOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
 
@@ -55,6 +56,8 @@ const LayerControlPanel = ({
   setShowFlagsLayer,
   flagsCount,
 }: LayerControlPanelProps) => {
+  const [showAttributions, setShowAttributions] = useState(false);
+
   return (
     <div className="flex w-48 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
       {/* Basemap Selection */}
@@ -98,6 +101,35 @@ const LayerControlPanel = ({
         onChange={setOpacity}
         tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%`, placement: "left" }}
       />
+
+      <Divider className="my-3" />
+      <div className="mb-1 text-xs font-medium text-gray-500">Model Info</div>
+      <Tooltip title="View model attributions and papers">
+        <Button
+          type="link"
+          size="small"
+          icon={<InfoCircleOutlined />}
+          onClick={() => setShowAttributions((prev) => !prev)}
+          className="m-0 w-fit p-0 text-xs"
+        >
+          {showAttributions ? "Hide Citations" : "View Citations"}
+        </Button>
+      </Tooltip>
+      {showAttributions && (
+        <div className="mt-2 space-y-2 rounded bg-gray-50 p-2 text-xs">
+          <div>
+            <div className="font-semibold text-gray-800">Satellite products (Sentinel maps):</div>
+            <a
+              href="https://eartharxiv.org/repository/view/11912/"
+              className="text-blue-600 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Mosig et al., 2026 (EarthArXiv preprint)
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Polygon Stats Section */}
       {onPolygonStatsClick && (
