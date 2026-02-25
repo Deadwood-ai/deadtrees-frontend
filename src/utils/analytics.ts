@@ -2,6 +2,7 @@ import { User } from "@supabase/supabase-js";
 
 // Access the global posthog instance
 declare const posthog: any;
+const POSTHOG_PROJECT_KEY = import.meta.env.VITE_POSTHOG_PROJECT_KEY as string | undefined;
 
 // The current cookie consent version
 // Increment this whenever you want users to re-consent
@@ -63,6 +64,7 @@ export const saveConsent = (consent: "accepted" | "rejected"): void => {
 // Initialize PostHog with appropriate settings
 export const initializePostHog = (consent: string | null = null): void => {
   if (!isPostHogAvailable()) return;
+  if (!POSTHOG_PROJECT_KEY) return;
 
   // If already initialized with correct settings, don't reinitialize
   if (
@@ -85,7 +87,7 @@ export const initializePostHog = (consent: string | null = null): void => {
 
   // Initialize PostHog
   if (!posthog.has_opted_in_capturing && !posthog.has_opted_out_capturing) {
-    posthog.init("phc_RnLiX7SIkVuBtAdcb628PjiuOYennHWZRlUXHIcVbKA", {
+    posthog.init(POSTHOG_PROJECT_KEY, {
       api_host: "https://eu.i.posthog.com",
       // Use cookie persistence only if user explicitly accepted
       persistence: consent === "accepted" ? "cookie" : "memory",
