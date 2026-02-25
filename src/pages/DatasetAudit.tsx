@@ -16,11 +16,11 @@ import {
 	Select,
 	Collapse,
 	Badge,
+	DatePicker,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
 	SearchOutlined,
-	MailOutlined,
 	FilterOutlined,
 	FlagOutlined,
 	EditOutlined,
@@ -47,21 +47,25 @@ type AuditTab = "pending" | "completed" | "reference" | "edits-flags";
 // Status sub-filter for completed tab
 type CompletedStatusFilter = "all" | "ready" | "fixable" | "excluded" | "needs-review" | "reviewed";
 
-// Month constants for filtering
-const MONTHS = [
-	{ label: "Jan", value: 1 },
-	{ label: "Feb", value: 2 },
-	{ label: "Mar", value: 3 },
-	{ label: "Apr", value: 4 },
-	{ label: "May", value: 5 },
-	{ label: "Jun", value: 6 },
-	{ label: "Jul", value: 7 },
-	{ label: "Aug", value: 8 },
-	{ label: "Sep", value: 9 },
-	{ label: "Oct", value: 10 },
-	{ label: "Nov", value: 11 },
-	{ label: "Dec", value: 12 },
+type ProcessingStateFilterKey = "ortho" | "cog" | "thumbnail" | "deadwood" | "forestCover" | "metadata";
+
+const PROCESSING_STATE_OPTIONS: Array<{ label: string; value: ProcessingStateFilterKey }> = [
+	{ label: "Ortho", value: "ortho" },
+	{ label: "COG", value: "cog" },
+	{ label: "Thumb", value: "thumbnail" },
+	{ label: "Deadwood", value: "deadwood" },
+	{ label: "Forest", value: "forestCover" },
+	{ label: "Metadata", value: "metadata" },
 ];
+
+const PROCESSING_STATE_TO_FIELD: Record<ProcessingStateFilterKey, keyof IDataset> = {
+	ortho: "is_ortho_done",
+	cog: "is_cog_done",
+	thumbnail: "is_thumbnail_done",
+	deadwood: "is_deadwood_done",
+	forestCover: "is_forest_cover_done",
+	metadata: "is_metadata_done",
+};
 
 const BADGE_OVERFLOW_COUNT = 999999;
 
@@ -91,6 +95,36 @@ const formatAcquisitionDate = (dataset: IDataset): string => {
 	if (aquisition_month) parts.push(String(aquisition_month).padStart(2, "0"));
 	if (aquisition_day) parts.push(String(aquisition_day).padStart(2, "0"));
 	return parts.join("-");
+};
+
+const compareNullableStrings = (a: string | null | undefined, b: string | null | undefined): number => {
+	return (a || "").localeCompare(b || "", undefined, { sensitivity: "base" });
+};
+
+const compareNullableNumbers = (a: number | null | undefined, b: number | null | undefined): number => {
+	const aNum = typeof a === "number" ? a : null;
+	const bNum = typeof b === "number" ? b : null;
+	if (aNum === null && bNum === null) return 0;
+	if (aNum === null) return 1; // nulls last
+	if (bNum === null) return -1;
+	return aNum - bNum;
+};
+
+const getAcquisitionMonthIndex = (dataset: IDataset): number | null => {
+	const year = parseInt(dataset.aquisition_year, 10);
+	const month = parseInt(dataset.aquisition_month, 10);
+	if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return null;
+	return year * 12 + (month - 1);
+};
+
+const getAcquisitionDateSortKey = (dataset: IDataset): number | null => {
+	const year = parseInt(dataset.aquisition_year, 10);
+	const month = parseInt(dataset.aquisition_month, 10);
+	const day = parseInt(dataset.aquisition_day, 10);
+	if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return null;
+	// Sort with month-level precision; day is optional and only used as a tie-breaker.
+	const safeDay = !isNaN(day) && day >= 1 && day <= 31 ? day : 0;
+	return year * 10000 + month * 100 + safeDay;
 };
 
 const getBiomeBadge = (biomeName: string | null) => {
@@ -168,12 +202,14 @@ function DatasetAuditInner() {
 	const [activeTab, setActiveTab] = useState<AuditTab>(initialTab);
 	const [statusFilter, setStatusFilter] = useState<CompletedStatusFilter>(initialStatus);
 	const [idFilter, setIdFilter] = useState<string>(searchParams.get("id") || "");
-	const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+	const [acquisitionMonthRange, setAcquisitionMonthRange] = useState<unknown>(null);
 	const [biomeFilter, setBiomeFilter] = useState<string>(initialBiome);
 	const [countryFilter, setCountryFilter] = useState<string>(initialCountry);
 	const [auditorFilter, setAuditorFilter] = useState<string>(initialAuditor);
 	const [contributorFilter, setContributorFilter] = useState<string>(initialContributor);
 	const [hasFlagsFilter, setHasFlagsFilter] = useState<boolean>(initialHasFlags);
+	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>([]);
+	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(false);
 	const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
 
 	// Update URL when filters change
@@ -293,10 +329,24 @@ function DatasetAuditInner() {
 			}
 		}
 
-		if (selectedMonths.length > 0) {
+		const acquisitionStart = (acquisitionMonthRange as any)?.[0] ?? null;
+		const acquisitionEnd = (acquisitionMonthRange as any)?.[1] ?? null;
+		const acquisitionStartIndex =
+			acquisitionStart && typeof acquisitionStart.year === "function" && typeof acquisitionStart.month === "function"
+				? acquisitionStart.year() * 12 + acquisitionStart.month()
+				: null;
+		const acquisitionEndIndex =
+			acquisitionEnd && typeof acquisitionEnd.year === "function" && typeof acquisitionEnd.month === "function"
+				? acquisitionEnd.year() * 12 + acquisitionEnd.month()
+				: null;
+
+		if (acquisitionStartIndex !== null || acquisitionEndIndex !== null) {
 			filtered = filtered.filter((dataset) => {
-				const month = parseInt(dataset.aquisition_month);
-				return !isNaN(month) && selectedMonths.includes(month);
+				const idx = getAcquisitionMonthIndex(dataset);
+				if (idx === null) return false;
+				if (acquisitionStartIndex !== null && idx < acquisitionStartIndex) return false;
+				if (acquisitionEndIndex !== null && idx > acquisitionEndIndex) return false;
+				return true;
 			});
 		}
 
@@ -327,18 +377,31 @@ function DatasetAuditInner() {
 			filtered = filtered.filter((d) => flaggedSet.has(d.id));
 		}
 
+		// Completed-only processing state filters (helps find "fixable but missing forest cover", etc.)
+		if (activeTab === "completed" && hasProcessingStates.length > 0) {
+			filtered = filtered.filter((dataset) =>
+				hasProcessingStates.every((key) => Boolean(dataset[PROCESSING_STATE_TO_FIELD[key]]))
+			);
+		}
+
+		if (activeTab === "completed" && inSeasonOnly) {
+			filtered = filtered.filter((dataset) => auditMap.get(dataset.id)?.has_valid_phenology === true);
+		}
+
 		return filtered;
 	}, [
 		datasets,
 		activeTab,
 		statusFilter,
 		idFilter,
-		selectedMonths,
+		acquisitionMonthRange,
 		biomeFilter,
 		countryFilter,
 		auditorFilter,
 		contributorFilter,
 		hasFlagsFilter,
+		hasProcessingStates,
+		inSeasonOnly,
 		auditMap,
 		contributorMap,
 		flaggedAgg,
@@ -374,14 +437,6 @@ function DatasetAuditInner() {
 		if (!datasets) return 0;
 		return datasets.filter((d) => referenceDatasetIds.has(d.id)).length;
 	}, [datasets, referenceDatasetIds]);
-
-	const needsReviewCount = useMemo(() => {
-		if (!datasets || !audits) return 0;
-		return datasets.filter((d) => {
-			const audit = auditMap.get(d.id);
-			return d.is_audited && audit && !audit.reviewed_at;
-		}).length;
-	}, [datasets, audits, auditMap]);
 
 	const editsFlagsCount = useMemo(() => {
 		if (!datasets) return 0;
@@ -454,18 +509,21 @@ function DatasetAuditInner() {
 					<span className="text-sm">{formatLocation(record)}</span>
 				</Tooltip>
 			),
+			sorter: (a, b) => compareNullableStrings(formatLocation(a), formatLocation(b)),
 			width: 180,
 		},
 		{
 			title: "Biome",
 			key: "biome",
 			render: (_, record) => getBiomeBadge(record.biome_name),
+			sorter: (a, b) => compareNullableStrings(a.biome_name, b.biome_name),
 			width: 120,
 		},
 		{
 			title: "Acquisition Date",
 			key: "date",
 			render: (_, record) => <span className="font-mono text-xs">{formatAcquisitionDate(record)}</span>,
+			sorter: (a, b) => compareNullableNumbers(getAcquisitionDateSortKey(a), getAcquisitionDateSortKey(b)),
 			width: 120,
 		},
 	];
@@ -486,6 +544,16 @@ function DatasetAuditInner() {
 				<Tag color="orange">Out of Season</Tag>
 			);
 		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aAudit = auditMap.get(a.id);
+			const bAudit = auditMap.get(b.id);
+			const rank = (val: boolean | null | undefined) => {
+				if (val === true) return 2;
+				if (val === false) return 1;
+				return 0; // unknown last-ish depending on sort order
+			};
+			return rank(aAudit?.has_valid_phenology ?? null) - rank(bAudit?.has_valid_phenology ?? null);
+		},
 		width: 100,
 	};
 
@@ -504,6 +572,11 @@ function DatasetAuditInner() {
 				</Tooltip>
 			);
 		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aNotes = auditMap.get(a.id)?.notes || "";
+			const bNotes = auditMap.get(b.id)?.notes || "";
+			return compareNullableStrings(aNotes, bNotes);
+		},
 		width: 200,
 	};
 
@@ -513,13 +586,24 @@ function DatasetAuditInner() {
 		render: (_: unknown, record: IDataset) => {
 			const flagData = flaggedMap.get(record.id);
 			if (!flagData) return null;
+			const openCount = flagData.open_count ?? 0;
+			const acknowledgedCount = flagData.acknowledged_count ?? 0;
+			const totalCount = openCount + acknowledgedCount;
+			if (totalCount <= 0) return null;
 			return (
-				<Tooltip title={`${flagData.flag_count} user-reported issue(s)`}>
-					<Badge count={flagData.flag_count} size="small" overflowCount={BADGE_OVERFLOW_COUNT}>
+				<Tooltip title={`${totalCount} flag(s) (open: ${openCount}, acknowledged: ${acknowledgedCount})`}>
+					<Badge count={totalCount} size="small" overflowCount={BADGE_OVERFLOW_COUNT}>
 						<FlagOutlined style={{ color: palette.state.warning }} />
 					</Badge>
 				</Tooltip>
 			);
+		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aFlag = flaggedMap.get(a.id);
+			const bFlag = flaggedMap.get(b.id);
+			const aCount = (aFlag?.open_count ?? 0) + (aFlag?.acknowledged_count ?? 0);
+			const bCount = (bFlag?.open_count ?? 0) + (bFlag?.acknowledged_count ?? 0);
+			return aCount - bCount;
 		},
 		width: 70,
 	};
@@ -538,6 +622,7 @@ function DatasetAuditInner() {
 				</Tooltip>
 			);
 		},
+		sorter: (a: IDataset, b: IDataset) => (correctionsMap.get(a.id) || 0) - (correctionsMap.get(b.id) || 0),
 		width: 100,
 	};
 
@@ -564,6 +649,11 @@ function DatasetAuditInner() {
 				</Tooltip>
 			);
 		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aEmail = contributorMap.get(a.id) || auditMap.get(a.id)?.uploaded_by_email || "";
+			const bEmail = contributorMap.get(b.id) || auditMap.get(b.id)?.uploaded_by_email || "";
+			return compareNullableStrings(aEmail, bEmail);
+		},
 		width: 180,
 	};
 
@@ -588,6 +678,11 @@ function DatasetAuditInner() {
 					</Button>
 				</Tooltip>
 			);
+		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aEmail = auditMap.get(a.id)?.audited_by_email || "";
+			const bEmail = auditMap.get(b.id)?.audited_by_email || "";
+			return compareNullableStrings(aEmail, bEmail);
 		},
 		width: 180,
 	};
@@ -629,6 +724,35 @@ function DatasetAuditInner() {
 				</Space>
 			);
 		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aAudit = auditMap.get(a.id);
+			const bAudit = auditMap.get(b.id);
+
+			const dispositionRank = (finalAssessment: DatasetAuditUserInfo["final_assessment"] | undefined | null) => {
+				switch (finalAssessment) {
+					case "no_issues":
+						return 3;
+					case "fixable_issues":
+						return 2;
+					case "exclude_completely":
+						return 1;
+					default:
+						return 0;
+				}
+			};
+
+			const aRank = dispositionRank(aAudit?.final_assessment ?? null);
+			const bRank = dispositionRank(bAudit?.final_assessment ?? null);
+			if (aRank !== bRank) return aRank - bRank;
+
+			// Secondary: reviewed first/last depending on sort direction
+			const aReviewed = aAudit?.reviewed_at ? 1 : 0;
+			const bReviewed = bAudit?.reviewed_at ? 1 : 0;
+			if (aReviewed !== bReviewed) return aReviewed - bReviewed;
+
+			// Final tie-breaker: dataset id
+			return a.id - b.id;
+		},
 		width: 180,
 	};
 
@@ -664,6 +788,12 @@ function DatasetAuditInner() {
 				</Button>
 			</Tooltip>
 		),
+		sorter: (a: IDataset, b: IDataset) => {
+			const aHas = a.has_ml_tiles ? 1 : 0;
+			const bHas = b.has_ml_tiles ? 1 : 0;
+			if (aHas !== bHas) return aHas - bHas;
+			return a.id - b.id;
+		},
 		width: 150,
 	};
 
@@ -685,17 +815,29 @@ function DatasetAuditInner() {
 
 	const clearAllFilters = () => {
 		setIdFilter("");
-		setSelectedMonths([]);
+		setAcquisitionMonthRange(null);
 		setBiomeFilter("");
 		setCountryFilter("");
 		setAuditorFilter("");
 		setContributorFilter("");
 		setHasFlagsFilter(false);
+		setHasProcessingStates([]);
+		setInSeasonOnly(false);
 		setStatusFilter("all");
 	};
 
+	const hasActiveProcessingFilters = activeTab === "completed" && (hasProcessingStates.length > 0 || inSeasonOnly);
+
 	const hasActiveFilters =
-		idFilter || selectedMonths.length > 0 || biomeFilter || countryFilter || auditorFilter || contributorFilter || hasFlagsFilter || statusFilter !== "all";
+		idFilter ||
+		Boolean((acquisitionMonthRange as any)?.[0] || (acquisitionMonthRange as any)?.[1]) ||
+		biomeFilter ||
+		countryFilter ||
+		auditorFilter ||
+		contributorFilter ||
+		hasFlagsFilter ||
+		hasActiveProcessingFilters ||
+		statusFilter !== "all";
 
 	return (
 		<div className="p-6">
@@ -777,7 +919,14 @@ function DatasetAuditInner() {
 							<Space>
 								<FilterOutlined />
 								<span>Filters</span>
-								{hasActiveFilters && <Badge count="Active" size="small" style={{ backgroundColor: palette.primary[500] }} />}
+								{hasActiveFilters && (
+									<Badge
+										count={filteredDatasets.length}
+										size="small"
+										overflowCount={BADGE_OVERFLOW_COUNT}
+										style={{ backgroundColor: palette.primary[500] }}
+									/>
+								)}
 							</Space>
 						),
 						children: (
@@ -881,28 +1030,60 @@ function DatasetAuditInner() {
 										/>
 									</div>
 
-									<div className="flex items-end">
-										<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
-											Has flags only
-										</Checkbox>
+									<div>
+										<Text type="secondary" className="block mb-1 text-xs">
+											Acquisition Month
+										</Text>
+										<DatePicker.RangePicker
+											picker="month"
+											value={acquisitionMonthRange as any}
+											onChange={(value) => setAcquisitionMonthRange(value as any)}
+											allowClear
+											placeholder={["From", "To"]}
+											style={{ width: 200 }}
+										/>
 									</div>
+
 								</div>
 
-								{/* Row 2: Acquisition Month Filter */}
-								<div className="flex items-center gap-4">
-									<Text type="secondary" className="text-xs">
-										Acquisition Month:
-									</Text>
-									<Checkbox.Group
-										options={MONTHS}
-										value={selectedMonths}
-										onChange={(checkedValues) => setSelectedMonths(checkedValues as number[])}
-									/>
-									{selectedMonths.length > 0 && (
-										<Button size="small" type="link" onClick={() => setSelectedMonths([])}>
-											Clear months
-										</Button>
-									)}
+								{/* Row 2: Requirements */}
+								<div className="rounded-md border border-gray-100 bg-gray-50 p-3">
+									<div className="flex flex-wrap gap-6">
+										<div>
+											<Text type="secondary" className="block mb-1 text-xs">
+												Has outputs
+											</Text>
+											<Checkbox.Group
+												options={PROCESSING_STATE_OPTIONS}
+												value={hasProcessingStates}
+												onChange={(checkedValues) => setHasProcessingStates(checkedValues as ProcessingStateFilterKey[])}
+											/>
+										</div>
+										<div>
+											<Text type="secondary" className="block mb-1 text-xs">
+												Season
+											</Text>
+											<div className="flex flex-row gap-1">
+
+												<Checkbox checked={inSeasonOnly} onChange={(e) => setInSeasonOnly(e.target.checked)}>
+													In season only
+												</Checkbox>
+
+											</div>
+
+										</div>
+										<div>
+											<Text type="secondary" className="block mb-1 text-xs">
+												Flags
+											</Text>
+											<div className="flex flex-row gap-1">
+												<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
+													Has flags only
+												</Checkbox>
+											</div>
+
+										</div>
+									</div>
 								</div>
 
 								{/* Clear all button */}
