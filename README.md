@@ -1,30 +1,92 @@
-# React + TypeScript + Vite
+# DeadTrees Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for `deadtrees.earth` and GeoLabel workflows (map visualization, correction editing, and audit UI).
 
-Currently, two official plugins are available:
+## Repositories
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Frontend: https://github.com/Deadwood-ai/deadtrees-frontend
+- Backend: https://github.com/Deadwood-ai/deadtrees-backend
+- Upload service: https://github.com/Deadwood-ai/deadtrees-upload
+- Live platform: https://deadtrees.earth
 
-## Expanding the ESLint configuration
+## GeoLabel At A Glance
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+The frontend provides:
+- high-performance map rendering with OpenLayers
+- polygon editing tools (draw/delete/cut/merge/clip/undo)
+- optional AI-assisted boundaries
+- auditor review queue with approve/revert workflow
 
-- Configure the top-level `parserOptions` property like this:
+<p align="center">
+<img src="https://github.com/Deadwood-ai/deadtrees-backend/blob/main/docs/assets/ui-screenshot.jpg?raw=1" alt="GeoLabel UI overview" width="100%"/>
+</p>
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+<p align="center">
+<img src="https://github.com/Deadwood-ai/deadtrees-backend/blob/main/docs/assets/adding-ai.gif?raw=1" alt="AI-assisted editing" width="48%"/>
+<img src="https://github.com/Deadwood-ai/deadtrees-backend/blob/main/docs/assets/approve.gif?raw=1" alt="Audit approval workflow" width="48%"/>
+</p>
+
+## Tech Stack
+
+- React 18 + TypeScript + Vite
+- OpenLayers for map rendering and interaction
+- Ant Design for UI components
+- TanStack Query for async state
+- Supabase client for auth/data access
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+
+### Install and Run
+
+```bash
+npm install
+npm run dev
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+By default, Vite serves at `http://localhost:5173`.
+
+### Build and Lint
+
+```bash
+npm run lint
+npm run build
+npm run preview
+```
+
+## Environment Variables
+
+Create a `.env.local` file (or equivalent environment setup) and provide the values your deployment mode needs:
+
+```bash
+VITE_MODE=development
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+
+# optional integrations
+VITE_SAM_API_URL=...
+VITE_MAPBOX_ACCESS_TOKEN=...
+VITE_GEOPIFY_KEY=...
+VITE_SUPABASE_SENTINEL_PROCESSING_URL=...
+VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY=...
+```
+
+## Important Feature Areas
+
+- `src/components/DeadwoodMap/`: GeoLabel editing map and correction tooling
+- `src/pages/DatasetAudit.tsx`: auditor review flows
+- `src/hooks/`: data fetching and map-related behavior hooks
+- `src/config.ts`: runtime configuration and environment-driven setup
+
+## Related Documentation
+
+- Full GeoLabel pilot roadmap: https://github.com/Deadwood-ai/deadtrees-backend/blob/main/docs/projects/geolabel/roadmap-report.md
+- Backend architecture and processing docs: https://github.com/Deadwood-ai/deadtrees-backend
+
+## License
+
+MIT (see `LICENSE`).
