@@ -71,7 +71,7 @@ export function useMapCore({
 	onViewportChange,
 	onMapReady,
 	onOrthoLayerReady,
-	minZoom = 14,
+	minZoom = 2,
 	maxZoom = 23,
 	isReady = true,
 }: UseMapCoreOptions): UseMapCoreReturn {
