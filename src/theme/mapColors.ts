@@ -1,4 +1,4 @@
-import { palette } from "./palette";
+import { hexToRgba, palette } from "./palette";
 
 export const mapColors = {
   forest: {
@@ -12,8 +12,8 @@ export const mapColors = {
     gradient: "from-amber-100 via-amber-400 to-amber-700",
   },
   aoi: {
-    stroke: palette.primary[500],
-    fill: "rgba(59, 130, 246, 0.2)",
+    stroke: palette.secondary[500],
+    fill: hexToRgba(palette.secondary[500], 0.2),
   },
   flag: {
     stroke: palette.primary[500],

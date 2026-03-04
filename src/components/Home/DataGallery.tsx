@@ -35,8 +35,8 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
   return (
     <div className="m-auto mx-8 w-full rounded-xl px-6">
       <div className="flex items-baseline justify-center">
-        <p className="m-0 text-3xl font-medium text-blue-600">{value}</p>
-        <p className="m-0 pl-1 text-lg font-medium text-blue-500">{unit}</p>
+        <p className="m-0 text-3xl font-medium text-green-800">{value}</p>
+        <p className="m-0 pl-1 text-lg font-medium text-green-700">{unit}</p>
       </div>
       <p className="m-0 p-3 text-center text-sm font-medium uppercase">{title}</p>
     </div>
@@ -197,7 +197,7 @@ const DataGallery = () => {
   return (
     <div className="hidden md:block">
       <div className="m-auto w-full rounded-xl bg-gradient-to-t from-white to-purple-50 p-8 md:mt-36 md:w-full">
-        <p className="text-center text-lg font-semibold text-blue-600">EXPLORE OUR DATABASE</p>
+        <p className="text-center text-lg font-semibold text-green-800">EXPLORE OUR DATABASE</p>
         <p className="m-0 text-center text-4xl font-semibold md:text-5xl">Global Tree Mortality Atlas</p>
         <p className="m-auto max-w-4xl pt-8 text-left text-lg text-gray-500">
           Browse our growing collection of aerial imagery datasets showing tree mortality patterns. Each dataset

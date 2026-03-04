@@ -10,7 +10,9 @@ import DownloadProvider from "./hooks/useDownloadProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CookieBanner } from "./components/cookieBanner/CookieBanner";
 import { applyCanvasOptimization } from "./utils/canvasOptimization";
+import { applyThemeCssVariables } from "./theme/cssVariables";
 
+applyThemeCssVariables();
 applyCanvasOptimization();
 
 const queryClient = new QueryClient();

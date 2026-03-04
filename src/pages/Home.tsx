@@ -1,6 +1,5 @@
 import { Collapse } from "antd";
 
-import LogoBannerBand from "../components/Home/LogoBanner";
 import Hero from "../components/Home/Hero";
 import DataGallery from "../components/Home/DataGallery";
 import Features from "../components/Home/Features";
@@ -9,18 +8,6 @@ import GetInContact from "../components/Home/GetInContact";
 
 import { useData } from "../hooks/useDataProvider";
 
-const logos = [
-  { path: "assets/logos/esa.jpg" },
-  { path: "assets/logos/dfg.jpeg" },
-  { path: "assets/logos/uni-freiburg.png" },
-  { path: "RSC4Earth" },
-  { path: "assets/logos/NFDI4Earth_logo.jpg" },
-  { path: "assets/logos/scads.png" },
-  { path: "assets/logos/MLR.png" },
-  { path: "assets/logos/dlr.jpeg" },
-  { path: "assets/logos/geonadir.png" },
-  { path: "assets/logos/bmwk.jpg", height: "h-24" },
-];
 
 const FAQ = () => {
   const { authors } = useData();
@@ -228,11 +215,6 @@ export default function HomePage() {
   return (
     <div className="pb-1">
       <Hero />
-      <section className="w-full border-y border-slate-100 bg-white">
-        <div className="m-auto max-w-6xl px-4 md:px-0">
-          <LogoBannerBand logos={logos} title="Supported by" />
-        </div>
-      </section>
       <div className="m-auto max-w-6xl px-4 md:px-0">
         <DataGallery />
         <Features />

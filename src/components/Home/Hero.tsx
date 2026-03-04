@@ -1,149 +1,162 @@
-import { useState } from "react";
-import { Alert, Button, Input, Tag } from "antd";
-import { PlayCircleFilled } from "@ant-design/icons";
+import { useState, useMemo } from "react";
+import { Alert, Button, Tag } from "antd";
+import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
-import { supabase } from "../../hooks/useSupabase";
-import { notification } from "antd";
-import { Settings } from "../../config";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuthProvider";
+import { useData } from "../../hooks/useDataProvider";
+import { isDatasetViewable } from "../../utils/datasetVisibility";
+import LogoBannerBand from "./LogoBanner";
+
+const logos = [
+	{ path: "assets/logos/esa.jpg" },
+	{ path: "assets/logos/dfg.jpeg" },
+	{ path: "assets/logos/uni-freiburg.png" },
+	{ path: "RSC4Earth" },
+	{ path: "assets/logos/NFDI4Earth_logo.jpg" },
+	{ path: "assets/logos/scads.png" },
+	{ path: "assets/logos/MLR.png" },
+	{ path: "assets/logos/dlr.jpeg" },
+	{ path: "assets/logos/geonadir.png" },
+	{ path: "assets/logos/bmwk.jpg", height: "h-14" },
+];
+
+const StatItem = ({ value, label }: { value: string; label: string }) => (
+	<div className="flex flex-col items-center md:items-start">
+		<span className="text-2xl font-bold text-green-800">{value}</span>
+		<span className="text-xs font-medium uppercase tracking-wider text-gray-400">{label}</span>
+	</div>
+);
 
 const Hero = () => {
-  const [email, setEmail] = useState<string>("");
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isPlaying, setIsPlaying] = useState(false);
+	const navigate = useNavigate();
+	const { user } = useAuth();
+	const { data, authors } = useData();
 
-  const emailCheck = (email: string) => {
-    const re = /\S+@\S+\.\S+/;
-    return re.test(email);
-  };
+	const stats = useMemo(() => {
+		if (!data) return null;
+		const valid = data.filter((item) => isDatasetViewable(item));
+		const countries = new Set(valid.map((d) => d.admin_level_1).filter(Boolean));
+		return {
+			datasets: valid.length,
+			countries: countries.size,
+			contributors: authors?.length ?? 0,
+		};
+	}, [data, authors]);
 
-  const addSubscriber = async () => {
-    if (!emailCheck(email)) {
-      notification.error({
-        message: "Invalid email",
-        description: "Please enter a valid email address.",
-        placement: "topRight",
-      });
-      return;
-    }
+	const handleContribute = () => {
+		if (user) {
+			navigate("/profile");
+		} else {
+			navigate("/sign-in");
+		}
+	};
 
-    setIsSubmitting(true);
+	return (
+		<section className="relative flex w-full flex-col overflow-hidden md:min-h-[calc(100vh-64px)]">
+			<div className="absolute inset-0 hidden bg-[radial-gradient(1000px_at_25%_35%,_var(--tw-gradient-stops))] from-emerald-100/60 via-green-50/30 to-white md:block"></div>
 
-    const normalizedEmail = email.trim().toLowerCase();
+			<div className="relative z-10 m-auto flex max-w-[1400px] flex-1 flex-col justify-center px-4 md:px-10">
+				<div className="md:hidden">
+					<Alert
+						message="Mobile version is limited"
+						description="Please use a desktop browser for full functionality. Features like the interactive map, data visualization, and dataset uploads are optimized for desktop devices."
+						type="info"
+						showIcon
+						closable
+					/>
+				</div>
 
-    const { error: insertError } = await supabase
-      .from(Settings.NEWSLETTER_TABLE)
-      .insert([{ email: normalizedEmail }]);
+				<div className="flex flex-col items-center gap-8 py-12 md:flex-row md:items-center md:gap-14 md:py-0">
+					{/* Left column */}
+					<div className="flex flex-1 flex-col items-center text-center md:items-start md:text-left">
+						<Tag className="mb-4" color="warning">🚀 LAUNCHED</Tag>
+						<h1 className="m-0 bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 bg-clip-text pb-4 text-4xl font-bold text-transparent md:text-5xl lg:text-6xl">
+							Help map tree mortality worldwide
+						</h1>
+						<p className="m-0 max-w-lg text-lg leading-relaxed text-gray-500">
+							Contribute drone imagery to map standing deadwood with AI — and help build
+							the training data that powers global satellite-based forest mortality monitoring.
+						</p>
 
-    if (insertError) {
-      if (insertError.code === "23505") {
-        notification.info({
-          message: "Already subscribed",
-          description: "This email is already subscribed to our newsletter.",
-          placement: "topRight",
-        });
-      } else {
-        notification.error({
-          message: "Error",
-          description: "An error occurred while adding the subscriber.",
-          placement: "topRight",
-        });
-        console.error("Error adding subscriber:", insertError);
-      }
-    } else {
-      notification.success({
-        message: "Thank you!",
-        description: "Thank you for subscribing! You will receive updates on new features and developments.",
-        placement: "topRight",
-      });
-      setEmail(""); // Clear the input field after successful subscription
-    }
+						<div className="mt-8 flex flex-col gap-3 sm:flex-row">
+							<Button
+								type="primary"
+								size="large"
+								icon={<UploadOutlined />}
+								onClick={handleContribute}
+							>
+								Contribute Data
+							</Button>
+							<Button
+								size="large"
+								icon={<SearchOutlined />}
+								onClick={() => navigate("/dataset")}
+							>
+								Explore Datasets
+							</Button>
+						</div>
 
-    setIsSubmitting(false);
-  };
+						{!user && (
+							<p className="m-0 mt-3 text-sm text-gray-400">
+								Sign in or create an account to start uploading.
+							</p>
+						)}
 
-  return (
-    <section className="relative w-full overflow-hidden">
-      <div className="absolute inset-0 hidden bg-[radial-gradient(900px_at_50%_30%,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-white md:block"></div>
-      <div className="relative z-10 m-auto flex max-w-6xl flex-col items-center px-4 pb-12 md:px-0">
-        <div className="md:hidden">
-          <Alert
-            message="Mobile version is limited"
-            description="Please use a desktop browser for full functionality. Features like the interactive map, data visualization, and dataset uploads are optimized for desktop devices."
-            type="info"
-            showIcon
-            closable
-          />
-        </div>
-        <div className="flex justify-center pt-12 md:pt-24">
-          <Tag className="mb-6 text-xl" color="success">
-            🚀 LAUNCHED
-          </Tag>
-        </div>
-        <h1 className="m-0 bg-gradient-to-br from-blue-800 via-blue-600 via-purple-500 to-purple-700 bg-clip-text pb-10 text-center text-5xl font-bold text-transparent drop-shadow-sm md:text-7xl">
-          deadtrees.earth
-        </h1>
-        <p className="mx-auto text-center text-xl text-gray-500 md:max-w-xl">
-          An open database for accessing, contributing, analyzing, and visualizing remote sensing-based tree mortality
-          data.
-        </p>
-        <div className="pt-8">
-          <p className="text-md max-w-xl pb-1 text-center text-gray-500">
-            Stay informed about new features and the latest developments.
-          </p>
-          <div className="flex w-full flex-col justify-center gap-2 pt-0 md:flex-row">
-            <Input
-              size="large"
-              className="w-full md:w-80"
-              placeholder="Enter email..."
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-            />
-            <Button
-              onClick={addSubscriber}
-              className="w-full md:w-auto"
-              type="primary"
-              size="large"
-              loading={isSubmitting}
-              disabled={isSubmitting}
-            >
-              Get notified
-            </Button>
-          </div>
-        </div>
-        {/* Video Section */}
-        <div className="relative mx-auto mt-10 aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl md:mt-14">
-          {!isPlaying && (
-            <PlayCircleFilled
-              onClick={(e) => {
-                setIsPlaying(true);
-              }}
-              className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-1 text-6xl text-blue-600 transition-colors hover:text-blue-900"
-            />
-          )}
-          <ReactPlayer
-            url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
-            width="100%"
-            height="100%"
-            controls={true}
-            playsinline
-            loop={true}
-            light="https://data2.deadtrees.earth/assets/v1/image.png" // Add this line with your thumbnail image path
-            config={{
-              file: {
-                attributes: {
-                  controlsList: "nodownload",
-                },
-              },
-            }}
-            playing={isPlaying}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          />
-        </div>
-      </div>
-    </section>
-  );
+						{stats && (
+							<div className="mt-10 flex gap-8">
+								<StatItem value={stats.datasets.toLocaleString()} label="Datasets" />
+								<StatItem value={String(stats.countries)} label="Countries" />
+								<StatItem value={String(stats.contributors)} label="Contributors" />
+							</div>
+						)}
+					</div>
+
+					{/* Right column — wider to showcase the visual */}
+					<div className="w-full md:w-[58%] md:flex-none">
+						<div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5">
+							<ReactPlayer
+								url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
+								width="100%"
+								height="100%"
+								controls={true}
+								playsinline
+								loop={true}
+								light="https://data2.deadtrees.earth/assets/v1/image.png"
+								config={{
+									file: {
+										attributes: {
+											controlsList: "nodownload",
+										},
+									},
+								}}
+								playing={isPlaying}
+								onPlay={() => setIsPlaying(true)}
+								onPause={() => setIsPlaying(false)}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		{/* "Supported by" label above the white strip */}
+		<div className="relative z-10 pb-2 pt-4">
+			<p className="m-0 text-center text-xs font-medium uppercase tracking-wider text-gray-400">
+				Supported by
+			</p>
+		</div>
+
+		{/* Logo banner in white strip */}
+		<div className="relative z-10 border-t border-slate-100 bg-white/80 backdrop-blur-sm">
+			<div className="m-auto max-w-[1400px] px-4 md:px-10">
+				<div className="py-2 md:py-3">
+					<LogoBannerBand logos={logos} title="" compact />
+				</div>
+			</div>
+		</div>
+		</section>
+	);
 };
 
 export default Hero;

@@ -6,12 +6,16 @@ interface LogoBannerProps {
     height?: string;
   }>;
   title: string;
+  compact?: boolean;
 }
 
-export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
+export default function LogoBannerBand({ logos, title, compact }: LogoBannerProps) {
+  const logoHeight = compact ? "h-8" : "h-16";
+  const rscHeight = compact ? "h-8 text-sm" : "h-16 text-xl";
+
   return (
-    <div className="py-4 md:py-8">
-      <p className="text-md mb-8 text-center text-gray-600">{title}</p>
+    <div className={compact ? "py-1" : "py-4 md:py-8"}>
+      {title && <p className="text-md mb-8 text-center text-gray-600">{title}</p>}
       <div className="logo-scroll">
         <div className="logo-container">
           {/* First set of logos */}
@@ -34,7 +38,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                     <img
                       src={logo.path}
                       alt={logo.text || "Partner logo"}
-                      className={`${logo.height || "h-16"} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
+                      className={`${compact ? (logo.height ? "h-12" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
                     />
                     {logo.text && (
                       <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
@@ -44,7 +48,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                   </>
                 ) : (
                   <>
-                    <div className="flex h-16 w-full items-center justify-center text-xl font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80">
+                    <div className={`flex ${rscHeight} w-full items-center justify-center font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80`}>
                       RSC4Earth
                     </div>
                     {logo.text && (
@@ -77,7 +81,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                     <img
                       src={logo.path}
                       alt={logo.text || "Partner logo"}
-                      className={`${logo.height || "h-16"} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
+                      className={`${compact ? (logo.height ? "h-12" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-opacity duration-200 group-hover:opacity-80`}
                     />
                     {logo.text && (
                       <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
@@ -87,7 +91,7 @@ export default function LogoBannerBand({ logos, title }: LogoBannerProps) {
                   </>
                 ) : (
                   <>
-                    <div className="flex h-16 w-full items-center justify-center text-xl font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80">
+                    <div className={`flex ${rscHeight} w-full items-center justify-center font-bold text-blue-800 transition-opacity duration-200 group-hover:opacity-80`}>
                       RSC4Earth
                     </div>
                     {logo.text && (
