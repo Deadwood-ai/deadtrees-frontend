@@ -29,6 +29,8 @@ export interface UseVectorLayersOptions {
 	/** Quality flags for conditional rendering */
 	deadwoodQuality?: boolean | string | null;
 	forestCoverQuality?: boolean | string | null;
+	/** Allow rendering layers even when quality is marked as bad */
+	allowBadQualityLayers?: boolean;
 }
 
 export interface UseVectorLayersReturn {
@@ -73,6 +75,7 @@ export function useVectorLayers({
 	opacity = 1,
 	deadwoodQuality,
 	forestCoverQuality,
+	allowBadQualityLayers = false,
 }: UseVectorLayersOptions): UseVectorLayersReturn {
 	const deadwoodLayerRef = useRef<VectorTileLayer | null>(null);
 	const forestCoverLayerRef = useRef<VectorTileLayer | null>(null);
@@ -82,6 +85,7 @@ export function useVectorLayers({
 
 	// Check quality flags
 	const allowDeadwood = (() => {
+		if (allowBadQualityLayers) return true;
 		if (deadwoodQuality === undefined || deadwoodQuality === null) return true;
 		if (typeof deadwoodQuality === "boolean") return deadwoodQuality;
 		if (typeof deadwoodQuality === "string") return deadwoodQuality !== "bad";
@@ -89,6 +93,7 @@ export function useVectorLayers({
 	})();
 
 	const allowForestCover = (() => {
+		if (allowBadQualityLayers) return true;
 		if (forestCoverQuality === undefined || forestCoverQuality === null) return true;
 		if (typeof forestCoverQuality === "boolean") return forestCoverQuality;
 		if (typeof forestCoverQuality === "string") return forestCoverQuality !== "bad";

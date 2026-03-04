@@ -1236,211 +1236,211 @@ function DatasetAuditInner() {
 
 			{activeTab !== "processing" && (
 				<>
-			{/* Filters Panel */}
-			<Collapse
-				activeKey={filtersExpanded ? ["filters"] : []}
-				onChange={() => setFiltersExpanded(!filtersExpanded)}
-				className="mb-4"
-				items={[
-					{
-						key: "filters",
-						label: (
-							<Space>
-								<FilterOutlined />
-								<span>Filters</span>
-								{hasActiveFilters && (
-									<Badge
-										count={filteredDatasets.length}
-										size="small"
-										overflowCount={BADGE_OVERFLOW_COUNT}
-										style={{ backgroundColor: palette.primary[500] }}
-									/>
-								)}
-							</Space>
-						),
-						children: (
-							<div className="space-y-4">
-								{/* Row 1: Status, ID, Biome, Country */}
-								<div className="flex flex-wrap gap-4">
-									{activeTab === "completed" && (
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Status
-											</Text>
-											<Select
-												value={statusFilter}
-												onChange={setStatusFilter}
-												style={{ width: 150 }}
-												options={[
-													{ label: "All", value: "all" },
-													{ label: "Ready", value: "ready" },
-													{ label: "Fixable", value: "fixable" },
-													{ label: "Excluded", value: "excluded" },
-													{ label: "Needs Review", value: "needs-review" },
-													{ label: "Reviewed", value: "reviewed" },
-												]}
+					{/* Filters Panel */}
+					<Collapse
+						activeKey={filtersExpanded ? ["filters"] : []}
+						onChange={() => setFiltersExpanded(!filtersExpanded)}
+						className="mb-4"
+						items={[
+							{
+								key: "filters",
+								label: (
+									<Space>
+										<FilterOutlined />
+										<span>Filters</span>
+										{hasActiveFilters && (
+											<Badge
+												count={filteredDatasets.length}
+												size="small"
+												overflowCount={BADGE_OVERFLOW_COUNT}
+												style={{ backgroundColor: palette.primary[500] }}
 											/>
-										</div>
-									)}
+										)}
+									</Space>
+								),
+								children: (
+									<div className="space-y-4">
+										{/* Row 1: Status, ID, Biome, Country */}
+										<div className="flex flex-wrap gap-4">
+											{activeTab === "completed" && (
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Status
+													</Text>
+													<Select
+														value={statusFilter}
+														onChange={setStatusFilter}
+														style={{ width: 150 }}
+														options={[
+															{ label: "All", value: "all" },
+															{ label: "Ready", value: "ready" },
+															{ label: "Fixable", value: "fixable" },
+															{ label: "Excluded", value: "excluded" },
+															{ label: "Needs Review", value: "needs-review" },
+															{ label: "Reviewed", value: "reviewed" },
+														]}
+													/>
+												</div>
+											)}
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Dataset ID
-										</Text>
-										<Input
-											placeholder="Filter by ID"
-											prefix={<SearchOutlined />}
-											value={idFilter}
-											onChange={(e) => setIdFilter(e.target.value)}
-											style={{ width: 130 }}
-											allowClear
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Dataset ID
+												</Text>
+												<Input
+													placeholder="Filter by ID"
+													prefix={<SearchOutlined />}
+													value={idFilter}
+													onChange={(e) => setIdFilter(e.target.value)}
+													style={{ width: 130 }}
+													allowClear
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Biome
-										</Text>
-										<Select
-											value={biomeFilter}
-											onChange={setBiomeFilter}
-											style={{ width: 200 }}
-											allowClear
-											placeholder="All biomes"
-											showSearch
-											options={uniqueBiomes.map((b) => ({ label: `${getBiomeEmoji(b)} ${b}`, value: b }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Biome
+												</Text>
+												<Select
+													value={biomeFilter}
+													onChange={setBiomeFilter}
+													style={{ width: 200 }}
+													allowClear
+													placeholder="All biomes"
+													showSearch
+													options={uniqueBiomes.map((b) => ({ label: `${getBiomeEmoji(b)} ${b}`, value: b }))}
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Country
-										</Text>
-										<Select
-											value={countryFilter}
-											onChange={setCountryFilter}
-											style={{ width: 180 }}
-											allowClear
-											placeholder="All countries"
-											showSearch
-											options={uniqueCountries.map((c) => ({ label: c, value: c }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Country
+												</Text>
+												<Select
+													value={countryFilter}
+													onChange={setCountryFilter}
+													style={{ width: 180 }}
+													allowClear
+													placeholder="All countries"
+													showSearch
+													options={uniqueCountries.map((c) => ({ label: c, value: c }))}
+												/>
+											</div>
 
-									{activeTab === "completed" && (
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Auditor
-											</Text>
-											<Select
-												value={auditorFilter}
-												onChange={setAuditorFilter}
-												style={{ width: 180 }}
-												allowClear
-												placeholder="All auditors"
-												showSearch
-												options={uniqueAuditors.map((a) => ({ label: a, value: a }))}
-											/>
-										</div>
-									)}
+											{activeTab === "completed" && (
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Auditor
+													</Text>
+													<Select
+														value={auditorFilter}
+														onChange={setAuditorFilter}
+														style={{ width: 180 }}
+														allowClear
+														placeholder="All auditors"
+														showSearch
+														options={uniqueAuditors.map((a) => ({ label: a, value: a }))}
+													/>
+												</div>
+											)}
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Contributor
-										</Text>
-										<Select
-											value={contributorFilter}
-											onChange={setContributorFilter}
-											style={{ width: 180 }}
-											allowClear
-											placeholder="All contributors"
-											showSearch
-											options={uniqueContributors.map((c) => ({ label: c, value: c }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Contributor
+												</Text>
+												<Select
+													value={contributorFilter}
+													onChange={setContributorFilter}
+													style={{ width: 180 }}
+													allowClear
+													placeholder="All contributors"
+													showSearch
+													options={uniqueContributors.map((c) => ({ label: c, value: c }))}
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Acquisition Month
-										</Text>
-										<DatePicker.RangePicker
-											picker="month"
-											value={acquisitionMonthRange as any}
-											onChange={(value) => setAcquisitionMonthRange(value as any)}
-											allowClear
-											placeholder={["From", "To"]}
-											style={{ width: 200 }}
-										/>
-									</div>
-
-								</div>
-
-								{/* Row 2: Requirements */}
-								<div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-									<div className="flex flex-wrap gap-6">
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Has outputs
-											</Text>
-											<Checkbox.Group
-												options={PROCESSING_STATE_OPTIONS}
-												value={hasProcessingStates}
-												onChange={(checkedValues) => setHasProcessingStates(checkedValues as ProcessingStateFilterKey[])}
-											/>
-										</div>
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Season
-											</Text>
-											<div className="flex flex-row gap-1">
-
-												<Checkbox checked={inSeasonOnly} onChange={(e) => setInSeasonOnly(e.target.checked)}>
-													In season only
-												</Checkbox>
-
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Acquisition Month
+												</Text>
+												<DatePicker.RangePicker
+													picker="month"
+													value={acquisitionMonthRange as any}
+													onChange={(value) => setAcquisitionMonthRange(value as any)}
+													allowClear
+													placeholder={["From", "To"]}
+													style={{ width: 200 }}
+												/>
 											</div>
 
 										</div>
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Flags
-											</Text>
-											<div className="flex flex-row gap-1">
-												<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
-													Has flags only
-												</Checkbox>
+
+										{/* Row 2: Requirements */}
+										<div className="rounded-md border border-gray-100 bg-gray-50 p-3">
+											<div className="flex flex-wrap gap-6">
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Has outputs
+													</Text>
+													<Checkbox.Group
+														options={PROCESSING_STATE_OPTIONS}
+														value={hasProcessingStates}
+														onChange={(checkedValues) => setHasProcessingStates(checkedValues as ProcessingStateFilterKey[])}
+													/>
+												</div>
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Season
+													</Text>
+													<div className="flex flex-row gap-1">
+
+														<Checkbox checked={inSeasonOnly} onChange={(e) => setInSeasonOnly(e.target.checked)}>
+															In season only
+														</Checkbox>
+
+													</div>
+
+												</div>
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Flags
+													</Text>
+													<div className="flex flex-row gap-1">
+														<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
+															Has flags only
+														</Checkbox>
+													</div>
+
+												</div>
 											</div>
-
 										</div>
+
+										{/* Clear all button */}
+										{hasActiveFilters && (
+											<Button size="small" onClick={clearAllFilters}>
+												Clear all filters
+											</Button>
+										)}
 									</div>
-								</div>
+								),
+							},
+						]}
+					/>
 
-								{/* Clear all button */}
-								{hasActiveFilters && (
-									<Button size="small" onClick={clearAllFilters}>
-										Clear all filters
-									</Button>
-								)}
-							</div>
-						),
-					},
-				]}
-			/>
-
-			{/* Table */}
-			<Table
-				dataSource={filteredDatasets}
-				columns={columns}
-				rowKey="id"
-				loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading || isCorrectionsLoading}
-				pagination={{
-					pageSize: 20,
-					showSizeChanger: true,
-					showQuickJumper: true,
-					showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
-				}}
-				scroll={{ x: 1000 }}
-			/>
+					{/* Table */}
+					<Table
+						dataSource={filteredDatasets}
+						columns={columns}
+						rowKey="id"
+						loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading || isCorrectionsLoading}
+						pagination={{
+							pageSize: 20,
+							showSizeChanger: true,
+							showQuickJumper: true,
+							showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
+						}}
+						scroll={{ x: 1000 }}
+					/>
 				</>
 			)}
 		</div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Alert, Button, Tag } from "antd";
 import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
@@ -21,12 +21,43 @@ const logos = [
 	{ path: "assets/logos/bmwk.jpg", height: "h-14" },
 ];
 
-const StatItem = ({ value, label }: { value: string; label: string }) => (
-	<div className="flex flex-col items-center md:items-start">
-		<span className="text-2xl font-bold text-green-800">{value}</span>
-		<span className="text-xs font-medium uppercase tracking-wider text-gray-400">{label}</span>
-	</div>
-);
+const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
+	const [displayValue, setDisplayValue] = useState(0);
+	const duration = 2000; // 2 seconds animation
+
+	useEffect(() => {
+		let startTime: number | null = null;
+		let animationFrame: number;
+
+		const animate = (timestamp: number) => {
+			if (!startTime) startTime = timestamp;
+			const progress = timestamp - startTime;
+			
+			// Easing function (easeOutExpo)
+			const easeProgress = 1 - Math.pow(2, -10 * (progress / duration));
+			
+			if (progress < duration) {
+				setDisplayValue(Math.floor(easeProgress * value));
+				animationFrame = requestAnimationFrame(animate);
+			} else {
+				setDisplayValue(value);
+			}
+		};
+
+		animationFrame = requestAnimationFrame(animate);
+
+		return () => cancelAnimationFrame(animationFrame);
+	}, [value]);
+
+	return (
+		<div className="flex items-baseline gap-1.5">
+			<span className="text-xl font-bold text-[#FFB31C]">
+				{displayValue.toLocaleString()}
+			</span>
+			<span className="text-sm font-medium text-gray-500">{label}</span>
+		</div>
+	);
+};
 
 const Hero = () => {
 	const [isPlaying, setIsPlaying] = useState(false);
@@ -68,19 +99,21 @@ const Hero = () => {
 					/>
 				</div>
 
-				<div className="flex flex-col items-center gap-8 py-12 md:flex-row md:items-center md:gap-14 md:py-0">
+				<div className="flex flex-col gap-12 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0">
 					{/* Left column */}
-					<div className="flex flex-1 flex-col items-center text-center md:items-start md:text-left">
-						<Tag className="mb-4" color="warning">🚀 LAUNCHED</Tag>
-						<h1 className="m-0 bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 bg-clip-text pb-4 text-4xl font-bold text-transparent md:text-5xl lg:text-6xl">
-							Help map tree mortality worldwide
+					<div className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left">
+						<div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[#FFB31C]/40 bg-[#FFF4D9]/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#AE5920]">
+							<span className="text-sm">🚀</span>
+							<span>Platform Live</span>
+						</div>
+						<h1 className="m-0 bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 bg-clip-text pb-6 text-4xl font-bold text-transparent md:text-5xl lg:text-7xl">
+							Mapping global tree mortality
 						</h1>
 						<p className="m-0 max-w-lg text-lg leading-relaxed text-gray-500">
-							Contribute drone imagery to map standing deadwood with AI — and help build
-							the training data that powers global satellite-based forest mortality monitoring.
+							Contribute drone imagery to help detect standing deadwood using AI. Your data powers the next generation of global satellite monitoring.
 						</p>
 
-						<div className="mt-8 flex flex-col gap-3 sm:flex-row">
+						<div className="mt-10 flex flex-col gap-4 sm:flex-row">
 							<Button
 								type="primary"
 								size="large"
@@ -92,9 +125,9 @@ const Hero = () => {
 							<Button
 								size="large"
 								icon={<SearchOutlined />}
-								onClick={() => navigate("/dataset")}
+								onClick={() => navigate("/deadtrees")}
 							>
-								Explore Datasets
+								Explore Map
 							</Button>
 						</div>
 
@@ -104,18 +137,16 @@ const Hero = () => {
 							</p>
 						)}
 
-						{stats && (
-							<div className="mt-10 flex gap-8">
-								<StatItem value={stats.datasets.toLocaleString()} label="Datasets" />
-								<StatItem value={String(stats.countries)} label="Countries" />
-								<StatItem value={String(stats.contributors)} label="Contributors" />
-							</div>
-						)}
+						<div className="mt-8 flex flex-wrap items-center justify-center gap-6 md:justify-start">
+							<AnimatedStat value={stats?.datasets ?? 6741} label="Datasets" />
+							<AnimatedStat value={stats?.countries ?? 127} label="Countries" />
+							<AnimatedStat value={stats?.contributors ?? 668} label="Contributors" />
+						</div>
 					</div>
 
-					{/* Right column — wider to showcase the visual */}
-					<div className="w-full md:w-[58%] md:flex-none">
-						<div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5">
+					{/* Right column — visual */}
+					<div className="mt-8 flex w-full flex-1 justify-center lg:mt-0">
+						<div className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5">
 							<ReactPlayer
 								url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
 								width="100%"
@@ -140,18 +171,18 @@ const Hero = () => {
 				</div>
 			</div>
 
-		{/* "Supported by" label above the white strip */}
-		<div className="relative z-10 pb-2 pt-4">
-			<p className="m-0 text-center text-xs font-medium uppercase tracking-wider text-gray-400">
+		{/* "Supported by" section */}
+		<div className="relative z-10 mt-auto pt-16">
+			<p className="m-0 pb-4 text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
 				Supported by
 			</p>
-		</div>
-
-		{/* Logo banner in white strip */}
-		<div className="relative z-10 border-t border-slate-100 bg-white/80 backdrop-blur-sm">
-			<div className="m-auto max-w-[1400px] px-4 md:px-10">
-				<div className="py-2 md:py-3">
-					<LogoBannerBand logos={logos} title="" compact />
+			
+			{/* Logo banner in white strip */}
+			<div className="border-t border-slate-100 bg-white/90 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)] backdrop-blur-md">
+				<div className="m-auto max-w-[1400px] px-4 md:px-10">
+					<div className="py-4 md:py-6">
+						<LogoBannerBand logos={logos} title="" compact />
+					</div>
 				</div>
 			</div>
 		</div>

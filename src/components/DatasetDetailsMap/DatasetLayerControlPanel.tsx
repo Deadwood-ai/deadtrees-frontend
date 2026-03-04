@@ -32,6 +32,7 @@ interface DatasetLayerControlPanelProps {
   // Quality ratings from audit
   forestCoverQuality?: QualityRating;
   deadwoodQuality?: QualityRating;
+  canBypassQualityRestriction?: boolean;
   // Opacity (controls forest cover + deadwood layers)
   opacity: number;
   setOpacity: (value: number) => void;
@@ -49,7 +50,7 @@ const QualityIcon = ({ quality }: { quality: QualityRating }) => {
   const config = {
     great: { icon: <CheckCircleOutlined />, color: "text-green-500", tooltip: "Quality: Great" },
     sentinel_ok: { icon: <ExclamationCircleOutlined />, color: "text-yellow-500", tooltip: "Quality: OK for Sentinel" },
-    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor – layer hidden due to audit" },
+    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor" },
   };
 
   const { icon, color, tooltip } = config[quality] || {};
@@ -84,6 +85,7 @@ const DatasetLayerControlPanel = ({
   hasAOI,
   forestCoverQuality,
   deadwoodQuality,
+  canBypassQualityRestriction = false,
   opacity,
   setOpacity,
   onReportClick,
@@ -121,9 +123,9 @@ const DatasetLayerControlPanel = ({
             <Checkbox
               checked={showForestCover}
               onChange={(e) => setShowForestCover(e.target.checked)}
-              disabled={forestCoverQuality === "bad"}
+              disabled={forestCoverQuality === "bad" && !canBypassQualityRestriction}
             >
-              <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" ? "opacity-50" : ""}`}>
+              <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                 <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
                 <span className="text-xs text-gray-600">Forest Cover</span>
               </span>
@@ -136,9 +138,9 @@ const DatasetLayerControlPanel = ({
             <Checkbox
               checked={showDeadwood}
               onChange={(e) => setShowDeadwood(e.target.checked)}
-              disabled={deadwoodQuality === "bad"}
+              disabled={deadwoodQuality === "bad" && !canBypassQualityRestriction}
             >
-              <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" ? "opacity-50" : ""}`}>
+              <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                 <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
                 <span className="text-xs text-gray-600">Deadwood</span>
               </span>

@@ -60,6 +60,7 @@ interface DatasetDetailsMapProps {
   canReviewCorrections?: boolean;
   onApproveCorrection?: (correctionId: number, geometryId: number) => void;
   onRevertCorrection?: (correctionId: number, geometryId: number) => void;
+  allowBadQualityLayers?: boolean;
 }
 
 /**
@@ -90,6 +91,7 @@ const DatasetDetailsMapInner = forwardRef<DatasetDetailsMapHandle, DatasetDetail
   canReviewCorrections = false,
   onApproveCorrection,
   onRevertCorrection,
+  allowBadQualityLayers = false,
     },
     ref
   ) => {
@@ -163,6 +165,7 @@ const DatasetDetailsMapInner = forwardRef<DatasetDetailsMapHandle, DatasetDetail
         canReviewCorrections={canReviewCorrections}
         onApproveCorrection={handleApproveCorrection}
         onRevertCorrection={handleRevertCorrection}
+        allowBadQualityLayers={allowBadQualityLayers}
       />
     );
   }

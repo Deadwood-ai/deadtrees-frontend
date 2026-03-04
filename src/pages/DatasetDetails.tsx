@@ -13,6 +13,7 @@ import { usePhenologyData } from "../hooks/usePhenologyData";
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag } from "../hooks/useDatasetFlags";
 import { useDatasetEditing } from "../hooks/useDatasetEditing";
+import { useCanAudit } from "../hooks/useUserPrivileges";
 import { isGeonadirDataset } from "../utils/datasetUtils";
 
 import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
@@ -27,6 +28,7 @@ export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
+  const { canAudit } = useCanAudit();
   const { data: datasets } = usePublicDatasets();
   const {
     setViewport,
@@ -190,6 +192,7 @@ export default function DatasetDetails() {
               hasAOI={true}
               forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
               deadwoodQuality={auditInfo?.deadwood_quality as "great" | "sentinel_ok" | "bad" | undefined}
+              canBypassQualityRestriction={canAudit}
               opacity={layerControl.layerOpacity}
               setOpacity={setLayerOpacity}
               onReportClick={() => setReportModalOpen(true)}
@@ -239,6 +242,7 @@ export default function DatasetDetails() {
           onEditDeadwood={() => editing.handleStartEditing("deadwood")}
           onEditForestCover={() => editing.handleStartEditing("forest_cover")}
           isLoggedIn={!!user}
+          allowBadQualityLayers={canAudit}
         />
       </Col>
 
