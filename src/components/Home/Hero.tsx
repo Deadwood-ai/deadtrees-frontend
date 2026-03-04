@@ -101,12 +101,12 @@ const Hero = () => {
 
 				<div className="flex flex-col gap-12 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0">
 					{/* Left column */}
-					<div className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left">
+					<div className="flex flex-col items-center text-center lg:w-[48%] lg:items-start lg:text-left shrink-0">
 						<div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[#FFB31C]/40 bg-[#FFF4D9]/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#AE5920]">
 							<span className="text-sm">🚀</span>
 							<span>Platform Live</span>
 						</div>
-						<h1 className="m-0 bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 bg-clip-text pb-6 text-4xl font-bold text-transparent md:text-5xl lg:text-7xl">
+						<h1 className="m-0 bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 bg-clip-text pb-6 text-4xl font-bold leading-tight text-transparent md:text-5xl lg:text-6xl xl:text-[4rem]">
 							Mapping global tree mortality
 						</h1>
 						<p className="m-0 max-w-lg text-lg leading-relaxed text-gray-500">
@@ -145,8 +145,8 @@ const Hero = () => {
 					</div>
 
 					{/* Right column — visual */}
-					<div className="mt-8 flex w-full flex-1 justify-center lg:mt-0">
-						<div className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5">
+					<div className="mt-8 flex w-full flex-1 justify-center lg:mt-0 lg:justify-end">
+						<div className={`relative w-full max-w-[850px] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5 transition-all duration-700 ease-in-out ${isPlaying ? "aspect-video" : "aspect-[4/3] lg:aspect-square xl:aspect-[4/3]"}`}>
 							<ReactPlayer
 								url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
 								width="100%"

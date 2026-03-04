@@ -2,7 +2,7 @@ import { Collapse } from "antd";
 
 import Hero from "../components/Home/Hero";
 import HowItWorks from "../components/Home/HowItWorks";
-import Roadmap from "../components/Home/Roadmap";
+import PlatformFeatures from "../components/Home/PlatformFeatures";
 import GetInContact from "../components/Home/GetInContact";
 
 import { useData } from "../hooks/useDataProvider";
@@ -208,7 +208,7 @@ export default function HomePage() {
       <Hero />
       <div className="m-auto max-w-6xl px-4 md:px-0">
         <HowItWorks />
-        <Roadmap />
+        <PlatformFeatures />
         <GetInContact />
         <FAQ />
       </div>
