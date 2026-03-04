@@ -10,69 +10,73 @@ const RoadmapItemDate = ({ date, done }: { date: string; done?: boolean }) => {
 
 const RoadmapItemLabel = ({ label, done }: { label: string; done?: boolean }) => {
   return (
-    <span className={`m-0 pt-4 text-lg ${done ? "text-gray-400 line-through decoration-gray-300" : "text-gray-600"}`}>
-      {label}
-    </span>
+    <div className={`mt-2 mb-8 rounded-lg p-5 ${done ? "bg-gray-50 border border-gray-100 text-gray-500" : "bg-white border border-[#1B5E35]/10 shadow-sm text-gray-800"}`}>
+      <span className={`text-lg font-medium ${done ? "line-through decoration-gray-300" : ""}`}>
+        {label}
+      </span>
+    </div>
   );
 };
 
 const Roadmap = () => {
   return (
-    <div className="m-auto flex max-w-4xl flex-col pt-24 md:flex-row">
-      <div className="mb-8 text-center md:text-left">
-        <p className="m-auto text-2xl font-semibold text-green-800 md:mt-0">OUR ROADMAP</p>
-        <p className="text-lg text-gray-600">Our vision and goals for the future</p>
+    <div className="m-auto flex w-full flex-col pt-24 md:pt-32">
+      <div className="mb-16 text-center">
+        <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Roadmap</p>
+        <p className="m-0 text-4xl font-semibold text-gray-800 md:text-5xl">Vision and goals</p>
       </div>
-      <Timeline
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <Timeline
         mode="left"
         items={[
           {
-            label: RoadmapItemDate({ date: "2026 QX" }),
+            label: <RoadmapItemDate date="2026 QX" />,
             color: "#FFB31C",
             children: <RoadmapItemLabel label="Satellite predictions of forest & deadwood cover at global scale" />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q3", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q3" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Satellite predictions of forest & deadwood cover at EU scale" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q3", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q3" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Web-labelling & feedback" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q3", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q3" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="AI-ready datasets and community model integration" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q3", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q3" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Automated orthomosaic generation with ODM (OpenDroneMap)" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q2", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q2" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Repository functionality (long-term storage + DOI generation)" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q1", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q1" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="AI segmentation of forest and deadwood cover online" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2025 Q1", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2025 Q1" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Stable upload & download" done />,
           },
           {
-            label: RoadmapItemDate({ date: "2024 Q2", done: true }),
-            color: "green",
+            label: <RoadmapItemDate date="2024 Q2" done />,
+            color: "#1B5E35",
             children: <RoadmapItemLabel label="Deadtrees.earth beta launch" done />,
           },
         ]}
       />
+      </div>
     </div>
   );
 };

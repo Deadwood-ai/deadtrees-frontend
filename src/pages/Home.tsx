@@ -1,8 +1,7 @@
 import { Collapse } from "antd";
 
 import Hero from "../components/Home/Hero";
-import DataGallery from "../components/Home/DataGallery";
-import Features from "../components/Home/Features";
+import HowItWorks from "../components/Home/HowItWorks";
 import Roadmap from "../components/Home/Roadmap";
 import GetInContact from "../components/Home/GetInContact";
 
@@ -36,14 +35,12 @@ const FAQ = () => {
         </div>
       ),
       style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
+        border: "1px solid #e2e8f0",
+        borderRadius: "0.75rem",
+        marginBottom: "16px",
+        padding: "12px 24px",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
     {
@@ -60,14 +57,12 @@ const FAQ = () => {
         </div>
       ),
       style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
+        border: "1px solid #e2e8f0",
+        borderRadius: "0.75rem",
+        marginBottom: "16px",
+        padding: "12px 24px",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
     {
@@ -108,14 +103,12 @@ const FAQ = () => {
         </div>
       ),
       style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
+        border: "1px solid #e2e8f0",
+        borderRadius: "0.75rem",
+        marginBottom: "16px",
+        padding: "12px 24px",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
     {
@@ -142,14 +135,12 @@ const FAQ = () => {
         </div>
       ),
       style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
+        border: "1px solid #e2e8f0",
+        borderRadius: "0.75rem",
+        marginBottom: "16px",
+        padding: "12px 24px",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
     {
@@ -183,28 +174,28 @@ const FAQ = () => {
         </div>
       ),
       style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
+        border: "1px solid #e2e8f0",
+        borderRadius: "0.75rem",
+        marginBottom: "16px",
+        padding: "12px 24px",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
   ];
 
   return (
-    <div className="my-24 px-4 md:mt-36">
-      <h1 className="m-auto text-center text-3xl font-semibold text-gray-800 md:text-4xl">
-        Frequently Asked Questions
-      </h1>
+    <div className="my-24 md:my-32">
+      <div className="mb-12 text-center">
+        <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Support</p>
+        <h1 className="m-0 text-3xl font-semibold text-gray-800 md:text-4xl">
+          Frequently Asked Questions
+        </h1>
+      </div>
       <Collapse
         bordered={false}
         style={{ backgroundColor: "transparent" }}
-        // defaultActiveKey={["1"]}
-        className="w-5xl mt-16"
+        className="w-full max-w-4xl mx-auto"
         items={FAQItems}
       />
     </div>
@@ -216,8 +207,7 @@ export default function HomePage() {
     <div className="pb-1">
       <Hero />
       <div className="m-auto max-w-6xl px-4 md:px-0">
-        <DataGallery />
-        <Features />
+        <HowItWorks />
         <Roadmap />
         <GetInContact />
         <FAQ />

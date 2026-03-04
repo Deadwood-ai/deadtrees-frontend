@@ -140,12 +140,17 @@ const GetInContact = () => {
 	};
 
 	return (
-		<div className="m-auto mt-48 max-w-6xl">
-			<div className="rounded-xl border border-slate-200 bg-white">
+		<div className="mt-24 md:mt-32">
+			<div className="mb-12 text-center">
+				<p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Community</p>
+				<h2 className="m-0 text-4xl font-semibold text-gray-800 md:text-5xl">Join the effort</h2>
+			</div>
+
+			<div className="m-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 				<div className="grid md:grid-cols-5">
 					{/* Contribute — wider */}
-					<div className="p-8 md:col-span-3 md:p-10">
-						<p className="m-0 text-sm font-semibold uppercase tracking-wide text-green-800">
+					<div className="p-8 md:col-span-3 md:p-12">
+						<p className="m-0 text-sm font-semibold uppercase tracking-wide text-[#1B5E35]">
 							Share your data
 						</p>
 						<p className="m-0 mt-3 text-2xl font-semibold text-gray-900 md:text-3xl">
@@ -155,9 +160,8 @@ const GetInContact = () => {
 							{`Upload high-resolution (<10cm) orthophotos and get automatic deadwood detection, proper attribution, and full database access. `}
 							<em>Labels are optional</em> — our AI handles the rest.
 						</p>
-						<div className="mt-6 flex flex-wrap items-center gap-3">
+						<div className="mt-8 flex flex-wrap items-center gap-4">
 							<Button
-								className="hidden md:inline-flex"
 								type="primary"
 								size="large"
 								onClick={() => navigate("/profile")}
@@ -174,28 +178,29 @@ const GetInContact = () => {
 					</div>
 
 					{/* Newsletter — narrower, subtle left border */}
-					<div className="border-t border-slate-200 bg-slate-50 p-8 md:col-span-2 md:border-l md:border-t-0 md:p-10">
-						<p className="m-0 text-sm font-semibold uppercase tracking-wide text-gray-400">
+					<div className="bg-[#E8F3EB]/30 p-8 md:col-span-2 md:border-l border-slate-100 md:p-12">
+						<p className="m-0 text-sm font-semibold uppercase tracking-wide text-[#1B5E35]/80">
 							Newsletter
 						</p>
-						<p className="m-0 mt-3 text-lg font-medium text-gray-800">
+						<p className="m-0 mt-3 text-2xl font-semibold text-gray-900">
 							Stay in the loop
 						</p>
-						<p className="m-0 mt-2 text-sm leading-relaxed text-gray-500">
+						<p className="m-0 mt-4 text-base leading-relaxed text-gray-500">
 							Get notified about new features and platform updates.
 						</p>
-						<div className="mt-5 flex flex-col gap-2">
+						<div className="mt-8 flex flex-col gap-3">
 							<Input
 								size="large"
-								placeholder="Enter email..."
+								placeholder="Enter email address"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={isSubmitting}
 								onPressEnter={addSubscriber}
+								className="border-slate-200"
 							/>
 							<Button
 								onClick={addSubscriber}
-								className="w-full"
+								className="w-full bg-[#1B5E35] hover:bg-[#144728]"
 								type="primary"
 								size="large"
 								loading={isSubmitting}
