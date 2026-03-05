@@ -1,4 +1,4 @@
-import { Typography, Button, Card, Tabs, Collapse, Tooltip, message, Input } from "antd";
+import { Button, Collapse, Tooltip, message, Input, Tabs } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, ExportOutlined, CopyOutlined, DownloadOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
@@ -6,16 +6,11 @@ import { usePublications } from "../hooks/usePublications";
 import { useMemo } from "react";
 import LogoBannerBand from "../components/Home/LogoBanner";
 import { useData } from "../hooks/useDataProvider";
-import { useState } from "react";
 import ReactPlayer from "react-player";
-
-const { Title, Paragraph, Text } = Typography;
-const { TabPane } = Tabs;
 
 export default function About() {
   const logos = [
     {
-      // path: "assets/logos/copenhagen.png",
       path: "assets/logos/logo-copenhagen.svg",
       text: "Department of Geosciences and Natural Resource Management, University of Copenhagen",
       url: "https://researchprofiles.ku.dk/en/organisations/institut-for-geovidenskab-og-naturforvaltning",
@@ -67,9 +62,10 @@ export default function About() {
   const { data: publications, isLoading: isLoadingPublications } = usePublications();
   const { data: presentations, isLoading: isLoadingPresentations } = usePresentations();
   const { authors } = useData();
-  const contributorNames = (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b));
-
-  const [isPlaying, setIsPlaying] = useState(false);
+  const contributorNames = useMemo(
+    () => (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b)),
+    [authors]
+  );
 
   const bibtexPreprint = String.raw`@article{mosig2026deadtrees,
 title = {deadtrees.earth - An open-access and interactive database for centimeter-scale aerial imagery to uncover global tree mortality dynamics},
@@ -128,298 +124,297 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
   }, [presentations]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      {/* Introduction Section */}
-      {/* if on mobile add a button to go back to home use tailwind */}
-      <div className="md:hidden">
-        <Button className="mb-8" type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
-          Back to Home
-        </Button>
-      </div>
-
-      <div className="mb-16">
-        <div className="flex items-center gap-3">
-          <Title level={1} className="m-0">
-            About deadtrees.earth
-          </Title>
+    <div className="w-full bg-[#F8FAF9] pb-24 pt-12 md:pt-24">
+      <div className="mx-auto max-w-6xl px-4 md:px-8">
+        {/* Mobile Back Button */}
+        <div className="mb-8 md:hidden">
+          <Button type="default" icon={<ArrowLeftOutlined />} onClick={() => navigate("/")}>
+            Back to Home
+          </Button>
         </div>
-        <Paragraph className="mt-6 text-lg text-gray-600">
-          deadtrees.earth is an open-access, dynamic database revolutionizing the way we map and analyze global tree
-          mortality patterns. By combining aerial imagery, Earth observation data, and machine learning, we're creating
-          a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
-          worldwide to understand tree mortality dynamics.
-        </Paragraph>
-        <div className="relative  my-8 aspect-video w-full max-w-3xl overflow-hidden rounded-2xl bg-gray-100 md:mt-8">
+
+        {/* Header & Video */}
+        <div className="mb-20 text-center">
+          <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">About</p>
+          <h1 className="m-0 text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
+            The Initiative
+          </h1>
+          <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-600">
+            deadtrees.earth is an open-access, dynamic database revolutionizing the way we map and analyze global tree
+            mortality patterns. By combining aerial imagery, Earth observation data, and machine learning, we're creating
+            a comprehensive platform that brings together drone-based, airplane, and satellite imagery from contributors
+            worldwide to understand tree mortality dynamics.
+          </p>
+        </div>
+
+        <div className="relative mx-auto my-12 aspect-video w-full max-w-4xl overflow-hidden rounded-3xl bg-gray-100 shadow-xl ring-1 ring-black/5">
           <ReactPlayer
             url="https://www.youtube.com/watch?v=IKbFopiTcWY"
             width="100%"
             height="100%"
             controls={true}
             playsinline
-            loop={true}
             config={{
-              file: {
-                attributes: {
-                  controlsList: "nodownload",
-                },
-              },
+              youtube: {
+                playerVars: {
+                  modestbranding: 1,
+                  rel: 0
+                }
+              }
             }}
-            playing={isPlaying}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
           />
         </div>
-        <Paragraph className="mt-4 text-lg text-gray-600">
-          This initivative is being led by Prof. Dr. Teja Kattenborn from{" "}
-          <a href="https://geosense.uni-freiburg.de/en">geosense</a> and Clemens Mosig from{" "}
-          <a href="https://rsc4earth.de/">RSC4Earth</a> / <a href="https://scads.ai/">ScaDS.AI</a>, and the service is
-          being built by Janusch Vajna-Jehle from <a href="https://geosense.uni-freiburg.de/en">geosense</a> and{" "}
-          <a href="https://hydrocode.de/home">hydrocode</a>. deadtrees.earth would not be possible without the numerous
-          collaborators and data contributors of more than 60 institutions.
-        </Paragraph>
-        <Collapse
-          bordered={false}
-          style={{ backgroundColor: "transparent" }}
-          className="mt-0"
-          items={[
-            {
-              key: "1",
-              label: <span className="m-0 pt-6 text-lg text-gray-500">Want to see all contributors?</span>,
-              children: (
-                <div>
-                  <p className="text-md font-semibold">Data contributors:</p>
-                  <p className="text-md">
-                    {contributorNames.length > 0 ? contributorNames.join(", ") : "Loading contributors..."}
-                  </p>
-                </div>
-              ),
-              style: {
-                borderRadius: "0.5rem",
-                marginBottom: "12px",
-                paddingLeft: "0px",
-                paddingRight: "12px",
-                paddingTop: "0px",
-                paddingBottom: "8px",
-                // backgroundColor: "rgb(241 245 249)",
-              },
-            },
-          ]}
-        />
-      </div>
-      {/* How to cite Section - moved above Mission */}
-      <div className="mb-16">
-        <Title level={2}>How to cite</Title>
-        <Paragraph className="text-gray-600">
-          If you use datasets from deadtrees.earth, please cite each dataset by its DOI. You can find the DOI on the
-          dataset page (look for the DOI badge and link).
-        </Paragraph>
-        <Title level={4} className="mt-4 text-gray-700">
-          1) Database (drone products)
-        </Title>
-        <Title level={5} className="mt-4 text-gray-600">
-          BibTeX:
-        </Title>
-        <div className="relative w-full">
-          <Tooltip title="Copy BibTeX">
-            <Button
-              // type="link"
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => handleCopy(bibtexPreprint)}
-              className="absolute right-4 top-4 z-10"
-            >
-              Copy
-            </Button>
-          </Tooltip>
-          <Input.TextArea
-            readOnly
-            value={bibtexPreprint}
-            autoSize={{ minRows: 1, maxRows: 16 }}
-            className="pr-14 font-mono text-sm"
-            style={{ whiteSpace: "pre", overflowX: "auto", width: "100%" }}
-          />
+
+        {/* Team & Contributors */}
+        <div className="mx-auto mb-24 max-w-3xl text-center">
+          <p className="text-lg leading-relaxed text-gray-600">
+            This initiative is being led by Prof. Dr. Teja Kattenborn from{" "}
+            <a href="https://geosense.uni-freiburg.de/en" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1B5E35] hover:underline">geosense</a> and Clemens Mosig from{" "}
+            <a href="https://rsc4earth.de/" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1B5E35] hover:underline">RSC4Earth</a> / <a href="https://scads.ai/" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1B5E35] hover:underline">ScaDS.AI</a>, and the service is
+            being built by Janusch Vajna-Jehle from <a href="https://geosense.uni-freiburg.de/en" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1B5E35] hover:underline">geosense</a> and{" "}
+            <a href="https://hydrocode.de/home" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1B5E35] hover:underline">hydrocode</a>. deadtrees.earth would not be possible without the numerous
+            collaborators and data contributors of more than 60 institutions.
+          </p>
+          <div className="mt-8">
+            <Collapse
+              bordered={false}
+              style={{ backgroundColor: "transparent" }}
+              className="mx-auto max-w-2xl"
+              items={[
+                {
+                  key: "1",
+                  label: <span className="text-base font-semibold text-gray-700">View all contributors</span>,
+                  children: (
+                    <div className="text-left text-sm leading-relaxed text-gray-600">
+                      {contributorNames.length > 0 ? contributorNames.join(", ") : "Loading contributors..."}
+                    </div>
+                  ),
+                  style: {
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "0.75rem",
+                    backgroundColor: "#ffffff",
+                    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                  },
+                },
+              ]}
+            />
+          </div>
         </div>
-        <Title level={5} className="mt-4 text-gray-600">
-          APA:
-        </Title>
-        <div className="relative w-full">
-          <Tooltip title="Copy APA">
-            <Button
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => handleCopy(apaCitation)}
-              className="absolute right-4 top-4 z-10"
-            >
-              Copy
-            </Button>
-          </Tooltip>
-          <Input.TextArea
-            readOnly
-            value={apaCitation}
-            autoSize={{ minRows: 1, maxRows: 8 }}
-            className="pr-14 font-mono text-sm"
-            style={{ whiteSpace: "pre-wrap", overflowX: "auto", width: "100%" }}
-          />
-        </div>
-        <Title level={4} className="mt-6 text-gray-700">
-          2) Segmentation model
-        </Title>
-        <Paragraph className="text-gray-600">
-          For deadwood segmentation predictions, please cite{" "}
-          <a
-            href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Mohring et al., 2025 (ISPRS Open Journal of Photogrammetry and Remote Sensing)
-          </a>
-          .
-        </Paragraph>
-        <Title level={4} className="mt-6 text-gray-700">
-          3) Satellite products (Sentinel maps)
-        </Title>
-        <Paragraph className="text-gray-600">
-          For the satellite products shown in the DeadTrees map, please cite{" "}
-          <a href="https://eartharxiv.org/repository/view/11912/" target="_blank" rel="noopener noreferrer">
-            Mosig et al., 2026 (EarthArXiv preprint)
-          </a>
-          .
-        </Paragraph>
-      </div>
-      {/* Publications Section */}
-      <div className="mb-16">
-        <Title level={2}>Publications</Title>
-        <Paragraph className="mb-8 text-gray-600">
-          Our work has been featured in various peer-reviewed journals and preprints, advancing the understanding of
-          forest dieback and global tree mortality mapping.
-        </Paragraph>
-        {isLoadingPublications ? (
-          <div>Loading...</div>
-        ) : publications && publications.length > 0 ? (
-          publications.map((pub, index) => (
-            <Card key={index} className="mb-4">
-              <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-                <div className="w-full sm:w-auto">
-                  <Text strong className="block">
-                    {pub.title}
-                  </Text>
-                  <Text type="secondary" className="block">
-                    {pub.authors}
-                  </Text>
-                  <Text type="secondary" className="block">
-                    {pub.publisher}, {pub.year}
-                  </Text>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button type="link" icon={<ExportOutlined />} href={pub.url} target="_blank">
-                    View Paper
-                  </Button>
-                  {pub.data_url && (
-                    <Button type="link" icon={<DownloadOutlined />} href={pub.data_url} target="_blank">
-                      Data Link
+
+        {/* How to cite */}
+        <div className="mx-auto mb-24 max-w-4xl">
+          <h2 className="mb-4 text-3xl font-bold tracking-tight text-gray-900">How to cite</h2>
+          <p className="mb-8 text-lg text-gray-600">
+            If you use datasets from deadtrees.earth, please cite each dataset by its DOI. You can find the DOI on the
+            dataset page (look for the DOI badge and link).
+          </p>
+
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <h3 className="mb-6 text-xl font-semibold text-gray-900">1) Database (drone products)</h3>
+              
+              <div className="mb-8">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-bold uppercase tracking-wider text-gray-500">BibTeX</span>
+                  <Tooltip title="Copy BibTeX">
+                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(bibtexPreprint)}>
+                      Copy
                     </Button>
-                  )}
+                  </Tooltip>
                 </div>
+                <Input.TextArea
+                  readOnly
+                  value={bibtexPreprint}
+                  autoSize={{ minRows: 4, maxRows: 12 }}
+                  className="font-mono text-xs bg-slate-50 text-slate-700 rounded-lg p-4 custom-scrollbar"
+                />
               </div>
-            </Card>
-          ))
-        ) : (
-          <div>No publications available</div>
-        )}
-      </div>
-      {/* Contributions Section */}
-      <div className="mb-16">
-        <Title level={2}>Conference Contributions</Title>
-        <Tabs defaultActiveKey="upcoming">
-          <TabPane tab="Upcoming" key="upcoming">
-            {isLoadingPresentations ? (
-              <div>Loading...</div>
-            ) : contributions.upcoming.length > 0 ? (
-              contributions.upcoming.map((contribution, index) => (
-                <Card key={index} className="mb-4">
-                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-                    <div className="w-full sm:w-auto">
-                      <Text strong className="block">
-                        {contribution.title}
-                      </Text>
-                      <Text type="secondary" className="block">
-                        {contribution.date}
-                      </Text>
-                      <Text type="secondary" className="block">
-                        {contribution.event}
-                      </Text>
-                    </div>
-                    <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
-                      View Details
+
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-bold uppercase tracking-wider text-gray-500">APA</span>
+                  <Tooltip title="Copy APA">
+                    <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(apaCitation)}>
+                      Copy
                     </Button>
+                  </Tooltip>
+                </div>
+                <Input.TextArea
+                  readOnly
+                  value={apaCitation}
+                  autoSize={{ minRows: 2, maxRows: 6 }}
+                  className="font-mono text-sm bg-slate-50 text-slate-700 rounded-lg p-4 custom-scrollbar"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <h3 className="mb-3 text-xl font-semibold text-gray-900">2) Segmentation model</h3>
+              <p className="text-base text-gray-600 m-0">
+                For deadwood segmentation predictions, please cite{" "}
+                <a
+                  href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[#1B5E35] hover:underline"
+                >
+                  Mohring et al., 2025 (ISPRS Open Journal of Photogrammetry and Remote Sensing)
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+              <h3 className="mb-3 text-xl font-semibold text-gray-900">3) Satellite products (Sentinel maps)</h3>
+              <p className="text-base text-gray-600 m-0">
+                For the satellite products shown in the DeadTrees map, please cite{" "}
+                <a href="https://eartharxiv.org/repository/view/11912/" target="_blank" rel="noopener noreferrer" className="font-medium text-[#1B5E35] hover:underline">
+                  Mosig et al., 2026 (EarthArXiv preprint)
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Publications */}
+        <div className="mx-auto mb-24 max-w-4xl">
+          <h2 className="mb-4 text-3xl font-bold tracking-tight text-gray-900">Publications</h2>
+          <p className="mb-8 text-lg text-gray-600">
+            Our work has been featured in various peer-reviewed journals and preprints, advancing the understanding of
+            forest dieback and global tree mortality mapping.
+          </p>
+
+          <div className="space-y-4">
+            {isLoadingPublications ? (
+              <div className="text-gray-500">Loading...</div>
+            ) : publications && publications.length > 0 ? (
+              publications.map((pub, index) => (
+                <div key={index} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md sm:flex-row">
+                  <div className="flex-1">
+                    <h4 className="mb-1 text-lg font-semibold text-gray-900">{pub.title}</h4>
+                    <p className="mb-2 text-sm text-gray-600">{pub.authors}</p>
+                    <p className="m-0 text-sm font-medium text-gray-500">
+                      {pub.publisher}, {pub.year}
+                    </p>
                   </div>
-                </Card>
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start">
+                    <Button icon={<ExportOutlined />} href={pub.url} target="_blank">
+                      View Paper
+                    </Button>
+                    {pub.data_url && (
+                      <Button icon={<DownloadOutlined />} href={pub.data_url} target="_blank">
+                        Data Link
+                      </Button>
+                    )}
+                  </div>
+                </div>
               ))
             ) : (
-              <div>No upcoming presentations</div>
+              <div className="text-gray-500 rounded-xl border border-gray-200 bg-white p-6">No publications available</div>
             )}
-          </TabPane>
-          <TabPane tab="Past" key="past">
-            {isLoadingPresentations ? (
-              <div>Loading...</div>
-            ) : contributions.past.length > 0 ? (
-              contributions.past.map((contribution, index) => (
-                <Card key={index} className="mb-4">
-                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-                    <div className="w-full sm:w-auto">
-                      <Text strong className="block">
-                        {contribution.title}
-                      </Text>
-                      <Text type="secondary" className="block">
-                        {contribution.date}
-                      </Text>
-                      <Text type="secondary" className="block">
-                        {contribution.event}
-                      </Text>
-                    </div>
-                    <Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
-                      View Details
-                    </Button>
+          </div>
+        </div>
+
+        {/* Conference Contributions */}
+        <div className="mx-auto mb-24 max-w-4xl">
+          <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900">Conference Contributions</h2>
+          <Tabs 
+            defaultActiveKey="upcoming"
+            items={[
+              {
+                key: "upcoming",
+                label: "Upcoming",
+                children: isLoadingPresentations ? (
+                  <div className="text-gray-500 py-4">Loading...</div>
+                ) : contributions.upcoming.length > 0 ? (
+                  <div className="space-y-4 py-4">
+                    {contributions.upcoming.map((contribution, index) => (
+                      <div key={index} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md sm:flex-row">
+                        <div className="flex-1">
+                          <h4 className="mb-1 text-lg font-semibold text-gray-900">{contribution.title}</h4>
+                          <p className="mb-2 text-sm font-medium text-[#1B5E35]">{contribution.date}</p>
+                          <p className="m-0 text-sm text-gray-600">{contribution.event}</p>
+                        </div>
+                        <Button className="shrink-0" icon={<ExportOutlined />} href={contribution.link} target="_blank">
+                          View Details
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                </Card>
-              ))
-            ) : (
-              <div>No past presentations</div>
-            )}
-          </TabPane>
-        </Tabs>
+                ) : (
+                  <div className="text-gray-500 py-4 rounded-xl border border-gray-200 bg-white p-6">No upcoming presentations</div>
+                )
+              },
+              {
+                key: "past",
+                label: "Past",
+                children: isLoadingPresentations ? (
+                  <div className="text-gray-500 py-4">Loading...</div>
+                ) : contributions.past.length > 0 ? (
+                  <div className="space-y-4 py-4">
+                    {contributions.past.map((contribution, index) => (
+                      <div key={index} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md sm:flex-row">
+                        <div className="flex-1">
+                          <h4 className="mb-1 text-lg font-semibold text-gray-900">{contribution.title}</h4>
+                          <p className="mb-2 text-sm font-medium text-[#1B5E35]">{contribution.date}</p>
+                          <p className="m-0 text-sm text-gray-600">{contribution.event}</p>
+                        </div>
+                        <Button className="shrink-0" icon={<ExportOutlined />} href={contribution.link} target="_blank">
+                          View Details
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 py-4 rounded-xl border border-gray-200 bg-white p-6">No past presentations</div>
+                )
+              }
+            ]}
+          />
+        </div>
+
+        {/* Mission / Call to Action */}
+        <div className="mx-auto mb-24 max-w-4xl overflow-hidden rounded-3xl border border-emerald-100 bg-emerald-50/50 shadow-sm">
+          <div className="p-10 text-center md:p-14">
+            <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+              A Glimpse into Our Mission
+            </h2>
+            <div className="mx-auto max-w-2xl space-y-6 text-lg text-gray-600 leading-relaxed">
+              <p>
+                As global tree mortality rates continue to rise, understanding the complex drivers behind this phenomenon
+                becomes increasingly crucial. deadtrees.earth leverages cutting-edge technology to fill critical knowledge
+                gaps by integrating crowd-sourced aerial images, Earth Observation data, and artificial intelligence.
+              </p>
+              <p>
+                Our platform serves as a central hub for researchers, conservationists, and citizen scientists to contribute
+                and analyze data, fostering a collaborative approach to understanding and addressing the challenges of forest
+                dieback in the face of climate change.
+              </p>
+              <p className="font-medium text-gray-900">
+                We are always looking for new contributors to join our project. If you have high-resolution (&lt;10cm)
+                orthoimagery and optionally any labels for standing deadwood, we would be excited to have you collaborate with
+                us on this project.
+              </p>
+            </div>
+            <div className="mt-12">
+              <Button
+                type="primary"
+                size="large"
+                className="h-12 px-8 text-base font-semibold shadow-sm"
+                href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration"
+              >
+                Get in Contact
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Partners Banner */}
+        <div className="mt-12 rounded-3xl border border-gray-200 bg-white py-12 text-center shadow-sm">
+          <LogoBannerBand logos={logos} title="Research Networks and associated partners" />
+        </div>
       </div>
-      {/* Mission Section */}
-      <Card className="mb-16 bg-slate-100">
-        <Title level={2}>
-          A Glimpse into Our Mission
-        </Title>
-        <Paragraph className="text-gray-600">
-          As global tree mortality rates continue to rise, understanding the complex drivers behind this phenomenon
-          becomes increasingly crucial. deadtrees.earth leverages cutting-edge technology to fill critical knowledge
-          gaps by integrating crowd-sourced aerial images, Earth Observation data, and artificial intelligence.
-        </Paragraph>
-        <Paragraph className="text-gray-600">
-          Our platform serves as a central hub for researchers, conservationists, and citizen scientists to contribute
-          and analyze data, fostering a collaborative approach to understanding and addressing the challenges of forest
-          dieback in the face of climate change.
-        </Paragraph>
-        <Paragraph className="text-gray-600">
-          We are always looking for new contributors to join our project. If you have high-resolution (&lt;10cm)
-          orthoimagery and optionally any labels for standing deadwood, we would be excited to have you collaborate with
-          us on this project.
-        </Paragraph>
-        {/* get in contact with us */}
-        <div className="mt-4 text-center"></div>
-        <Button
-          className="mb-8 mt-4"
-          type="primary"
-          href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration"
-        >
-          Get in Contact
-        </Button>
-      </Card>
-      <LogoBannerBand logos={logos} title="Research Networks and associated partners" />
     </div>
   );
 }
