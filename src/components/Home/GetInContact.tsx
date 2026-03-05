@@ -140,8 +140,9 @@ const GetInContact = () => {
 	};
 
 	return (
-		<div className="mt-24 md:mt-32">
-			<div className="mb-12 text-center">
+		<section className="w-full bg-[#F8FAF9] border-y border-slate-200/50 py-24 md:py-32">
+			<div className="m-auto max-w-6xl px-4 md:px-8">
+				<div className="mb-12 text-center">
 				<p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Community</p>
 				<h2 className="m-0 text-4xl font-semibold text-gray-800 md:text-5xl">Join the effort</h2>
 			</div>
@@ -214,7 +215,8 @@ const GetInContact = () => {
 			</div>
 
 			<UpcomingConferences />
-		</div>
+			</div>
+		</section>
 	);
 };
 

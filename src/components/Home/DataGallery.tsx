@@ -33,12 +33,12 @@ const calculateAreaFromBBox = (bboxArray: number[]): number => {
 
 const Stat = ({ title, value, unit }: { title: string; value: string; unit: string }) => {
   return (
-    <div className="m-auto mx-8 w-full rounded-xl px-6">
-      <div className="flex items-baseline justify-center">
-        <p className="m-0 text-3xl font-medium text-[#1B5E35]">{value}</p>
-        <p className="m-0 pl-1 text-lg font-medium text-[#1B5E35]/80">{unit}</p>
+    <div className="flex flex-col items-center justify-center p-4">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-3xl font-semibold text-[#FFB31C]">{value}</span>
+        {unit && <span className="text-base font-semibold text-[#FFB31C]/80">{unit}</span>}
       </div>
-      <p className="m-0 p-3 text-center text-sm font-medium uppercase">{title}</p>
+      <span className="mt-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">{title}</span>
     </div>
   );
 };
@@ -92,9 +92,8 @@ const Stats = () => {
   }, [data]);
 
   return (
-    <div className="flex flex-col justify-center py-4 align-middle md:mt-0">
-      <div className="text-center"></div>
-      <div className="grid grid-cols-2 pt-8 md:flex md:justify-around">
+    <div className="mt-4 flex flex-col justify-center rounded-2xl bg-white/50 py-6 md:mt-8">
+      <div className="grid grid-cols-2 gap-y-8 md:flex md:justify-around md:gap-y-0">
         <Stat title="Orthophotos" value={stats.orthophotos.toLocaleString()} unit="" />
         <Stat title="Area Covered" value={Math.round(stats.area).toLocaleString()} unit="ha" />
         <Stat title="Countries" value={stats.countries.toString()} unit="" />
@@ -208,21 +207,21 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
             </p>
           </>
         )}
-        <div className={`relative ${!hideHeader ? "px-4 pt-8" : "px-0 pt-0"}`}>
-          <Button
-            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
-            icon={<LeftOutlined />}
-            onClick={previous}
-            shape="circle"
-          />
-          <Button
-            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-white/80"
-            icon={<RightOutlined />}
-            onClick={next}
-            shape="circle"
-          />
+        <div className={`flex flex-col gap-8 ${!hideHeader ? "px-4 pt-8" : "px-0 pt-0"}`}>
+          <div className="relative mx-4 md:mx-12">
+            <Button
+              className="absolute -left-4 top-1/2 z-10 flex !h-12 !w-12 !min-w-0 -translate-y-1/2 items-center justify-center rounded-full border-gray-200 bg-white !p-0 shadow-sm transition-all hover:scale-105 hover:bg-white hover:shadow-md md:-left-12"
+              icon={<LeftOutlined className="text-lg text-gray-500" />}
+              onClick={previous}
+              shape="circle"
+            />
+            <Button
+              className="absolute -right-4 top-1/2 z-10 flex !h-12 !w-12 !min-w-0 -translate-y-1/2 items-center justify-center rounded-full border-gray-200 bg-white !p-0 shadow-sm transition-all hover:scale-105 hover:bg-white hover:shadow-md md:-right-12"
+              icon={<RightOutlined className="text-lg text-gray-500" />}
+              onClick={next}
+              shape="circle"
+            />
 
-          <div className="mx-8">
             <Carousel ref={carouselRef} {...settings}>
               {sortedUniqueData.map((item) => (
                 <div key={item.id} className="px-2 py-4">

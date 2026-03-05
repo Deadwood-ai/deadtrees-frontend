@@ -1,32 +1,38 @@
 import { Link } from "react-router-dom";
 import { Button } from "antd";
-import { CloudUploadOutlined, GlobalOutlined, FileImageOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { CloudUploadOutlined, GlobalOutlined, FileImageOutlined, FileZipOutlined, DatabaseOutlined } from "@ant-design/icons";
 import DataGallery from "./DataGallery";
 import MiniSatelliteMap from "./MiniSatelliteMap";
 
 const UploadIllustration = () => (
   <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-white p-8 shadow-sm">
-    <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-50 text-5xl text-green-700 ring-8 ring-emerald-50/50">
+    <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-50 text-5xl text-[#1B5E35] ring-8 ring-emerald-50/50">
       <CloudUploadOutlined />
     </div>
     <div className="flex w-full max-w-sm flex-col gap-3">
+      {/* GeoTIFF Upload */}
       <div className="flex items-center gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
         <FileImageOutlined className="text-2xl text-blue-500" />
         <div className="flex-1">
-          <div className="h-2 w-24 rounded bg-gray-300"></div>
-          <div className="mt-2 h-2 w-16 rounded bg-gray-200"></div>
+          <div className="text-sm font-semibold text-gray-700">orthomosaic.tif</div>
+          <div className="mt-1 text-xs font-medium text-gray-400">GeoTIFF • 1.2 GB</div>
         </div>
-        <div className="text-xs font-bold text-green-600">DONE</div>
+        <div className="text-xs font-bold text-[#1B5E35]">DONE</div>
       </div>
-      <div className="flex items-center gap-4 rounded-lg border border-emerald-100 bg-emerald-50/30 p-4">
-        <FolderOpenOutlined className="text-2xl text-amber-500" />
+      
+      {/* Raw Imagery ZIP Upload */}
+      <div className="flex items-center gap-4 rounded-lg border border-emerald-100 bg-[#E8F3EB]/50 p-4">
+        <FileZipOutlined className="text-2xl text-amber-500" />
         <div className="flex-1">
-          <div className="h-2 w-32 rounded bg-gray-300"></div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
-            <div className="h-full w-2/3 bg-green-500"></div>
+          <div className="text-sm font-semibold text-gray-700">raw_drone_images.zip</div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white">
+            <div className="h-full w-[68%] bg-[#1B5E35] rounded-full"></div>
           </div>
         </div>
-        <div className="text-xs font-bold text-gray-500">68%</div>
+        <div className="flex flex-col items-end">
+          <div className="text-xs font-bold text-[#1B5E35]">68%</div>
+          <div className="text-[10px] text-gray-500">ODM Processing</div>
+        </div>
       </div>
     </div>
   </div>
@@ -34,8 +40,9 @@ const UploadIllustration = () => (
 
 const HowItWorks = () => {
   return (
-    <div className="py-24 md:py-32">
-      <div className="mb-20 text-center">
+    <section className="w-full bg-[#F8FAF9] border-t border-slate-200/50 py-24 md:py-32">
+      <div className="m-auto max-w-6xl px-4 md:px-8">
+        <div className="mb-20 text-center">
         <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">
           The Pipeline
         </p>
@@ -58,7 +65,7 @@ const HowItWorks = () => {
               Contribute Drone Data
             </h3>
             <p className="mb-8 text-lg text-gray-600">
-              Upload your high-resolution drone imagery of forests via your user profile. We primarily seek aerial orthophotos (resolution &lt; 10 cm) showing forest areas with standing deadwood. Every contributor will be credited and invited to collaborate in our open access community effort.
+              Upload your high-resolution drone imagery of forests (resolution &lt; 10 cm) via your user profile. <strong>All forest data is valuable</strong>, whether it contains standing deadwood or healthy trees. We support direct uploads of finished <strong>orthophotos (GeoTIFF)</strong> as well as <strong>raw drone imagery (ZIP)</strong>. For raw images, our pipeline automatically generates orthomosaics using OpenDroneMap (ODM).
             </p>
             <Link to="/profile">
               <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
@@ -89,6 +96,13 @@ const HowItWorks = () => {
           <div className="-mx-4 md:mx-0 relative z-10">
              <DataGallery hideHeader={true} />
           </div>
+          <div className="flex justify-center">
+            <Link to="/dataset">
+              <Button size="large" icon={<DatabaseOutlined />}>
+                Browse Dataset Archive
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Step 3: Satellite Upscaling */}
@@ -116,7 +130,8 @@ const HowItWorks = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </section>
   );
 };
 

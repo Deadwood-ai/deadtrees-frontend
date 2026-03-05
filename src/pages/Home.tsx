@@ -49,11 +49,11 @@ const FAQ = () => {
 
       children: (
         <div>
-          <p className="text-md">
-            The data is processed to detect standing deadwood and used to train our machine learning models. By default,
-            all uploaded data is made publicly available under the Creative Commons Attribution (CC BY) license, though
-            you can request private usage for model training only if needed.
-          </p>
+              <p className="text-md">
+                The data is processed to detect forest cover and tree mortality to train our machine learning models. By default,
+                all uploaded data is made publicly available under the Creative Commons Attribution (CC BY) license, though
+                you can request private usage for model training only if needed.
+              </p>
         </div>
       ),
       style: {
@@ -148,14 +148,13 @@ const FAQ = () => {
       label: <span className="m-0 pt-4 text-lg text-gray-500">What kinds of data can I contribute?</span>,
       children: (
         <div>
-          <p className="text-md">
-            We primarily seek high-resolution aerial orthophotos showing forest areas with standing deadwood. To be
-            suitable for our platform:
-          </p>
-          <ul className="text-md list-disc pl-5">
-            <li>
-              <strong>Resolution:</strong> Better than 10 cm (higher resolution provides better detection results)
-            </li>
+              <p className="text-md">
+                We seek high-resolution aerial imagery of any forest areas. <strong>All forest data is valuable</strong>, whether it contains healthy trees or standing deadwood. To be suitable for our platform:
+              </p>
+              <ul className="text-md list-disc pl-5">
+                <li>
+                  <strong>Resolution:</strong> Better than 10 cm (higher resolution provides better detection results)
+                </li>
             <li>
               <strong>Format:</strong> GeoTIFF or ZIP of raw images (recommended overlap 85% vs. 75%)
             </li>
@@ -185,33 +184,33 @@ const FAQ = () => {
   ];
 
   return (
-    <div className="my-24 md:my-32">
-      <div className="mb-12 text-center">
-        <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Support</p>
-        <h1 className="m-0 text-3xl font-semibold text-gray-800 md:text-4xl">
-          Frequently Asked Questions
-        </h1>
+    <section className="w-full bg-white py-24 md:py-32">
+      <div className="m-auto max-w-4xl px-4 md:px-8">
+        <div className="mb-12 text-center">
+          <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Support</p>
+          <h2 className="m-0 text-3xl font-semibold text-gray-800 md:text-4xl">
+            Frequently Asked Questions
+          </h2>
+        </div>
+        <Collapse
+          bordered={false}
+          style={{ backgroundColor: "transparent" }}
+          className="w-full"
+          items={FAQItems}
+        />
       </div>
-      <Collapse
-        bordered={false}
-        style={{ backgroundColor: "transparent" }}
-        className="w-full max-w-4xl mx-auto"
-        items={FAQItems}
-      />
-    </div>
+    </section>
   );
 };
 
 export default function HomePage() {
   return (
-    <div className="pb-1">
+    <div className="w-full bg-white">
       <Hero />
-      <div className="m-auto max-w-6xl px-4 md:px-0">
-        <HowItWorks />
-        <PlatformFeatures />
-        <GetInContact />
-        <FAQ />
-      </div>
+      <HowItWorks />
+      <PlatformFeatures />
+      <GetInContact />
+      <FAQ />
     </div>
   );
 }

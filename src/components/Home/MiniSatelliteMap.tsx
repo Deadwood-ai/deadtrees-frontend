@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Segmented } from "antd";
+import { Segmented, Select } from "antd";
 import "ol/ol.css";
 import { Map, View } from "ol";
 import TileLayer from "ol/layer/Tile";
@@ -12,9 +12,10 @@ import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUr
 import { getWaybackTileUrl } from "../../utils/waybackVersions";
 
 const LOCATIONS = [
-  { name: "Harz Mountains", center: [10.6682, 51.7868], zoom: 12 },
-  { name: "Bavarian Forest", center: [13.3309, 49.0396], zoom: 12 },
-  { name: "Black Forest", center: [8.35, 48.55], zoom: 12 },
+  { name: "Harz Mountains", country: "DE", center: [10.6682, 51.7868], zoom: 12 },
+  { name: "Bavarian Forest", country: "DE", center: [13.3309, 49.0396], zoom: 12 },
+  { name: "Šumava National Park", country: "CZ", center: [13.45, 48.95], zoom: 12 },
+  { name: "Białowieża Forest", country: "PL", center: [23.85, 52.75], zoom: 11 },
 ];
 
 const YEARS = ["2018", "2020", "2022", "2024"];
@@ -164,22 +165,23 @@ const MiniSatelliteMap = () => {
 
         {/* Bottom Info and Controls */}
         <div className="flex items-end justify-between px-2 pb-2">
-          <div className="text-white pointer-events-none">
+          <div className="text-white pointer-events-none drop-shadow-md">
             <div className="font-semibold tracking-wide">LIVE PREVIEW</div>
-            <div className="text-sm font-medium opacity-90">{LOCATIONS[activeLocationIndex].name}, Germany</div>
+            <div className="text-sm font-medium opacity-90">{LOCATIONS[activeLocationIndex].name}, {LOCATIONS[activeLocationIndex].country}</div>
           </div>
           
-          <div className="mb-1 flex gap-2 pointer-events-auto">
-            {LOCATIONS.map((loc, idx) => (
-              <button
-                key={loc.name}
-                onClick={() => setActiveLocationIndex(idx)}
-                className={`h-2 w-8 rounded-full transition-all duration-300 ${
-                  idx === activeLocationIndex ? "bg-[#FFB31C] w-12" : "bg-white/40 hover:bg-white/60"
-                }`}
-                aria-label={`Go to ${loc.name}`}
+          <div className="pointer-events-auto">
+            <div className="rounded-lg bg-white/90 shadow-sm backdrop-blur">
+              <Select
+                value={activeLocationIndex}
+                onChange={setActiveLocationIndex}
+                options={LOCATIONS.map((loc, idx) => ({ label: `${loc.name}, ${loc.country}`, value: idx }))}
+                style={{ width: 180 }}
+                size="small"
+                variant="borderless"
+                dropdownStyle={{ borderRadius: '0.5rem' }}
               />
-            ))}
+            </div>
           </div>
         </div>
       </div>

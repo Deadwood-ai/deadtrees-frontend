@@ -29,12 +29,11 @@ const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
 	const duration = 2000; // 2 seconds animation
 
 	useEffect(() => {
-		const animationKey = `${label}:${value}`;
-		if (animatedStatKeys.has(animationKey)) {
+		if (animatedStatKeys.has(label)) {
 			setDisplayValue(value);
 			return;
 		}
-		animatedStatKeys.add(animationKey);
+		animatedStatKeys.add(label);
 
 		let startTime: number | null = null;
 		let animationFrame: number;
@@ -57,7 +56,7 @@ const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
 		animationFrame = requestAnimationFrame(animate);
 
 		return () => cancelAnimationFrame(animationFrame);
-	}, [value]);
+	}, [value, label]);
 
 	return (
 		<div className="flex items-baseline gap-1.5">
@@ -119,7 +118,7 @@ const Hero = () => {
 							Mapping global tree mortality
 						</h1>
 						<p className="m-0 max-w-lg text-lg leading-relaxed text-gray-500">
-							Contribute drone imagery to help detect standing deadwood using AI. Your data powers the next generation of global satellite monitoring.
+							Contribute drone imagery of forests to help monitor tree mortality and forest health using AI. All forest data is valuable and powers the next generation of global satellite models.
 						</p>
 
 						<div className="mt-10 flex flex-col gap-4 sm:flex-row">
