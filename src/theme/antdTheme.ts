@@ -13,5 +13,11 @@ export const antdTheme: ThemeConfig = {
     colorBgContainer: semanticColors.surfaceRaised,
     colorBorder: semanticColors.borderSubtle,
   },
+  components: {
+    Button: {
+      // Keep primary button shadow neutral (not green-tinted)
+      primaryShadow: "0 2px 0 rgba(15, 23, 42, 0.12)",
+    },
+  },
 };
 

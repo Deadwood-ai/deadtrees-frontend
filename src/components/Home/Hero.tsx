@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Alert, Button, Tag } from "antd";
+import { useState, useMemo, useEffect } from "react";
+import { Alert, Button } from "antd";
 import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { useNavigate } from "react-router-dom";
@@ -21,21 +21,31 @@ const logos = [
 	{ path: "assets/logos/bmwk.jpg", height: "h-14" },
 ];
 
+// Prevent duplicate count-up in React StrictMode remounts (dev)
+const animatedStatKeys = new Set<string>();
+
 const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
 	const [displayValue, setDisplayValue] = useState(0);
 	const duration = 2000; // 2 seconds animation
 
 	useEffect(() => {
+		const animationKey = `${label}:${value}`;
+		if (animatedStatKeys.has(animationKey)) {
+			setDisplayValue(value);
+			return;
+		}
+		animatedStatKeys.add(animationKey);
+
 		let startTime: number | null = null;
 		let animationFrame: number;
 
 		const animate = (timestamp: number) => {
 			if (!startTime) startTime = timestamp;
 			const progress = timestamp - startTime;
-			
+
 			// Easing function (easeOutExpo)
 			const easeProgress = 1 - Math.pow(2, -10 * (progress / duration));
-			
+
 			if (progress < duration) {
 				setDisplayValue(Math.floor(easeProgress * value));
 				animationFrame = requestAnimationFrame(animate);
@@ -60,7 +70,6 @@ const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
 };
 
 const Hero = () => {
-	const [isPlaying, setIsPlaying] = useState(false);
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const { data, authors } = useData();
@@ -88,7 +97,7 @@ const Hero = () => {
 		<section className="relative flex w-full flex-col overflow-hidden md:min-h-[calc(100vh-64px)]">
 			<div className="absolute inset-0 hidden bg-[radial-gradient(1000px_at_25%_35%,_var(--tw-gradient-stops))] from-emerald-100/60 via-green-50/30 to-white md:block"></div>
 
-			<div className="relative z-10 m-auto flex max-w-[1400px] flex-1 flex-col justify-center px-4 md:px-10">
+			<div className="relative z-10 m-auto flex w-full max-w-[1400px] flex-1 flex-col justify-center px-4 md:px-10">
 				<div className="md:hidden">
 					<Alert
 						message="Mobile version is limited"
@@ -99,9 +108,9 @@ const Hero = () => {
 					/>
 				</div>
 
-				<div className="flex flex-col gap-12 py-12 lg:flex-row lg:items-center lg:gap-16 lg:py-0">
+				<div className="w-full flex flex-col gap-12 py-12 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-0">
 					{/* Left column */}
-					<div className="flex flex-col items-center text-center lg:w-[48%] lg:items-start lg:text-left shrink-0">
+					<div className="flex flex-col items-center text-center lg:w-[42%] lg:items-start lg:text-left shrink-0">
 						<div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-[#FFB31C]/40 bg-[#FFF4D9]/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#AE5920]">
 							<span className="text-sm">🚀</span>
 							<span>Platform Live</span>
@@ -145,8 +154,8 @@ const Hero = () => {
 					</div>
 
 					{/* Right column — visual */}
-					<div className="mt-8 flex w-full flex-1 justify-center lg:mt-0 lg:justify-end">
-						<div className={`relative w-full max-w-[850px] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5 transition-all duration-700 ease-in-out ${isPlaying ? "aspect-video" : "aspect-[4/3] lg:aspect-square xl:aspect-[4/3]"}`}>
+					<div className="mt-8 flex w-full justify-center lg:mt-0 lg:w-[58%] lg:justify-end">
+						<div className="relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-2xl bg-gray-100 shadow-2xl ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)]">
 							<ReactPlayer
 								url="https://data2.deadtrees.earth/assets/v1/New_Version_deadtrees_video.mp4"
 								width="100%"
@@ -162,30 +171,27 @@ const Hero = () => {
 										},
 									},
 								}}
-								playing={isPlaying}
-								onPlay={() => setIsPlaying(true)}
-								onPause={() => setIsPlaying(false)}
 							/>
 						</div>
 					</div>
 				</div>
 			</div>
 
-		{/* "Supported by" section */}
-		<div className="relative z-10 mt-auto pt-16">
-			<p className="m-0 pb-4 text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-				Supported by
-			</p>
-			
-			{/* Logo banner in white strip */}
-			<div className="border-t border-slate-100 bg-white/90 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)] backdrop-blur-md">
-				<div className="m-auto max-w-[1400px] px-4 md:px-10">
-					<div className="py-4 md:py-6">
-						<LogoBannerBand logos={logos} title="" compact />
+			{/* "Supported by" section */}
+			<div className="relative z-10 mt-auto pt-16">
+				<p className="m-0 pb-4 text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+					Supported by
+				</p>
+
+				{/* Logo banner in white strip */}
+				<div className="border-t border-slate-100 bg-white/90 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)] backdrop-blur-md">
+					<div className="m-auto max-w-[1640px] px-4 md:px-10">
+						<div className="py-4 md:py-6">
+							<LogoBannerBand logos={logos} title="" compact />
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 		</section>
 	);
 };
