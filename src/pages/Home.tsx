@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Collapse } from "antd";
 
 import Hero from "../components/Home/Hero";
@@ -7,12 +8,24 @@ import GetInContact from "../components/Home/GetInContact";
 
 import { useData } from "../hooks/useDataProvider";
 
+const FAQ_ITEM_STYLE = {
+	border: "1px solid #e2e8f0",
+	borderRadius: "0.75rem",
+	marginBottom: "16px",
+	padding: "12px 24px",
+	backgroundColor: "#ffffff",
+	boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+};
+
 
 const FAQ = () => {
   const { authors } = useData();
-  const contributorNames = (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b));
+  const contributorNames = useMemo(
+    () => (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b)),
+    [authors],
+  );
 
-  const FAQItems = [
+  const FAQItems = useMemo(() => [
     {
       key: "1",
       label: <span className="m-0 pt-4 text-lg text-gray-500">Who is behind deadtrees.earth?</span>,
@@ -34,14 +47,7 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.75rem",
-        marginBottom: "16px",
-        padding: "12px 24px",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "2",
@@ -56,14 +62,7 @@ const FAQ = () => {
               </p>
         </div>
       ),
-      style: {
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.75rem",
-        marginBottom: "16px",
-        padding: "12px 24px",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "3",
@@ -102,14 +101,7 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.75rem",
-        marginBottom: "16px",
-        padding: "12px 24px",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "4",
@@ -134,14 +126,7 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.75rem",
-        marginBottom: "16px",
-        padding: "12px 24px",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "5",
@@ -172,16 +157,9 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "1px solid #e2e8f0",
-        borderRadius: "0.75rem",
-        marginBottom: "16px",
-        padding: "12px 24px",
-        backgroundColor: "#ffffff",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
-  ];
+  ], [contributorNames]);
 
   return (
     <section className="w-full bg-white py-24 md:py-32">

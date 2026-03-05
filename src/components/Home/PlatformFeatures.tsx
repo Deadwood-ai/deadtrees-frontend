@@ -1,3 +1,10 @@
+const DOI_BADGES = [
+  "10.60493/4mn6a-8zx75",
+  "10.60493/ftw67-pnd16",
+  "10.60493/nzzsq-m4a90",
+  "10.60493/0gdk6-rwg98",
+];
+
 const PlatformFeatures = () => {
   return (
     <section className="w-full bg-white py-24 md:py-32">
@@ -24,7 +31,7 @@ const PlatformFeatures = () => {
           </div>
           <div className="relative w-full px-8 pb-8 md:w-1/2 md:p-10 md:pl-0">
             <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
-              <video src="/assets/adding-ai.mp4" autoPlay loop muted playsInline className="w-full object-cover" />
+              <video src="/assets/adding-ai.mp4" autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
             </div>
           </div>
         </div>
@@ -81,19 +88,22 @@ const PlatformFeatures = () => {
             </p>
           </div>
           <div className="relative flex flex-col gap-3 px-8 pb-8 md:px-10 md:pb-10">
-            {/* Real DOIs from the platform */}
-            <a href="https://doi.org/10.60493/4mn6a-8zx75" target="_blank" rel="noopener noreferrer" className="block w-fit transition-all hover:scale-[1.02] bg-white p-2 rounded-xl shadow-sm ring-1 ring-black/5 z-40">
-              <img src="https://freidata.uni-freiburg.de/badge/DOI/10.60493/4mn6a-8zx75.svg" alt="FreiDATA DOI badge" className="h-6" />
-            </a>
-            <a href="https://doi.org/10.60493/ftw67-pnd16" target="_blank" rel="noopener noreferrer" className="block w-fit transition-all hover:scale-[1.02] bg-white p-2 rounded-xl shadow-sm ring-1 ring-black/5 opacity-80 -mt-1 z-30">
-              <img src="https://freidata.uni-freiburg.de/badge/DOI/10.60493/ftw67-pnd16.svg" alt="FreiDATA DOI badge" className="h-6" />
-            </a>
-            <a href="https://doi.org/10.60493/nzzsq-m4a90" target="_blank" rel="noopener noreferrer" className="block w-fit transition-all hover:scale-[1.02] bg-white p-2 rounded-xl shadow-sm ring-1 ring-black/5 opacity-50 -mt-1 z-20">
-              <img src="https://freidata.uni-freiburg.de/badge/DOI/10.60493/nzzsq-m4a90.svg" alt="FreiDATA DOI badge" className="h-6" />
-            </a>
-             <a href="https://doi.org/10.60493/0gdk6-rwg98" target="_blank" rel="noopener noreferrer" className="block w-fit transition-all hover:scale-[1.02] bg-white p-2 rounded-xl shadow-sm ring-1 ring-black/5 opacity-25 -mt-1 z-10">
-              <img src="https://freidata.uni-freiburg.de/badge/DOI/10.60493/0gdk6-rwg98.svg" alt="FreiDATA DOI badge" className="h-6" />
-            </a>
+            {DOI_BADGES.map((doi, index) => (
+              <a
+                key={doi}
+                href={`https://doi.org/${doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open DOI ${doi}`}
+                className={`block w-fit rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5 transition-all hover:scale-[1.02] ${index > 0 ? "-mt-1" : ""}`}
+                style={{
+                  opacity: [1, 0.8, 0.5, 0.25][index] ?? 1,
+                  zIndex: [40, 30, 20, 10][index] ?? 1,
+                }}
+              >
+                <img src={`https://freidata.uni-freiburg.de/badge/DOI/${doi}.svg`} alt="FreiDATA DOI badge" className="h-6" />
+              </a>
+            ))}
           </div>
         </div>
 
@@ -110,7 +120,7 @@ const PlatformFeatures = () => {
           </div>
           <div className="relative mt-2 w-full px-8 pb-8 md:mt-0 md:w-1/2 md:p-10 md:pl-0">
             <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
-              <video src="/assets/satellite-analysis.mp4" autoPlay loop muted playsInline className="w-full object-cover" />
+              <video src="/assets/satellite-analysis.mp4" autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
             </div>
           </div>
         </div>

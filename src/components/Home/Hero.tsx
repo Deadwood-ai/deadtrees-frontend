@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Alert, Button } from "antd";
 import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
@@ -20,6 +20,14 @@ const logos = [
 	{ path: "assets/logos/geonadir.png" },
 	{ path: "assets/logos/bmwk.jpg", height: "h-14" },
 ];
+
+const heroVideoConfig = {
+	file: {
+		attributes: {
+			controlsList: "nodownload",
+		},
+	},
+};
 
 // Prevent duplicate count-up in React StrictMode remounts (dev)
 const animatedStatKeys = new Set<string>();
@@ -84,13 +92,17 @@ const Hero = () => {
 		};
 	}, [data, authors]);
 
-	const handleContribute = () => {
+	const handleContribute = useCallback(() => {
 		if (user) {
 			navigate("/profile");
 		} else {
 			navigate("/sign-in");
 		}
-	};
+	}, [navigate, user]);
+
+	const handleExploreMap = useCallback(() => {
+		navigate("/deadtrees");
+	}, [navigate]);
 
 	return (
 		<section className="relative flex w-full flex-col overflow-hidden md:min-h-[calc(100vh-64px)]">
@@ -133,7 +145,7 @@ const Hero = () => {
 							<Button
 								size="large"
 								icon={<SearchOutlined />}
-								onClick={() => navigate("/deadtrees")}
+								onClick={handleExploreMap}
 							>
 								Explore Map
 							</Button>
@@ -163,13 +175,7 @@ const Hero = () => {
 								playsinline
 								loop={true}
 								light="https://data2.deadtrees.earth/assets/v1/image.png"
-								config={{
-									file: {
-										attributes: {
-											controlsList: "nodownload",
-										},
-									},
-								}}
+								config={heroVideoConfig}
 							/>
 						</div>
 					</div>

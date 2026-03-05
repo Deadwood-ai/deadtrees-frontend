@@ -1,5 +1,5 @@
 import { Button, Carousel, Tooltip, Tag } from "antd";
-import { useState, useMemo, useRef } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useData } from "../../hooks/useDataProvider";
@@ -43,21 +43,16 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
   );
 };
 
-const Stats = () => {
-  const { data } = useData();
-
+const Stats = ({ datasets }: { datasets: any[] }) => {
   const stats = useMemo(() => {
-    if (!data) return { orthophotos: 0, area: 0, countries: 0, fileSize: 0 };
-
-    // Filter data with required fields using centralized visibility check
-    const validData = data.filter((item) => isDatasetViewable(item));
+    if (!datasets.length) return { orthophotos: 0, area: 0, countries: 0, fileSize: 0 };
 
     // Calculate orthophoto count
-    const orthophotos = validData.length;
+    const orthophotos = datasets.length;
 
     // Calculate total area from bounding boxes
     let totalArea = 0;
-    validData.forEach((item) => {
+    datasets.forEach((item) => {
       if (item.bbox) {
         const parsedBBox = parseBBox(item.bbox);
         if (parsedBBox) {
@@ -68,14 +63,14 @@ const Stats = () => {
 
     // Unique countries
     const countries = new Set<string>();
-    validData.forEach((item) => {
+    datasets.forEach((item) => {
       if (item.admin_level_1) {
         countries.add(item.admin_level_1);
       }
     });
 
     // Total file size in TB
-    const totalFileSizeBytes = validData.reduce((sum, item) => {
+    const totalFileSizeBytes = datasets.reduce((sum, item) => {
       // Convert from MB to TB (1 TB = 1,048,576 MB)
       return sum + (item.ortho_file_size || 0);
     }, 0);
@@ -89,7 +84,7 @@ const Stats = () => {
       countries: countries.size,
       fileSize: totalFileSizeTB,
     };
-  }, [data]);
+  }, [datasets]);
 
   return (
     <div className="mt-4 flex flex-col justify-center rounded-2xl bg-white/50 py-6 md:mt-8">
@@ -109,10 +104,15 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
   const navigate = useNavigate();
   const { setNavigationSource } = useDatasetDetailsMap();
 
-  const sortedUniqueData = useMemo(() => {
+  const viewableData = useMemo(() => {
     if (!data) return [];
+    return data.filter((item) => isDatasetViewable(item));
+  }, [data]);
 
-    const sorted = [...data].sort((a, b) => b.id - a.id);
+  const sortedUniqueData = useMemo(() => {
+    if (!viewableData.length) return [];
+
+    const sorted = [...viewableData].sort((a, b) => b.id - a.id);
 
     // Debug: Check initial data
     // console.log("Initial data count:", sorted.length);
@@ -123,8 +123,7 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
       if (!item.authors || !Array.isArray(item.authors) || !item.thumbnail_path) {
         return false;
       }
-      // Use centralized visibility check for core requirements
-      return isDatasetViewable(item);
+      return true;
     });
 
     // Debug: Check after required fields filter
@@ -158,17 +157,17 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
     // );
 
     return oneImagePerAuthor;
-  }, [data]);
+  }, [viewableData]);
 
-  const onClickHandler = (id: number) => {
+  const onClickHandler = useCallback((id: number) => {
     setNavigationSource("dataset");
     navigate(`/dataset/${id}`);
-  };
+  }, [navigate, setNavigationSource]);
 
-  const next = () => carouselRef.current?.next();
-  const previous = () => carouselRef.current?.prev();
+  const next = useCallback(() => carouselRef.current?.next(), []);
+  const previous = useCallback(() => carouselRef.current?.prev(), []);
 
-  const settings = {
+  const settings = useMemo(() => ({
     dots: false,
     infinite: true,
     speed: 500,
@@ -191,7 +190,7 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
         },
       },
     ],
-  };
+  }), []);
 
   return (
     <div className="w-full">
@@ -284,7 +283,7 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
               ))}
             </Carousel>
           </div>
-          <Stats />
+          <Stats datasets={viewableData} />
         </div>
         {!hideHeader && (
           <div className="flex justify-center pt-8">

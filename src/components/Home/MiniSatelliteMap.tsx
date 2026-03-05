@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Segmented, Select } from "antd";
 import "ol/ol.css";
 import { Map, View } from "ol";
@@ -19,18 +19,31 @@ const LOCATIONS = [
 ];
 
 const YEARS = ["2018", "2020", "2022", "2024"];
+const DEFAULT_YEAR = "2024";
+
+const createRasterSource = (url: string) =>
+  new GeoTIFF({
+    sources: [{ url, bands: [1], min: 0, max: 255 }],
+    normalize: true,
+    interpolate: false,
+  });
 
 const MiniSatelliteMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<Map | null>(null);
+  const mapRef = useRef<Map | null>(null);
   const forestLayerRef = useRef<TileLayerWebGL | null>(null);
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
 
   const [activeLocationIndex, setActiveLocationIndex] = useState(0);
-  const [activeYear, setActiveYear] = useState("2024");
+  const [activeYear, setActiveYear] = useState(DEFAULT_YEAR);
+  const locationOptions = useMemo(
+    () => LOCATIONS.map((loc, idx) => ({ label: `${loc.name}, ${loc.country}`, value: idx })),
+    [],
+  );
 
   useEffect(() => {
-    if (!map && mapContainer.current) {
+    if (mapRef.current || !mapContainer.current) return;
+
       const initialView = new View({
         center: fromLonLat(LOCATIONS[0].center),
         zoom: LOCATIONS[0].zoom,
@@ -46,11 +59,7 @@ const MiniSatelliteMap = () => {
       });
 
       const forestLayer = new TileLayerWebGL({
-        source: new GeoTIFF({
-          sources: [{ url: getForestCOGUrl(activeYear), bands: [1], min: 0, max: 255 }],
-          normalize: true,
-          interpolate: false,
-        }),
+        source: createRasterSource(getForestCOGUrl(DEFAULT_YEAR)),
         style: {
           color: [
             "interpolate",
@@ -65,11 +74,7 @@ const MiniSatelliteMap = () => {
       });
 
       const deadwoodLayer = new TileLayerWebGL({
-        source: new GeoTIFF({
-          sources: [{ url: getDeadwoodCOGUrl(activeYear), bands: [1], min: 0, max: 255 }],
-          normalize: true,
-          interpolate: false,
-        }),
+        source: createRasterSource(getDeadwoodCOGUrl(DEFAULT_YEAR)),
         style: {
           color: [
             "interpolate",
@@ -95,46 +100,33 @@ const MiniSatelliteMap = () => {
         interactions: [], // keep interactions disabled so the user doesn't get stuck panning it while scrolling the page
       });
 
-      setMap(newMap);
-    }
+      mapRef.current = newMap;
 
     return () => {
-      if (map) {
-        map.setTarget(undefined);
+      if (mapRef.current) {
+        mapRef.current.setTarget(undefined);
+        mapRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []);
 
   // Update center when location changes
   useEffect(() => {
-    if (map) {
+    if (mapRef.current) {
       const loc = LOCATIONS[activeLocationIndex];
-      map.getView().animate({
+      mapRef.current.getView().animate({
         center: fromLonLat(loc.center),
         zoom: loc.zoom,
         duration: 800
       });
     }
-  }, [activeLocationIndex, map]);
+  }, [activeLocationIndex]);
 
   // Update sources when year changes
   useEffect(() => {
     if (forestLayerRef.current && deadwoodLayerRef.current) {
-      forestLayerRef.current.setSource(
-        new GeoTIFF({
-          sources: [{ url: getForestCOGUrl(activeYear), bands: [1], min: 0, max: 255 }],
-          normalize: true,
-          interpolate: false,
-        })
-      );
-      deadwoodLayerRef.current.setSource(
-        new GeoTIFF({
-          sources: [{ url: getDeadwoodCOGUrl(activeYear), bands: [1], min: 0, max: 255 }],
-          normalize: true,
-          interpolate: false,
-        })
-      );
+      forestLayerRef.current.setSource(createRasterSource(getForestCOGUrl(activeYear)));
+      deadwoodLayerRef.current.setSource(createRasterSource(getDeadwoodCOGUrl(activeYear)));
     }
   }, [activeYear]);
 
@@ -175,11 +167,11 @@ const MiniSatelliteMap = () => {
               <Select
                 value={activeLocationIndex}
                 onChange={setActiveLocationIndex}
-                options={LOCATIONS.map((loc, idx) => ({ label: `${loc.name}, ${loc.country}`, value: idx }))}
+                options={locationOptions}
                 style={{ width: 180 }}
                 size="small"
                 variant="borderless"
-                dropdownStyle={{ borderRadius: '0.5rem' }}
+                dropdownStyle={{ borderRadius: "0.5rem" }}
               />
             </div>
           </div>

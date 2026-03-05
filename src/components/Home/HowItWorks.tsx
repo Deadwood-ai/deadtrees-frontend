@@ -1,8 +1,10 @@
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "antd";
 import { CloudUploadOutlined, GlobalOutlined, FileImageOutlined, FileZipOutlined, DatabaseOutlined } from "@ant-design/icons";
 import DataGallery from "./DataGallery";
-import MiniSatelliteMap from "./MiniSatelliteMap";
+
+const MiniSatelliteMap = lazy(() => import("./MiniSatelliteMap"));
 
 const UploadIllustration = () => (
   <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-white p-8 shadow-sm">
@@ -37,6 +39,40 @@ const UploadIllustration = () => (
     </div>
   </div>
 );
+
+const DeferredMiniSatelliteMap = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isVisible || !containerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "250px 0px" },
+    );
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [isVisible]);
+
+  return (
+    <div ref={containerRef} className="h-full w-full">
+      {isVisible ? (
+        <Suspense fallback={<div className="h-full w-full animate-pulse bg-gray-100" />}>
+          <MiniSatelliteMap />
+        </Suspense>
+      ) : (
+        <div className="h-full w-full animate-pulse bg-gray-100" />
+      )}
+    </div>
+  );
+};
 
 const HowItWorks = () => {
   return (
@@ -109,7 +145,7 @@ const HowItWorks = () => {
         <div className="flex flex-col items-center gap-10 md:flex-row lg:gap-20">
           <div className="w-full flex-1">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5 bg-gray-100">
-              <MiniSatelliteMap />
+              <DeferredMiniSatelliteMap />
             </div>
           </div>
           <div className="flex-1 text-left">

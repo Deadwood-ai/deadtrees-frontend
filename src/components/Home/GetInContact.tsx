@@ -1,12 +1,10 @@
-import { useState, useMemo } from "react";
-import { Button, Card, Input } from "antd";
+import { useState, useMemo, useCallback } from "react";
+import { Button, Card, Input, Typography, notification } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ExportOutlined } from "@ant-design/icons";
-import { notification } from "antd";
 import { usePresentations } from "../../hooks/usePresentations";
 import { supabase } from "../../hooks/useSupabase";
 import { Settings } from "../../config";
-import { Typography } from "antd";
 
 const { Text } = Typography;
 
@@ -94,10 +92,9 @@ const GetInContact = () => {
 	const [email, setEmail] = useState<string>("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const emailCheck = (value: string) => /\S+@\S+\.\S+/.test(value);
-
-	const addSubscriber = async () => {
-		if (!emailCheck(email)) {
+	const addSubscriber = useCallback(async () => {
+		const emailCheck = /\S+@\S+\.\S+/;
+		if (!emailCheck.test(email)) {
 			notification.error({
 				message: "Invalid email",
 				description: "Please enter a valid email address.",
@@ -137,7 +134,7 @@ const GetInContact = () => {
 			setEmail("");
 		}
 		setIsSubmitting(false);
-	};
+	}, [email]);
 
 	return (
 		<section className="w-full bg-[#F8FAF9] border-y border-slate-200/50 py-24 md:py-32">
