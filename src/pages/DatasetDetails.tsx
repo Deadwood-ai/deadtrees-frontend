@@ -1,9 +1,9 @@
-import { Button, Col, Row, Spin, message } from "antd";
+import { Button, Spin, message } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense, lazy } from "react";
 
-import { usePublicDatasets } from "../hooks/useDatasets";
+import { usePublicDatasetById } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
 import { ILabelData } from "../types/labels";
 import { useDownload } from "../hooks/useDownloadProvider";
@@ -16,7 +16,6 @@ import { useDatasetEditing } from "../hooks/useDatasetEditing";
 import { useCanAudit } from "../hooks/useUserPrivileges";
 import { isGeonadirDataset } from "../utils/datasetUtils";
 
-import DatasetDetailsMap from "../components/DatasetDetailsMap/DatasetDetailsMap";
 import DatasetLayerControlPanel from "../components/DatasetDetailsMap/DatasetLayerControlPanel";
 import EditingSidebar from "../components/DatasetDetailsMap/EditingSidebar";
 import DatasetInfoSidebar from "../components/DatasetDetailsMap/DatasetInfoSidebar";
@@ -24,12 +23,16 @@ import DownloadSection from "../components/DatasetDetailsMap/DownloadSection";
 import ReportIssueModal from "../components/DatasetDetailsMap/ReportIssueModal";
 import { EditorToolbar } from "../components/PolygonEditor";
 
+const DatasetDetailsMap = lazy(() => import("../components/DatasetDetailsMap/DatasetDetailsMap"));
+
 export default function DatasetDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const datasetId = id ? Number(id) : undefined;
+  const hasValidDatasetId = typeof datasetId === "number" && Number.isFinite(datasetId);
   const { user } = useAuth();
   const { canAudit } = useCanAudit();
-  const { data: datasets } = usePublicDatasets();
+  const { data: dataset, isLoading: isDatasetLoading } = usePublicDatasetById(hasValidDatasetId ? datasetId : undefined);
   const {
     setViewport,
     setNavigationSource,
@@ -42,9 +45,6 @@ export default function DatasetDetails() {
     setShowAOI,
     setLayerOpacity,
   } = useDatasetDetailsMap();
-
-  // Find current dataset
-  const dataset = datasets?.find((d) => d.id.toString() === id);
 
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -102,7 +102,7 @@ export default function DatasetDetails() {
   );
 
   // Loading state
-  if (!dataset) {
+  if (!hasValidDatasetId || isDatasetLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center" style={{ minHeight: "60vh" }}>
         <Spin size="large" />
@@ -110,31 +110,51 @@ export default function DatasetDetails() {
     );
   }
 
+  if (!dataset) {
+    return (
+      <div className="flex h-full w-full items-center justify-center px-4" style={{ minHeight: "60vh" }}>
+        <div className="text-center text-slate-600">
+          <p className="mb-3 text-base font-medium">Dataset not found.</p>
+          <Button onClick={() => navigate("/dataset")}>Back to datasets</Button>
+        </div>
+      </div>
+    );
+  }
+
   const isFromGeonadir = isGeonadirDataset(dataset);
   const { isEditing, editingLayerType, editor, ai, hasDeadwood, hasForestCover, refreshKey } = editing;
+  const SIDEBAR_LEFT_PX = 16;
+  const SIDEBAR_WIDTH_PX = 384;
+  const SIDEBAR_BUTTON_TOP_PX = 144;
+  const FLOAT_BUTTON_SIZE_PX = 36;
+	const TOGGLE_INSET_EXPANDED_PX = 24;
 
   return (
-    <Row className="relative h-full bg-slate-50" style={{ width: "100%", height: "100%" }}>
+    <div className="relative h-full w-full bg-slate-50 overflow-hidden">
       {/* Collapsible Sidebar */}
-      {!sidebarCollapsed && (
-        <Col className="flex h-full w-96 flex-col border-r border-gray-200 bg-white">
-          <div className="flex-1 overflow-y-auto p-3 pr-4 pt-14">
-            {isEditing && editingLayerType ? (
-              <EditingSidebar layerType={editingLayerType} />
-            ) : (
-              <DatasetInfoSidebar
-                dataset={dataset}
-                phenologyData={phenologyData}
-                isPhenologyLoading={isPhenologyLoading}
-                auditInfo={auditInfo}
-                overlappingDatasets={overlappingDatasets || []}
-                isLoadingOverlapping={isLoadingOverlapping}
-              />
-            )}
-          </div>
+      <div
+        className={`absolute left-4 top-32 bottom-6 z-10 flex flex-col rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none -translate-x-full" : "w-96 opacity-100 translate-x-0"
+          }`}
+      >
+        <div className="flex-1 overflow-y-auto p-4 pr-5 pt-20">
+          {isEditing && editingLayerType ? (
+            <EditingSidebar layerType={editingLayerType} />
+          ) : (
+            <DatasetInfoSidebar
+              dataset={dataset}
+              phenologyData={phenologyData}
+              isPhenologyLoading={isPhenologyLoading}
+              auditInfo={auditInfo}
+              overlappingDatasets={overlappingDatasets || []}
+              isLoadingOverlapping={isLoadingOverlapping}
+            />
+          )}
+        </div>
 
-          {/* Download Section - hidden when editing */}
-          {!isEditing && (
+        {/* Download Section - fixed footer outside scroll area */}
+        {!isEditing && (
+          <div className="shrink-0 border-t border-gray-200 bg-gradient-to-t from-gray-50 to-white px-4 pb-4 pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Downloads</p>
             <DownloadSection
               dataset={dataset}
               isFromGeonadir={isFromGeonadir}
@@ -146,36 +166,44 @@ export default function DatasetDetails() {
               startDownload={startDownload}
               finishDownload={finishDownload}
             />
-          )}
-        </Col>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Back Button - hidden when editing */}
       {!isEditing && (
-        <div className="absolute left-5 top-3 z-20">
-          <Button size="large" shape="circle" onClick={handleBackClick} icon={<ArrowLeftOutlined />} className="bg-white" />
+        <div
+          className="absolute z-20 transition-all duration-300"
+          style={{ top: `${SIDEBAR_BUTTON_TOP_PX}px`, left: sidebarCollapsed ? `${SIDEBAR_LEFT_PX}px` : `${SIDEBAR_LEFT_PX + 12}px` }}
+        >
+          <Button size="large" shape="circle" onClick={handleBackClick} icon={<ArrowLeftOutlined />} className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900" />
         </div>
       )}
 
       {/* Sidebar Toggle */}
       <div
-        className="absolute top-3 z-20"
-        style={{ left: sidebarCollapsed ? (isEditing ? "20px" : "68px") : "calc(24rem - 52px)" }}
+        className="absolute z-20 transition-all duration-300"
+        style={{
+          top: `${SIDEBAR_BUTTON_TOP_PX}px`,
+          left: sidebarCollapsed
+            ? `${SIDEBAR_LEFT_PX + 56}px`
+		  : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX - TOGGLE_INSET_EXPANDED_PX}px`,
+        }}
       >
         <Button
           size="large"
           shape="circle"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          className="bg-white"
+          className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900"
         />
       </div>
 
       {/* Map Column */}
-      <Col className="relative flex-1">
+      <div className="absolute inset-0 z-0">
         {/* Layer Control Panel - hidden when editing */}
         {!isEditing && (
-          <div className="absolute right-3 top-3 z-10">
+          <div className="absolute right-4 top-32 z-10">
             <DatasetLayerControlPanel
               mapStyle={layerControl.mapStyle}
               onMapStyleChange={setMapStyle}
@@ -227,24 +255,32 @@ export default function DatasetDetails() {
           />
         )}
 
-        <DatasetDetailsMap
-          data={dataset}
-          onMapReady={editing.handleMapReady}
-          onOrthoLayerReady={editing.handleOrthoLayerReady}
-          hideDeadwoodLayer={isEditing}
-          hideForestCoverLayer={isEditing}
-          refreshKey={refreshKey}
-          showDeadwood={isEditing ? false : layerControl.showDeadwood}
-          showForestCover={isEditing ? false : layerControl.showForestCover}
-          showDroneImagery={layerControl.showDroneImagery}
-          showAOI={layerControl.showAOI}
-          layerOpacity={layerControl.layerOpacity}
-          onEditDeadwood={() => editing.handleStartEditing("deadwood")}
-          onEditForestCover={() => editing.handleStartEditing("forest_cover")}
-          isLoggedIn={!!user}
-          allowBadQualityLayers={canAudit}
-        />
-      </Col>
+        <Suspense
+          fallback={
+            <div className="flex h-full w-full items-center justify-center bg-slate-50">
+              <Spin size="large" />
+            </div>
+          }
+        >
+          <DatasetDetailsMap
+            data={dataset}
+            onMapReady={editing.handleMapReady}
+            onOrthoLayerReady={editing.handleOrthoLayerReady}
+            hideDeadwoodLayer={isEditing}
+            hideForestCoverLayer={isEditing}
+            refreshKey={refreshKey}
+            showDeadwood={isEditing ? false : layerControl.showDeadwood}
+            showForestCover={isEditing ? false : layerControl.showForestCover}
+            showDroneImagery={layerControl.showDroneImagery}
+            showAOI={layerControl.showAOI}
+            layerOpacity={layerControl.layerOpacity}
+            onEditDeadwood={() => editing.handleStartEditing("deadwood")}
+            onEditForestCover={() => editing.handleStartEditing("forest_cover")}
+            isLoggedIn={!!user}
+            allowBadQualityLayers={canAudit}
+          />
+        </Suspense>
+      </div>
 
       {/* Report Issue Modal */}
       <ReportIssueModal
@@ -253,6 +289,6 @@ export default function DatasetDetails() {
         onSubmit={handleReportSubmit}
         isSubmitting={isCreatingFlag}
       />
-    </Row>
+    </div>
   );
 }

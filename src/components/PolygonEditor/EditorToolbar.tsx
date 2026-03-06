@@ -54,7 +54,7 @@ export default function EditorToolbar({
   const displayTitle = title || `Editing ${type === "deadwood" ? "Deadwood" : "Forest Cover"}`;
 
   return (
-    <div className={`absolute ${position === "top-right" ? "right-4" : "left-4"} top-4 z-20`}>
+    <div className={`absolute ${position === "top-right" ? "right-4" : "left-4"} top-32 z-20`}>
       <Card
         title={displayTitle}
         className="shadow-lg"

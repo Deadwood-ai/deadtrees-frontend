@@ -59,7 +59,7 @@ const LayerControlPanel = ({
   const [showAttributions, setShowAttributions] = useState(false);
 
   return (
-    <div className="flex w-48 flex-col rounded-lg bg-white/95 p-3 backdrop-blur-sm">
+    <div className="flex w-64 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden">
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
       <Segmented
@@ -160,9 +160,9 @@ const LayerControlPanel = ({
       {/* Flags Section - shown to all users */}
       {showFlagsControls && (
         <>
-          <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
-            <div className="mb-1 text-xs font-medium text-blue-700">Feedback</div>
-            <p className="mb-2 text-xs text-blue-600">
+          <div className="-mx-4 -mb-4 mt-3 bg-[#F8FAF9] px-4 pb-4 pt-3 border-t border-gray-100">
+            <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
+            <p className="mb-3 text-xs text-gray-500">
               Help improve our AI by flagging incorrect predictions
             </p>
             {isLoggedIn ? (

@@ -38,7 +38,7 @@ export default function DataList({
   };
 
   return (
-    <div className="h-full space-y-2 overflow-auto">
+    <div className="flex-1 space-y-2 overflow-y-auto pr-1">
       {!visibleData ? (
         <div>Loading...</div>
       ) : visibleData.length === 0 ? (

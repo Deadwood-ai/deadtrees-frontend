@@ -42,9 +42,9 @@ const PlatformFeatures = () => {
             <div className="mb-4 inline-flex items-center rounded-full bg-amber-100/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-amber-700">
               INGESTION
             </div>
-            <h3 className="mb-3 text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">Raw drone imagery</h3>
+            <h3 className="mb-3 text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">From raw to georeferenced drone imagery</h3>
             <p className="text-base leading-relaxed text-gray-600">
-              Upload orthomosaics or raw ZIPs. Our OpenDroneMap pipeline automatically generates analysis-ready orthophotos.
+              Upload orthomosaics or simply raw .jpeg files. Our OpenDroneMap pipeline automatically generates analysis-ready orthophotos for free.
             </p>
           </div>
           

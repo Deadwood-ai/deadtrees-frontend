@@ -14,19 +14,19 @@ const defaultNavigation = [
   },
   {
     key: "/deadtrees",
-    label: "Satellite Products",
+    label: "Satellite Map",
   },
   {
     key: "/dataset",
-    label: "Drone Products",
+    label: "Drone Archive",
   },
   {
     key: "/about",
-    label: "About deadtrees.earth",
+    label: "About",
   },
   {
     key: "/profile",
-    label: "Account",
+    label: "My Account",
   },
 ];
 
@@ -103,18 +103,21 @@ export default function Navigation() {
   };
 
   return (
-    <div className="hidden md:block">
+    <div className="hidden md:flex justify-center w-full fixed top-0 z-50 pt-4 px-4 pb-2 pointer-events-none">
       <Header
+        className="w-full pointer-events-auto"
         style={{
           display: "flex",
           alignItems: "center",
-          background: "var(--dt-surface-raised, #ffffff)",
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          borderRadius: "0 0 8px 8px",
-          borderBottom: "1px solid rgb(var(--dt-primary-rgb) / 0.15)",
-          boxShadow: "0 1px 8px rgb(var(--dt-primary-rgb) / 0.08)",
+          background: "rgba(255, 255, 255, 0.90)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderRadius: "1rem",
+          border: "1px solid rgba(229, 231, 235, 0.8)",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+          padding: "0 24px",
+          height: "64px",
+          lineHeight: "64px"
         }}
       >
         <div className="flex flex-1 items-center justify-center md:justify-start">
@@ -122,11 +125,10 @@ export default function Navigation() {
             src="/assets/logo.png"
             alt="deadtrees.earth"
             onClick={handleLogoClick}
-            className="mr-3 h-12 cursor-pointer"
+            className="mr-3 h-10 cursor-pointer hover:opacity-80 transition-opacity"
           />
-          {/* <Tag color="warning">BETA</Tag> */}
         </div>
-        <div style={{ flex: 1, backgroundColor: "var(--dt-surface-raised, #ffffff)" }}>
+        <div style={{ flex: 1, backgroundColor: "transparent" }}>
           <Menu
             mode="horizontal"
             selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
@@ -136,13 +138,13 @@ export default function Navigation() {
               justifyContent: "end",
               minWidth: 0,
               borderBottom: "none",
-              backgroundColor: "var(--dt-surface-raised, #ffffff)",
+              backgroundColor: "transparent",
               width: "100%",
             }}
           />
         </div>
         <Button
-          className="ml-8"
+          className="ml-8 rounded-full shadow-sm px-6 font-medium"
           type={session ? "default" : "primary"}
           onClick={
             session

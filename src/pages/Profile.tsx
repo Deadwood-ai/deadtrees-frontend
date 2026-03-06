@@ -92,181 +92,186 @@ export default function ProfilePage() {
     return null;
   } else {
     return (
-      <div className="m-auto min-h-screen w-full max-w-7xl">
-        <div className="flex items-center justify-between pb-16 pt-12">
-          <div className="flex flex-col">
-            <Badge count={myFlags.length} color="red">
-              <ProfileAvatar email={user?.email ?? ""} />
-            </Badge>
-            <Typography.Title style={{ marginBottom: "4px" }}>Profile</Typography.Title>
-            <Typography.Text className="m-0 p-0 text-lg" type="secondary">
-              {user?.email}
-            </Typography.Text>
-          </div>
-          <div>
-            <Alert
-              message="Upload and Publish Your Data"
-              className="max-w-3xl"
-              description={
-                <>
-                  <p>
-                    Upload and visualize your data on the platform. Publish datasets via{" "}
-                    <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer">
-                      FreiDATA
-                    </a>{" "}
-                    to get a DOI.
-                  </p>
-                  <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
-                    <li>
-                      🗺️ <strong>Formats:</strong> Standalone GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG,
-                      JPG (max 30GB)
-                    </li>
-                    <li>
-                      🔧 <strong>Raw Images:</strong> For orthomosaic generation we recommend {">"}85%-front and {">"}
-                      70%-side overlap
-                    </li>
-                    <li>
-                      📏 <strong>Requirements:</strong> RGB/NIRRGB, {"<"}10cm resolution, any coordinate reference system
-                    </li>
-                    <li>
-                      🏆 <strong>Publishing:</strong> After upload, click "request DOI" and "Publish Data". No direct
-                      interaction with FreiDATA needed.
-                    </li>
-                  </ul>
-                  <p>
-                    Questions? <a href="mailto:info@deadtrees.earth?subject=deadtrees.earth issue">Contact us</a>
-                  </p>
-                </>
-              }
-              type="info"
-              showIcon
-            />
-          </div>
-        </div>
-        <div className="w-full">
-          <div className="mb-4 flex justify-between">
-            <Segmented
-              options={["My Datasets", "Published Datasets", "My Issues"]}
-              size="large"
-              value={activeTab}
-              onChange={(value) => {
-                setActiveTab(value as ActiveTab);
-              }}
-            />
-            <div className="flex gap-2">
-              {activeTab === ActiveTab.MyDatasets ? (
-                <>
-                  {selectedDatasets.length > 0 ? (
-                    <Button size="large" type="primary" icon={<FileOutlined />} onClick={showPublicationModal}>
-                      Publish Data ({selectedDatasets.length})
-                    </Button>
-                  ) : (
-                    <UploadButton />
-                  )}
-                </>
-              ) : null}
+      <div className="w-full bg-[#F8FAF9] min-h-[calc(100vh-64px)] pb-24 pt-24 md:pt-28">
+        <div className="mx-auto max-w-[1920px] px-4 md:px-8 xl:px-12">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 pb-12">
+            <div className="flex items-center gap-6">
+              <Badge count={myFlags.length} color="red">
+                <ProfileAvatar email={user?.email ?? ""} size={96} />
+              </Badge>
+              <div className="flex flex-col">
+                <Typography.Title level={2} style={{ margin: 0, fontWeight: 700 }}>
+                  My Account
+                </Typography.Title>
+                <Typography.Text className="text-lg font-medium" type="secondary">
+                  {user?.email}
+                </Typography.Text>
+              </div>
+            </div>
+            <div className="w-full md:w-auto md:max-w-2xl">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="text-xl">💡</div>
+                  <div>
+                    <h3 className="mb-2 text-base font-semibold text-blue-900">Upload and Publish Your Data</h3>
+                    <div className="space-y-2 text-sm text-blue-800/80">
+                      <p className="m-0">
+                        Upload and visualize your data on the platform. Publish datasets via{" "}
+                        <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                          FreiDATA
+                        </a>{" "}
+                        to get a DOI.
+                      </p>
+                      <ul className="m-0 space-y-1 pl-0" style={{ listStyleType: "none" }}>
+                        <li>
+                          <span className="font-medium text-blue-900">Formats:</span> Standalone GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG, JPG (max 30GB)
+                        </li>
+                        <li>
+                          <span className="font-medium text-blue-900">Raw Images:</span> For orthomosaic generation we recommend {">"}85%-front and {">"}70%-side overlap
+                        </li>
+                        <li>
+                          <span className="font-medium text-blue-900">Requirements:</span> RGB/NIRRGB, {"<"}10cm resolution, any coordinate reference system
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+          <div className="w-full">
+            <div className="mb-6 flex justify-between items-center">
+              <Segmented
+                options={["My Datasets", "Published Datasets", "My Issues"]}
+                size="large"
+                value={activeTab}
+                onChange={(value) => {
+                  setActiveTab(value as ActiveTab);
+                }}
+                className="shadow-sm border border-gray-200/50"
+              />
+              <div className="flex gap-2">
+                {activeTab === ActiveTab.MyDatasets ? (
+                  <>
+                    {selectedDatasets.length > 0 ? (
+                      <Button size="large" type="primary" icon={<FileOutlined />} onClick={showPublicationModal} className="shadow-sm">
+                        Publish Data ({selectedDatasets.length})
+                      </Button>
+                    ) : (
+                      <UploadButton />
+                    )}
+                  </>
+                ) : null}
+              </div>
+            </div>
 
-          {activeTab === ActiveTab.MyDatasets ? (
-            <DataTable
-              onSelectedRowsChange={handleSelectedRowsChange}
-              resetSelection={resetSelectionFlag}
-              onResetSelectionComplete={handleResetComplete}
-            />
-          ) : activeTab === ActiveTab.Publications ? (
-            <PublicationsTable />
-          ) : (
-            <div className="mt-4">
-              {myFlags.length === 0 ? (
-                <div className="mt-8 flex flex-col items-center justify-center">
-                  <Typography.Title level={4}>No issues yet</Typography.Title>
-                  <Typography.Paragraph type="secondary">
-                    Report an issue from any dataset’s details page to see it here.
-                  </Typography.Paragraph>
-                </div>
+            <div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm">
+              {activeTab === ActiveTab.MyDatasets ? (
+                <DataTable
+                  onSelectedRowsChange={handleSelectedRowsChange}
+                  resetSelection={resetSelectionFlag}
+                  onResetSelectionComplete={handleResetComplete}
+                />
+              ) : activeTab === ActiveTab.Publications ? (
+                <PublicationsTable />
               ) : (
-                <>
-                  <Typography.Title level={5}>My Issues</Typography.Title>
-                  <Typography.Paragraph type="secondary">
-                    User-reported issues you've filed. Only you and auditors can view them.
-                  </Typography.Paragraph>
-                  <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                    <Table
-                      rowKey="id"
-                      dataSource={myFlags}
-                      scroll={{ x: "max-content" }}
-                      columns={[
-                      {
-                        title: "Dataset ID",
-                        dataIndex: "dataset_id",
-                        key: "dataset_id",
-                        render: (id: number) => (
-                          <Link to={`/dataset/${id}`} className="text-blue-600">
-                            {id}
-                          </Link>
-                        ),
-                      },
-                      {
-                        title: "Description",
-                        key: "description",
-                        render: (_: unknown, f: DatasetFlag) => (
-                          <Tooltip title={f.description}>
-                            <span>{(f.description || "").slice(0, 120) + (f.description.length > 120 ? "…" : "")}</span>
-                          </Tooltip>
-                        ),
-                      },
-                      {
-                        title: "Categories",
-                        key: "categories",
-                        render: (_: unknown, f: DatasetFlag) => (
-                          <span>
-                            {f.is_ortho_mosaic_issue && <Tag color="orange">Orthomosaic</Tag>}
-                            {f.is_prediction_issue && <Tag color="blue">Segmentation</Tag>}
-                          </span>
-                        ),
-                      },
-                      {
-                        title: "Status",
-                        dataIndex: "status",
-                        key: "status",
-                        render: (status: string) => (
-                          <Tag color={status === "open" ? "red" : status === "acknowledged" ? "gold" : "green"}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        title: "Created",
-                        dataIndex: "created_at",
-                        key: "created_at",
-                        render: (iso: string) => new Date(iso).toLocaleString(),
-                      },
-                      // Removed last status change per requirements
-                      {
-                        title: "Actions",
-                        key: "actions",
-                        render: (_: unknown, f: DatasetFlag) => (
-                          <Button size="small" onClick={() => navigate(`/dataset/${f.dataset_id}`)}>
-                            View Map
-                          </Button>
-                        ),
-                      },
-                      ]}
-                      pagination={{ pageSize: 10 }}
-                    />
-                  </div>
-                </>
+                <div>
+                  {myFlags.length === 0 ? (
+                    <div className="my-12 flex flex-col items-center justify-center text-center">
+                      <Typography.Title level={4} className="mb-2">No issues yet</Typography.Title>
+                      <Typography.Text type="secondary" className="text-base">
+                        Report an issue from any dataset’s details page to see it here.
+                      </Typography.Text>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-6">
+                        <Typography.Title level={4} style={{ margin: 0 }}>My Issues</Typography.Title>
+                        <Typography.Text type="secondary">
+                          User-reported issues you've filed. Only you and auditors can view them.
+                        </Typography.Text>
+                      </div>
+                      <div className="overflow-hidden rounded-xl border border-gray-100">
+                        <Table
+                          rowKey="id"
+                          dataSource={myFlags}
+                          scroll={{ x: "max-content" }}
+                          columns={[
+                          {
+                            title: "Dataset ID",
+                            dataIndex: "dataset_id",
+                            key: "dataset_id",
+                            render: (id: number) => (
+                              <Link to={`/dataset/${id}`} className="font-medium text-[#1B5E35] hover:underline">
+                                {id}
+                              </Link>
+                            ),
+                          },
+                          {
+                            title: "Description",
+                            key: "description",
+                            render: (_: unknown, f: DatasetFlag) => (
+                              <Tooltip title={f.description}>
+                                <span className="text-gray-600">{(f.description || "").slice(0, 120) + (f.description.length > 120 ? "…" : "")}</span>
+                              </Tooltip>
+                            ),
+                          },
+                          {
+                            title: "Categories",
+                            key: "categories",
+                            render: (_: unknown, f: DatasetFlag) => (
+                              <div className="flex gap-1">
+                                {f.is_ortho_mosaic_issue && <Tag color="orange" className="m-0 border-none bg-orange-50 font-medium">Orthomosaic</Tag>}
+                                {f.is_prediction_issue && <Tag color="blue" className="m-0 border-none bg-blue-50 font-medium">Segmentation</Tag>}
+                              </div>
+                            ),
+                          },
+                          {
+                            title: "Status",
+                            dataIndex: "status",
+                            key: "status",
+                            render: (status: string) => (
+                              <Tag 
+                                className="m-0 border-none font-medium capitalize"
+                                color={status === "open" ? "red" : status === "acknowledged" ? "gold" : "green"}
+                              >
+                                {status}
+                              </Tag>
+                            ),
+                          },
+                          {
+                            title: "Created",
+                            dataIndex: "created_at",
+                            key: "created_at",
+                            render: (iso: string) => <span className="text-gray-500">{new Date(iso).toLocaleString()}</span>,
+                          },
+                          // Removed last status change per requirements
+                          {
+                            title: "Actions",
+                            key: "actions",
+                            render: (_: unknown, f: DatasetFlag) => (
+                              <Button size="small" onClick={() => navigate(`/dataset/${f.dataset_id}`)}>
+                                View Map
+                              </Button>
+                            ),
+                          },
+                          ]}
+                          pagination={{ pageSize: 10 }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
-          )}
 
-          <PublicationModal
-            visible={isPublicationModalVisible}
-            onCancel={handlePublicationModalCancel}
-            datasets={selectedDatasets}
-            onSuccess={handlePublicationSuccess}
-          />
+            <PublicationModal
+              visible={isPublicationModalVisible}
+              onCancel={handlePublicationModalCancel}
+              datasets={selectedDatasets}
+              onSuccess={handlePublicationSuccess}
+            />
+          </div>
         </div>
       </div>
     );

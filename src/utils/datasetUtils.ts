@@ -50,7 +50,7 @@ export const getTruncatedAuthorDisplay = (authors: string[] | null, isGeonadir: 
   const cleanedAuthors = fixAuthorNamesEncoding(authors);
   if (cleanedAuthors.length === 0) return "";
 
-  const firstAuthor = cleanedAuthors[0].slice(0, 18) + (cleanedAuthors[0].length > 18 ? "..." : "");
+  const firstAuthor = cleanedAuthors[0].slice(0, 14) + (cleanedAuthors[0].length > 14 ? "..." : "");
   const additionalCount = cleanedAuthors.length > 1 ? ` +${cleanedAuthors.length - 1}` : "";
   const baseText = firstAuthor + additionalCount;
 

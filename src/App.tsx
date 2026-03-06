@@ -1,4 +1,4 @@
-import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { ConfigProvider, Layout } from "antd";
 import { useEffect } from "react";
 import { trackPageView, initializePostHog } from "./utils/analytics";
@@ -54,7 +54,6 @@ function LayoutWrapper() {
       <Layout
         style={{
           margin: "0 auto",
-          paddingTop: 16,
           height: shouldUseFullHeight ? "100vh" : "auto",
           backgroundColor: "var(--dt-surface-base)",
         }}
@@ -62,7 +61,7 @@ function LayoutWrapper() {
         <Navigation />
         <Content
           style={{
-            height: shouldUseFullHeight ? "calc(100vh - 80px)" : "auto",
+            height: shouldUseFullHeight ? "100vh" : "auto",
             backgroundColor: "var(--dt-surface-base)",
           }}
         >
@@ -125,13 +124,11 @@ function AppWithTracking() {
 export default function App() {
   return (
     <ConfigProvider theme={antdTheme}>
-      <BrowserRouter>
-        <AOIProvider>
-          <AuditNavigationProvider>
-            <AppWithTracking />
-          </AuditNavigationProvider>
-        </AOIProvider>
-      </BrowserRouter>
+      <AOIProvider>
+        <AuditNavigationProvider>
+          <AppWithTracking />
+        </AuditNavigationProvider>
+      </AOIProvider>
     </ConfigProvider>
   );
 }

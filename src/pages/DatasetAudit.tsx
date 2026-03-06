@@ -1012,84 +1012,89 @@ function DatasetAuditInner() {
 		statusFilter !== "all";
 
 	return (
-		<div className="p-6">
-			{/* Header */}
-			<div className="mb-6 flex items-center justify-between">
-				<Title level={3} style={{ margin: 0 }}>
-					Dataset Audits
-				</Title>
-				<Button
-					type="link"
-					href="https://docs.google.com/document/d/1EQ52zDOU6X6ze1g-xKd381IPziv72Pt4QV18YDYqIUo/edit"
-					target="_blank"
-					rel="noopener noreferrer"
-					icon={<span className="mr-1">📋</span>}
-				>
-					Audit Protocol
-				</Button>
-			</div>
+		<div className="w-full bg-[#F8FAF9] min-h-[calc(100vh-64px)] pb-24 pt-24 md:pt-28">
+			<div className="mx-auto max-w-[1920px] px-4 md:px-8 xl:px-12">
+				{/* Header */}
+				<div className="mb-8 flex items-center justify-between">
+					<Title level={2} style={{ margin: 0, fontWeight: 700 }}>
+						Dataset Audits
+					</Title>
+					<Button
+						type="primary"
+						ghost
+						href="https://docs.google.com/document/d/1EQ52zDOU6X6ze1g-xKd381IPziv72Pt4QV18YDYqIUo/edit"
+						target="_blank"
+						rel="noopener noreferrer"
+						icon={<span className="mr-1">📋</span>}
+						className="shadow-sm"
+					>
+						Audit Protocol
+					</Button>
+				</div>
 
-			{/* Tabs with badges */}
-			<div className="mb-4">
-				<Segmented
-					value={activeTab}
-					onChange={(value) => {
-						setActiveTab(value as AuditTab);
-						setStatusFilter("all");
-					}}
-					options={[
-						{
-							label: (
-								<Space size={6}>
-									<span>📋 Pending</span>
-									<Badge count={pendingCount} size="small" color={palette.primary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "pending",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>✓ Completed</span>
-									<Badge count={completedCount} size="small" color={palette.state.success} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "completed",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>🔔 Edits & Flags</span>
-									<Badge count={editsFlagsCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "edits-flags",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>📌 Reference</span>
-									<Badge count={referenceCount} size="small" color={palette.secondary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "reference",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>⚙️ Processing</span>
-									<Badge count={processingCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "processing",
-						},
-					]}
-					size="large"
-				/>
-			</div>
+				{/* Tabs with badges */}
+				<div className="mb-6">
+					<Segmented
+						value={activeTab}
+						onChange={(value) => {
+							setActiveTab(value as AuditTab);
+							setStatusFilter("all");
+						}}
+						className="shadow-sm border border-gray-200/50"
+						options={[
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>📋 Pending</span>
+										<Badge count={pendingCount} size="small" color={palette.primary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "pending",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>✓ Completed</span>
+										<Badge count={completedCount} size="small" color={palette.state.success} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "completed",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>🔔 Edits & Flags</span>
+										<Badge count={editsFlagsCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "edits-flags",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>📌 Reference</span>
+										<Badge count={referenceCount} size="small" color={palette.secondary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "reference",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>⚙️ Processing</span>
+										<Badge count={processingCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "processing",
+							},
+						]}
+						size="large"
+					/>
+				</div>
 
-			{activeTab === "processing" && (
-				<>
+				<div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm">
+					{activeTab === "processing" && (
+						<>
 					<div className="mb-4 flex flex-wrap items-end gap-3 rounded-md border border-gray-100 bg-gray-50 p-3">
 						<div>
 							<Text type="secondary" className="block mb-1 text-xs">
@@ -1443,6 +1448,8 @@ function DatasetAuditInner() {
 					/>
 				</>
 			)}
+			</div>
+			</div>
 		</div>
 	);
 }

@@ -105,7 +105,7 @@ const Hero = () => {
 	}, [navigate]);
 
 	return (
-		<section className="relative flex w-full flex-col overflow-hidden md:min-h-[calc(100vh-64px)]">
+		<section className="relative flex w-full flex-col overflow-hidden min-h-screen pt-24 md:pt-28">
 			<div className="absolute inset-0 hidden bg-[radial-gradient(1000px_at_25%_35%,_var(--tw-gradient-stops))] from-emerald-100/60 via-green-50/30 to-white md:block"></div>
 
 			<div className="relative z-10 m-auto flex w-full max-w-[1400px] flex-1 flex-col justify-center px-4 md:px-10">
@@ -140,7 +140,7 @@ const Hero = () => {
 								icon={<UploadOutlined />}
 								onClick={handleContribute}
 							>
-								Contribute Data
+								Contribute Drone Data
 							</Button>
 							<Button
 								size="large"

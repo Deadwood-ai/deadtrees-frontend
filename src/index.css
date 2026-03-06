@@ -18,6 +18,14 @@
   z-index: 40;
 }
 
+/* Push OpenLayers zoom controls down to avoid floating header and sidebars */
+.ol-zoom {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  right: 16px !important;
+  left: auto !important;
+}
+
 .ol-attribution.ol-collapsed {
   background-color: rgba(255, 255, 255, 0.85);
   border-radius: 4px;

@@ -800,12 +800,12 @@ const DeadtreesMap = () => {
         ref={mapContainer}
       >
         {/* Top Left - Location Controls */}
-        <div className="absolute left-2 top-24 z-50">
+        <div className="absolute left-4 top-32 z-50">
           <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
         </div>
 
         {/* Top Right - Layer Controls */}
-        <div className="absolute right-2 top-24 z-50">
+        <div className="absolute right-4 top-32 z-50">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}

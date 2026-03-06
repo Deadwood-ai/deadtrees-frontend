@@ -14,7 +14,7 @@ const LocationControls = ({ selectedSite, onSiteChange, onPlaceSelect }: Locatio
   const segmentedValue = selectedSite || null;
 
   return (
-    <div className="flex min-w-72 flex-col gap-2 rounded-lg bg-white/95 p-3 backdrop-blur-sm">
+    <div className="flex min-w-72 flex-col gap-2 rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto">
       {/* Address Search */}
       <div className="text-xs font-medium text-gray-500">Location</div>
       <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>

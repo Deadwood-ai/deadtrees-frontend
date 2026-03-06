@@ -98,7 +98,7 @@ const DatasetLayerControlPanel = ({
 
   return (
     <div
-      className="flex w-52 flex-col rounded-lg bg-white/95 p-3 shadow-lg backdrop-blur-sm pointer-events-auto"
+      className="flex w-64 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden"
       onMouseDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
@@ -243,9 +243,9 @@ const DatasetLayerControlPanel = ({
       )}
 
       {/* Feedback Section */}
-      <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
-        <div className="mb-1 text-xs font-medium text-blue-700">Feedback</div>
-        <p className="mb-2 text-xs text-blue-600">
+      <div className="-mx-4 -mb-4 mt-3 bg-[#F8FAF9] px-4 pb-4 pt-3 border-t border-gray-100">
+        <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
+        <p className="mb-3 text-xs text-gray-500">
           Help improve predictions by editing or reporting issues
         </p>
         <div className="flex flex-col gap-2">

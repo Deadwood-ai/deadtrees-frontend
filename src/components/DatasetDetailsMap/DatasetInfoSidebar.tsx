@@ -49,7 +49,7 @@ const InfoRow = ({ label, children, tooltip }: InfoRowProps) => {
 
 // Section container with consistent styling
 const Section = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`rounded-md bg-gray-50 p-4 space-y-3 ${className}`}>
+  <div className={`rounded-2xl border border-gray-200/60 bg-white p-5 shadow-sm space-y-3 ${className}`}>
     {children}
   </div>
 );
@@ -133,7 +133,7 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
   // Show pending state
   if (!audit || !audit.final_assessment) {
     return (
-      <Section className="mt-4">
+      <Section>
         <div className="flex items-center gap-2 text-gray-500">
           <ClockCircleOutlined className="animate-pulse" />
           <Typography.Text strong>Audit Pending</Typography.Text>
@@ -148,9 +148,9 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
   const config = assessmentConfig[audit.final_assessment as keyof typeof assessmentConfig] || assessmentConfig.no_issues;
 
   return (
-    <div className="mt-4 rounded-md bg-gray-50 overflow-hidden">
+    <div className="rounded-2xl border border-gray-200/60 bg-white overflow-hidden shadow-sm">
       {/* Colored header */}
-      <div className={`${config.bgColor} px-4 py-2 flex items-center gap-2 ${config.textColor}`}>
+      <div className={`${config.bgColor} px-5 py-3 flex items-center gap-2 ${config.textColor}`}>
         {config.icon}
         <Typography.Text strong className={config.textColor}>
           {config.label}
@@ -158,7 +158,7 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
       </div>
 
       {/* Content rows */}
-      <div className="p-4 space-y-3">
+      <div className="p-5 space-y-3">
         <InfoRow label="Forest Cover Prediction" tooltip={tooltips.forestCover}>
           <QualityValue quality={audit.forest_cover_quality} />
         </InfoRow>
@@ -199,7 +199,7 @@ export default function DatasetInfoSidebar({
   const isFromGeonadir = isGeonadirDataset(dataset);
 
   return (
-    <div className="p-2">
+    <div className="flex flex-col gap-4 pb-4">
       {/* Location Header */}
       <Section>
         <div className="flex items-center pb-1">
@@ -260,7 +260,7 @@ export default function DatasetInfoSidebar({
       </Section>
 
       {/* Environmental Context */}
-      <Section className="mt-4">
+      <Section>
         <InfoRow label="Biome" tooltip={`Ecological biome classification: ${dataset.biome_name || "Unknown"}`}>
           <Tag color={getBiomeTagColor(dataset.biome_name)} style={{ margin: 0 }}>
             {getBiomeEmoji(dataset.biome_name)}{" "}
@@ -304,7 +304,7 @@ export default function DatasetInfoSidebar({
       </Section>
 
       {/* Technical Info */}
-      <Section className="mt-4">
+      <Section>
         <InfoRow label="Platform" tooltip="Type of platform used to capture the imagery (e.g., drone, satellite).">
           <Tag color="default" style={{ margin: 0 }}>{dataset.platform || "Unknown"}</Tag>
         </InfoRow>
@@ -322,7 +322,7 @@ export default function DatasetInfoSidebar({
 
       {/* Additional Information */}
       {dataset.additional_information && (
-        <Section className="mt-4">
+        <Section>
           <Typography.Text strong>Additional Information</Typography.Text>
           <div className="whitespace-pre-wrap break-words text-sm text-gray-500">
             {sanitizeText(dataset.additional_information)

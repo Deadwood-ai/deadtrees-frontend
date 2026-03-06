@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Map, View } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
 import { XYZ } from "ol/source";
@@ -20,35 +20,149 @@ import Overlay from "ol/Overlay";
 import Select from "ol/interaction/Select.js";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import "./tooltip.css";
-import { debounce } from "lodash";
-import { Settings } from "../../config";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
+import { palette } from "../../theme/palette";
 
-const defaultExtendStyle = new Style({
-  fill: new Fill({ color: [0, 0, 255, 0.4] }),
-  stroke: new Stroke({ color: "black", width: 1 }),
-});
+export type DatasetMapColorMode = "quality" | "labels" | "year";
 
-const hoverExtendStyle = new Style({
-  fill: new Fill({ color: [0, 0, 255, 0.7] }), // Orange with 60% opacity
-  stroke: new Stroke({ color: "white", width: 4 }), // Dark orange stroke
-});
+type DatasetVisualSpec = {
+  fill: string;
+  stroke: string;
+  marker: string;
+};
 
-const defaultMarkerStyle = new Style({
-  image: new Circle({
-    radius: 5,
-    fill: new Fill({ color: [0, 0, 255, 0.5] }),
-    stroke: new Stroke({ color: "black", width: 1 }),
-  }),
-});
+const withAlpha = (hex: string, alpha: number): string => {
+  const cleanHex = hex.replace("#", "");
+  const fullHex =
+    cleanHex.length === 3
+      ? cleanHex
+        .split("")
+        .map((char) => `${char}${char}`)
+        .join("")
+      : cleanHex;
+  const r = parseInt(fullHex.substring(0, 2), 16);
+  const g = parseInt(fullHex.substring(2, 4), 16);
+  const b = parseInt(fullHex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
-const hoverMarkerStyle = new Style({
-  image: new Circle({
-    radius: 10,
-    fill: new Fill({ color: [0, 0, 255, 0.5] }),
-    stroke: new Stroke({ color: "white", width: 4 }),
-  }),
-});
+const createExtentStyle = (spec: DatasetVisualSpec): Style =>
+  new Style({
+    fill: new Fill({ color: withAlpha(spec.fill, 0.32) }),
+    stroke: new Stroke({ color: spec.stroke, width: 1.5 }),
+  });
+
+const createMarkerStyle = (spec: DatasetVisualSpec, hovered = false): Style =>
+  new Style({
+    image: new Circle({
+      radius: hovered ? 8 : 5,
+      fill: new Fill({ color: withAlpha(spec.marker, hovered ? 0.9 : 0.7) }),
+      stroke: new Stroke({ color: "#ffffff", width: hovered ? 2.5 : 1.5 }),
+    }),
+  });
+
+const createHoverExtentStyle = (spec: DatasetVisualSpec): Style =>
+  new Style({
+    fill: new Fill({ color: withAlpha(spec.fill, 0.52) }),
+    stroke: new Stroke({ color: "#ffffff", width: 2.5 }),
+  });
+
+const parseYear = (dataset: IDataset): number | null => {
+  const year = Number.parseInt(dataset.aquisition_year, 10);
+  return Number.isNaN(year) ? null : year;
+};
+
+const getDatasetVisualSpec = (dataset: IDataset, mode: DatasetMapColorMode): DatasetVisualSpec => {
+  if (mode === "labels") {
+    if (dataset.has_labels) {
+      return {
+        fill: palette.primary[500],
+        stroke: palette.primary[700],
+        marker: palette.primary[600],
+      };
+    }
+    if (dataset.has_deadwood_prediction) {
+      return {
+        fill: palette.secondary[500],
+        stroke: palette.secondary[600],
+        marker: palette.secondary[500],
+      };
+    }
+    return {
+      fill: palette.neutral[500],
+      stroke: palette.neutral[700],
+      marker: palette.neutral[700],
+    };
+  }
+
+  if (mode === "year") {
+    const year = parseYear(dataset);
+    if (!year) {
+      return {
+        fill: palette.neutral[500],
+        stroke: palette.neutral[700],
+        marker: palette.neutral[700],
+      };
+    }
+    if (year >= 2024) {
+      return {
+        fill: "#FDE725",
+        stroke: "#D4C21D",
+        marker: "#D4C21D",
+      };
+    }
+    if (year >= 2021) {
+      return {
+        fill: "#58A67A",
+        stroke: "#468564",
+        marker: "#468564",
+      };
+    }
+    if (year >= 2018) {
+      return {
+        fill: "#355F8D",
+        stroke: "#2A4C71",
+        marker: "#2A4C71",
+      };
+    }
+    return {
+      fill: "#2C1E7A",
+      stroke: "#221760",
+      marker: "#221760",
+    };
+  }
+
+  const finalAssessment = dataset.final_assessment;
+  const hasBadQuality = dataset.deadwood_quality === "bad" || dataset.forest_cover_quality === "bad";
+  const hasMediumQuality = dataset.deadwood_quality === "sentinel_ok" || dataset.forest_cover_quality === "sentinel_ok";
+
+  if (finalAssessment === "exclude_completely" || hasBadQuality || dataset.has_major_issue) {
+    return {
+      fill: palette.state.error,
+      stroke: "#B91C1C",
+      marker: "#DC2626",
+    };
+  }
+  if (finalAssessment === "fixable_issues" || hasMediumQuality) {
+    return {
+      fill: palette.deadwood[500],
+      stroke: palette.deadwood[700],
+      marker: palette.deadwood[700],
+    };
+  }
+  if (finalAssessment === "no_issues" || finalAssessment === "ready" || dataset.is_audited) {
+    return {
+      fill: palette.forest[500],
+      stroke: palette.forest[700],
+      marker: palette.forest[600],
+    };
+  }
+  return {
+    fill: palette.neutral[500],
+    stroke: palette.neutral[700],
+    marker: palette.neutral[700],
+  };
+};
 
 const formatAcquisitionDate = (dataset: IDataset): string => {
   const year = Number.parseInt(dataset.aquisition_year, 10);
@@ -88,12 +202,14 @@ const DatasetMapOL = ({
   setHoveredItem,
   setVisibleFeatures,
   filterZoomTrigger = 0,
+  colorMode = "quality",
 }: {
   data: IDataset[];
   hoveredItem: number | null;
   setHoveredItem: (id: number | null) => void;
   setVisibleFeatures: (ids: string[]) => void;
   filterZoomTrigger?: number;
+  colorMode?: DatasetMapColorMode;
 }) => {
   const navigate = useNavigate();
   const mapRef = useRef<MapRef | null>(null);
@@ -103,7 +219,6 @@ const DatasetMapOL = ({
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
   // Track previous trigger value to only zoom on explicit filter actions
   const prevZoomTriggerRef = useRef(filterZoomTrigger);
-  const [userInteracted, setUserInteracted] = useState(false);
   const { setNavigationSource } = useDatasetDetailsMap();
 
   const updateVisibleFeatures = useCallback(() => {
@@ -225,9 +340,10 @@ const DatasetMapOL = ({
           tooltip.getElement().classList.remove("hidden");
 
           // Apply hover styles
-          hoveredFeature.setStyle(
-            hoveredFeature.getGeometry() instanceof Polygon ? hoverExtendStyle : hoverMarkerStyle,
-          );
+          const hoverStyle = hoveredFeature.get("hoverStyle");
+          if (hoverStyle) {
+            hoveredFeature.setStyle(hoverStyle);
+          }
         } else {
           setHoveredItem(null);
           map.getTargetElement().style.cursor = "";
@@ -237,11 +353,11 @@ const DatasetMapOL = ({
           vectorLayerExtendRef.current
             ?.getSource()
             .getFeatures()
-            .forEach((f) => f.setStyle(defaultExtendStyle));
+            .forEach((f) => f.setStyle(f.get("baseStyle")));
           vectorLayerMarkerRef.current
             ?.getSource()
             .getFeatures()
-            .forEach((f) => f.setStyle(defaultMarkerStyle));
+            .forEach((f) => f.setStyle(f.get("baseStyle")));
         }
       });
 
@@ -332,14 +448,21 @@ const DatasetMapOL = ({
         if (dataset.bbox) {
           const parsedBBox = parseBBox(dataset.bbox);
           if (parsedBBox) {
+            const visualSpec = getDatasetVisualSpec(dataset, colorMode);
+            const extentStyle = createExtentStyle(visualSpec);
+            const extentHoverStyle = createHoverExtentStyle(visualSpec);
+            const markerStyle = createMarkerStyle(visualSpec);
+            const markerHoverStyle = createMarkerStyle(visualSpec, true);
             const extentFeature = new Feature(fromExtent(parsedBBox).transform("EPSG:4326", "EPSG:3857"));
             extentFeature.setProperties({
               id: dataset.id,
               title: buildTooltipTitle(dataset),
               thumbnail_path: dataset.thumbnail_path,
               date: formatAcquisitionDate(dataset),
+              baseStyle: extentStyle,
+              hoverStyle: extentHoverStyle,
             });
-            extentFeature.setStyle(defaultExtendStyle);
+            extentFeature.setStyle(extentStyle);
             vectorSourceExtend.addFeature(extentFeature);
 
             const point = extentFeature.getGeometry().getInteriorPoint();
@@ -348,8 +471,10 @@ const DatasetMapOL = ({
               id: dataset.id,
               title: buildTooltipTitle(dataset),
               date: formatAcquisitionDate(dataset),
+              baseStyle: markerStyle,
+              hoverStyle: markerHoverStyle,
             });
-            pointFeature.setStyle(defaultMarkerStyle);
+            pointFeature.setStyle(markerStyle);
             vectorSourceMarker.addFeature(pointFeature);
           }
         }
@@ -369,7 +494,7 @@ const DatasetMapOL = ({
         }
       }
     }
-  }, [data, filterZoomTrigger]);
+  }, [data, filterZoomTrigger, colorMode]);
 
   // Handle feature highlighting separately
   useEffect(() => {
@@ -380,12 +505,12 @@ const DatasetMapOL = ({
 
       vectorSourceExtend.getFeatures().forEach((feature) => {
         const featureId = feature.get("id");
-        feature.setStyle(featureId === hoveredItem ? hoverExtendStyle : defaultExtendStyle);
+        feature.setStyle(featureId === hoveredItem ? feature.get("hoverStyle") : feature.get("baseStyle"));
       });
 
       vectorSourceMarker.getFeatures().forEach((feature) => {
         const featureId = feature.get("id");
-        feature.setStyle(featureId === hoveredItem ? hoverMarkerStyle : defaultMarkerStyle);
+        feature.setStyle(featureId === hoveredItem ? feature.get("hoverStyle") : feature.get("baseStyle"));
       });
     }
   }, [hoveredItem]);
