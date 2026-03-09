@@ -45,7 +45,7 @@ const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
 // };
 
 const uploadOrtho = async (options: UploadOptions) => {
-  const { file, onProgress, onSuccess, onError, uploadId, session, signal } = options;
+  const { file, onSuccess, onError, signal } = options;
   const uploadStartTime = Date.now();
 
   try {
@@ -166,6 +166,11 @@ function calculateCopyTime(startTime: number): number {
 
 async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileSize: number, options: UploadOptions) {
   const { session, onProgress, signal } = options;
+  const accessToken = session?.access_token;
+
+  if (!accessToken) {
+    throw new Error("Missing auth session for upload");
+  }
 
   // console.log("FormData contents:");
   // for (const pair of formData.entries()) {
@@ -175,8 +180,7 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
   try {
     const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${accessToken}`,
       },
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total) {
@@ -192,7 +196,21 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
     if (axios.isCancel(error)) {
       throw new DOMException("Upload cancelled by user", "AbortError");
     }
-    throw new Error(`Failed to upload chunk ${chunkInfo.index}`);
+
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const detail =
+        (typeof error.response?.data === "object" &&
+          error.response?.data &&
+          "detail" in error.response.data &&
+          (error.response.data as { detail?: unknown }).detail) ||
+        (typeof error.response?.data === "string" ? error.response.data : undefined) ||
+        error.message;
+
+      throw new Error(`Failed to upload chunk ${chunkInfo.index} (status ${status ?? "unknown"}): ${String(detail)}`);
+    }
+
+    throw new Error(`Failed to upload chunk ${chunkInfo.index}: ${error instanceof Error ? error.message : "unknown error"}`);
   }
 }
 

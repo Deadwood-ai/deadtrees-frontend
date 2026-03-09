@@ -2,6 +2,8 @@ import { Button, Tooltip, Checkbox, Space, message } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import { Settings } from "../../config";
 import type { IDataset } from "../../types/dataset";
+import { supabase } from "../../hooks/useSupabase";
+import { useAuth } from "../../hooks/useAuthProvider";
 
 interface DownloadSectionProps {
   dataset: IDataset;
@@ -26,7 +28,31 @@ export default function DownloadSection({
   startDownload,
   finishDownload,
 }: DownloadSectionProps) {
+  const { session } = useAuth();
+
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const accessToken = session?.access_token;
+
+    if (accessToken) {
+      return { Authorization: `Bearer ${accessToken}` };
+    }
+
+    const { data } = await supabase.auth.getSession();
+    const fallbackToken = data.session?.access_token;
+
+    if (!fallbackToken) {
+      throw new Error("Please log in to download datasets");
+    }
+
+    return { Authorization: `Bearer ${fallbackToken}` };
+  };
+
   const handleDownload = () => {
+    if (!session) {
+      message.info("Please log in to download datasets.");
+      return;
+    }
+
     if (isFromGeonadir && !labelsOnly) {
       message.warning("Dataset download restricted by data provider. You can download labels/predictions only.");
       return;
@@ -51,9 +77,13 @@ export default function DownloadSection({
       duration: 0,
     });
 
-    fetch(baseUrl)
-      .then((response) => response.json())
-      .then((data) => {
+    getAuthHeaders()
+      .then((headers) =>
+        fetch(baseUrl, { headers })
+          .then((response) => response.json())
+          .then((data) => ({ data, headers })),
+      )
+      .then(({ data, headers }) => {
         const jobId = data.job_id;
         const statusEndpoint = labelsOnly
           ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/status`
@@ -63,13 +93,13 @@ export default function DownloadSection({
           : `${Settings.API_URL}/download/datasets/${jobId}/download`;
 
         const checkStatus = () => {
-          fetch(statusEndpoint)
+          fetch(statusEndpoint, { headers })
             .then((response) => response.json())
             .then((statusData) => {
               if (statusData.status === "completed") {
                 downloadMsg();
                 finishDownload();
-                window.location.href = downloadEndpoint;
+                window.location.href = statusData.download_path ?? downloadEndpoint;
                 message.success({
                   content: `${labelsOnly ? "Predictions" : "Dataset"} download started!`,
                   duration: 5,
@@ -102,6 +132,8 @@ export default function DownloadSection({
     ? currentDownloadId === dataset.id.toString()
       ? "This dataset is currently being prepared for download..."
       : "Another download is in progress. Only one download can be active at a time."
+    : !session
+      ? "Please log in to download datasets."
     : isFromGeonadir && !labelsOnly
       ? "Dataset download restricted by data provider. Labels/predictions are still available."
       : labelsOnly
@@ -121,7 +153,7 @@ export default function DownloadSection({
               size="large"
               icon={<DownloadOutlined />}
               className="w-full shadow-sm"
-              disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
+              disabled={!session || isDownloading || (isFromGeonadir && !labelsOnly)}
               loading={isDownloading && currentDownloadId === dataset.id.toString()}
               onClick={handleDownload}
             >

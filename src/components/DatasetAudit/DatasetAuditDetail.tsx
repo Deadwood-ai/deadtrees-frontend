@@ -7,6 +7,8 @@ import { Settings } from "../../config";
 import { isGeonadirDataset } from "../../utils/datasetUtils";
 import { DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
 import EditingSidebar from "../DatasetDetailsMap/EditingSidebar";
+import { supabase } from "../../hooks/useSupabase";
+import { useAuth } from "../../hooks/useAuthProvider";
 
 // Sub-components
 import AuditHeader from "./AuditHeader";
@@ -38,6 +40,7 @@ interface DatasetAuditDetailProps {
  * - useAuditDetailState: All state management logic
  */
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
+	const { session } = useAuth();
 	// Map ref for map controls (zoom, flash, refresh)
 	const mapRef = useRef<AuditMapWithControlsHandle>(null);
 
@@ -112,6 +115,11 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
 	// Handle orthophoto download
 	const handleStartDownload = (ds: IDataset) => {
+		if (!session) {
+			message.info("Please log in to download datasets.");
+			return;
+		}
+
 		if (isGeonadirDataset(ds)) {
 			message.warning("Download restricted by data provider.");
 			return;
@@ -134,23 +142,33 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 			duration: 0,
 		});
 
-		fetch(baseUrl)
-			.then((response) => response.json())
-			.then((data) => {
+		supabase.auth
+			.getSession()
+			.then(({ data: authData }) => {
+				const accessToken = authData.session?.access_token;
+				if (!accessToken) {
+					throw new Error("Authentication required for download");
+				}
+				const headers = { Authorization: `Bearer ${accessToken}` };
+				return fetch(baseUrl, { headers })
+					.then((response) => response.json())
+					.then((data) => ({ data, headers }));
+			})
+			.then(({ data, headers }) => {
 				const jobId = data.job_id;
 
 				const checkStatus = () => {
-					fetch(`${Settings.API_URL}/download/job/${jobId}`)
+					fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`, { headers })
 						.then((response) => response.json())
 						.then((statusData) => {
-							if (statusData.status === "complete" && statusData.download_url) {
+							if (statusData.status === "completed" && statusData.download_path) {
 								downloadMsg();
-								window.location.href = statusData.download_url;
+								window.location.href = statusData.download_path;
 								message.success("Download started!");
 								finishDownload();
-							} else if (statusData.status === "error") {
+							} else if (statusData.status === "failed") {
 								downloadMsg();
-								message.error(`Download failed: ${statusData.error || "Unknown error"}`);
+								message.error(`Download failed: ${statusData.message || "Unknown error"}`);
 								finishDownload();
 							} else {
 								setTimeout(checkStatus, 2000);
@@ -165,9 +183,9 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
 				checkStatus();
 			})
-			.catch(() => {
+			.catch((error: Error) => {
 				downloadMsg();
-				message.error("Failed to initiate download");
+				message.error(error?.message || "Failed to initiate download");
 				finishDownload();
 			});
 	};
