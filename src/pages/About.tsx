@@ -31,6 +31,13 @@ export default function About() {
       institutionLink: "https://rsc4earth.de/",
       image: "/assets/team/clemens.png",
     },
+    {
+      name: "Prof. Dr. Miguel Mahecha",
+      role: "Scientific Lead",
+      institution: "RSC4Earth, Leipzig University",
+      institutionLink: "https://rsc4earth.de/",
+      image: "/assets/team/miguel.png",
+    },
   ];
 
   const logos = [
@@ -192,9 +199,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
         </div>
 
         {/* Team & Contributors */}
-        <div className="mx-auto mb-24 max-w-5xl">
+        <div className="mx-auto mb-24 max-w-6xl">
           <h2 className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">The Core Team</h2>
-          <div className="mb-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {coreTeam.map((member) => (
               <div key={member.name} className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm transition-all hover:shadow-md">
                 <div className="mb-6 h-32 w-32 overflow-hidden rounded-full shadow-sm ring-4 ring-emerald-50">

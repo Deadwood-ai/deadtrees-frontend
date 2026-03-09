@@ -863,108 +863,98 @@ export default function ReferencePatchEditorView({
   );
 
   return (
-    <div className="flex h-full w-full flex-col">
-      {/* Completion Status Banner */}
+    <div className="relative h-full w-full">
+      {/* Completion Status Banner - floating at top center below header */}
       {isCompleted && (
-        <Alert
-          message="Dataset Marked as Complete"
-          description={
-            <div className="flex items-center justify-between">
-              <span>
-                This dataset has been marked as reference patches complete. To make changes, reopen it for editing.
-              </span>
-              <Button icon={<EditOutlined />} onClick={onReopenForEditing} size="small">
-                Reopen for Editing
-              </Button>
-            </div>
-          }
-          type="success"
-          icon={<LockOutlined />}
-          showIcon
-          className="m-4"
-        />
+        <div className="absolute left-1/2 -translate-x-1/2 top-[224px] z-20 w-full max-w-2xl pointer-events-auto">
+          <Alert
+            message="Dataset Marked as Complete"
+            description={
+              <div className="flex items-center justify-between">
+                <span>
+                  This dataset has been marked as reference patches complete. To make changes, reopen it for editing.
+                </span>
+                <Button icon={<EditOutlined />} onClick={onReopenForEditing} size="small">
+                  Reopen for Editing
+                </Button>
+              </div>
+            }
+            type="success"
+            icon={<LockOutlined />}
+            showIcon
+            className="shadow-lg rounded-xl"
+          />
+        </div>
       )}
 
-      {/* Main Content: Map + Sidebar */}
-      <div className="flex min-h-0 flex-1">
-        {/* Map */}
-        <div className="relative flex-1">
-          <ReferencePatchMap
-            datasetId={dataset.id}
-            cogPath={dataset.cog_path}
-            resolution={selectedResolution}
-            patches={patchesForResolution}
-            onPatchSelected={handlePatchSelected}
-            enableTranslation={true}
-            focusPatchId={selectedPatchId}
-            onGetPatchGeometry={handleGetPatchGeometry}
-            onGetMapRef={handleGetMapRef}
-            onGetOrthoLayer={handleGetOrthoLayer}
-            layerSelection={layerSelection}
-            selectedPatchId={selectedPatchId}
-            selectedBasePatch={selectedBasePatch}
-            isEditingMode={!!editingMode}
+      {/* Map */}
+      <div className="absolute inset-0 z-0">
+        <ReferencePatchMap
+          datasetId={dataset.id}
+          cogPath={dataset.cog_path}
+          resolution={selectedResolution}
+          patches={patchesForResolution}
+          onPatchSelected={handlePatchSelected}
+          enableTranslation={true}
+          focusPatchId={selectedPatchId}
+          onGetPatchGeometry={handleGetPatchGeometry}
+          onGetMapRef={handleGetMapRef}
+          onGetOrthoLayer={handleGetOrthoLayer}
+          layerSelection={layerSelection}
+          selectedPatchId={selectedPatchId}
+          selectedBasePatch={selectedBasePatch}
+          isEditingMode={!!editingMode}
+        />
+
+        {/* Layer Radio Buttons (bottom-left) */}
+        <LayerRadioButtons
+          value={layerSelection}
+          onChange={setLayerSelection}
+          position="bottom-left"
+          availableLayers={
+            editingMode
+              ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
+              : undefined
+          }
+        />
+
+        {/* Editor Toolbar - shown during editing mode */}
+        {editingMode && (
+          <EditorToolbar
+            type={editingMode}
+            isDrawing={editor.isDrawing}
+            hasSelection={!!editor.selection && editor.selection.length > 0}
+            selectionCount={editor.selection?.length || 0}
+            isAIActive={ai.isActive}
+            isAIProcessing={ai.isProcessing}
+            onToggleDraw={() => editor.toggleDraw()}
+            onCutHole={editor.cutHoleWithDrawn}
+            onMerge={editor.mergeSelected}
+            onClip={editor.clipSelected}
+            onToggleAI={() => (ai.isActive ? ai.disable() : ai.enable())}
+            onDeleteSelected={editor.deleteSelected}
+            onUndo={editor.undo}
+            canUndo={editor.canUndo}
+            onSave={handleSaveEdits}
+            onCancel={handleCancelEditing}
+            position="top-right"
+            className="top-[224px]"
           />
+        )}
 
-          {/* Layer Radio Buttons (bottom-left) - filtered during editing */}
-          <LayerRadioButtons
-            value={layerSelection}
-            onChange={setLayerSelection}
-            position="bottom-left"
-            availableLayers={
-              editingMode
-                ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
-                : undefined // Show all when not editing
-            }
-          />
+        {/* Add Base Patch Button (overlay) */}
+        {!selectedPatch && !isCompleted && !editingMode && (
+          <div className="absolute left-4 top-[224px] z-10 pointer-events-auto">
+            <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="shadow-lg">
+              Add Base Patch
+            </Button>
+          </div>
+        )}
+      </div>
 
-          {/* Editor Toolbar - shown during editing mode */}
-          {editingMode && (
-            <EditorToolbar
-              type={editingMode}
-              isDrawing={editor.isDrawing}
-              hasSelection={!!editor.selection && editor.selection.length > 0}
-              selectionCount={editor.selection?.length || 0}
-              isAIActive={ai.isActive}
-              isAIProcessing={ai.isProcessing}
-              onToggleDraw={() => {
-                console.debug("Toggle draw clicked, current isDrawing:", editor.isDrawing);
-                editor.toggleDraw();
-                console.debug("After toggle, isDrawing:", editor.isDrawing);
-              }}
-              onCutHole={editor.cutHoleWithDrawn}
-              onMerge={editor.mergeSelected}
-              onClip={editor.clipSelected}
-              onToggleAI={() => {
-                console.debug("Toggle AI clicked, current isActive:", ai.isActive);
-                if (ai.isActive) {
-                  ai.disable();
-                } else {
-                  ai.enable();
-                }
-                console.debug("After toggle, isActive:", ai.isActive);
-              }}
-              onDeleteSelected={editor.deleteSelected}
-              onUndo={editor.undo}
-              canUndo={editor.canUndo}
-              onSave={handleSaveEdits}
-              onCancel={handleCancelEditing}
-              position="top-left"
-            />
-          )}
-
-          {/* Add Base Patch Button (overlay) - show when no patch is selected and not completed and not editing */}
-          {!selectedPatch && !isCompleted && !editingMode && (
-            <div className="pointer-events-none absolute left-4 top-4 z-10">
-              <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="pointer-events-auto shadow-lg">
-                Add Base Patch
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar (only visible when a patch is selected and not editing) */}
-        {selectedPatch && selectedBasePatch && !editingMode && (
+      {/* Sidebar (floating on the right) */}
+      {selectedPatch && selectedBasePatch && !editingMode && (
+        <div className="absolute right-4 top-[224px] bottom-6 z-10 flex w-[420px] flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto">
           <PatchDetailSidebar
             basePatch={selectedBasePatch}
             selectedPatch={selectedPatch}
@@ -990,17 +980,13 @@ export default function ReferencePatchEditorView({
             onDeselect={handleDeselect}
             batchProgress={batchProgress}
             onDelete={async (patchId: number) => {
-              // Find the patch being deleted
               const patchToDelete = allPatches.find((p) => p.id === patchId);
               if (!patchToDelete) return;
 
-              // Always delete the entire base patch family
-              // First, find the base patch (20cm)
               let basePatch: IReferencePatch;
               if (patchToDelete.resolution_cm === 20) {
                 basePatch = patchToDelete;
               } else {
-                // Walk up the parent chain to find the base patch
                 let current = patchToDelete;
                 while (current.parent_tile_id) {
                   const parent = allPatches.find((p) => p.id === current.parent_tile_id);
@@ -1010,20 +996,15 @@ export default function ReferencePatchEditorView({
                 basePatch = current;
               }
 
-              // Find all descendants of the base patch
               const patchesToDelete: IReferencePatch[] = [basePatch];
-
-              // Find all direct children (10cm patches)
               const children10cm = allPatches.filter((p) => p.parent_tile_id === basePatch.id);
               patchesToDelete.push(...children10cm);
 
-              // Find all grandchildren (5cm patches)
               for (const child of children10cm) {
                 const children5cm = allPatches.filter((p) => p.parent_tile_id === child.id);
                 patchesToDelete.push(...children5cm);
               }
 
-              // Show confirmation modal with completion warning if applicable
               const completionWarning = isCompleted
                 ? "\n\n⚠️ Warning: Deleting patches will automatically reset this dataset's completion status. You'll need to mark it as complete again after making changes."
                 : "";
@@ -1036,7 +1017,6 @@ export default function ReferencePatchEditorView({
                 okType: "danger",
                 cancelText: "Cancel",
                 onOk: async () => {
-                  // Delete all patches in the family in parallel for better performance
                   message.loading({
                     content: `Deleting base patch and ${patchesToDelete.length - 1} sub-patches...`,
                     key: "delete",
@@ -1046,7 +1026,6 @@ export default function ReferencePatchEditorView({
                     patchesToDelete.map((patch) => deletePatch({ patchId: patch.id, datasetId: dataset.id })),
                   );
 
-                  // If dataset was marked as complete, automatically reset it
                   if (isCompleted) {
                     await onReopenForEditing();
                     message.success({
@@ -1064,8 +1043,8 @@ export default function ReferencePatchEditorView({
             }}
             onGenerateSubPatches={handleGenerateSubPatches}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

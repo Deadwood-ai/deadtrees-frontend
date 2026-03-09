@@ -125,7 +125,7 @@ export default function DatasetDetails() {
   const { isEditing, editingLayerType, editor, ai, hasDeadwood, hasForestCover, refreshKey } = editing;
   const SIDEBAR_LEFT_PX = 16;
   const SIDEBAR_WIDTH_PX = 384;
-  const SIDEBAR_BUTTON_TOP_PX = 144;
+  const SIDEBAR_BUTTON_TOP_PX = 112;
   const FLOAT_BUTTON_SIZE_PX = 36;
 	const TOGGLE_INSET_EXPANDED_PX = 24;
 
@@ -133,7 +133,7 @@ export default function DatasetDetails() {
     <div className="relative h-full w-full bg-slate-50 overflow-hidden">
       {/* Collapsible Sidebar */}
       <div
-        className={`absolute left-4 top-32 bottom-6 z-10 flex flex-col rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none -translate-x-full" : "w-96 opacity-100 translate-x-0"
+        className={`absolute left-4 top-24 bottom-6 z-10 flex flex-col rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none -translate-x-full" : "w-96 opacity-100 translate-x-0"
           }`}
       >
         <div className="flex-1 overflow-y-auto p-4 pr-5 pt-20">
@@ -153,8 +153,7 @@ export default function DatasetDetails() {
 
         {/* Download Section - fixed footer outside scroll area */}
         {!isEditing && (
-          <div className="shrink-0 border-t border-gray-200 bg-gradient-to-t from-gray-50 to-white px-4 pb-4 pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Downloads</p>
+          <div className="shrink-0 border-t border-slate-300/90 bg-slate-100/95 px-4 pb-4 pt-3 shadow-[0_-10px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
             <DownloadSection
               dataset={dataset}
               isFromGeonadir={isFromGeonadir}
@@ -203,7 +202,7 @@ export default function DatasetDetails() {
       <div className="absolute inset-0 z-0">
         {/* Layer Control Panel - hidden when editing */}
         {!isEditing && (
-          <div className="absolute right-4 top-32 z-10">
+          <div className="absolute right-4 top-24 z-10">
             <DatasetLayerControlPanel
               mapStyle={layerControl.mapStyle}
               onMapStyleChange={setMapStyle}

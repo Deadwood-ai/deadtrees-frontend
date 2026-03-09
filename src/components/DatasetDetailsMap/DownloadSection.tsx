@@ -110,7 +110,7 @@ export default function DownloadSection({
 
   return (
     <div className="shrink-0">
-      <div className="rounded-2xl border border-gray-200/60 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-slate-300/80 bg-white/98 p-4 shadow-md">
         <Space direction="vertical" className="w-full">
           {isDownloading && currentDownloadId !== dataset.id.toString() && (
             <div className="mb-2 text-center text-sm text-orange-500">Another download is in progress</div>

@@ -121,7 +121,7 @@ export default function Dataset() {
   return (
     <div className="relative h-full w-full bg-slate-50">
       {/* Floating Sidebar */}
-      <div className="absolute left-4 top-32 bottom-6 z-10 flex w-[380px] flex-col rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm pointer-events-auto">
+      <div className="absolute left-4 top-24 bottom-6 z-10 flex w-[380px] flex-col rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm pointer-events-auto">
         <div className="flex items-start justify-between pb-3">
           <div className="flex flex-col">
             <div className="flex items-center">
@@ -207,7 +207,7 @@ export default function Dataset() {
 
       {/* Full Map */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute right-4 top-32 z-10">
+        <div className="absolute bottom-6 right-4 z-10">
           <DatasetMapColorControl colorMode={colorMode} />
         </div>
         {!processedData ? (
