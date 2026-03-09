@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../hooks/useAuthProvider";
 import ReferencePatchEditorView from "../components/ReferencePatches/ReferencePatchEditorView";
 import { palette } from "../theme/palette";
+import { MAP_FLOATING_TOP_CLASS } from "../theme/mapLayout";
 
 export default function DatasetReferencePatchEditor() {
   const { id } = useParams();
@@ -206,8 +207,10 @@ export default function DatasetReferencePatchEditor() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex items-center justify-between border-b p-4">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-slate-50">
+      <div
+        className={`absolute left-4 right-4 ${MAP_FLOATING_TOP_CLASS} z-10 flex items-center justify-between rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto`}
+      >
         <div className="flex items-center gap-3">
           <Button icon={<ArrowLeftOutlined />} onClick={handleBack} />
           <div>
@@ -253,12 +256,14 @@ export default function DatasetReferencePatchEditor() {
         )}
       </div>
 
-      <ReferencePatchEditorView
-        dataset={dataset}
-        onUnsavedChanges={setHasUnsavedChanges}
-        isCompleted={dataset.has_ml_tiles === true}
-        onReopenForEditing={handleReopenForEditing}
-      />
+      <div className="absolute inset-0 z-0 bg-slate-50">
+        <ReferencePatchEditorView
+          dataset={dataset}
+          onUnsavedChanges={setHasUnsavedChanges}
+          isCompleted={dataset.has_ml_tiles === true}
+          onReopenForEditing={handleReopenForEditing}
+        />
+      </div>
     </div>
   );
 }

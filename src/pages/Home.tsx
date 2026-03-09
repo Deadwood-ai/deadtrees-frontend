@@ -1,32 +1,31 @@
+import { useMemo } from "react";
 import { Collapse } from "antd";
 
-import LogoBannerBand from "../components/Home/LogoBanner";
 import Hero from "../components/Home/Hero";
-import DataGallery from "../components/Home/DataGallery";
-import Features from "../components/Home/Features";
-import Roadmap from "../components/Home/Roadmap";
+import HowItWorks from "../components/Home/HowItWorks";
+import PlatformFeatures from "../components/Home/PlatformFeatures";
 import GetInContact from "../components/Home/GetInContact";
 
 import { useData } from "../hooks/useDataProvider";
 
-const logos = [
-  { path: "assets/logos/esa.jpg" },
-  { path: "assets/logos/dfg.jpeg" },
-  { path: "assets/logos/uni-freiburg.png" },
-  { path: "RSC4Earth" },
-  { path: "assets/logos/NFDI4Earth_logo.jpg" },
-  { path: "assets/logos/scads.png" },
-  { path: "assets/logos/MLR.png" },
-  { path: "assets/logos/dlr.jpeg" },
-  { path: "assets/logos/geonadir.png" },
-  { path: "assets/logos/bmwk.jpg", height: "h-24" },
-];
+const FAQ_ITEM_STYLE = {
+	border: "1px solid #e2e8f0",
+	borderRadius: "0.75rem",
+	marginBottom: "16px",
+	padding: "12px 24px",
+	backgroundColor: "#ffffff",
+	boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+};
+
 
 const FAQ = () => {
   const { authors } = useData();
-  const contributorNames = (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b));
+  const contributorNames = useMemo(
+    () => (authors || []).map((author) => author.label).sort((a, b) => a.localeCompare(b)),
+    [authors],
+  );
 
-  const FAQItems = [
+  const FAQItems = useMemo(() => [
     {
       key: "1",
       label: <span className="m-0 pt-4 text-lg text-gray-500">Who is behind deadtrees.earth?</span>,
@@ -48,16 +47,7 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "2",
@@ -65,23 +55,14 @@ const FAQ = () => {
 
       children: (
         <div>
-          <p className="text-md">
-            The data is processed to detect standing deadwood and used to train our machine learning models. By default,
-            all uploaded data is made publicly available under the Creative Commons Attribution (CC BY) license, though
-            you can request private usage for model training only if needed.
-          </p>
+              <p className="text-md">
+                The data is processed to detect forest cover and tree mortality to train our machine learning models. By default,
+                all uploaded data is made publicly available under the Creative Commons Attribution (CC BY) license, though
+                you can request private usage for model training only if needed.
+              </p>
         </div>
       ),
-      style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "3",
@@ -120,16 +101,7 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "4",
@@ -154,30 +126,20 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
     {
       key: "5",
       label: <span className="m-0 pt-4 text-lg text-gray-500">What kinds of data can I contribute?</span>,
       children: (
         <div>
-          <p className="text-md">
-            We primarily seek high-resolution aerial orthophotos showing forest areas with standing deadwood. To be
-            suitable for our platform:
-          </p>
-          <ul className="text-md list-disc pl-5">
-            <li>
-              <strong>Resolution:</strong> Better than 10 cm (higher resolution provides better detection results)
-            </li>
+              <p className="text-md">
+                We seek high-resolution aerial imagery of any forest areas. <strong>All forest data is valuable</strong>, whether it contains healthy trees or standing deadwood. To be suitable for our platform:
+              </p>
+              <ul className="text-md list-disc pl-5">
+                <li>
+                  <strong>Resolution:</strong> Better than 10 cm (higher resolution provides better detection results)
+                </li>
             <li>
               <strong>Format:</strong> GeoTIFF or ZIP of raw images (recommended overlap 85% vs. 75%)
             </li>
@@ -195,51 +157,38 @@ const FAQ = () => {
           </p>
         </div>
       ),
-      style: {
-        border: "none",
-        borderRadius: "0.5rem",
-        marginBottom: "24px",
-        paddingLeft: "24px",
-        paddingRight: "24px",
-        paddingTop: "16px",
-        paddingBottom: "16px",
-        backgroundColor: "rgb(241 245 249)",
-      },
+      style: FAQ_ITEM_STYLE,
     },
-  ];
+  ], [contributorNames]);
 
   return (
-    <div className="my-24 px-4 md:mt-36">
-      <h1 className="m-auto text-center text-3xl font-semibold text-gray-800 md:text-4xl">
-        Frequently Asked Questions
-      </h1>
-      <Collapse
-        bordered={false}
-        style={{ backgroundColor: "transparent" }}
-        // defaultActiveKey={["1"]}
-        className="w-5xl mt-16"
-        items={FAQItems}
-      />
-    </div>
+    <section className="w-full bg-white py-24 md:py-32">
+      <div className="m-auto max-w-4xl px-4 md:px-8">
+        <div className="mb-12 text-center">
+          <p className="mb-2 text-lg font-semibold uppercase tracking-wider text-[#1B5E35]">Support</p>
+          <h2 className="m-0 text-3xl font-semibold text-gray-800 md:text-4xl">
+            Frequently Asked Questions
+          </h2>
+        </div>
+        <Collapse
+          bordered={false}
+          style={{ backgroundColor: "transparent" }}
+          className="w-full"
+          items={FAQItems}
+        />
+      </div>
+    </section>
   );
 };
 
 export default function HomePage() {
   return (
-    <div className="pb-1">
+    <div className="w-full bg-white">
       <Hero />
-      <section className="w-full border-y border-slate-100 bg-white">
-        <div className="m-auto max-w-6xl px-4 md:px-0">
-          <LogoBannerBand logos={logos} title="Supported by" />
-        </div>
-      </section>
-      <div className="m-auto max-w-6xl px-4 md:px-0">
-        <DataGallery />
-        <Features />
-        <Roadmap />
-        <GetInContact />
-        <FAQ />
-      </div>
+      <HowItWorks />
+      <PlatformFeatures />
+      <GetInContact />
+      <FAQ />
     </div>
   );
 }

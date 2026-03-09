@@ -50,6 +50,9 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
   const adminLevel3 = item.admin_level_3 || item.admin_level_2 || "";
   const adminLevel1 = item.admin_level_1 || "";
   const firstAuthor = item.authors?.[0] || "";
+  const truncatedFirstAuthor = firstAuthor
+    ? firstAuthor.slice(0, 16) + (firstAuthor.length > 16 ? "..." : "")
+    : "";
   const biomeName = item.biome_name;
   const biomeLabel = biomeName || "Unknown";
   const biomeColor = getBiomeTagColor(biomeName);
@@ -65,40 +68,40 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
       onMouseLeave={handleMouseLeave}
       onClick={() => onClickHandler(item)}
     >
-      <div className="relative h-16 w-16 overflow-hidden rounded-lg">
+      <div className="relative h-16 w-16 min-h-16 min-w-16 shrink-0 overflow-hidden rounded-lg">
         <img
           src={item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"}
           className="m-0 h-full w-full scale-150 object-cover transition-transform hover:z-10"
           loading="lazy"
         />
       </div>
-      <div className="flex flex-1 flex-col justify-between pl-3">
-        <div className="flex justify-between">
-          <div className="flex items-baseline">
+      <div className="flex flex-1 flex-col justify-between pl-3 min-w-0">
+        <div className="flex justify-between items-start gap-1">
+          <div className="flex items-baseline min-w-0 flex-1 truncate">
             <Tooltip title={adminLevel3}>
               <Button
                 type="text"
                 size="small"
-                className=" max-content m-0 ml-1 p-0 font-semibold"
+                className="max-content m-0 p-0 font-semibold truncate"
                 onClick={(e) => onClickFilterHandler(e, adminLevel3, "admin_level_3")}
               >
-                {adminLevel3.slice(0, 15) + (adminLevel3.length > 15 ? "..." : "")}
+                {adminLevel3.slice(0, 16) + (adminLevel3.length > 16 ? "..." : "")}
               </Button>
             </Tooltip>
-            {adminLevel3 && ","}
+            {adminLevel3 && <span className="mr-1">,</span>}
             <Tooltip title={adminLevel1}>
               <Button
                 type="text"
                 size="small"
-                className="max-content m-0 ml-1 p-0 font-semibold"
+                className="max-content m-0 p-0 font-semibold shrink-0"
                 onClick={(e) => onClickFilterHandler(e, adminLevel1, "admin_level_1")}
               >
                 {countryList[adminLevel1 as keyof typeof countryList]}
               </Button>
             </Tooltip>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="pt-0.5 text-xs">
+          <div className="flex flex-col items-end shrink-0 pl-1">
+            <div className="pt-0.5 text-xs whitespace-nowrap">
               {new Date(
                 parseInt(item.aquisition_year),
                 item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
@@ -111,19 +114,16 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
             </div>
           </div>
         </div>
-        <div className="flex space-x-1">
-          <div className="flex-1">
+        <div className="flex items-center gap-1">
+          <div className="min-w-0 flex-1">
             <Tooltip title={item.authors?.join(", ")}>
               <Button
                 size="small"
-                className="truncate font-medium"
+                className="inline-block max-w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-left font-medium"
                 onClick={(e) => onClickFilterHandler(e, firstAuthor, "authors_image")}
               >
-                {firstAuthor
-                  ? firstAuthor.slice(0, 18) +
-                    (firstAuthor.length > 18 ? "..." : "") +
-                    (item.authors && item.authors.length > 1 ? ` +${item.authors.length - 1}` : "")
-                  : ""}
+                {truncatedFirstAuthor}
+                {item.authors && item.authors.length > 1 ? ` +${item.authors.length - 1}` : ""}
               </Button>
             </Tooltip>
           </div>
@@ -131,7 +131,7 @@ const ListItem = ({ item, index, setHoveredItem, hoveredItem, onFilterClick }: L
           <Tooltip title={biomeName || "Unknown biome"}>
             <Tag
               color={biomeColor}
-              className="m-0 cursor-pointer select-none"
+              className="m-0 inline-flex w-fit shrink-0 cursor-pointer select-none"
               onClick={(e) => {
                 if (!biomeName) return;
                 onClickFilterHandler(e, biomeName, "biome");

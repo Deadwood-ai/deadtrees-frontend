@@ -23,6 +23,7 @@ import {
 	FinalAssessmentCard,
 } from "./AuditStepCards";
 import AuditMapWithControls, { AuditMapWithControlsHandle } from "./AuditMapWithControls";
+import { MAP_AUDIT_SIDEBAR_WIDTH_CLASS, MAP_FLOATING_TOP_CLASS } from "../../theme/mapLayout";
 
 interface DatasetAuditDetailProps {
 	dataset: IDataset;
@@ -196,9 +197,11 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 	}
 
 	return (
-		<div className="flex h-full w-full overflow-hidden">
+		<div className="relative flex h-screen w-full overflow-hidden bg-slate-50">
 			{/* Sidebar */}
-			<div className="flex w-96 flex-shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-gray-50">
+			<div
+				className={`absolute bottom-6 left-4 ${MAP_FLOATING_TOP_CLASS} z-10 flex ${MAP_AUDIT_SIDEBAR_WIDTH_CLASS} flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto`}
+			>
 				{/* Header - hidden when editing */}
 				{!isPolygonEditing && (
 					<AuditHeader dataset={dataset} auditData={auditData} onCancel={handleCancel} />
@@ -280,13 +283,15 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 
 			{/* Map - wrapped in provider for layer controls */}
 			<DatasetDetailsMapProvider>
-				<AuditMapWithControls
-					ref={mapRef}
-					dataset={dataset}
-					onAOIChange={handleAOIChange}
-					onToolbarStateChange={setAoiToolbarState}
-					onEditingStateChange={handleEditingStateChange}
-				/>
+				<div className="absolute inset-0 z-0">
+					<AuditMapWithControls
+						ref={mapRef}
+						dataset={dataset}
+						onAOIChange={handleAOIChange}
+						onToolbarStateChange={setAoiToolbarState}
+						onEditingStateChange={handleEditingStateChange}
+					/>
+				</div>
 			</DatasetDetailsMapProvider>
 		</div>
 	);

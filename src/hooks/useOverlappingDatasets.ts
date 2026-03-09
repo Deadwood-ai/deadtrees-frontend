@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { IDataset } from "../types/dataset";
-import { useDatasets } from "./useDatasets";
+import { Settings } from "../config";
 
 interface OverlappingDataset {
   dataset_id: number;
@@ -9,12 +9,10 @@ interface OverlappingDataset {
 }
 
 export function useOverlappingDatasets(datasetId: number | undefined) {
-  const { data: allDatasets } = useDatasets();
-
   const query = useQuery({
     queryKey: ["overlappingDatasets", datasetId],
     queryFn: async (): Promise<IDataset[]> => {
-      if (!datasetId || !allDatasets) {
+      if (!datasetId) {
         return [];
       }
 
@@ -37,22 +35,42 @@ export function useOverlappingDatasets(datasetId: number | undefined) {
         // Include the current dataset in the list for proper navigation
         const datasetIds = new Set([datasetId, ...(data as OverlappingDataset[]).map((item) => item.dataset_id)]);
 
-        // Get full dataset objects from dataset IDs
-        const overlappingDatasets = Array.from(datasetIds)
-          .map((id) => allDatasets.find((d) => d.id === id))
-          .filter(Boolean) as IDataset[];
+        const ids = Array.from(datasetIds);
+        if (ids.length === 0) return [];
+
+        // Fetch only overlapping datasets instead of loading all datasets and filtering client-side.
+        const { data: datasets, error: datasetsError } = await supabase
+          .from(Settings.DATA_TABLE_PUBLIC)
+          .select("*")
+          .in("id", ids);
+
+        if (datasetsError || !datasets) {
+          if (datasetsError) {
+            console.error("Error fetching overlapping dataset details:", datasetsError);
+          }
+          return [];
+        }
+
+        const overlappingDatasets = datasets as IDataset[];
 
         // Sort by acquisition date
         return overlappingDatasets.sort((a, b) => {
+          const aYear = parseInt(String(a.aquisition_year || ""), 10);
+          const bYear = parseInt(String(b.aquisition_year || ""), 10);
+          const aMonth = parseInt(String(a.aquisition_month || ""), 10);
+          const bMonth = parseInt(String(b.aquisition_month || ""), 10);
+          const aDay = parseInt(String(a.aquisition_day || ""), 10);
+          const bDay = parseInt(String(b.aquisition_day || ""), 10);
+
           const dateA = new Date(
-            a.aquisition_year,
-            a.aquisition_month ? a.aquisition_month - 1 : 0,
-            a.aquisition_day || 1,
+            Number.isNaN(aYear) ? 1970 : aYear,
+            Number.isNaN(aMonth) ? 0 : Math.max(0, aMonth - 1),
+            Number.isNaN(aDay) ? 1 : aDay,
           );
           const dateB = new Date(
-            b.aquisition_year,
-            b.aquisition_month ? b.aquisition_month - 1 : 0,
-            b.aquisition_day || 1,
+            Number.isNaN(bYear) ? 1970 : bYear,
+            Number.isNaN(bMonth) ? 0 : Math.max(0, bMonth - 1),
+            Number.isNaN(bDay) ? 1 : bDay,
           );
           return dateA.getTime() - dateB.getTime();
         });
@@ -61,7 +79,7 @@ export function useOverlappingDatasets(datasetId: number | undefined) {
         return [];
       }
     },
-    enabled: !!datasetId && !!allDatasets,
+    enabled: !!datasetId,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 

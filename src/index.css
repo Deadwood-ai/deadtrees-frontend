@@ -2,25 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --dt-primary: #1f5faf;
-  --dt-primary-rgb: 31 95 175;
-  --dt-secondary: #2f7d4a;
-  --dt-secondary-rgb: 47 125 74;
-  --dt-forest: #29d280;
-  --dt-forest-rgb: 41 210 128;
-  --dt-deadwood: #ffb31c;
-  --dt-deadwood-rgb: 255 179 28;
-  --dt-deadwood-dark: #cc8f16;
-  --dt-surface-base: #f8fafc;
-  --dt-surface-base-rgb: 248 250 252;
-  --dt-surface-raised: #ffffff;
-  --dt-surface-raised-rgb: 255 255 255;
-  --dt-surface-soft: #e1efff;
-  --dt-surface-soft-rgb: 225 239 255;
-  --dt-text-primary: #1f2937;
-  --dt-text-primary-rgb: 31 41 55;
-}
+/* Theme variables are injected at runtime from src/theme/palette.ts */
 
 /* OpenLayers Attribution Control - position in bottom-left */
 .ol-attribution {
@@ -34,6 +16,14 @@
   padding: 2px 6px;
   font-size: 11px;
   z-index: 40;
+}
+
+/* Push OpenLayers zoom controls down to avoid floating header and sidebars */
+.ol-zoom {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  right: 16px !important;
+  left: auto !important;
 }
 
 .ol-attribution.ol-collapsed {

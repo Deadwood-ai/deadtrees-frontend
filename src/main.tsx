@@ -10,26 +10,31 @@ import DownloadProvider from "./hooks/useDownloadProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CookieBanner } from "./components/cookieBanner/CookieBanner";
 import { applyCanvasOptimization } from "./utils/canvasOptimization";
+import { applyThemeCssVariables } from "./theme/cssVariables";
+import { BrowserRouter } from "react-router-dom";
 
+applyThemeCssVariables();
 applyCanvasOptimization();
 
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <DataProvider>
-        <DatasetMapProvider>
-          <DatasetDetailsMapProvider>
-            <DatasetFilterProvider>
-              <DownloadProvider>
-                <App />
-                <CookieBanner />
-              </DownloadProvider>
-            </DatasetFilterProvider>
-          </DatasetDetailsMapProvider>
-        </DatasetMapProvider>
-      </DataProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <DataProvider>
+          <DatasetMapProvider>
+            <DatasetDetailsMapProvider>
+              <DatasetFilterProvider>
+                <DownloadProvider>
+                  <App />
+                  <CookieBanner />
+                </DownloadProvider>
+              </DatasetFilterProvider>
+            </DatasetDetailsMapProvider>
+          </DatasetMapProvider>
+        </DataProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>,
 );

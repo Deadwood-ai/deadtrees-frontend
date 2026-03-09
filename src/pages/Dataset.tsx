@@ -1,20 +1,22 @@
 import { useMemo, useState, useEffect } from "react";
-import { Button, Col, Row, Tag, Input, Spin, Tooltip, Checkbox } from "antd";
+import { Button, Tag, Input, Spin, Tooltip, Checkbox } from "antd";
 import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
-import DatasetMapOL from "../components/DatasetMap/DatasetMap";
-import { CloseOutlined } from "@ant-design/icons";
+import DatasetMapOL, { type DatasetMapColorMode } from "../components/DatasetMap/DatasetMap";
+import DatasetMapColorControl from "../components/DatasetMap/DatasetMapColorControl";
+import { CloseOutlined, UploadOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { usePublicDatasets } from "../hooks/useDatasets";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 import { isDatasetViewable } from "../utils/datasetVisibility";
 
-type SortDirection = "asc" | "desc";
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
 
 export default function Dataset() {
+  const navigate = useNavigate();
   const { data: allData } = usePublicDatasets();
   const { filteredData } = useFilteredDatasets(allData);
 
@@ -22,7 +24,6 @@ export default function Dataset() {
   const {
     filter,
     setFilter,
-    filterTag,
     setFilterTag,
     advancedFilters,
     setAdvancedFilters,
@@ -38,6 +39,7 @@ export default function Dataset() {
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const colorMode: DatasetMapColorMode = "year";
   // Incremented on explicit filter actions to trigger map zoom
   const [filterZoomTrigger, setFilterZoomTrigger] = useState(0);
 
@@ -117,51 +119,46 @@ export default function Dataset() {
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
   return (
-    <Row
-      className="bg-slate-50"
-      style={{
-        width: "100%",
-        height: "100%",
-      }}
-    >
-      <Col className="flex h-full w-96 flex-col px-2 pt-2 align-middle">
-        {filter ? (
-          <div className="flex justify-between pb-2">
+    <div className="relative h-full w-full bg-slate-50">
+      {/* Floating Sidebar */}
+      <div className="absolute left-4 top-24 bottom-6 z-10 flex w-[380px] flex-col rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm pointer-events-auto">
+        <div className="flex items-start justify-between pb-3">
+          <div className="flex flex-col">
             <div className="flex items-center">
-              <h4 className="p m-0">Filtered by: </h4>
-              {
-                <Tag className="m-0 ml-1" color="blue">
-                  <span className="text-sm font-medium">
-                    {filterDisplay.slice(0, 10) + (filterDisplay.length > 10 ? "..." : "")}
+              <h4 className="m-0 pr-2 font-medium text-gray-600">Images: </h4>
+              <Tag className="m-0 font-semibold text-gray-700 bg-gray-100 border-gray-200">
+                <span>{processedData?.length}</span>
+              </Tag>
+            </div>
+            {filter && (
+              <div className="flex items-center mt-2">
+                <span className="text-xs text-gray-500 mr-2">Filtered by:</span>
+                <Tag className="m-0 flex items-center gap-1" color="blue">
+                  <span className="text-xs font-medium">
+                    {filterDisplay.slice(0, 15) + (filterDisplay.length > 15 ? "..." : "")}
                   </span>
                   <Button
-                    className=" ml-2 border-none bg-transparent"
+                    className="border-none bg-transparent h-auto p-0 ml-1 flex items-center justify-center text-blue-500 hover:text-blue-700"
                     size="small"
-                    shape="circle"
                     onClick={() => {
                       setFilter("");
                       setFilterTag("platform");
                     }}
-                    icon={<CloseOutlined />}
+                    icon={<CloseOutlined className="text-[10px]" />}
                   />
                 </Tag>
-              }
-            </div>
-            <div className="flex items-center">
-              <h4 className="m-0 pr-2">Images: </h4>
-              <Tag>
-                <span>{processedData?.length}</span>
-              </Tag>
-            </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex items-center justify-end pb-2">
-            <h4 className="m-0 pr-2">Images: </h4>
-            <Tag>
-              <span>{processedData?.length}</span>
-            </Tag>
-          </div>
-        )}
+          <Button 
+            type="primary" 
+            icon={<UploadOutlined />} 
+            onClick={() => navigate("/profile")}
+            className="shadow-sm font-medium"
+          >
+            Upload Data
+          </Button>
+        </div>
 
         <div className="flex flex-col gap-2 pb-4">
           <div className="flex">
@@ -206,8 +203,13 @@ export default function Dataset() {
             <Spin size="large" tip="Loading data..." />
           </div>
         )}
-      </Col>
-      <Col className="flex-1 pt-2">
+      </div>
+
+      {/* Full Map */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute bottom-6 right-4 z-10">
+          <DatasetMapColorControl colorMode={colorMode} />
+        </div>
         {!processedData ? (
           <div className="flex h-full items-center justify-center">
             <Spin size="large" tip="Loading map..." />
@@ -224,9 +226,10 @@ export default function Dataset() {
             setHoveredItem={setHoveredItem}
             setVisibleFeatures={setVisibleFeatures}
             filterZoomTrigger={filterZoomTrigger}
+            colorMode={colorMode}
           />
         )}
-      </Col>
+      </div>
 
       {/* Filter Modal */}
       <FilterModal
@@ -235,6 +238,6 @@ export default function Dataset() {
         onApplyFilters={handleApplyFilters}
         currentFilters={advancedFilters}
       />
-    </Row>
+    </div>
   );
 }

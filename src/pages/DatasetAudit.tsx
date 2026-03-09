@@ -20,6 +20,7 @@ import {
 	Drawer,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery } from "@tanstack/react-query";
 import {
 	SearchOutlined,
 	FilterOutlined,
@@ -40,6 +41,7 @@ import { usePendingCorrections } from "../hooks/usePendingCorrections";
 import { palette } from "../theme/palette";
 import { getBiomeEmoji, getBiomeTagColor, truncateBiomeLabel } from "../utils/biomeDisplay";
 import { useDatasetLogs, useProcessingOverview, ProcessingOverviewRow, ProcessingStatus } from "../hooks/useProcessingOverview";
+import { getAcquisitionPeriod } from "../utils/phenologyUtils";
 
 const { Title, Text } = Typography;
 
@@ -68,6 +70,7 @@ const PROCESSING_STATE_TO_FIELD: Record<ProcessingStateFilterKey, keyof IDataset
 	forestCover: "is_forest_cover_done",
 	metadata: "is_metadata_done",
 };
+const DEFAULT_PROCESSING_STATE_FILTERS: ProcessingStateFilterKey[] = PROCESSING_STATE_OPTIONS.map((option) => option.value);
 
 const BADGE_OVERFLOW_COUNT = 999999;
 const DEFAULT_PROCESSING_STATUS_FILTERS: ProcessingStatus[] = ["QUEUED", "PROCESSING", "FAILED"];
@@ -116,6 +119,25 @@ const compareNullableNumbers = (a: number | null | undefined, b: number | null |
 	if (aNum === null) return 1; // nulls last
 	if (bNum === null) return -1;
 	return aNum - bNum;
+};
+
+const getPhenologyProbability = (dataset: IDataset, curve: number[] | null | undefined): number | null => {
+	if (!curve || curve.length === 0) return null;
+
+	const year = parseInt(dataset.aquisition_year, 10);
+	if (isNaN(year)) return null;
+
+	const parsedMonth = parseInt(dataset.aquisition_month, 10);
+	const parsedDay = parseInt(dataset.aquisition_day, 10);
+	const month = !isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12 ? parsedMonth : undefined;
+	const day = !isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31 ? parsedDay : undefined;
+
+	const period = getAcquisitionPeriod(year, month, day);
+	const index = Math.max(0, Math.min(curve.length - 1, period.centerDay - 1));
+	const value = curve[index];
+	if (typeof value !== "number" || Number.isNaN(value)) return null;
+
+	return Math.max(0, Math.min(1, value / 255));
 };
 
 const getAcquisitionMonthIndex = (dataset: IDataset): number | null => {
@@ -221,8 +243,8 @@ function DatasetAuditInner() {
 	const [auditorFilter, setAuditorFilter] = useState<string>(initialAuditor);
 	const [contributorFilter, setContributorFilter] = useState<string>(initialContributor);
 	const [hasFlagsFilter, setHasFlagsFilter] = useState<boolean>(initialHasFlags);
-	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>([]);
-	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(false);
+	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>(DEFAULT_PROCESSING_STATE_FILTERS);
+	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(true);
 	const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
 	const [processingStatusFilters, setProcessingStatusFilters] = useState<ProcessingStatus[]>(
 		DEFAULT_PROCESSING_STATUS_FILTERS
@@ -479,11 +501,66 @@ function DatasetAuditInner() {
 		referenceDatasetIds,
 	]);
 
+	const pendingDatasetIds = useMemo(() => {
+		if (activeTab !== "pending") return [];
+		return filteredDatasets.map((dataset) => dataset.id);
+	}, [activeTab, filteredDatasets]);
+
+	const { data: pendingPhenologyProbabilityMap = new Map<number, number | null>(), isLoading: isPendingPhenologyLoading } = useQuery({
+		queryKey: ["audit-pending-phenology-probabilities", pendingDatasetIds],
+		enabled: activeTab === "pending" && pendingDatasetIds.length > 0,
+		queryFn: async () => {
+			const datasetById = new Map(filteredDatasets.map((dataset) => [dataset.id, dataset]));
+			const probabilities = new Map<number, number | null>();
+			pendingDatasetIds.forEach((id) => probabilities.set(id, null));
+
+			const chunkSize = 500;
+			for (let i = 0; i < pendingDatasetIds.length; i += chunkSize) {
+				const chunk = pendingDatasetIds.slice(i, i + chunkSize);
+				const { data, error } = await supabase
+					.from("v2_metadata")
+					.select("dataset_id, metadata")
+					.in("dataset_id", chunk);
+
+				if (error) throw error;
+
+				for (const row of data || []) {
+					const datasetId = (row as { dataset_id?: number }).dataset_id;
+					if (typeof datasetId !== "number") continue;
+
+					const curve = (row as { metadata?: { phenology?: { phenology_curve?: number[] } } }).metadata?.phenology?.phenology_curve;
+					const dataset = datasetById.get(datasetId);
+					if (!dataset) continue;
+
+					probabilities.set(datasetId, getPhenologyProbability(dataset, curve));
+				}
+			}
+
+			return probabilities;
+		},
+		staleTime: 5 * 60 * 1000,
+	});
+
+	const sortedFilteredDatasets = useMemo(() => {
+		if (activeTab !== "pending") return filteredDatasets;
+
+		return [...filteredDatasets].sort((a, b) => {
+			const aProb = pendingPhenologyProbabilityMap.get(a.id);
+			const bProb = pendingPhenologyProbabilityMap.get(b.id);
+			const aValue = typeof aProb === "number" ? aProb : -1;
+			const bValue = typeof bProb === "number" ? bProb : -1;
+			if (bValue !== aValue) return bValue - aValue;
+			return b.id - a.id;
+		});
+	}, [activeTab, filteredDatasets, pendingPhenologyProbabilityMap]);
+
 	// Update navigation context with filtered dataset IDs (sorted by ID descending to match table order)
-	const filteredIds = useMemo(
-		() => [...filteredDatasets].sort((a, b) => b.id - a.id).map((d) => d.id),
-		[filteredDatasets]
-	);
+	const filteredIds = useMemo(() => {
+		if (activeTab === "pending") {
+			return sortedFilteredDatasets.map((dataset) => dataset.id);
+		}
+		return [...filteredDatasets].sort((a, b) => b.id - a.id).map((dataset) => dataset.id);
+	}, [activeTab, sortedFilteredDatasets, filteredDatasets]);
 
 	useEffect(() => {
 		setFilteredDatasetIds(filteredIds);
@@ -670,7 +747,7 @@ function DatasetAuditInner() {
 			dataIndex: "id",
 			key: "id",
 			sorter: (a, b) => a.id - b.id,
-			defaultSortOrder: "descend",
+			defaultSortOrder: activeTab === "pending" ? undefined : "descend",
 			width: 80,
 		},
 		{
@@ -727,6 +804,29 @@ function DatasetAuditInner() {
 			return rank(aAudit?.has_valid_phenology ?? null) - rank(bAudit?.has_valid_phenology ?? null);
 		},
 		width: 100,
+	};
+
+	const pendingPhenologyProbabilityColumn = {
+		title: "Phenology Prob.",
+		key: "phenology_probability",
+		render: (_: unknown, record: IDataset) => {
+			const probability = pendingPhenologyProbabilityMap.get(record.id);
+			if (typeof probability !== "number") {
+				return <Tag color="default">—</Tag>;
+			}
+
+			const pct = Math.round(probability * 100);
+			const color = pct >= 70 ? "green" : pct >= 40 ? "gold" : "red";
+			return <Tag color={color}>{pct}%</Tag>;
+		},
+		sorter: (a: IDataset, b: IDataset) => {
+			const aProb = pendingPhenologyProbabilityMap.get(a.id);
+			const bProb = pendingPhenologyProbabilityMap.get(b.id);
+			const aValue = typeof aProb === "number" ? aProb : -1;
+			const bValue = typeof bProb === "number" ? bProb : -1;
+			return aValue - bValue;
+		},
+		width: 130,
 	};
 
 	// Notes/Description column - only for Completed tab
@@ -972,8 +1072,8 @@ function DatasetAuditInner() {
 	// Assemble columns based on tab
 	let columns: ColumnsType<IDataset>;
 	if (activeTab === "pending") {
-		// Pending: no season (determined during audit), include flags and contributor
-		columns = [...baseColumns, flagsColumn, contributorColumn, actionsColumn];
+		// Pending: include derived phenology probability, flags and contributor
+		columns = [...baseColumns, pendingPhenologyProbabilityColumn, flagsColumn, contributorColumn, actionsColumn];
 	} else if (activeTab === "completed") {
 		// Completed: season, notes, flags, status, auditor
 		columns = [...baseColumns, seasonColumn, notesColumn, flagsColumn, statusColumn, auditorColumn, actionsColumn];
@@ -1012,84 +1112,89 @@ function DatasetAuditInner() {
 		statusFilter !== "all";
 
 	return (
-		<div className="p-6">
-			{/* Header */}
-			<div className="mb-6 flex items-center justify-between">
-				<Title level={3} style={{ margin: 0 }}>
-					Dataset Audits
-				</Title>
-				<Button
-					type="link"
-					href="https://docs.google.com/document/d/1EQ52zDOU6X6ze1g-xKd381IPziv72Pt4QV18YDYqIUo/edit"
-					target="_blank"
-					rel="noopener noreferrer"
-					icon={<span className="mr-1">📋</span>}
-				>
-					Audit Protocol
-				</Button>
-			</div>
+		<div className="w-full bg-[#F8FAF9] min-h-[calc(100vh-64px)] pb-24 pt-24 md:pt-28">
+			<div className="mx-auto max-w-[1920px] px-4 md:px-8 xl:px-12">
+				{/* Header */}
+				<div className="mb-8 flex items-center justify-between">
+					<Title level={2} style={{ margin: 0, fontWeight: 700 }}>
+						Dataset Audits
+					</Title>
+					<Button
+						type="primary"
+						ghost
+						href="https://docs.google.com/document/d/1EQ52zDOU6X6ze1g-xKd381IPziv72Pt4QV18YDYqIUo/edit"
+						target="_blank"
+						rel="noopener noreferrer"
+						icon={<span className="mr-1">📋</span>}
+						className="shadow-sm"
+					>
+						Audit Protocol
+					</Button>
+				</div>
 
-			{/* Tabs with badges */}
-			<div className="mb-4">
-				<Segmented
-					value={activeTab}
-					onChange={(value) => {
-						setActiveTab(value as AuditTab);
-						setStatusFilter("all");
-					}}
-					options={[
-						{
-							label: (
-								<Space size={6}>
-									<span>📋 Pending</span>
-									<Badge count={pendingCount} size="small" color={palette.primary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "pending",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>✓ Completed</span>
-									<Badge count={completedCount} size="small" color={palette.state.success} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "completed",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>🔔 Edits & Flags</span>
-									<Badge count={editsFlagsCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "edits-flags",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>📌 Reference</span>
-									<Badge count={referenceCount} size="small" color={palette.secondary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "reference",
-						},
-						{
-							label: (
-								<Space size={6}>
-									<span>⚙️ Processing</span>
-									<Badge count={processingCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
-								</Space>
-							),
-							value: "processing",
-						},
-					]}
-					size="large"
-				/>
-			</div>
+				{/* Tabs with badges */}
+				<div className="mb-6">
+					<Segmented
+						value={activeTab}
+						onChange={(value) => {
+							setActiveTab(value as AuditTab);
+							setStatusFilter("all");
+						}}
+						className="shadow-sm border border-gray-200/50"
+						options={[
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>📋 Pending</span>
+										<Badge count={pendingCount} size="small" color={palette.primary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "pending",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>✓ Completed</span>
+										<Badge count={completedCount} size="small" color={palette.state.success} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "completed",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>🔔 Edits & Flags</span>
+										<Badge count={editsFlagsCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "edits-flags",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>📌 Reference</span>
+										<Badge count={referenceCount} size="small" color={palette.secondary[500]} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "reference",
+							},
+							{
+								label: (
+									<Space size={6} className="py-1 px-2">
+										<span>⚙️ Processing</span>
+										<Badge count={processingCount} size="small" color={palette.state.warning} showZero overflowCount={BADGE_OVERFLOW_COUNT} />
+									</Space>
+								),
+								value: "processing",
+							},
+						]}
+						size="large"
+					/>
+				</div>
 
-			{activeTab === "processing" && (
-				<>
+				<div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm">
+					{activeTab === "processing" && (
+						<>
 					<div className="mb-4 flex flex-wrap items-end gap-3 rounded-md border border-gray-100 bg-gray-50 p-3">
 						<div>
 							<Text type="secondary" className="block mb-1 text-xs">
@@ -1236,213 +1341,215 @@ function DatasetAuditInner() {
 
 			{activeTab !== "processing" && (
 				<>
-			{/* Filters Panel */}
-			<Collapse
-				activeKey={filtersExpanded ? ["filters"] : []}
-				onChange={() => setFiltersExpanded(!filtersExpanded)}
-				className="mb-4"
-				items={[
-					{
-						key: "filters",
-						label: (
-							<Space>
-								<FilterOutlined />
-								<span>Filters</span>
-								{hasActiveFilters && (
-									<Badge
-										count={filteredDatasets.length}
-										size="small"
-										overflowCount={BADGE_OVERFLOW_COUNT}
-										style={{ backgroundColor: palette.primary[500] }}
-									/>
-								)}
-							</Space>
-						),
-						children: (
-							<div className="space-y-4">
-								{/* Row 1: Status, ID, Biome, Country */}
-								<div className="flex flex-wrap gap-4">
-									{activeTab === "completed" && (
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Status
-											</Text>
-											<Select
-												value={statusFilter}
-												onChange={setStatusFilter}
-												style={{ width: 150 }}
-												options={[
-													{ label: "All", value: "all" },
-													{ label: "Ready", value: "ready" },
-													{ label: "Fixable", value: "fixable" },
-													{ label: "Excluded", value: "excluded" },
-													{ label: "Needs Review", value: "needs-review" },
-													{ label: "Reviewed", value: "reviewed" },
-												]}
+					{/* Filters Panel */}
+					<Collapse
+						activeKey={filtersExpanded ? ["filters"] : []}
+						onChange={() => setFiltersExpanded(!filtersExpanded)}
+						className="mb-4"
+						items={[
+							{
+								key: "filters",
+								label: (
+									<Space>
+										<FilterOutlined />
+										<span>Filters</span>
+										{hasActiveFilters && (
+											<Badge
+												count={filteredDatasets.length}
+												size="small"
+												overflowCount={BADGE_OVERFLOW_COUNT}
+												style={{ backgroundColor: palette.primary[500] }}
 											/>
-										</div>
-									)}
+										)}
+									</Space>
+								),
+								children: (
+									<div className="space-y-4">
+										{/* Row 1: Status, ID, Biome, Country */}
+										<div className="flex flex-wrap gap-4">
+											{activeTab === "completed" && (
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Status
+													</Text>
+													<Select
+														value={statusFilter}
+														onChange={setStatusFilter}
+														style={{ width: 150 }}
+														options={[
+															{ label: "All", value: "all" },
+															{ label: "Ready", value: "ready" },
+															{ label: "Fixable", value: "fixable" },
+															{ label: "Excluded", value: "excluded" },
+															{ label: "Needs Review", value: "needs-review" },
+															{ label: "Reviewed", value: "reviewed" },
+														]}
+													/>
+												</div>
+											)}
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Dataset ID
-										</Text>
-										<Input
-											placeholder="Filter by ID"
-											prefix={<SearchOutlined />}
-											value={idFilter}
-											onChange={(e) => setIdFilter(e.target.value)}
-											style={{ width: 130 }}
-											allowClear
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Dataset ID
+												</Text>
+												<Input
+													placeholder="Filter by ID"
+													prefix={<SearchOutlined />}
+													value={idFilter}
+													onChange={(e) => setIdFilter(e.target.value)}
+													style={{ width: 130 }}
+													allowClear
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Biome
-										</Text>
-										<Select
-											value={biomeFilter}
-											onChange={setBiomeFilter}
-											style={{ width: 200 }}
-											allowClear
-											placeholder="All biomes"
-											showSearch
-											options={uniqueBiomes.map((b) => ({ label: `${getBiomeEmoji(b)} ${b}`, value: b }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Biome
+												</Text>
+												<Select
+													value={biomeFilter}
+													onChange={setBiomeFilter}
+													style={{ width: 200 }}
+													allowClear
+													placeholder="All biomes"
+													showSearch
+													options={uniqueBiomes.map((b) => ({ label: `${getBiomeEmoji(b)} ${b}`, value: b }))}
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Country
-										</Text>
-										<Select
-											value={countryFilter}
-											onChange={setCountryFilter}
-											style={{ width: 180 }}
-											allowClear
-											placeholder="All countries"
-											showSearch
-											options={uniqueCountries.map((c) => ({ label: c, value: c }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Country
+												</Text>
+												<Select
+													value={countryFilter}
+													onChange={setCountryFilter}
+													style={{ width: 180 }}
+													allowClear
+													placeholder="All countries"
+													showSearch
+													options={uniqueCountries.map((c) => ({ label: c, value: c }))}
+												/>
+											</div>
 
-									{activeTab === "completed" && (
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Auditor
-											</Text>
-											<Select
-												value={auditorFilter}
-												onChange={setAuditorFilter}
-												style={{ width: 180 }}
-												allowClear
-												placeholder="All auditors"
-												showSearch
-												options={uniqueAuditors.map((a) => ({ label: a, value: a }))}
-											/>
-										</div>
-									)}
+											{activeTab === "completed" && (
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Auditor
+													</Text>
+													<Select
+														value={auditorFilter}
+														onChange={setAuditorFilter}
+														style={{ width: 180 }}
+														allowClear
+														placeholder="All auditors"
+														showSearch
+														options={uniqueAuditors.map((a) => ({ label: a, value: a }))}
+													/>
+												</div>
+											)}
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Contributor
-										</Text>
-										<Select
-											value={contributorFilter}
-											onChange={setContributorFilter}
-											style={{ width: 180 }}
-											allowClear
-											placeholder="All contributors"
-											showSearch
-											options={uniqueContributors.map((c) => ({ label: c, value: c }))}
-										/>
-									</div>
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Contributor
+												</Text>
+												<Select
+													value={contributorFilter}
+													onChange={setContributorFilter}
+													style={{ width: 180 }}
+													allowClear
+													placeholder="All contributors"
+													showSearch
+													options={uniqueContributors.map((c) => ({ label: c, value: c }))}
+												/>
+											</div>
 
-									<div>
-										<Text type="secondary" className="block mb-1 text-xs">
-											Acquisition Month
-										</Text>
-										<DatePicker.RangePicker
-											picker="month"
-											value={acquisitionMonthRange as any}
-											onChange={(value) => setAcquisitionMonthRange(value as any)}
-											allowClear
-											placeholder={["From", "To"]}
-											style={{ width: 200 }}
-										/>
-									</div>
-
-								</div>
-
-								{/* Row 2: Requirements */}
-								<div className="rounded-md border border-gray-100 bg-gray-50 p-3">
-									<div className="flex flex-wrap gap-6">
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Has outputs
-											</Text>
-											<Checkbox.Group
-												options={PROCESSING_STATE_OPTIONS}
-												value={hasProcessingStates}
-												onChange={(checkedValues) => setHasProcessingStates(checkedValues as ProcessingStateFilterKey[])}
-											/>
-										</div>
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Season
-											</Text>
-											<div className="flex flex-row gap-1">
-
-												<Checkbox checked={inSeasonOnly} onChange={(e) => setInSeasonOnly(e.target.checked)}>
-													In season only
-												</Checkbox>
-
+											<div>
+												<Text type="secondary" className="block mb-1 text-xs">
+													Acquisition Month
+												</Text>
+												<DatePicker.RangePicker
+													picker="month"
+													value={acquisitionMonthRange as any}
+													onChange={(value) => setAcquisitionMonthRange(value as any)}
+													allowClear
+													placeholder={["From", "To"]}
+													style={{ width: 200 }}
+												/>
 											</div>
 
 										</div>
-										<div>
-											<Text type="secondary" className="block mb-1 text-xs">
-												Flags
-											</Text>
-											<div className="flex flex-row gap-1">
-												<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
-													Has flags only
-												</Checkbox>
+
+										{/* Row 2: Requirements */}
+										<div className="rounded-md border border-gray-100 bg-gray-50 p-3">
+											<div className="flex flex-wrap gap-6">
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Has outputs
+													</Text>
+													<Checkbox.Group
+														options={PROCESSING_STATE_OPTIONS}
+														value={hasProcessingStates}
+														onChange={(checkedValues) => setHasProcessingStates(checkedValues as ProcessingStateFilterKey[])}
+													/>
+												</div>
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Season
+													</Text>
+													<div className="flex flex-row gap-1">
+
+														<Checkbox checked={inSeasonOnly} onChange={(e) => setInSeasonOnly(e.target.checked)}>
+															In season only
+														</Checkbox>
+
+													</div>
+
+												</div>
+												<div>
+													<Text type="secondary" className="block mb-1 text-xs">
+														Flags
+													</Text>
+													<div className="flex flex-row gap-1">
+														<Checkbox checked={hasFlagsFilter} onChange={(e) => setHasFlagsFilter(e.target.checked)}>
+															Has flags only
+														</Checkbox>
+													</div>
+
+												</div>
 											</div>
-
 										</div>
+
+										{/* Clear all button */}
+										{hasActiveFilters && (
+											<Button size="small" onClick={clearAllFilters}>
+												Clear all filters
+											</Button>
+										)}
 									</div>
-								</div>
+								),
+							},
+						]}
+					/>
 
-								{/* Clear all button */}
-								{hasActiveFilters && (
-									<Button size="small" onClick={clearAllFilters}>
-										Clear all filters
-									</Button>
-								)}
-							</div>
-						),
-					},
-				]}
-			/>
-
-			{/* Table */}
-			<Table
-				dataSource={filteredDatasets}
-				columns={columns}
-				rowKey="id"
-				loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading || isCorrectionsLoading}
-				pagination={{
-					pageSize: 20,
-					showSizeChanger: true,
-					showQuickJumper: true,
-					showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
-				}}
-				scroll={{ x: 1000 }}
-			/>
+					{/* Table */}
+					<Table
+						dataSource={sortedFilteredDatasets}
+						columns={columns}
+						rowKey="id"
+						loading={isDatasetLoading || isAuditsLoading || isFlaggedLoading || isCorrectionsLoading || isPendingPhenologyLoading}
+						pagination={{
+							pageSize: 20,
+							showSizeChanger: true,
+							showQuickJumper: true,
+							showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
+						}}
+						scroll={{ x: 1000 }}
+					/>
 				</>
 			)}
+			</div>
+			</div>
 		</div>
 	);
 }

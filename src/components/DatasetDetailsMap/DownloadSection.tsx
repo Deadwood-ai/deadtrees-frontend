@@ -109,31 +109,34 @@ export default function DownloadSection({
         : "Download both orthophoto and tree mortality predictions";
 
   return (
-    <div className="shrink-0 border-t border-gray-200 bg-white p-4 shadow-[0_-2px_4px_-2px_rgba(0,0,0,0.06)]">
-      <Space direction="vertical" className="w-full">
-        {isDownloading && currentDownloadId !== dataset.id.toString() && (
-          <div className="mb-2 text-center text-sm text-orange-500">Another dataset is being downloaded</div>
-        )}
-        <Tooltip title={tooltipTitle}>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            className="w-full"
-            disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
-            loading={isDownloading && currentDownloadId === dataset.id.toString()}
-            onClick={handleDownload}
-          >
-            {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
-          </Button>
-        </Tooltip>
-        {hasLabels && (
-          <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
-            <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2">
-              Download predictions only
-            </Checkbox>
+    <div className="shrink-0">
+      <div className="rounded-2xl border border-slate-300/80 bg-white/98 p-4 shadow-md">
+        <Space direction="vertical" className="w-full">
+          {isDownloading && currentDownloadId !== dataset.id.toString() && (
+            <div className="mb-2 text-center text-sm text-orange-500">Another download is in progress</div>
+          )}
+          <Tooltip title={tooltipTitle}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<DownloadOutlined />}
+              className="w-full shadow-sm"
+              disabled={isDownloading || (isFromGeonadir && !labelsOnly)}
+              loading={isDownloading && currentDownloadId === dataset.id.toString()}
+              onClick={handleDownload}
+            >
+              {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
+            </Button>
           </Tooltip>
-        )}
-      </Space>
+          {hasLabels && (
+            <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
+              <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2 flex justify-center text-gray-600">
+                Download predictions only
+              </Checkbox>
+            </Tooltip>
+          )}
+        </Space>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { usePublicDatasets, useUserDatasets, useAuthors } from "./useDatasets";
 import { IDataset, IThumbnail } from "../types/dataset";
+import { useLocation } from "react-router-dom";
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -34,10 +35,20 @@ const DataContext = createContext<DataContextType>({
 });
 
 const DataProvider = ({ children }: DataProviderProps) => {
+  const location = useLocation();
+  const shouldFetchDataContext = useMemo(() => {
+    const pathname = location.pathname;
+    // Home/About and data-management pages rely on this context.
+    // Skip broad prefetch for heavy detail/map routes like /dataset/:id.
+    if (pathname === "/" || pathname === "/about") return true;
+    if (pathname.startsWith("/profile")) return true;
+    if (pathname === "/dataset") return true;
+    return false;
+  }, [location.pathname]);
 
-  const { data: rawData, isLoading: isLoadingRawData } = usePublicDatasets();
-  const { data: authors } = useAuthors();
-  const { data: userData } = useUserDatasets();
+  const { data: rawData, isLoading: isLoadingRawData } = usePublicDatasets({ enabled: shouldFetchDataContext });
+  const { data: authors } = useAuthors({ enabled: shouldFetchDataContext });
+  const { data: userData } = useUserDatasets({ enabled: shouldFetchDataContext });
 
   const [filter, setFilter] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
@@ -65,6 +76,7 @@ const DataProvider = ({ children }: DataProviderProps) => {
   const value = useMemo(
     () => ({
       data: filteredData,
+      thumbnails: undefined,
       userData,
       authors,
       filter,

@@ -480,7 +480,7 @@ export default function PatchDetailSidebar({
   }, [handleNext, handlePrevious, handleStatusChangeWithAdvance]);
 
   return (
-    <div className="flex h-full w-96 flex-shrink-0 flex-col border-l bg-gray-50">
+    <div className="flex h-full w-full flex-shrink-0 flex-col bg-gray-50">
       {/* Base Patch Summary */}
       <Card
         size="small"

@@ -45,6 +45,8 @@ interface BaseMapProps {
 
 	// Skip interaction handlers (when editing polygon corrections)
 	skipInteractions?: boolean;
+	// Allow rendering predictions even when audited as poor
+	allowBadQualityLayers?: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ export default function BaseMap({
 	onApproveCorrection,
 	onRevertCorrection,
 	skipInteractions = false,
+	allowBadQualityLayers = false,
 }: BaseMapProps) {
 	// Refs
 	const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -139,6 +142,7 @@ export default function BaseMap({
 		opacity: layerOpacity,
 		deadwoodQuality: data?.deadwood_quality,
 		forestCoverQuality: data?.forest_cover_quality,
+		allowBadQualityLayers,
 	});
 
 	// Store layer refs for external access

@@ -32,6 +32,7 @@ interface DatasetLayerControlPanelProps {
   // Quality ratings from audit
   forestCoverQuality?: QualityRating;
   deadwoodQuality?: QualityRating;
+  canBypassQualityRestriction?: boolean;
   // Opacity (controls forest cover + deadwood layers)
   opacity: number;
   setOpacity: (value: number) => void;
@@ -49,7 +50,7 @@ const QualityIcon = ({ quality }: { quality: QualityRating }) => {
   const config = {
     great: { icon: <CheckCircleOutlined />, color: "text-green-500", tooltip: "Quality: Great" },
     sentinel_ok: { icon: <ExclamationCircleOutlined />, color: "text-yellow-500", tooltip: "Quality: OK for Sentinel" },
-    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor – layer hidden due to audit" },
+    bad: { icon: <WarningOutlined />, color: "text-red-500", tooltip: "Quality: Poor" },
   };
 
   const { icon, color, tooltip } = config[quality] || {};
@@ -84,6 +85,7 @@ const DatasetLayerControlPanel = ({
   hasAOI,
   forestCoverQuality,
   deadwoodQuality,
+  canBypassQualityRestriction = false,
   opacity,
   setOpacity,
   onReportClick,
@@ -96,7 +98,7 @@ const DatasetLayerControlPanel = ({
 
   return (
     <div
-      className="flex w-52 flex-col rounded-lg bg-white/95 p-3 shadow-lg backdrop-blur-sm pointer-events-auto"
+      className="flex w-56 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden"
       onMouseDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
@@ -121,9 +123,9 @@ const DatasetLayerControlPanel = ({
             <Checkbox
               checked={showForestCover}
               onChange={(e) => setShowForestCover(e.target.checked)}
-              disabled={forestCoverQuality === "bad"}
+              disabled={forestCoverQuality === "bad" && !canBypassQualityRestriction}
             >
-              <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" ? "opacity-50" : ""}`}>
+              <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                 <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
                 <span className="text-xs text-gray-600">Forest Cover</span>
               </span>
@@ -136,9 +138,9 @@ const DatasetLayerControlPanel = ({
             <Checkbox
               checked={showDeadwood}
               onChange={(e) => setShowDeadwood(e.target.checked)}
-              disabled={deadwoodQuality === "bad"}
+              disabled={deadwoodQuality === "bad" && !canBypassQualityRestriction}
             >
-              <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" ? "opacity-50" : ""}`}>
+              <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                 <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
                 <span className="text-xs text-gray-600">Deadwood</span>
               </span>
@@ -241,9 +243,9 @@ const DatasetLayerControlPanel = ({
       )}
 
       {/* Feedback Section */}
-      <div className="-mx-3 -mb-3 mt-3 rounded-b-lg bg-blue-50 px-3 pb-3 pt-2">
-        <div className="mb-1 text-xs font-medium text-blue-700">Feedback</div>
-        <p className="mb-2 text-xs text-blue-600">
+      <div className="-mx-4 -mb-4 mt-3 bg-[#F8FAF9] px-4 pb-4 pt-3 border-t border-gray-100">
+        <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
+        <p className="mb-3 text-xs text-gray-500">
           Help improve predictions by editing or reporting issues
         </p>
         <div className="flex flex-col gap-2">

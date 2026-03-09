@@ -229,7 +229,7 @@ const YearImagerySelector = ({
   const yearsMatch = baseMapYear?.toString() === predictionYear;
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-lg bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-gray-200/60 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm pointer-events-auto">
       {/* Row 1: Prediction Year with label on top */}
       <div className="flex flex-col items-center gap-1">
         <div className="flex items-center gap-2">

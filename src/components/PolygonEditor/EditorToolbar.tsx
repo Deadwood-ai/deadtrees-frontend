@@ -29,6 +29,7 @@ interface Props {
   onCancel: () => void;
   position?: "top-right" | "top-left";
   title?: string; // Allow custom title
+  className?: string; // Allow custom container classes like overriding top offset
 }
 
 export default function EditorToolbar({
@@ -50,11 +51,12 @@ export default function EditorToolbar({
   onCancel,
   position = "top-right",
   title,
+  className,
 }: Props) {
   const displayTitle = title || `Editing ${type === "deadwood" ? "Deadwood" : "Forest Cover"}`;
 
   return (
-    <div className={`absolute ${position === "top-right" ? "right-4" : "left-4"} top-4 z-20`}>
+    <div className={`absolute ${position === "top-right" ? "right-4" : "left-4"} ${className || "top-32"} z-20`}>
       <Card
         title={displayTitle}
         className="shadow-lg"

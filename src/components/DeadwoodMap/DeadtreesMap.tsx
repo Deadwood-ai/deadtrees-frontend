@@ -6,7 +6,7 @@ import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
 import { Attribution } from "ol/control";
-import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
+import { transformExtent, toLonLat } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -27,7 +27,6 @@ import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUr
 import { getWaybackTileUrl } from "../../utils/waybackVersions";
 import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
-import MapLegend from "./MapLegend";
 import YearImagerySelector from "./YearImagerySelector";
 import PolygonStatsModal from "./PolygonStatsModal";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
@@ -62,12 +61,6 @@ const createForestSource = (year: string) => {
   });
 };
 
-const sites: Record<string, number[]> = {
-  Harz: [10.668224826784524, 51.78688853393797],
-  Bayern: [13.330993298074588, 49.03963187270776],
-  Schwarzwald: [8.35, 48.55],
-};
-
 // Source caches - persist across renders to reuse already-loaded sources
 const deadwoodSourceCache: Record<string, GeoTIFF> = {};
 const forestSourceCache: Record<string, GeoTIFF> = {};
@@ -98,7 +91,6 @@ const DeadtreesMap = () => {
   const [map, setMap] = useState(null);
   const [selectedYear, setSelectedYear] = useState<string>("2025");
   const [bounds, setBounds] = useState([]);
-  const [selectedSite, setSelectedSite] = useState<string>("");
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef();
   const mapRef = useRef(null);
@@ -488,15 +480,6 @@ const DeadtreesMap = () => {
     }
   }, [sliderValue]);
 
-  // update on selectedSite change
-  useEffect(() => {
-    if (map && selectedSite) {
-      const view = map.getView();
-      view.setCenter(fromLonLat(sites[selectedSite]));
-      view.setZoom(15);
-    }
-  }, [selectedSite, map]);
-
   // update onClick handler when selectedYear changes
   useEffect(() => {
     if (mapRef.current) {
@@ -800,12 +783,12 @@ const DeadtreesMap = () => {
         ref={mapContainer}
       >
         {/* Top Left - Location Controls */}
-        <div className="absolute left-2 top-24 z-50">
-          <LocationControls selectedSite={selectedSite} onSiteChange={setSelectedSite} onPlaceSelect={setBounds} />
+        <div className="absolute left-4 top-24 z-50">
+          <LocationControls onPlaceSelect={setBounds} />
         </div>
 
         {/* Top Right - Layer Controls */}
-        <div className="absolute right-2 top-24 z-50">
+        <div className="absolute right-4 top-24 z-50">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
@@ -825,6 +808,7 @@ const DeadtreesMap = () => {
             showFlagsLayer={showFlagsLayer}
             setShowFlagsLayer={setShowFlagsLayer}
             flagsCount={mapFlags.length}
+            clickedValues={clickedValues}
           />
         </div>
 
@@ -850,10 +834,6 @@ const DeadtreesMap = () => {
           />
         </div>
 
-        {/* Bottom Right - Legend with Click Info */}
-        <div className="absolute bottom-2 right-2 z-50">
-          <MapLegend clickedValues={clickedValues} showForest={showForest} showDeadwood={showDeadwood} />
-        </div>
       </div>
 
       {/* Flag description modal */}
