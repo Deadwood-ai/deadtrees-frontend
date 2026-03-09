@@ -10,6 +10,7 @@ const { Text } = Typography;
 
 interface Contribution {
 	title: string;
+	speaker?: string | null;
 	event: string;
 	date: string;
 	link: string;
@@ -29,6 +30,7 @@ const UpcomingConferences = () => {
 				if (presentationDate > today) {
 					acc.push({
 						title: presentation.title,
+						speaker: presentation.speaker,
 						event: presentation.event,
 						date: new Date(presentation.date).toLocaleDateString("en-US", {
 							year: "numeric",
@@ -39,8 +41,7 @@ const UpcomingConferences = () => {
 					});
 				}
 				return acc;
-			}, [])
-			.slice(0, 2);
+			}, []);
 	}, [presentations]);
 
 	if (isLoading) return null;
@@ -57,6 +58,11 @@ const UpcomingConferences = () => {
 								<Text strong className="block">
 									{contribution.title}
 								</Text>
+								{contribution.speaker && (
+									<Text className="block text-gray-700">
+										Speaker: {contribution.speaker}
+									</Text>
+								)}
 								<Text type="secondary" className="block">
 									{contribution.date}
 								</Text>

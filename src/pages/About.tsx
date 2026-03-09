@@ -123,7 +123,7 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
     }
   };
 
-  type ContributionItem = { title: string; event: string; date: string; link: string };
+  type ContributionItem = { title: string; speaker?: string | null; event: string; date: string; link: string };
   const contributions = useMemo(() => {
     if (!presentations) return { upcoming: [] as ContributionItem[], past: [] as ContributionItem[] };
 
@@ -133,6 +133,7 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
         const presentationTime = new Date(presentation.date).getTime();
         const item: ContributionItem = {
           title: presentation.title,
+          speaker: presentation.speaker,
           event: presentation.event,
           date: new Date(presentation.date).toLocaleDateString("en-US", {
             year: "numeric",
@@ -425,6 +426,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                             <Tag icon={<CalendarOutlined />} className="m-0 border-none bg-emerald-50 text-[#1B5E35] font-semibold">{contribution.date}</Tag>
                           </div>
                           <h4 className={`mb-2 text-lg font-semibold text-gray-900 ${contribution.link ? 'group-hover:text-[#1B5E35]' : ''}`}>{contribution.title}</h4>
+                          {contribution.speaker && (
+                            <p className="mb-2 text-sm font-medium text-gray-700">Speaker: {contribution.speaker}</p>
+                          )}
                           <p className="m-0 flex items-center gap-2 text-sm text-gray-600"><FileTextOutlined className="text-gray-400" /> {contribution.event}</p>
                         </div>
                         {contribution.link && (
@@ -459,6 +463,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                             <Tag icon={<CalendarOutlined />} className="m-0 border-none bg-gray-100 text-gray-600 font-semibold">{contribution.date}</Tag>
                           </div>
                           <h4 className={`mb-2 text-lg font-semibold text-gray-900 ${contribution.link ? 'group-hover:text-[#1B5E35]' : ''}`}>{contribution.title}</h4>
+                          {contribution.speaker && (
+                            <p className="mb-2 text-sm font-medium text-gray-700">Speaker: {contribution.speaker}</p>
+                          )}
                           <p className="m-0 flex items-center gap-2 text-sm text-gray-600"><FileTextOutlined className="text-gray-400" /> {contribution.event}</p>
                         </div>
                         {contribution.link && (
