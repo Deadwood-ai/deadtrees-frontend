@@ -34,7 +34,7 @@ export default function About() {
     {
       name: "Prof. Dr. Miguel Mahecha",
       role: "Scientific Lead",
-      institution: "RSC4Earth, Leipzig University",
+      institution: "Leipzig University",
       institutionLink: "https://rsc4earth.de/",
       image: "/assets/team/miguel.png",
     },
@@ -200,7 +200,7 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
 
         {/* Team & Contributors */}
         <div className="mx-auto mb-24 max-w-6xl">
-          <h2 className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">The Core Team</h2>
+          <h2 className="mb-12 text-center text-3xl font-bold tracking-tight text-gray-900">Core Contact Persons</h2>
           <div className="mb-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {coreTeam.map((member) => (
               <div key={member.name} className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm transition-all hover:shadow-md">
@@ -218,12 +218,12 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
 
           <div className="mt-16 text-center">
             <p className="mx-auto mb-6 max-w-2xl text-lg text-gray-600">
-              deadtrees.earth would not be possible without the numerous collaborators and data contributors of more than 60 institutions.
+              deadtrees.earth would not be possible without the numerous collaborators and data contributors of more than 100 institutions.
             </p>
             <Collapse
               bordered={false}
               style={{ backgroundColor: "transparent" }}
-              className="mx-auto max-w-2xl"
+              className="w-full"
               items={[
                 {
                   key: "1",
@@ -242,6 +242,16 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                 },
               ]}
             />
+          </div>
+        </div>
+
+        {/* Partners Banner */}
+        <div className="mx-auto mb-24 max-w-6xl">
+          <div className="mb-6 text-center">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Supported by our global partners</h2>
+          </div>
+          <div className="overflow-hidden rounded-3xl bg-white py-6 shadow-sm ring-1 ring-black/5">
+            <LogoBannerBand logos={logos} title="" compact />
           </div>
         </div>
 
@@ -509,15 +519,6 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
           </div>
         </div>
 
-        {/* Partners Banner */}
-        <div className="mx-auto mt-24 max-w-6xl pb-12">
-          <div className="mb-8 text-center">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Supported by our global partners</h2>
-          </div>
-          <div className="overflow-hidden rounded-3xl bg-white py-12 shadow-sm ring-1 ring-black/5">
-            <LogoBannerBand logos={logos} title="" />
-          </div>
-        </div>
       </div>
     </div>
   );

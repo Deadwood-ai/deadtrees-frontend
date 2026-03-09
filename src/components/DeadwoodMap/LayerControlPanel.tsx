@@ -3,6 +3,7 @@ import { Segmented, Slider, Switch, Button, Divider, Checkbox, Tooltip } from "a
 import { AreaChartOutlined, FlagOutlined, LoginOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
+import MapLegend from "./MapLegend";
 
 interface LayerControlPanelProps {
   // Basemap
@@ -28,6 +29,10 @@ interface LayerControlPanelProps {
   showFlagsLayer?: boolean;
   setShowFlagsLayer?: (show: boolean) => void;
   flagsCount?: number;
+  clickedValues?: {
+    forestPct: number;
+    deadwoodPct: number;
+  } | null;
 }
 
 // Basemap options: Streets and Satellite
@@ -55,11 +60,12 @@ const LayerControlPanel = ({
   showFlagsLayer,
   setShowFlagsLayer,
   flagsCount,
+  clickedValues = null,
 }: LayerControlPanelProps) => {
   const [showAttributions, setShowAttributions] = useState(false);
 
   return (
-    <div className="flex w-64 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden">
+    <div className="flex w-60 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden">
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
       <Segmented
@@ -197,6 +203,15 @@ const LayerControlPanel = ({
                 Sign in to flag areas
               </Button>
             )}
+
+            <div className="mt-3 border-t border-gray-200/80 pt-3">
+              <MapLegend
+                clickedValues={clickedValues}
+                showForest={showForest}
+                showDeadwood={showDeadwood}
+                embedded={true}
+              />
+            </div>
           </div>
         </>
       )}

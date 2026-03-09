@@ -11,6 +11,7 @@ interface MapLegendProps {
   clickedValues: ClickedValues | null;
   showForest: boolean;
   showDeadwood: boolean;
+  embedded?: boolean;
 }
 
 // Gradient bar with optional value indicator
@@ -38,9 +39,15 @@ const GradientBar = ({
   </div>
 );
 
-const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) => {
+const MapLegend = ({ clickedValues, showForest, showDeadwood, embedded = false }: MapLegendProps) => {
   return (
-    <div className="flex w-52 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto">
+    <div
+      className={
+        embedded
+          ? "flex w-full flex-col rounded-xl border border-gray-200/70 bg-white/90 p-3"
+          : "flex w-52 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto"
+      }
+    >
       {/* Header */}
       <div className="mb-2">
         <div className="text-sm font-medium text-gray-700">Fractional Cover</div>
@@ -103,7 +110,7 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood }: MapLegendProps) 
             )}
             {showDeadwood && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500">Deadwood:</span>
+                <span className="text-gray-500">Standing Deadwood:</span>
                 <span className="font-semibold" style={{ color: mapColors.deadwood.text }}>
                   {clickedValues.deadwoodPct}%
                 </span>

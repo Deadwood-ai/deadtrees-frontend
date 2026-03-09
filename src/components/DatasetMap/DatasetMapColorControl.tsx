@@ -35,12 +35,8 @@ export default function DatasetMapColorControl({ colorMode }: DatasetMapColorCon
 
   return (
     <div className="w-56 rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto">
-      <div className="mb-3">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Color by</div>
-        <div className="mt-1 text-sm font-medium text-gray-700">Acquisition Year</div>
-      </div>
+      <div className="mb-3 text-sm font-medium text-gray-700">Acquisition Year</div>
       <div className="rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2">
-        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Legend</div>
         <div className="flex flex-wrap gap-2">
           {legendItems.map((item) => (
             <div key={item.label} className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-[11px] text-gray-700 ring-1 ring-gray-200/70">
