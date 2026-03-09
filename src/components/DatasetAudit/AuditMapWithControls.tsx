@@ -17,6 +17,7 @@ import { useCorrectionStats, useCorrectionContributors, usePendingCorrectionLoca
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useDatasetEditing } from "../../hooks/useDatasetEditing";
 import { mapColors } from "../../theme/mapColors";
+import { MAP_FLOATING_TOP_CLASS } from "../../theme/mapLayout";
 
 interface AuditMapWithControlsProps {
 	dataset: IDataset;
@@ -274,7 +275,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 
 				{/* Layer Control Panel */}
 				{!isEditing && (
-					<div className="absolute right-4 top-24 z-50 pointer-events-auto">
+					<div className={`absolute right-4 ${MAP_FLOATING_TOP_CLASS} z-50 pointer-events-auto`}>
 						<DatasetLayerControlPanel
 							mapStyle={layerControl.mapStyle}
 							onMapStyleChange={setMapStyle}

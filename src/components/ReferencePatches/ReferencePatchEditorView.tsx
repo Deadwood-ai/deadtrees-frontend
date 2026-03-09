@@ -25,6 +25,9 @@ import type TileLayerWebGL from "ol/layer/WebGLTile";
 import ReferencePatchMap from "./ReferencePatchMap";
 import PatchDetailSidebar from "./PatchDetailSidebar";
 import { LayerRadioButtons, EditorToolbar, type LayerSelection } from "../PolygonEditor";
+import { findBasePatchForPatch, getPreferredDefaultPatch } from "./utils/patchSelection";
+import { MAP_FLOATING_CHILD_TOP_CLASS, MAP_REFERENCE_SIDEBAR_WIDTH_CLASS } from "../../theme/mapLayout";
+import { useReferenceEditorKeyboardShortcuts } from "./hooks/useReferenceEditorKeyboardShortcuts";
 
 interface Props {
   dataset: IDataset;
@@ -32,6 +35,9 @@ interface Props {
   isCompleted: boolean;
   onReopenForEditing: () => void;
 }
+
+const isTextInputTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 
 export default function ReferencePatchEditorView({
   dataset,
@@ -76,45 +82,6 @@ export default function ReferencePatchEditorView({
 
   const geoJson = useMemo(() => new GeoJSON(), []);
 
-  // Keyboard shortcuts for layer selection (1/2/3) - filtered during editing
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Determine available layers based on editing mode
-      const availableLayers = editingMode
-        ? [editingMode === ILabelData.DEADWOOD ? "deadwood" : "forest_cover", "ortho_only"]
-        : ["deadwood", "forest_cover", "ortho_only"];
-
-      switch (e.key) {
-        case "1":
-          if (availableLayers.includes("ortho_only")) {
-            setLayerSelection("ortho_only");
-          }
-          break;
-        case "2":
-          if (availableLayers.includes("deadwood")) {
-            setLayerSelection("deadwood");
-          }
-          break;
-        case "3":
-          if (availableLayers.includes("forest_cover")) {
-            setLayerSelection("forest_cover");
-          }
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingMode]);
-
-  // Get base patches (20cm) and calculate AOI centroid
-  const basePatches = useMemo(() => allPatches.filter((p) => p.resolution_cm === 20), [allPatches]);
-
   const aoiCentroid = useMemo(() => {
     if (!aoiData?.geometry) return null;
     try {
@@ -157,17 +124,7 @@ export default function ReferencePatchEditorView({
   useEffect(() => {
     if (editingMode || selectedPatchId || allPatches.length === 0) return;
 
-    const pending5cmPatch = allPatches.find(
-      (p) => p.resolution_cm === 5 && (p.deadwood_validated === null || p.forest_cover_validated === null),
-    );
-    const any5cmPatch = allPatches.find((p) => p.resolution_cm === 5);
-    const baseWithReference = allPatches.find(
-      (p) =>
-        p.resolution_cm === 20 &&
-        (p.reference_deadwood_label_id !== null || p.reference_forest_cover_label_id !== null),
-    );
-    const fallbackBase = allPatches.find((p) => p.resolution_cm === 20);
-    const patchToSelect = pending5cmPatch || any5cmPatch || baseWithReference || fallbackBase;
+    const patchToSelect = getPreferredDefaultPatch(allPatches);
 
     if (patchToSelect) {
       setSelectedPatchId(patchToSelect.id);
@@ -178,26 +135,17 @@ export default function ReferencePatchEditorView({
   // Get base patch for selected patch
   const selectedBasePatch = useMemo(() => {
     if (!selectedPatch) return null;
-    if (selectedPatch.resolution_cm === 20) {
-      console.debug("[Editor] selectedBasePatch updated (20cm):", {
-        id: selectedPatch.id,
-        deadwoodLabel: selectedPatch.reference_deadwood_label_id,
-        forestCoverLabel: selectedPatch.reference_forest_cover_label_id,
-      });
-      return selectedPatch;
-    }
-    // Find parent base patch by parsing patch_index
-    const baseIndex = selectedPatch.patch_index.split("_")[0] + "_" + selectedPatch.patch_index.split("_")[1];
-    const basePatch = basePatches.find((p) => p.patch_index === baseIndex) || null;
-    if (basePatch) {
-      console.debug("[Editor] selectedBasePatch updated (child patch):", {
-        id: basePatch.id,
-        deadwoodLabel: basePatch.reference_deadwood_label_id,
-        forestCoverLabel: basePatch.reference_forest_cover_label_id,
-      });
-    }
+    const basePatch = findBasePatchForPatch(selectedPatch, allPatches);
+    if (!basePatch) return null;
+
+    console.debug("[Editor] selectedBasePatch updated:", {
+      id: basePatch.id,
+      deadwoodLabel: basePatch.reference_deadwood_label_id,
+      forestCoverLabel: basePatch.reference_forest_cover_label_id,
+    });
+
     return basePatch;
-  }, [selectedPatch, basePatches]);
+  }, [selectedPatch, allPatches]);
 
   // Recursively generate nested patches
   const generateNestedPatchesRecursive = useCallback(
@@ -348,18 +296,8 @@ export default function ReferencePatchEditorView({
     // Find base patch
     const selectedPatch = allPatches.find((p) => p.id === selectedPatchId);
     if (!selectedPatch) return;
-
-    let basePatch = selectedPatch;
-    if (selectedPatch.resolution_cm !== 20) {
-      // Walk up to find base patch
-      let current = selectedPatch;
-      while (current.parent_tile_id) {
-        const parent = allPatches.find((p) => p.id === current.parent_tile_id);
-        if (!parent) break;
-        current = parent;
-      }
-      basePatch = current;
-    }
+    const basePatch = findBasePatchForPatch(selectedPatch, allPatches);
+    if (!basePatch) return;
 
     const layerType: ILabelData = layerSelection === "deadwood" ? ILabelData.DEADWOOD : ILabelData.FOREST_COVER;
 
@@ -443,26 +381,6 @@ export default function ReferencePatchEditorView({
     }
   }, [layerSelection, selectedPatchId, allPatches, editor, geoJson, mapRef]);
 
-  // Keyboard shortcut for starting edit mode (E) - only when NOT editing
-  useEffect(() => {
-    if (editingMode) return; // Only allow when not already editing
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      if (e.key.toLowerCase() === "e") {
-        e.preventDefault();
-        handleEditLayer();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingMode, handleEditLayer]);
-
   // Handle save edits
   const handleSaveEdits = useCallback(async () => {
     if (!editingMode || !selectedPatchId) return;
@@ -472,16 +390,8 @@ export default function ReferencePatchEditorView({
       const selectedPatch = allPatches.find((p) => p.id === selectedPatchId);
       if (!selectedPatch) return;
 
-      let basePatch = selectedPatch;
-      if (selectedPatch.resolution_cm !== 20) {
-        let current = selectedPatch;
-        while (current.parent_tile_id) {
-          const parent = allPatches.find((p) => p.id === current.parent_tile_id);
-          if (!parent) break;
-          current = parent;
-        }
-        basePatch = current;
-      }
+      const basePatch = findBasePatchForPatch(selectedPatch, allPatches);
+      if (!basePatch) return;
 
       // Get features from overlay
       const features = editor.getOverlayLayer()?.getSource()?.getFeatures() || [];
@@ -547,23 +457,6 @@ export default function ReferencePatchEditorView({
     message.info("Editing cancelled - no changes saved");
   }, [editor]);
 
-  // Add Esc key handler for deselection (Phase 4)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      if (e.key === "Escape" && selectedPatchId) {
-        handleDeselect();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPatchId, handleDeselect]);
-
   // Control overlay visibility based on layer selection during editing
   useEffect(() => {
     if (!editingMode) {
@@ -580,114 +473,17 @@ export default function ReferencePatchEditorView({
     }
   }, [editingMode, layerSelection, editor]);
 
-  // Keyboard shortcut for undo (Ctrl/Cmd+Z) - only during editing
-  useEffect(() => {
-    if (!editingMode) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Ctrl+Z (Windows/Linux) or Cmd+Z (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault(); // Prevent browser undo
-        if (editor.canUndo) {
-          editor.undo();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingMode, editor]);
-
-  // Keyboard shortcut for save (Ctrl/Cmd+S) - only during editing
-  useEffect(() => {
-    if (!editingMode) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Ctrl+S (Windows/Linux) or Cmd+S (Mac)
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault(); // Prevent browser save dialog
-        handleSaveEdits();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingMode, handleSaveEdits]);
-
-  // Keyboard shortcuts for editor actions (s, a, c, d, g) - only during editing
-  useEffect(() => {
-    if (!editingMode) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Ignore if modifier keys are pressed (except for shortcuts that need them)
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case "s":
-          // Toggle AI segmentation
-          e.preventDefault();
-          if (ai.isActive) {
-            ai.disable();
-          } else {
-            ai.enable();
-          }
-          break;
-        case "a":
-          // Toggle draw polygon
-          e.preventDefault();
-          editor.toggleDraw();
-          break;
-        case "c":
-          // Cut hole (only if one polygon is selected)
-          if (editor.selection && editor.selection.length === 1) {
-            e.preventDefault();
-            editor.cutHoleWithDrawn();
-          }
-          break;
-        case "d":
-          // Delete selected (only if something is selected)
-          if (editor.selection && editor.selection.length > 0) {
-            e.preventDefault();
-            editor.deleteSelected();
-          }
-          break;
-        case "g":
-          // Merge (only if exactly 2 polygons are selected)
-          if (editor.selection && editor.selection.length === 2) {
-            e.preventDefault();
-            editor.mergeSelected();
-          }
-          break;
-        case "x":
-          // Clip (only if exactly 2 polygons are selected)
-          if (editor.selection && editor.selection.length === 2) {
-            e.preventDefault();
-            editor.clipSelected();
-          }
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editingMode, editor, ai]);
+  useReferenceEditorKeyboardShortcuts({
+    editingMode,
+    selectedPatchId,
+    setLayerSelection,
+    onEditLayer: handleEditLayer,
+    onDeselect: handleDeselect,
+    onSaveEdits: handleSaveEdits,
+    editor,
+    ai,
+    isTextInputTarget,
+  });
 
   // Memoize the callback that receives the patch geometry getter
   const handleGetPatchGeometry = useCallback((getter: (patchId: number) => GeoJSON.Polygon | null) => {
@@ -889,7 +685,9 @@ export default function ReferencePatchEditorView({
     <div className="relative h-full w-full">
       {/* Completion Status Banner - floating at top center below header */}
       {isCompleted && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-[192px] z-20 w-full max-w-2xl pointer-events-auto">
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 ${MAP_FLOATING_CHILD_TOP_CLASS} z-20 w-full max-w-2xl pointer-events-auto`}
+        >
           <Alert
             message="Dataset Marked as Complete"
             description={
@@ -961,13 +759,13 @@ export default function ReferencePatchEditorView({
             onSave={handleSaveEdits}
             onCancel={handleCancelEditing}
             position="top-right"
-            className="top-[192px]"
+            className={MAP_FLOATING_CHILD_TOP_CLASS}
           />
         )}
 
         {/* Add Base Patch Button (overlay) */}
         {!selectedPatch && !isCompleted && !editingMode && (
-          <div className="absolute left-4 top-[192px] z-10 pointer-events-auto">
+          <div className={`absolute left-4 ${MAP_FLOATING_CHILD_TOP_CLASS} z-10 pointer-events-auto`}>
             <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="shadow-lg">
               Add Base Patch
             </Button>
@@ -977,7 +775,9 @@ export default function ReferencePatchEditorView({
 
       {/* Sidebar (floating on the right) */}
       {selectedPatch && selectedBasePatch && !editingMode && (
-        <div className="absolute right-4 top-[192px] bottom-6 z-10 flex w-[380px] flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto">
+        <div
+          className={`absolute right-4 ${MAP_FLOATING_CHILD_TOP_CLASS} bottom-6 z-10 flex ${MAP_REFERENCE_SIDEBAR_WIDTH_CLASS} flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto`}
+        >
           <PatchDetailSidebar
             basePatch={selectedBasePatch}
             selectedPatch={selectedPatch}
@@ -1006,18 +806,8 @@ export default function ReferencePatchEditorView({
               const patchToDelete = allPatches.find((p) => p.id === patchId);
               if (!patchToDelete) return;
 
-              let basePatch: IReferencePatch;
-              if (patchToDelete.resolution_cm === 20) {
-                basePatch = patchToDelete;
-              } else {
-                let current = patchToDelete;
-                while (current.parent_tile_id) {
-                  const parent = allPatches.find((p) => p.id === current.parent_tile_id);
-                  if (!parent) break;
-                  current = parent;
-                }
-                basePatch = current;
-              }
+              const basePatch = findBasePatchForPatch(patchToDelete, allPatches);
+              if (!basePatch) return;
 
               const patchesToDelete: IReferencePatch[] = [basePatch];
               const children10cm = allPatches.filter((p) => p.parent_tile_id === basePatch.id);
