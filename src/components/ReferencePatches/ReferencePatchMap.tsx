@@ -691,13 +691,11 @@ export default function ReferencePatchMap({
 
   // Update layer visibility based on radio selection, reference data existence, and editing mode
   useEffect(() => {
-    if (!deadwoodLayerRef.current || !forestCoverLayerRef.current) return;
-
     // If in editing mode, hide ALL layers (predictions + reference)
     // Only the editing overlay should be visible during editing
     if (isEditingMode) {
-      deadwoodLayerRef.current.setVisible(false);
-      forestCoverLayerRef.current.setVisible(false);
+      deadwoodLayerRef.current?.setVisible(false);
+      forestCoverLayerRef.current?.setVisible(false);
 
       // Hide reference layers too - editing overlay replaces them
       if (referenceDeadwoodLayerRef.current) {
@@ -711,6 +709,15 @@ export default function ReferencePatchMap({
       return;
     }
 
+    // Once any reference data exists in this editor session, never fall back to global predictions.
+    // This avoids mixing old model predictions with curated reference annotations.
+    const hasAnyReferenceData =
+      (patches || []).some(
+        (p) =>
+          p.resolution_cm === 20 &&
+          (p.reference_deadwood_label_id !== null || p.reference_forest_cover_label_id !== null),
+      );
+
     // Determine what to show based on patch selection and reference data
     const currentlySelectedPatch = patches?.find((p) => p.id === selectedPatchId);
     const isBasePatchSelected = currentlySelectedPatch && currentlySelectedPatch.resolution_cm === 20;
@@ -721,11 +728,11 @@ export default function ReferencePatchMap({
       selectedBasePatch &&
       (selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id);
 
-    // Case 1: Base patch selected WITH sub-patches AND reference data
+    // Case 1: Base patch selected WITH reference data
     // → Show reference data (hide global predictions)
-    if (isBasePatchSelected && hasSubPatches && hasReferenceData) {
-      deadwoodLayerRef.current.setVisible(false);
-      forestCoverLayerRef.current.setVisible(false);
+    if (isBasePatchSelected && hasReferenceData) {
+      deadwoodLayerRef.current?.setVisible(false);
+      forestCoverLayerRef.current?.setVisible(false);
 
       // First, hide both reference layers to prevent flickering
       if (referenceDeadwoodLayerRef.current) {
@@ -748,8 +755,8 @@ export default function ReferencePatchMap({
     // Case 2: Base patch selected WITH sub-patches but NO reference data yet
     // → Hide everything (only ortho visible)
     if (isBasePatchSelected && hasSubPatches && !hasReferenceData) {
-      deadwoodLayerRef.current.setVisible(false);
-      forestCoverLayerRef.current.setVisible(false);
+      deadwoodLayerRef.current?.setVisible(false);
+      forestCoverLayerRef.current?.setVisible(false);
       if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
       if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
       return;
@@ -758,8 +765,8 @@ export default function ReferencePatchMap({
     // Case 3: Sub-patch (5cm/10cm) selected with reference data
     // → Hide global predictions, show reference data based on layer selection
     if (!isBasePatchSelected && hasReferenceData) {
-      deadwoodLayerRef.current.setVisible(false);
-      forestCoverLayerRef.current.setVisible(false);
+      deadwoodLayerRef.current?.setVisible(false);
+      forestCoverLayerRef.current?.setVisible(false);
 
       // First, hide both reference layers to prevent flickering
       if (referenceDeadwoodLayerRef.current) {
@@ -789,20 +796,30 @@ export default function ReferencePatchMap({
       return;
     }
 
-    // Case 4: Default - Show global predictions based on layer selection
+    // Case 4: Reference workflow active, but selected patch has no reference geometry yet
+    // → keep prediction layers hidden to avoid confusing layer mixing.
+    if (hasAnyReferenceData) {
+      deadwoodLayerRef.current?.setVisible(false);
+      forestCoverLayerRef.current?.setVisible(false);
+      if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
+      if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
+      return;
+    }
+
+    // Case 5: Default (no reference workflow yet) - Show global predictions based on layer selection
     // First, hide all layers to prevent flickering
-    deadwoodLayerRef.current.setVisible(false);
-    forestCoverLayerRef.current.setVisible(false);
+    deadwoodLayerRef.current?.setVisible(false);
+    forestCoverLayerRef.current?.setVisible(false);
     if (referenceDeadwoodLayerRef.current) referenceDeadwoodLayerRef.current.setVisible(false);
     if (referenceForestCoverLayerRef.current) referenceForestCoverLayerRef.current.setVisible(false);
 
     // Then show only the selected layer
     switch (layerSelection) {
       case "deadwood":
-        deadwoodLayerRef.current.setVisible(true);
+        deadwoodLayerRef.current?.setVisible(true);
         break;
       case "forest_cover":
-        forestCoverLayerRef.current.setVisible(true);
+        forestCoverLayerRef.current?.setVisible(true);
         break;
       case "ortho_only":
         // All layers already hidden
@@ -821,6 +838,7 @@ export default function ReferencePatchMap({
 
       const hasReferenceData =
         selectedBasePatch.reference_deadwood_label_id || selectedBasePatch.reference_forest_cover_label_id;
+
 
       console.debug("[Map] Loading reference geometries for patch:", selectedBasePatch.id, {
         hasReferenceData,

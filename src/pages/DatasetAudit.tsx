@@ -70,6 +70,7 @@ const PROCESSING_STATE_TO_FIELD: Record<ProcessingStateFilterKey, keyof IDataset
 	forestCover: "is_forest_cover_done",
 	metadata: "is_metadata_done",
 };
+const DEFAULT_PROCESSING_STATE_FILTERS: ProcessingStateFilterKey[] = PROCESSING_STATE_OPTIONS.map((option) => option.value);
 
 const BADGE_OVERFLOW_COUNT = 999999;
 const DEFAULT_PROCESSING_STATUS_FILTERS: ProcessingStatus[] = ["QUEUED", "PROCESSING", "FAILED"];
@@ -242,8 +243,8 @@ function DatasetAuditInner() {
 	const [auditorFilter, setAuditorFilter] = useState<string>(initialAuditor);
 	const [contributorFilter, setContributorFilter] = useState<string>(initialContributor);
 	const [hasFlagsFilter, setHasFlagsFilter] = useState<boolean>(initialHasFlags);
-	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>([]);
-	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(false);
+	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>(DEFAULT_PROCESSING_STATE_FILTERS);
+	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(true);
 	const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
 	const [processingStatusFilters, setProcessingStatusFilters] = useState<ProcessingStatus[]>(
 		DEFAULT_PROCESSING_STATUS_FILTERS

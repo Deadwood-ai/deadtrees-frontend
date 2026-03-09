@@ -152,6 +152,29 @@ export default function ReferencePatchEditorView({
     [allPatches, selectedPatchId],
   );
 
+  // In non-edit mode, default to a 5cm patch when available (QA-first workflow).
+  // Fallback to a base patch if no 5cm patches exist yet.
+  useEffect(() => {
+    if (editingMode || selectedPatchId || allPatches.length === 0) return;
+
+    const pending5cmPatch = allPatches.find(
+      (p) => p.resolution_cm === 5 && (p.deadwood_validated === null || p.forest_cover_validated === null),
+    );
+    const any5cmPatch = allPatches.find((p) => p.resolution_cm === 5);
+    const baseWithReference = allPatches.find(
+      (p) =>
+        p.resolution_cm === 20 &&
+        (p.reference_deadwood_label_id !== null || p.reference_forest_cover_label_id !== null),
+    );
+    const fallbackBase = allPatches.find((p) => p.resolution_cm === 20);
+    const patchToSelect = pending5cmPatch || any5cmPatch || baseWithReference || fallbackBase;
+
+    if (patchToSelect) {
+      setSelectedPatchId(patchToSelect.id);
+      setSelectedResolution(patchToSelect.resolution_cm);
+    }
+  }, [editingMode, selectedPatchId, allPatches]);
+
   // Get base patch for selected patch
   const selectedBasePatch = useMemo(() => {
     if (!selectedPatch) return null;
@@ -866,7 +889,7 @@ export default function ReferencePatchEditorView({
     <div className="relative h-full w-full">
       {/* Completion Status Banner - floating at top center below header */}
       {isCompleted && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-[224px] z-20 w-full max-w-2xl pointer-events-auto">
+        <div className="absolute left-1/2 -translate-x-1/2 top-[192px] z-20 w-full max-w-2xl pointer-events-auto">
           <Alert
             message="Dataset Marked as Complete"
             description={
@@ -938,13 +961,13 @@ export default function ReferencePatchEditorView({
             onSave={handleSaveEdits}
             onCancel={handleCancelEditing}
             position="top-right"
-            className="top-[224px]"
+            className="top-[192px]"
           />
         )}
 
         {/* Add Base Patch Button (overlay) */}
         {!selectedPatch && !isCompleted && !editingMode && (
-          <div className="absolute left-4 top-[224px] z-10 pointer-events-auto">
+          <div className="absolute left-4 top-[192px] z-10 pointer-events-auto">
             <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="shadow-lg">
               Add Base Patch
             </Button>
@@ -954,7 +977,7 @@ export default function ReferencePatchEditorView({
 
       {/* Sidebar (floating on the right) */}
       {selectedPatch && selectedBasePatch && !editingMode && (
-        <div className="absolute right-4 top-[224px] bottom-6 z-10 flex w-[420px] flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto">
+        <div className="absolute right-4 top-[192px] bottom-6 z-10 flex w-[380px] flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto">
           <PatchDetailSidebar
             basePatch={selectedBasePatch}
             selectedPatch={selectedPatch}

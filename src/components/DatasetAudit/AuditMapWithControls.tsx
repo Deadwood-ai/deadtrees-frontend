@@ -274,7 +274,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 
 				{/* Layer Control Panel */}
 				{!isEditing && (
-					<div className="absolute right-4 top-32 z-50 pointer-events-auto">
+					<div className="absolute right-4 top-24 z-50 pointer-events-auto">
 						<DatasetLayerControlPanel
 							mapStyle={layerControl.mapStyle}
 							onMapStyleChange={setMapStyle}

@@ -207,7 +207,7 @@ export default function DatasetReferencePatchEditor() {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-slate-50">
-      <div className="absolute left-4 right-4 top-32 z-10 flex items-center justify-between rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto">
+      <div className="absolute left-4 right-4 top-24 z-10 flex items-center justify-between rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto">
         <div className="flex items-center gap-3">
           <Button icon={<ArrowLeftOutlined />} onClick={handleBack} />
           <div>
