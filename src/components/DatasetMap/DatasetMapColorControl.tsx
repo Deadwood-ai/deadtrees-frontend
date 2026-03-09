@@ -15,7 +15,7 @@ const getLegendItems = (colorMode: DatasetMapColorMode): Array<{ label: string; 
 
   if (colorMode === "year") {
     return [
-      { label: "2024+", color: "#FDE725" },
+      { label: "2024+", color: "#EC4899" },
       { label: "2021-2023", color: "#58A67A" },
       { label: "2018-2020", color: "#355F8D" },
       { label: "< 2018", color: "#2C1E7A" },

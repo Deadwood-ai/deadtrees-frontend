@@ -106,9 +106,9 @@ const getDatasetVisualSpec = (dataset: IDataset, mode: DatasetMapColorMode): Dat
     }
     if (year >= 2024) {
       return {
-        fill: "#FDE725",
-        stroke: "#D4C21D",
-        marker: "#D4C21D",
+        fill: "#EC4899",
+        stroke: "#BE185D",
+        marker: "#BE185D",
       };
     }
     if (year >= 2021) {
