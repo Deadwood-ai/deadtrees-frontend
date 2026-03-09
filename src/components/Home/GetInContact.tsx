@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
-import { Button, Card, Input, Typography, notification } from "antd";
+import { Button, Input, Typography, Tag, notification } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ExportOutlined } from "@ant-design/icons";
+import { CalendarOutlined, ExportOutlined, FileTextOutlined } from "@ant-design/icons";
 import { usePresentations } from "../../hooks/usePresentations";
 import { supabase } from "../../hooks/useSupabase";
 import { Settings } from "../../config";
@@ -52,29 +52,35 @@ const UpcomingConferences = () => {
 			<p className="text-center text-sm font-medium uppercase text-gray-500">Upcoming Conferences</p>
 			<div className="m-auto mt-4 max-w-4xl space-y-3">
 				{upcomingContributions.map((contribution, index) => (
-					<Card key={index} className="mb-4">
-						<div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-							<div className="w-full sm:w-auto">
-								<Text strong className="block">
-									{contribution.title}
-								</Text>
-								{contribution.speaker && (
-									<Text className="block text-gray-700">
-										Speaker: {contribution.speaker}
-									</Text>
-								)}
-								<Text type="secondary" className="block">
+					<a
+						key={index}
+						href={contribution.link || "#"}
+						target={contribution.link ? "_blank" : undefined}
+						rel={contribution.link ? "noopener noreferrer" : undefined}
+						className={`group flex flex-col items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all sm:flex-row sm:items-center ${contribution.link ? "hover:border-[#1B5E35]/30 hover:shadow-md cursor-pointer" : "cursor-default"}`}
+					>
+						<div className="flex-1">
+							<div className="mb-3 flex flex-wrap items-center gap-2">
+								<Tag icon={<CalendarOutlined />} className="m-0 border-none bg-emerald-50 text-[#1B5E35] font-semibold">
 									{contribution.date}
-								</Text>
-								<Text type="secondary" className="block">
-									{contribution.event}
-								</Text>
+								</Tag>
 							</div>
-							<Button type="link" icon={<ExportOutlined />} href={contribution.link} target="_blank">
-								View Details
-							</Button>
+							<h4 className={`mb-2 text-lg font-semibold text-gray-900 ${contribution.link ? "group-hover:text-[#1B5E35]" : ""}`}>
+								{contribution.title}
+							</h4>
+							{contribution.speaker && (
+								<p className="mb-2 text-sm font-medium text-gray-700">Speaker: {contribution.speaker}</p>
+							)}
+							<p className="m-0 flex items-center gap-2 text-sm text-gray-600">
+								<FileTextOutlined className="text-gray-400" /> {contribution.event}
+							</p>
 						</div>
-					</Card>
+						{contribution.link && (
+							<div className="shrink-0 flex items-center gap-1 text-sm font-semibold text-[#1B5E35] sm:ml-4">
+								View Details <ExportOutlined />
+							</div>
+						)}
+					</a>
 				))}
 			</div>
 			<div className="mt-4 text-center">
