@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { Card, Typography, Form, Radio, Input, Space, Tooltip, Tag, Button, Image, Collapse, message } from "antd";
 import { CopyOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, SaveOutlined } from "@ant-design/icons";
 import { createConditionalRule, formatAcquisitionDate } from "./auditConstants";
@@ -6,9 +5,8 @@ import { IDataset } from "../../types/dataset";
 import { OrthoMetadata } from "../../hooks/useDatasetAudit";
 import { DatasetFlag, FlagStatus } from "../../types/flags";
 import { AOIToolbarState, AuditMapWithControlsHandle } from "./AuditMapWithControls";
+import type { PhenologyMetadata } from "../../types/phenology";
 import PhenologyBar from "../PhenologyBar/PhenologyBar";
-import { Settings } from "../../config";
-import { isGeonadirDataset } from "../../utils/datasetUtils";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -155,13 +153,12 @@ export function AcquisitionDateCard({ dataset }: AcquisitionDateCardProps) {
 // === Phenology Card (Step 3) ===
 interface PhenologyCardProps {
 	dataset: IDataset;
-	phenologyData: { phenology_curve: number[]; source?: string; version?: string } | null | undefined;
+	phenologyData: PhenologyMetadata | null | undefined;
 	isPhenologyLoading: boolean;
-	thumbnailUrl: string | null;
 	onCopySeasonPrompt: () => void;
 }
 
-export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, thumbnailUrl, onCopySeasonPrompt }: PhenologyCardProps) {
+export function PhenologyCard({ dataset, phenologyData, isPhenologyLoading, onCopySeasonPrompt }: PhenologyCardProps) {
 	return (
 		<Card size="small" className="mb-3 shadow-sm">
 			<div className="mb-2 flex items-center justify-between">
@@ -515,7 +512,7 @@ export function FinalAssessmentCard({
 	currentDownloadId,
 	onStartDownload,
 }: FinalAssessmentCardProps) {
-	const isFromGeonadir = isGeonadirDataset(dataset);
+	const isViewOnlyDataset = dataset.data_access === "viewonly";
 
 	return (
 		<Card size="small" className="mb-3 shadow-sm">
@@ -560,15 +557,15 @@ export function FinalAssessmentCard({
 			<div className="mb-3">
 				<Tooltip
 					title={
-						isFromGeonadir
-							? "Download restricted by data provider"
+						isViewOnlyDataset
+							? "View-only dataset: orthophoto download is restricted"
 							: "Download orthophoto for local testing"
 					}
 				>
 					<Button
 						size="small"
 						icon={<DownloadOutlined />}
-						disabled={isDownloading || isFromGeonadir}
+						disabled={isDownloading || isViewOnlyDataset}
 						loading={isDownloading && currentDownloadId === `${dataset.id}-ortho`}
 						onClick={() => onStartDownload(dataset)}
 					>

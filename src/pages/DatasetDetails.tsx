@@ -1,7 +1,7 @@
 import { Button, Spin, message } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { useState, useCallback, Suspense, lazy } from "react";
+import { useState, useCallback, Suspense, lazy, useEffect } from "react";
 
 import { usePublicDatasetById } from "../hooks/useDatasets";
 import { useDatasetLabels } from "../hooks/useDatasetLabels";
@@ -14,7 +14,6 @@ import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag } from "../hooks/useDatasetFlags";
 import { useDatasetEditing } from "../hooks/useDatasetEditing";
 import { useCanAudit } from "../hooks/useUserPrivileges";
-import { isGeonadirDataset } from "../utils/datasetUtils";
 
 import DatasetLayerControlPanel from "../components/DatasetDetailsMap/DatasetLayerControlPanel";
 import EditingSidebar from "../components/DatasetDetailsMap/EditingSidebar";
@@ -101,6 +100,12 @@ export default function DatasetDetails() {
     [dataset, createFlag]
   );
 
+  useEffect(() => {
+    if (dataset?.data_access === "viewonly" && !labelsOnly) {
+      setLabelsOnly(true);
+    }
+  }, [dataset?.data_access, labelsOnly, setLabelsOnly]);
+
   // Loading state
   if (!hasValidDatasetId || isDatasetLoading) {
     return (
@@ -121,13 +126,12 @@ export default function DatasetDetails() {
     );
   }
 
-  const isFromGeonadir = isGeonadirDataset(dataset);
   const { isEditing, editingLayerType, editor, ai, hasDeadwood, hasForestCover, refreshKey } = editing;
   const SIDEBAR_LEFT_PX = 16;
   const SIDEBAR_WIDTH_PX = 384;
   const SIDEBAR_BUTTON_TOP_PX = 112;
   const FLOAT_BUTTON_SIZE_PX = 36;
-	const TOGGLE_INSET_EXPANDED_PX = 24;
+  const TOGGLE_INSET_EXPANDED_PX = 24;
 
   return (
     <div className="relative h-full w-full bg-slate-50 overflow-hidden">
@@ -156,7 +160,6 @@ export default function DatasetDetails() {
           <div className="shrink-0 border-t border-slate-300/90 bg-slate-100/95 px-4 pb-4 pt-3 shadow-[0_-10px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
             <DownloadSection
               dataset={dataset}
-              isFromGeonadir={isFromGeonadir}
               labelsOnly={labelsOnly}
               setLabelsOnly={setLabelsOnly}
               hasLabels={!!labelsData}
@@ -186,7 +189,7 @@ export default function DatasetDetails() {
           top: `${SIDEBAR_BUTTON_TOP_PX}px`,
           left: sidebarCollapsed
             ? `${SIDEBAR_LEFT_PX + 56}px`
-		  : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX - TOGGLE_INSET_EXPANDED_PX}px`,
+            : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX - TOGGLE_INSET_EXPANDED_PX}px`,
         }}
       >
         <Button

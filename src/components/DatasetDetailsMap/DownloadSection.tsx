@@ -5,10 +5,10 @@ import type { IDataset } from "../../types/dataset";
 import { supabase } from "../../hooks/useSupabase";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { resolveDownloadUrl } from "../../utils/downloadUrl";
+import { useEffect } from "react";
 
 interface DownloadSectionProps {
   dataset: IDataset;
-  isFromGeonadir: boolean;
   labelsOnly: boolean;
   setLabelsOnly: (value: boolean) => void;
   hasLabels: boolean;
@@ -18,9 +18,16 @@ interface DownloadSectionProps {
   finishDownload: () => void;
 }
 
+interface DownloadApiResponse {
+  status?: string;
+  job_id?: string;
+  download_path?: string;
+  message?: string;
+  detail?: string;
+}
+
 export default function DownloadSection({
   dataset,
-  isFromGeonadir,
   labelsOnly,
   setLabelsOnly,
   hasLabels,
@@ -30,6 +37,13 @@ export default function DownloadSection({
   finishDownload,
 }: DownloadSectionProps) {
   const { session } = useAuth();
+  const isViewOnlyDataset = dataset.data_access === "viewonly";
+
+  useEffect(() => {
+    if (isViewOnlyDataset && !labelsOnly) {
+      setLabelsOnly(true);
+    }
+  }, [isViewOnlyDataset, labelsOnly, setLabelsOnly]);
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     const accessToken = session?.access_token;
@@ -48,14 +62,35 @@ export default function DownloadSection({
     return { Authorization: `Bearer ${fallbackToken}` };
   };
 
+  const parseJsonResponse = async (response: Response): Promise<DownloadApiResponse> => {
+    let data: unknown = null;
+    try {
+      data = await response.json();
+    } catch {
+      if (!response.ok) {
+        throw new Error(`Request failed (${response.status})`);
+      }
+      throw new Error("Invalid API response");
+    }
+
+    if (!response.ok) {
+      const parsed = (data && typeof data === "object" ? data : {}) as DownloadApiResponse;
+      const detail = parsed.detail || parsed.message || `Request failed (${response.status})`;
+      throw new Error(detail);
+    }
+
+    return (data && typeof data === "object" ? data : {}) as DownloadApiResponse;
+  };
+
   const handleDownload = () => {
     if (!session) {
       message.info("Please log in to download datasets.");
       return;
     }
 
-    if (isFromGeonadir && !labelsOnly) {
-      message.warning("Dataset download restricted by data provider. You can download labels/predictions only.");
+    if (isViewOnlyDataset && !labelsOnly) {
+      setLabelsOnly(true);
+      message.warning("This is a view-only dataset. You can only download predictions.");
       return;
     }
 
@@ -81,11 +116,14 @@ export default function DownloadSection({
     getAuthHeaders()
       .then((headers) =>
         fetch(baseUrl, { headers })
-          .then((response) => response.json())
+          .then(parseJsonResponse)
           .then((data) => ({ data, headers })),
       )
       .then(({ data, headers }) => {
         const jobId = data.job_id;
+        if (!jobId) {
+          throw new Error("Missing job ID in download response");
+        }
         const statusEndpoint = labelsOnly
           ? `${Settings.API_URL}/download/datasets/${dataset.id}/labels/status`
           : `${Settings.API_URL}/download/datasets/${jobId}/status`;
@@ -95,7 +133,7 @@ export default function DownloadSection({
 
         const checkStatus = () => {
           fetch(statusEndpoint, { headers })
-            .then((response) => response.json())
+            .then(parseJsonResponse)
             .then((statusData) => {
               if (statusData.status === "completed") {
                 const downloadUrl = resolveDownloadUrl(statusData.download_path, downloadEndpoint);
@@ -113,7 +151,10 @@ export default function DownloadSection({
               } else if (statusData.status === "failed") {
                 downloadMsg();
                 finishDownload();
-                message.error({ content: "Download preparation failed. Please try again.", duration: 5 });
+                message.error({
+                  content: statusData.message || "Download preparation failed. Please try again.",
+                  duration: 5,
+                });
               } else {
                 setTimeout(checkStatus, 1000);
               }
@@ -140,8 +181,8 @@ export default function DownloadSection({
       : "Another download is in progress. Only one download can be active at a time."
     : !session
       ? "Please log in to download datasets."
-    : isFromGeonadir && !labelsOnly
-      ? "Dataset download restricted by data provider. Labels/predictions are still available."
+    : isViewOnlyDataset && !labelsOnly
+      ? "This dataset is view-only. Labels/predictions are available."
       : labelsOnly
         ? "Download vector data of tree mortality predictions (GPKG format)"
         : "Download both orthophoto and tree mortality predictions";
@@ -153,22 +194,32 @@ export default function DownloadSection({
           {isDownloading && currentDownloadId !== dataset.id.toString() && (
             <div className="mb-2 text-center text-sm text-orange-500">Another download is in progress</div>
           )}
+          {isViewOnlyDataset && (
+            <div className="rounded-md bg-amber-50 px-3 py-2 text-center text-xs text-amber-700">
+              View-only dataset: orthophoto download is restricted. Predictions (GPKG) are available.
+            </div>
+          )}
           <Tooltip title={tooltipTitle}>
             <Button
               type="primary"
               size="large"
               icon={<DownloadOutlined />}
               className="w-full shadow-sm"
-              disabled={!session || isDownloading || (isFromGeonadir && !labelsOnly)}
+              disabled={!session || isDownloading}
               loading={isDownloading && currentDownloadId === dataset.id.toString()}
               onClick={handleDownload}
             >
-              {labelsOnly ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
+              {labelsOnly || isViewOnlyDataset ? "Download Predictions (GPKG)" : "Download Complete Dataset"}
             </Button>
           </Tooltip>
           {hasLabels && (
             <Tooltip title="Only download the vector data containing tree mortality predictions, without the orthophoto">
-              <Checkbox checked={labelsOnly} onChange={(e) => setLabelsOnly(e.target.checked)} className="mt-2 flex justify-center text-gray-600">
+              <Checkbox
+                checked={labelsOnly || isViewOnlyDataset}
+                disabled={isViewOnlyDataset}
+                onChange={(e) => setLabelsOnly(e.target.checked)}
+                className="mt-2 flex justify-center text-gray-600"
+              >
                 Download predictions only
               </Checkbox>
             </Tooltip>

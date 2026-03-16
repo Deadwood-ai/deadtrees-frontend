@@ -4,7 +4,6 @@ import { IDataset } from "../../types/dataset";
 import { DatasetDetailsMapProvider } from "../../hooks/useDatasetDetailsMapProvider";
 import { useAuditDetailState } from "./useAuditDetailState";
 import { Settings } from "../../config";
-import { isGeonadirDataset } from "../../utils/datasetUtils";
 import { DatasetSeasonInfo } from "../../hooks/useSeasonPrompt";
 import EditingSidebar from "../DatasetDetailsMap/EditingSidebar";
 import { supabase } from "../../hooks/useSupabase";
@@ -30,6 +29,14 @@ import { resolveDownloadUrl } from "../../utils/downloadUrl";
 
 interface DatasetAuditDetailProps {
 	dataset: IDataset;
+}
+
+interface DownloadApiResponse {
+	status?: string;
+	job_id?: string;
+	download_path?: string;
+	message?: string;
+	detail?: string;
 }
 
 /**
@@ -121,8 +128,8 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 			return;
 		}
 
-		if (isGeonadirDataset(ds)) {
-			message.warning("Download restricted by data provider.");
+		if (ds.data_access === "viewonly") {
+			message.warning("This is a view-only dataset. Orthophoto download is restricted.");
 			return;
 		}
 
@@ -143,6 +150,26 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 			duration: 0,
 		});
 
+		const parseJsonResponse = async (response: Response): Promise<DownloadApiResponse> => {
+			let data: unknown = null;
+			try {
+				data = await response.json();
+			} catch {
+				if (!response.ok) {
+					throw new Error(`Request failed (${response.status})`);
+				}
+				throw new Error("Invalid API response");
+			}
+
+			if (!response.ok) {
+				const parsed = (data && typeof data === "object" ? data : {}) as DownloadApiResponse;
+				const detail = parsed.detail || parsed.message || `Request failed (${response.status})`;
+				throw new Error(detail);
+			}
+
+			return (data && typeof data === "object" ? data : {}) as DownloadApiResponse;
+		};
+
 		supabase.auth
 			.getSession()
 			.then(({ data: authData }) => {
@@ -152,16 +179,19 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 				}
 				const headers = { Authorization: `Bearer ${accessToken}` };
 				return fetch(baseUrl, { headers })
-					.then((response) => response.json())
+					.then(parseJsonResponse)
 					.then((data) => ({ data, headers }));
 			})
 			.then(({ data, headers }) => {
 				const jobId = data.job_id;
+				if (!jobId) {
+					throw new Error("Missing job ID in download response");
+				}
 				const downloadEndpoint = `${Settings.API_URL}/download/datasets/${jobId}/download`;
 
 				const checkStatus = () => {
 					fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`, { headers })
-						.then((response) => response.json())
+						.then(parseJsonResponse)
 						.then((statusData) => {
 							if (statusData.status === "completed") {
 								const downloadUrl = resolveDownloadUrl(statusData.download_path, downloadEndpoint);
@@ -261,7 +291,6 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 								dataset={dataset}
 								phenologyData={phenologyData}
 								isPhenologyLoading={isPhenologyLoading}
-								thumbnailUrl={thumbnailUrl}
 								onCopySeasonPrompt={handleCopySeasonPrompt}
 							/>
 
