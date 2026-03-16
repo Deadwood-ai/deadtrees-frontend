@@ -26,6 +26,7 @@ import {
 } from "./AuditStepCards";
 import AuditMapWithControls, { AuditMapWithControlsHandle } from "./AuditMapWithControls";
 import { MAP_AUDIT_SIDEBAR_WIDTH_CLASS, MAP_FLOATING_TOP_CLASS } from "../../theme/mapLayout";
+import { resolveDownloadUrl } from "../../utils/downloadUrl";
 
 interface DatasetAuditDetailProps {
 	dataset: IDataset;
@@ -156,14 +157,20 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 			})
 			.then(({ data, headers }) => {
 				const jobId = data.job_id;
+				const downloadEndpoint = `${Settings.API_URL}/download/datasets/${jobId}/download`;
 
 				const checkStatus = () => {
 					fetch(`${Settings.API_URL}/download/datasets/${jobId}/status`, { headers })
 						.then((response) => response.json())
 						.then((statusData) => {
-							if (statusData.status === "completed" && statusData.download_path) {
+							if (statusData.status === "completed") {
+								const downloadUrl = resolveDownloadUrl(statusData.download_path, downloadEndpoint);
+								if (!downloadUrl) {
+									throw new Error("Missing download URL in status response");
+								}
+
 								downloadMsg();
-								window.location.href = statusData.download_path;
+								window.location.href = downloadUrl;
 								message.success("Download started!");
 								finishDownload();
 							} else if (statusData.status === "failed") {

@@ -4,6 +4,7 @@ import { Settings } from "../../config";
 import type { IDataset } from "../../types/dataset";
 import { supabase } from "../../hooks/useSupabase";
 import { useAuth } from "../../hooks/useAuthProvider";
+import { resolveDownloadUrl } from "../../utils/downloadUrl";
 
 interface DownloadSectionProps {
   dataset: IDataset;
@@ -97,9 +98,14 @@ export default function DownloadSection({
             .then((response) => response.json())
             .then((statusData) => {
               if (statusData.status === "completed") {
+                const downloadUrl = resolveDownloadUrl(statusData.download_path, downloadEndpoint);
+                if (!downloadUrl) {
+                  throw new Error("Missing download URL in status response");
+                }
+
                 downloadMsg();
                 finishDownload();
-                window.location.href = statusData.download_path ?? downloadEndpoint;
+                window.location.href = downloadUrl;
                 message.success({
                   content: `${labelsOnly ? "Predictions" : "Dataset"} download started!`,
                   duration: 5,
