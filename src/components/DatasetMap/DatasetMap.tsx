@@ -23,7 +23,7 @@ import "./tooltip.css";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { palette } from "../../theme/palette";
 
-export type DatasetMapColorMode = "quality" | "labels" | "year";
+export type DatasetMapColorMode = "quality" | "labels" | "year" | "timeline";
 
 type DatasetVisualSpec = {
   fill: string;
@@ -129,6 +129,14 @@ const getDatasetVisualSpec = (dataset: IDataset, mode: DatasetMapColorMode): Dat
       fill: "#2C1E7A",
       stroke: "#221760",
       marker: "#221760",
+    };
+  }
+
+  if (mode === "timeline") {
+    return {
+      fill: palette.deadwood[500],
+      stroke: palette.deadwood[700],
+      marker: palette.deadwood[600],
     };
   }
 

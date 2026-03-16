@@ -1,14 +1,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { Button, Tag, Input, Spin, Tooltip, Checkbox } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined } from "@ant-design/icons";
+import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined, CloseOutlined, UploadOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL, { type DatasetMapColorMode } from "../components/DatasetMap/DatasetMap";
-import DatasetMapColorControl from "../components/DatasetMap/DatasetMapColorControl";
-import { CloseOutlined, UploadOutlined } from "@ant-design/icons";
+import DatasetTimelineControl from "../components/DatasetMap/DatasetTimelineControl";
 import { useNavigate } from "react-router-dom";
 import { useFilteredDatasets } from "../hooks/useFilteredDatasets";
 import { usePublicDatasets } from "../hooks/useDatasets";
+import { useUploadTimeline } from "../hooks/useUploadTimeline";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 import { isDatasetViewable } from "../utils/datasetVisibility";
@@ -39,7 +39,7 @@ export default function Dataset() {
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const colorMode: DatasetMapColorMode = "year";
+  const colorMode: DatasetMapColorMode = "timeline";
   // Incremented on explicit filter actions to trigger map zoom
   const [filterZoomTrigger, setFilterZoomTrigger] = useState(0);
 
@@ -108,13 +108,16 @@ export default function Dataset() {
     });
   }, [filteredData, searchValue, sortDirection]);
 
+  const { periods, selectedPeriod, setSelectedPeriod, displayData, cumulativeCount, addedInQuarter } =
+    useUploadTimeline(processedData);
+
   // Reset visibleFeatures when data changes
   useEffect(() => {
-    if (processedData?.length && processedData.length > 0) {
+    if (displayData?.length && displayData.length > 0) {
       // When data changes, start with all features visible
-      setVisibleFeatures(processedData.map((item) => item.id.toString()));
+      setVisibleFeatures(displayData.map((item) => item.id.toString()));
     }
-  }, [processedData]);
+  }, [displayData]);
 
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
 
@@ -127,7 +130,7 @@ export default function Dataset() {
             <div className="flex items-center">
               <h4 className="m-0 pr-2 font-medium text-gray-600">Images: </h4>
               <Tag className="m-0 font-semibold text-gray-700 bg-gray-100 border-gray-200">
-                <span>{processedData?.length}</span>
+                <span>{displayData?.length}</span>
               </Tag>
             </div>
             {filter && (
@@ -188,9 +191,9 @@ export default function Dataset() {
           </div>
         </div>
 
-        {processedData ? (
+        {displayData ? (
           <DataList
-            data={processedData}
+            data={displayData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             visibleFeatures={visibleFeatures}
@@ -207,21 +210,29 @@ export default function Dataset() {
 
       {/* Full Map */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute bottom-6 right-4 z-10">
-          <DatasetMapColorControl colorMode={colorMode} />
+        <div className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 max-w-[92vw]">
+          {periods.length > 0 && selectedPeriod && (
+            <DatasetTimelineControl
+              periods={periods}
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+              cumulativeCount={cumulativeCount}
+              addedInQuarter={addedInQuarter}
+            />
+          )}
         </div>
-        {!processedData ? (
+        {!displayData ? (
           <div className="flex h-full items-center justify-center">
             <Spin size="large" tip="Loading map..." />
           </div>
-        ) : processedData.length === 0 ? (
+        ) : displayData.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center rounded-lg bg-white">
             <div className="text-lg font-medium text-gray-500">No results found</div>
             <div className="text-sm text-gray-400">Try adjusting your filters or search criteria</div>
           </div>
         ) : (
           <DatasetMapOL
-            data={processedData}
+            data={displayData}
             hoveredItem={hoveredItem}
             setHoveredItem={setHoveredItem}
             setVisibleFeatures={setVisibleFeatures}
