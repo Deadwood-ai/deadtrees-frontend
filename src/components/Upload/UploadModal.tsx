@@ -14,6 +14,7 @@ import {
   Checkbox,
   Typography,
   Collapse,
+  message,
 } from "antd";
 import { InfoCircleOutlined, UploadOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
@@ -28,7 +29,7 @@ import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
 import useLabelsFileUpload from "../../hooks/useLabelsFileUpload";
 import { useCanUploadPrivate } from "../../hooks/useUserPrivileges";
-import { detectUploadType, validateFileSize } from "../../utils/fileValidation";
+import { detectUploadType, validateFileSize, validateZipCompressionMethods } from "../../utils/fileValidation";
 
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
@@ -176,6 +177,23 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
   const { canUpload: canUploadPrivate } = useCanUploadPrivate();
+
+  const handleBeforeUpload = async (file: RcFile) => {
+    try {
+      const uploadType = detectUploadType(file.name);
+      validateFileSize(file, uploadType);
+      if (uploadType === UploadType.RAW_IMAGES_ZIP) {
+        await validateZipCompressionMethods(file);
+      }
+
+      return beforeUpload(file);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "File validation failed. Please choose a different file.";
+      message.error(errorMessage);
+      return Upload.LIST_IGNORE;
+    }
+  };
 
   const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
     return new Promise((resolve, reject) => {
@@ -338,7 +356,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
               <Upload.Dragger
                 fileList={fileList}
                 onChange={onFileChange}
-                beforeUpload={beforeUpload}
+                beforeUpload={handleBeforeUpload}
                 accept=".tif,.tiff,.zip"
                 maxCount={1}
                 className="w-full"
