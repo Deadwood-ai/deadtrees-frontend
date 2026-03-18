@@ -528,13 +528,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
 
             {canUploadPrivate && (
               <Form.Item name="is_private" valuePropName="checked">
-                <div className="mt-2 flex items-start">
-                  <Checkbox />
-                  <div className="ml-4 flex items-center text-sm">
+                <Checkbox className="mt-2">
+                  <span className="flex items-center text-sm text-gray-700">
                     <LockOutlined className="mr-2" />
                     Upload as private data (only available to you)
-                  </div>
-                </div>
+                  </span>
+                </Checkbox>
               </Form.Item>
             )}
 
@@ -553,13 +552,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                     },
                   ]}
                 >
-                  <div className="flex items-start">
-                    <Checkbox className="mt-1" />
-                    <div className="ml-4 text-sm text-gray-600">
+                  <Checkbox className="mt-1 leading-relaxed">
+                    <span className="text-sm text-gray-700">
                       I agree to the <TermsLink /> and <PrivacyLink />. I confirm that I have the rights to share this
                       data and agree to make it available under the CC BY license.
-                    </div>
-                  </div>
+                      <span className="ml-1 font-medium text-red-600">(required)</span>
+                    </span>
+                  </Checkbox>
                 </Form.Item>
                 <Space className="pt-2">
                   <Button type="primary" htmlType="submit" disabled={fileList.length === 0 || !agreementAccepted}>
