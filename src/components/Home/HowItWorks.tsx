@@ -1,44 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "antd";
-import { CloudUploadOutlined, GlobalOutlined, FileImageOutlined, FileZipOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { CloudUploadOutlined, GlobalOutlined, DatabaseOutlined } from "@ant-design/icons";
 import DataGallery from "./DataGallery";
 
 const MiniSatelliteMap = lazy(() => import("./MiniSatelliteMap"));
-
-const UploadIllustration = () => (
-  <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl bg-white p-8 shadow-sm">
-    <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-50 text-5xl text-[#1B5E35] ring-8 ring-emerald-50/50">
-      <CloudUploadOutlined />
-    </div>
-    <div className="flex w-full max-w-sm flex-col gap-3">
-      {/* GeoTIFF Upload */}
-      <div className="flex items-center gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
-        <FileImageOutlined className="text-2xl text-blue-500" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-gray-700">orthomosaic.tif</div>
-          <div className="mt-1 text-xs font-medium text-gray-400">GeoTIFF • 1.2 GB</div>
-        </div>
-        <div className="text-xs font-bold text-[#1B5E35]">DONE</div>
-      </div>
-      
-      {/* Raw Imagery ZIP Upload */}
-      <div className="flex items-center gap-4 rounded-lg border border-emerald-100 bg-[#E8F3EB]/50 p-4">
-        <FileZipOutlined className="text-2xl text-amber-500" />
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-gray-700">raw_drone_images.zip</div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white">
-            <div className="h-full w-[68%] bg-[#1B5E35] rounded-full"></div>
-          </div>
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="text-xs font-bold text-[#1B5E35]">68%</div>
-          <div className="text-[10px] text-gray-500">ODM Processing</div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 const DeferredMiniSatelliteMap = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,8 +76,16 @@ const HowItWorks = () => {
             </Link>
           </div>
           <div className="w-full flex-1 order-1 md:order-2">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gray-50 shadow-inner ring-1 ring-black/5">
-              <UploadIllustration />
+            <div className="relative w-full overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
+              <video
+                src="/assets/upload.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full rounded-2xl object-contain"
+              />
             </div>
           </div>
         </div>
