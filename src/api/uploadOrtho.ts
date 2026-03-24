@@ -34,6 +34,9 @@ interface ChunkInfo {
 }
 
 const CHUNK_SIZE = 50 * 1024 * 1024; // 50 MB
+const CHUNK_UPLOAD_TIMEOUT_MS = 1000 * 60 * 60; // 60 minutes per chunk
+const MAX_CHUNK_UPLOAD_ATTEMPTS = 3;
+const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 
 // const refreshToken = async () => {
 //   const { data, error } = await supabase.auth.refreshSession();
@@ -49,11 +52,8 @@ const uploadOrtho = async (options: UploadOptions) => {
   const uploadStartTime = Date.now();
 
   try {
-    // Set up an event listener for the abort signal
-    if (signal) {
-      signal.addEventListener("abort", () => {
-        throw new DOMException("Upload cancelled by user", "AbortError");
-      });
+    if (signal?.aborted) {
+      throw new DOMException("Upload cancelled by user", "AbortError");
     }
 
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
@@ -177,47 +177,104 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
   //   console.log(pair[0], pair[1]);
   // }
 
-  try {
-    const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const percentComplete = calculateProgress(chunkInfo, progressEvent, fileSize);
-          onProgress({ percent: percentComplete });
-        }
-      },
-      timeout: 1000 * 60 * 10, // 10 minutes
-      signal: signal,
-    });
-    return resUpload;
-  } catch (error) {
-    if (axios.isCancel(error)) {
-      throw new DOMException("Upload cancelled by user", "AbortError");
+  for (let attempt = 1; attempt <= MAX_CHUNK_UPLOAD_ATTEMPTS; attempt++) {
+    try {
+      const resUpload = await axios.post(`${Settings.API_URL_UPLOAD_ENDPOINT}`, formData, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentComplete = calculateProgress(chunkInfo, progressEvent, fileSize);
+            onProgress({ percent: percentComplete });
+          }
+        },
+        timeout: CHUNK_UPLOAD_TIMEOUT_MS,
+        signal: signal,
+      });
+      return resUpload;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        throw new DOMException("Upload cancelled by user", "AbortError");
+      }
+
+      if (attempt < MAX_CHUNK_UPLOAD_ATTEMPTS && shouldRetryChunkUpload(error)) {
+        await waitForRetryDelay(attempt, signal);
+        continue;
+      }
+
+      throw createChunkUploadError(error, chunkInfo.index);
     }
-
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const detail =
-        (typeof error.response?.data === "object" &&
-          error.response?.data &&
-          "detail" in error.response.data &&
-          (error.response.data as { detail?: unknown }).detail) ||
-        (typeof error.response?.data === "string" ? error.response.data : undefined) ||
-        error.message;
-
-      throw new Error(`Failed to upload chunk ${chunkInfo.index} (status ${status ?? "unknown"}): ${String(detail)}`);
-    }
-
-    throw new Error(`Failed to upload chunk ${chunkInfo.index}: ${error instanceof Error ? error.message : "unknown error"}`);
   }
+
+  throw new Error(`Failed to upload chunk ${chunkInfo.index}: exhausted retry attempts`);
 }
 
 function calculateProgress(chunkInfo: ChunkInfo, progressEvent: any, fileSize: number): number {
   const chunkProgress = progressEvent.loaded / progressEvent.total;
   const overallProgress = (chunkInfo.index * CHUNK_SIZE + chunkProgress * (chunkInfo.end - chunkInfo.start)) / fileSize;
   return Math.round(overallProgress * 100);
+}
+
+function shouldRetryChunkUpload(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  if (error.code === "ECONNABORTED") {
+    return true;
+  }
+
+  if (!error.response) {
+    return true;
+  }
+
+  return RETRYABLE_STATUS_CODES.has(error.response.status);
+}
+
+function createChunkUploadError(error: unknown, chunkIndex: number): Error {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const detail =
+      (typeof error.response?.data === "object" &&
+        error.response?.data &&
+        "detail" in error.response.data &&
+        (error.response.data as { detail?: unknown }).detail) ||
+      (typeof error.response?.data === "string" ? error.response.data : undefined) ||
+      error.message;
+
+    return new Error(`Failed to upload chunk ${chunkIndex} (status ${status ?? "unknown"}): ${String(detail)}`);
+  }
+
+  return new Error(`Failed to upload chunk ${chunkIndex}: ${error instanceof Error ? error.message : "unknown error"}`);
+}
+
+async function waitForRetryDelay(attempt: number, signal?: AbortSignal): Promise<void> {
+  const retryDelayMs = Math.min(1000 * 2 ** attempt, 10000);
+
+  await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Upload cancelled by user", "AbortError"));
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, retryDelayMs);
+
+    const onAbort = () => {
+      window.clearTimeout(timeoutId);
+      cleanup();
+      reject(new DOMException("Upload cancelled by user", "AbortError"));
+    };
+
+    const cleanup = () => {
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function handleError(error: unknown, onError: (error: Error) => void) {
