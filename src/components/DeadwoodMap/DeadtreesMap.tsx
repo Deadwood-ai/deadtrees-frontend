@@ -12,7 +12,7 @@ import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
 import { Attribution } from "ol/control";
-import { transformExtent, toLonLat } from "ol/proj";
+import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -157,6 +157,7 @@ const DeadtreesMap = () => {
   const [clickedValues, setClickedValues] = useState<ClickedValues | null>(null);
   const [mobileLocationDrawerOpen, setMobileLocationDrawerOpen] = useState(false);
   const [mobileLayersDrawerOpen, setMobileLayersDrawerOpen] = useState(false);
+  const [isLocatingUser, setIsLocatingUser] = useState(false);
   const isMobile = useIsMobile();
 
   // Auth and flags hooks
@@ -786,6 +787,48 @@ const DeadtreesMap = () => {
     }
   }, [isDrawingFlag, cancelFlagDrawing, startFlagDrawing]);
 
+  const locateUser = useCallback(() => {
+    if (!navigator.geolocation) {
+      message.error("Geolocation is not supported by this browser");
+      return;
+    }
+
+    setIsLocatingUser(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const center = fromLonLat([longitude, latitude]);
+        const view = mapRef.current?.getView();
+        if (view) {
+          view.animate({
+            center,
+            zoom: Math.max(view.getZoom() || 0, 13),
+            duration: 700,
+          });
+        }
+        setIsLocatingUser(false);
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          message.warning("Location permission denied");
+        } else {
+          message.error("Could not get your current location");
+        }
+        setIsLocatingUser(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 120000,
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!map) return;
+    locateUser();
+  }, [map, locateUser]);
+
   return (
     <div className="h-full w-full">
       <div
@@ -797,7 +840,12 @@ const DeadtreesMap = () => {
       >
         {/* Top Left - Location Controls (desktop) */}
         <div className="absolute left-4 top-24 z-50 hidden md:block">
-          <LocationControls onPlaceSelect={setBounds} variant="floating-card" />
+          <LocationControls
+            onPlaceSelect={setBounds}
+            variant="floating-card"
+            onLocateMe={locateUser}
+            isLocating={isLocatingUser}
+          />
         </div>
 
         {/* Top Right - Layer Controls (desktop) */}
@@ -876,7 +924,12 @@ const DeadtreesMap = () => {
           className="md:hidden"
           styles={{ body: { padding: 16, overflowX: "hidden" } }}
         >
-          <LocationControls onPlaceSelect={setBounds} variant="drawer-inline" />
+          <LocationControls
+            onPlaceSelect={setBounds}
+            variant="drawer-inline"
+            onLocateMe={locateUser}
+            isLocating={isLocatingUser}
+          />
         </Drawer>
 
         <Drawer
