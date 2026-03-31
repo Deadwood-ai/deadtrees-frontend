@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Alert, Button } from "antd";
+import { Button } from "antd";
 import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { useNavigate } from "react-router-dom";
@@ -109,16 +109,6 @@ const Hero = () => {
 			<div className="absolute inset-0 hidden bg-[radial-gradient(1000px_at_25%_35%,_var(--tw-gradient-stops))] from-emerald-100/60 via-green-50/30 to-white md:block"></div>
 
 			<div className="relative z-10 m-auto flex w-full max-w-[1400px] flex-1 flex-col justify-center px-4 md:px-10">
-				<div className="md:hidden">
-					<Alert
-						message="Mobile version is limited"
-						description="Please use a desktop browser for full functionality. Features like the interactive map, data visualization, and dataset uploads are optimized for desktop devices."
-						type="info"
-						showIcon
-						closable
-					/>
-				</div>
-
 				<div className="w-full flex flex-col gap-12 py-12 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-0">
 					{/* Left column */}
 					<div className="flex flex-col items-center text-center lg:w-[42%] lg:items-start lg:text-left shrink-0">

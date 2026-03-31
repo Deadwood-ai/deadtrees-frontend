@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Table, Tag, Typography, Button, Tooltip, Spin, Empty } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import { ClockCircleOutlined } from "@ant-design/icons";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface Publication {
   id: number;
@@ -15,6 +17,7 @@ interface Publication {
 
 const PublicationsTable: React.FC = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [publications, setPublications] = useState<Publication[]>([]);
 
@@ -62,35 +65,40 @@ const PublicationsTable: React.FC = () => {
     fetchPublications();
   }, [user]);
 
-  const columns = [
+  const columns: ColumnsType<Publication> = [
     {
       title: "Title",
       dataIndex: "title",
       key: "title",
+      responsive: ["xs"],
       render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
     },
     {
       title: "Created",
       dataIndex: "created_at",
       key: "created_at",
+      responsive: ["sm"],
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
       title: "Datasets",
       dataIndex: "datasets",
       key: "datasets",
+      responsive: ["sm"],
       render: (count: number) => <Tag color="blue">{count}</Tag>,
     },
     {
       title: "Status",
       dataIndex: "doi",
       key: "status",
+      responsive: ["xs"],
       render: (doi: string | null) => (doi ? <Tag color="green">Published</Tag> : <Tag color="orange">Pending</Tag>),
     },
     {
       title: "DOI",
       dataIndex: "doi",
       key: "doi",
+      responsive: ["xs"],
       render: (doi: string | null) =>
         doi ? (
           <Tooltip title="View publication">
@@ -137,7 +145,7 @@ const PublicationsTable: React.FC = () => {
         dataSource={publications}
         columns={columns}
         rowKey="id"
-        scroll={{ x: "max-content" }}
+        scroll={{ x: isMobile ? 560 : "max-content" }}
         pagination={{ pageSize: 10 }}
       />
     </div>

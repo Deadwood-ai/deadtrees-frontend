@@ -1,11 +1,13 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { Breadcrumb, Button, Layout, Menu, Space, Typography, theme, Image, Tag } from "antd";
+import { MenuOutlined } from "@ant-design/icons";
+import { Button, ConfigProvider, Drawer, Layout, Menu } from "antd";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
 const { Header } = Layout;
 
 import { useAuth } from "../hooks/useAuthProvider";
 import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useNavigate } from "react-router-dom";
+import { palette } from "../theme/palette";
 
 const defaultNavigation = [
   {
@@ -37,7 +39,8 @@ const auditNavigation = {
 };
 
 export default function Navigation() {
-  const { user, session, signOut, isLoading } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { session, signOut } = useAuth();
   const { canAudit } = useCanAudit();
   const nav = useNavigate();
   const location = useLocation();
@@ -54,10 +57,6 @@ export default function Navigation() {
     // Insert the audit link before the Account link
     navigation.splice(navigation.length - 1, 0, auditNavigation);
   }
-
-  const {
-    token: { colorBgContainer },
-  } = theme.useToken();
 
   const handleSignOut = async () => {
     if (isInAuditDetail) {
@@ -87,7 +86,7 @@ export default function Navigation() {
     }
   };
 
-  const handleMenuClick = (e: any) => {
+  const handleMenuClick = (e: { key: string }) => {
     if (isInAuditDetail) {
       // When in audit detail, dispatch custom event instead of navigating
       window.dispatchEvent(
@@ -100,71 +99,154 @@ export default function Navigation() {
       const path = e.key === "/home" ? "/" : e.key;
       nav(path);
     }
+
+    setMobileMenuOpen(false);
+  };
+
+  const handleAuthClick = () => {
+    if (session) {
+      handleSignOut();
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    if (isInAuditDetail) {
+      window.dispatchEvent(
+        new CustomEvent("audit-navigation-attempt", {
+          detail: { to: "/sign-in" },
+        }),
+      );
+      return;
+    }
+
+    nav("/sign-in");
+    setMobileMenuOpen(false);
   };
 
   return (
-    <div className="hidden md:flex justify-center w-full fixed top-0 z-50 pt-4 px-4 pb-2 pointer-events-none">
-      <Header
-        className="w-full pointer-events-auto"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          background: "rgba(255, 255, 255, 0.90)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          borderRadius: "1rem",
-          border: "1px solid rgba(229, 231, 235, 0.8)",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
-          padding: "0 24px",
-          height: "64px",
-          lineHeight: "64px"
-        }}
-      >
-        <div className="flex flex-1 items-center justify-center md:justify-start">
+    <>
+      <div className="hidden md:flex justify-center w-full fixed top-0 z-50 pt-4 px-4 pb-2 pointer-events-none">
+        <Header
+          className="w-full pointer-events-auto"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            background: "rgba(255, 255, 255, 0.90)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderRadius: "1rem",
+            border: "1px solid rgba(229, 231, 235, 0.8)",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+            padding: "0 24px",
+            height: "64px",
+            lineHeight: "64px",
+          }}
+        >
+          <div className="flex flex-1 items-center justify-center md:justify-start">
+            <img
+              src="/assets/logo.png"
+              alt="deadtrees.earth"
+              onClick={handleLogoClick}
+              className="mr-3 h-10 cursor-pointer hover:opacity-80 transition-opacity"
+            />
+          </div>
+          <div style={{ flex: 1, backgroundColor: "transparent" }}>
+            <Menu
+              mode="horizontal"
+              selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
+              items={navigation}
+              onClick={handleMenuClick}
+              style={{
+                justifyContent: "end",
+                minWidth: 0,
+                borderBottom: "none",
+                backgroundColor: "transparent",
+                width: "100%",
+              }}
+            />
+          </div>
+          <Button
+            className="ml-8 rounded-full shadow-sm px-6 font-medium"
+            type={session ? "default" : "primary"}
+            onClick={handleAuthClick}
+          >
+            {session ? "Sign Out" : "Sign In"}
+          </Button>
+        </Header>
+      </div>
+
+      <div className="md:hidden fixed top-0 z-50 w-full px-2 pt-2 pointer-events-none">
+        <Header
+          className="pointer-events-auto"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "rgba(255, 255, 255, 0.94)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            borderRadius: "0.875rem",
+            border: "1px solid rgba(229, 231, 235, 0.8)",
+            boxShadow: "0 2px 8px rgba(15, 23, 42, 0.08)",
+            padding: "0 12px",
+            height: "56px",
+            lineHeight: "56px",
+          }}
+        >
           <img
             src="/assets/logo.png"
             alt="deadtrees.earth"
             onClick={handleLogoClick}
-            className="mr-3 h-10 cursor-pointer hover:opacity-80 transition-opacity"
+            className="h-8 cursor-pointer hover:opacity-80 transition-opacity"
           />
-        </div>
-        <div style={{ flex: 1, backgroundColor: "transparent" }}>
-          <Menu
-            mode="horizontal"
-            selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
-            items={navigation}
-            onClick={handleMenuClick}
-            style={{
-              justifyContent: "end",
-              minWidth: 0,
-              borderBottom: "none",
-              backgroundColor: "transparent",
-              width: "100%",
+          <Button
+            aria-label="Open navigation menu"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileMenuOpen(true)}
+          />
+        </Header>
+      </div>
+
+      <Drawer
+        title="Navigation"
+        placement="right"
+        open={mobileMenuOpen}
+        width="82vw"
+        onClose={() => setMobileMenuOpen(false)}
+        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column' } }}
+      >
+        <div className="flex-1 overflow-y-auto py-2">
+          <ConfigProvider
+            theme={{
+              components: {
+                Menu: {
+                  itemSelectedBg: palette.primary[50],
+                  itemSelectedColor: palette.primary[500],
+                  itemHoverBg: palette.neutral[50],
+                },
+              },
             }}
-          />
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[currentPath === "/" ? "/home" : currentPath]}
+              items={navigation}
+              onClick={handleMenuClick}
+              style={{ borderInlineEnd: "none", backgroundColor: "transparent" }}
+            />
+          </ConfigProvider>
         </div>
-        <Button
-          className="ml-8 rounded-full shadow-sm px-6 font-medium"
-          type={session ? "default" : "primary"}
-          onClick={
-            session
-              ? handleSignOut
-              : () => {
-                  if (isInAuditDetail) {
-                    window.dispatchEvent(
-                      new CustomEvent("audit-navigation-attempt", {
-                        detail: { to: "/sign-in" },
-                      }),
-                    );
-                  } else {
-                    nav("/sign-in");
-                  }
-                }
-          }
-        >
-          {session ? "Sign Out" : "Sign In"}
-        </Button>
-      </Header>
-    </div>
+        <div className="p-4 border-t border-gray-100">
+          <Button
+            className="w-full font-medium"
+            type={session ? "default" : "primary"}
+            size="large"
+            onClick={handleAuthClick}
+          >
+            {session ? "Sign Out" : "Sign In"}
+          </Button>
+        </div>
+      </Drawer>
+    </>
   );
 }

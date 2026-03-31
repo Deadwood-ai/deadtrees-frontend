@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
-import { Button, Tag, Input, Spin, Tooltip, Checkbox } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined, CloseOutlined, UploadOutlined } from "@ant-design/icons";
+import { Button, Tag, Input, Spin, Tooltip, Checkbox, Drawer } from "antd";
+import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined, CloseOutlined, UploadOutlined, UnorderedListOutlined } from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL, { type DatasetMapColorMode } from "../components/DatasetMap/DatasetMap";
@@ -12,6 +12,7 @@ import { useUploadTimeline } from "../hooks/useUploadTimeline";
 import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 import { isDatasetViewable } from "../utils/datasetVisibility";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
 
@@ -39,7 +40,9 @@ export default function Dataset() {
   const [visibleFeatures, setVisibleFeatures] = useState<string[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [isMobileListOpen, setIsMobileListOpen] = useState(false);
   const colorMode: DatasetMapColorMode = "timeline";
+  const isMobile = useIsMobile();
   // Incremented on explicit filter actions to trigger map zoom
   const [filterZoomTrigger, setFilterZoomTrigger] = useState(0);
 
@@ -120,93 +123,117 @@ export default function Dataset() {
   }, [displayData]);
 
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
+  const sidebarContent = (
+    <div className={`flex h-full flex-col pointer-events-auto ${!isMobile ? "rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm" : "px-4 pt-4 pb-16"}`}>
+      <div className="flex items-start justify-between pb-3">
+        <div className="flex flex-col">
+          <div className="flex items-center">
+            <h4 className="m-0 pr-2 font-medium text-gray-600">Images: </h4>
+            <Tag className="m-0 font-semibold text-gray-700 bg-gray-100 border-gray-200">
+              <span>{displayData?.length}</span>
+            </Tag>
+          </div>
+          {filter && (
+            <div className="flex items-center mt-2">
+              <span className="text-xs text-gray-500 mr-2">Filtered by:</span>
+              <Tag className="m-0 flex items-center gap-1" color="blue">
+                <span className="text-xs font-medium">
+                  {filterDisplay.slice(0, 15) + (filterDisplay.length > 15 ? "..." : "")}
+                </span>
+                <Button
+                  className="border-none bg-transparent h-auto p-0 ml-1 flex items-center justify-center text-blue-500 hover:text-blue-700"
+                  size="small"
+                  onClick={() => {
+                    setFilter("");
+                    setFilterTag("platform");
+                  }}
+                  icon={<CloseOutlined className="text-[10px]" />}
+                />
+              </Tag>
+            </div>
+          )}
+        </div>
+        <Button
+          type="primary"
+          icon={<UploadOutlined />}
+          onClick={() => navigate("/profile")}
+          className="shadow-sm font-medium"
+        >
+          Upload Data
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-2 pb-4">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            placeholder="Search by Authors or Location (Region, Province, City)"
+            onChange={(e) => handleSearch(e.target.value)}
+            className="flex-1"
+            allowClear
+            value={searchInput}
+          />
+          <div className="flex items-center gap-2 sm:pl-2">
+            <Tooltip title="Open advanced filtering options">
+              <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
+            </Tooltip>
+            <Tooltip title={`Sort by addition order ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
+              <Button icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />} onClick={toggleSort} />
+            </Tooltip>
+          </div>
+        </div>
+        <div className="ml-1 mt-0">
+          <Checkbox checked={filterByViewport} onChange={(e) => setFilterByViewport(e.target.checked)}>
+            Filter list by map view
+          </Checkbox>
+        </div>
+      </div>
+
+      {displayData ? (
+        <DataList
+          data={displayData}
+          hoveredItem={hoveredItem}
+          setHoveredItem={setHoveredItem}
+          visibleFeatures={visibleFeatures}
+          onFilterClick={handleFilterClick}
+          searchValue={searchValue}
+          filterByViewport={filterByViewport}
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <Spin size="large" tip="Loading data..." />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="relative h-full w-full bg-slate-50">
       {/* Floating Sidebar */}
-      <div className="absolute left-4 top-24 bottom-6 z-10 flex w-[380px] flex-col rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm pointer-events-auto">
-        <div className="flex items-start justify-between pb-3">
-          <div className="flex flex-col">
-            <div className="flex items-center">
-              <h4 className="m-0 pr-2 font-medium text-gray-600">Images: </h4>
-              <Tag className="m-0 font-semibold text-gray-700 bg-gray-100 border-gray-200">
-                <span>{displayData?.length}</span>
-              </Tag>
-            </div>
-            {filter && (
-              <div className="flex items-center mt-2">
-                <span className="text-xs text-gray-500 mr-2">Filtered by:</span>
-                <Tag className="m-0 flex items-center gap-1" color="blue">
-                  <span className="text-xs font-medium">
-                    {filterDisplay.slice(0, 15) + (filterDisplay.length > 15 ? "..." : "")}
-                  </span>
-                  <Button
-                    className="border-none bg-transparent h-auto p-0 ml-1 flex items-center justify-center text-blue-500 hover:text-blue-700"
-                    size="small"
-                    onClick={() => {
-                      setFilter("");
-                      setFilterTag("platform");
-                    }}
-                    icon={<CloseOutlined className="text-[10px]" />}
-                  />
-                </Tag>
-              </div>
-            )}
-          </div>
-          <Button 
-            type="primary" 
-            icon={<UploadOutlined />} 
-            onClick={() => navigate("/profile")}
-            className="shadow-sm font-medium"
-          >
-            Upload Data
-          </Button>
-        </div>
-
-        <div className="flex flex-col gap-2 pb-4">
-          <div className="flex">
-            <Input
-              placeholder="Search by Authors or Location (Region, Province, City)"
-              onChange={(e) => handleSearch(e.target.value)}
-              className="flex-1"
-              allowClear
-              value={searchInput}
-            />
-            <div className="space-x-2 pl-4">
-              <Tooltip title="Open advanced filtering options">
-                <Button icon={<FilterOutlined />} onClick={handleFilterButtonClick} />
-              </Tooltip>
-              <Tooltip title={`Sort by addition order ${sortDirection === "asc" ? "oldest first" : "newest first"}`}>
-                <Button
-                  icon={sortDirection === "asc" ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
-                  onClick={toggleSort}
-                />
-              </Tooltip>
-            </div>
-          </div>
-          <div className="ml-1 mt-0">
-            <Checkbox checked={filterByViewport} onChange={(e) => setFilterByViewport(e.target.checked)}>
-              Filter list by map view
-            </Checkbox>
-          </div>
-        </div>
-
-        {displayData ? (
-          <DataList
-            data={displayData}
-            hoveredItem={hoveredItem}
-            setHoveredItem={setHoveredItem}
-            visibleFeatures={visibleFeatures}
-            onFilterClick={handleFilterClick}
-            searchValue={searchValue}
-            filterByViewport={filterByViewport}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Spin size="large" tip="Loading data..." />
-          </div>
-        )}
+      <div className="absolute left-4 top-24 bottom-6 z-10 hidden w-[380px] md:flex">
+        {sidebarContent}
       </div>
+
+      <div className="absolute left-2 top-20 z-20 flex items-center md:hidden">
+        <Button 
+          icon={<UnorderedListOutlined />} 
+          className="shadow-sm" 
+          onClick={() => setIsMobileListOpen(true)}
+        >
+          Datasets & Filters
+        </Button>
+      </div>
+
+      <Drawer
+        title="Datasets and filters"
+        placement="bottom"
+        height="85vh"
+        open={isMobileListOpen}
+        onClose={() => setIsMobileListOpen(false)}
+        className="md:hidden"
+        styles={{ body: { padding: '0', overflowY: 'hidden' } }}
+      >
+        <div className="h-full bg-slate-50">{sidebarContent}</div>
+      </Drawer>
 
       {/* Full Map */}
       <div className="absolute inset-0 z-0">
@@ -245,7 +272,10 @@ export default function Dataset() {
       {/* Filter Modal */}
       <FilterModal
         isVisible={isFilterModalVisible}
-        onClose={() => setIsFilterModalVisible(false)}
+        onClose={() => {
+          setIsFilterModalVisible(false);
+          if (isMobile) setIsMobileListOpen(true);
+        }}
         onApplyFilters={handleApplyFilters}
         currentFilters={advancedFilters}
       />

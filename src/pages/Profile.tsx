@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Avatar, Badge, Button, Segmented, Typography, Table, Tag, Tooltip } from "antd";
+import { Avatar, Badge, Button, Segmented, Typography, Table, Tag, Tooltip } from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import UploadButton from "../components/Upload/UploadButton";
@@ -10,6 +10,7 @@ import type { DatasetFlag } from "../types/flags";
 import { FileOutlined } from "@ant-design/icons";
 import PublicationModal from "../components/PublicationModal";
 import PublicationsTable from "../components/PublicationsTable";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface ProfileAvatarProps {
   email: string;
@@ -50,6 +51,7 @@ export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
 export default function ProfilePage() {
   const { session, user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // const { data: userData } = useUserDatasets();
   const { data: myFlags = [] } = useMyFlags();
@@ -94,16 +96,16 @@ export default function ProfilePage() {
     return (
       <div className="w-full bg-[#F8FAF9] min-h-[calc(100vh-64px)] pb-24 pt-24 md:pt-28">
         <div className="mx-auto max-w-[1920px] px-4 md:px-8 xl:px-12">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 pb-12">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-8 pb-8 md:pb-12">
             <div className="flex items-center gap-6">
               <Badge count={myFlags.length} color="red">
                 <ProfileAvatar email={user?.email ?? ""} size={96} />
               </Badge>
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 <Typography.Title level={2} style={{ margin: 0, fontWeight: 700 }}>
                   My Account
                 </Typography.Title>
-                <Typography.Text className="text-lg font-medium" type="secondary">
+                <Typography.Text className="text-lg font-medium break-all" type="secondary">
                   {user?.email}
                 </Typography.Text>
               </div>
@@ -140,17 +142,19 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="w-full">
-            <div className="mb-6 flex justify-between items-center">
-              <Segmented
-                options={["My Datasets", "Published Datasets", "My Issues"]}
-                size="large"
-                value={activeTab}
-                onChange={(value) => {
-                  setActiveTab(value as ActiveTab);
-                }}
-                className="shadow-sm border border-gray-200/50"
-              />
-              <div className="flex gap-2">
+            <div className="mb-6 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
+              <div className="w-full md:w-auto overflow-x-auto">
+                <Segmented
+                  options={["My Datasets", "Published Datasets", "My Issues"]}
+                  size={isMobile ? "middle" : "large"}
+                  value={activeTab}
+                  onChange={(value) => {
+                    setActiveTab(value as ActiveTab);
+                  }}
+                  className="shadow-sm border border-gray-200/50"
+                />
+              </div>
+              <div className="flex w-full justify-end gap-2 md:w-auto">
                 {activeTab === ActiveTab.MyDatasets ? (
                   <>
                     {selectedDatasets.length > 0 ? (
@@ -195,12 +199,12 @@ export default function ProfilePage() {
                         <Table
                           rowKey="id"
                           dataSource={myFlags}
-                          scroll={{ x: "max-content" }}
                           columns={[
                           {
                             title: "Dataset ID",
                             dataIndex: "dataset_id",
                             key: "dataset_id",
+                            responsive: ["xs"],
                             render: (id: number) => (
                               <Link to={`/dataset/${id}`} className="font-medium text-[#1B5E35] hover:underline">
                                 {id}
@@ -210,6 +214,7 @@ export default function ProfilePage() {
                           {
                             title: "Description",
                             key: "description",
+                            responsive: ["sm"],
                             render: (_: unknown, f: DatasetFlag) => (
                               <Tooltip title={f.description}>
                                 <span className="text-gray-600">{(f.description || "").slice(0, 120) + (f.description.length > 120 ? "…" : "")}</span>
@@ -219,6 +224,7 @@ export default function ProfilePage() {
                           {
                             title: "Categories",
                             key: "categories",
+                            responsive: ["md"],
                             render: (_: unknown, f: DatasetFlag) => (
                               <div className="flex gap-1">
                                 {f.is_ortho_mosaic_issue && <Tag color="orange" className="m-0 border-none bg-orange-50 font-medium">Orthomosaic</Tag>}
@@ -230,6 +236,7 @@ export default function ProfilePage() {
                             title: "Status",
                             dataIndex: "status",
                             key: "status",
+                            responsive: ["xs"],
                             render: (status: string) => (
                               <Tag 
                                 className="m-0 border-none font-medium capitalize"
@@ -243,12 +250,14 @@ export default function ProfilePage() {
                             title: "Created",
                             dataIndex: "created_at",
                             key: "created_at",
+                            responsive: ["sm"],
                             render: (iso: string) => <span className="text-gray-500">{new Date(iso).toLocaleString()}</span>,
                           },
                           // Removed last status change per requirements
                           {
                             title: "Actions",
                             key: "actions",
+                            responsive: ["xs"],
                             render: (_: unknown, f: DatasetFlag) => (
                               <Button size="small" onClick={() => navigate(`/dataset/${f.dataset_id}`)}>
                                 View Map
@@ -257,6 +266,7 @@ export default function ProfilePage() {
                           },
                           ]}
                           pagination={{ pageSize: 10 }}
+                          scroll={{ x: isMobile ? 560 : "max-content" }}
                         />
                       </div>
                     </>

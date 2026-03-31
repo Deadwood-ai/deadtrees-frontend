@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Form, message } from "antd";
+import { Form, message, Button, Drawer } from "antd";
 import { IDataset } from "../../types/dataset";
 import { DatasetDetailsMapProvider } from "../../hooks/useDatasetDetailsMapProvider";
 import { useAuditDetailState } from "./useAuditDetailState";
@@ -26,6 +26,7 @@ import {
 import AuditMapWithControls, { AuditMapWithControlsHandle } from "./AuditMapWithControls";
 import { MAP_AUDIT_SIDEBAR_WIDTH_CLASS, MAP_FLOATING_TOP_CLASS } from "../../theme/mapLayout";
 import { resolveDownloadUrl } from "../../utils/downloadUrl";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 interface DatasetAuditDetailProps {
 	dataset: IDataset;
@@ -49,12 +50,14 @@ interface DownloadApiResponse {
  */
 export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps) {
 	const { session } = useAuth();
+	const isMobile = useIsMobile();
 	// Map ref for map controls (zoom, flash, refresh)
 	const mapRef = useRef<AuditMapWithControlsHandle>(null);
 
 	// Editing state (tracked from child map component)
 	const [isPolygonEditing, setIsPolygonEditing] = useState(false);
 	const [editingLayerType, setEditingLayerType] = useState<"deadwood" | "forest_cover" | null>(null);
+	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
 	// Handle editing state changes from map component
 	const handleEditingStateChange = (isEditing: boolean, layerType: "deadwood" | "forest_cover" | null) => {
@@ -251,89 +254,97 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 		);
 	}
 
+	const sidebarContent = (
+		<>
+			{/* Header - hidden when editing */}
+			{!isPolygonEditing && (
+				<AuditHeader dataset={dataset} auditData={auditData} onCancel={handleCancel} />
+			)}
+
+			{/* Scrollable Content */}
+			<div className="flex-1 overflow-y-auto p-2">
+				{isPolygonEditing && editingLayerType ? (
+					<EditingSidebar layerType={editingLayerType} />
+				) : (
+					<Form
+						form={form}
+						layout="vertical"
+						onFinish={handleSubmit}
+						disabled={isLoading}
+						size="small"
+						validateTrigger={["onChange", "onBlur"]}
+					>
+						<UserFlagsCard
+							flags={flags}
+							isFlagsLoading={isFlagsLoading}
+							isUpdatingFlag={isUpdatingFlag}
+							datasetId={dataset.id}
+							onUpdateFlag={updateFlagStatus}
+						/>
+
+						<GeoreferencingCard />
+
+						<AcquisitionDateCard dataset={dataset} />
+
+						<PhenologyCard
+							dataset={dataset}
+							phenologyData={phenologyData}
+							isPhenologyLoading={isPhenologyLoading}
+							onCopySeasonPrompt={handleCopySeasonPrompt}
+						/>
+
+						<PredictionQualityCard />
+
+						<COGQualityCard />
+
+						<ThumbnailCard thumbnailUrl={thumbnailUrl} />
+
+						<AOICard aoiToolbarState={aoiToolbarState} mapRef={mapRef} />
+
+						<FinalAssessmentCard
+							dataset={dataset}
+							orthoMetadata={orthoMetadata}
+							isOrthoLoading={isOrthoLoading}
+							isDownloading={isDownloading}
+							currentDownloadId={currentDownloadId}
+							onStartDownload={handleStartDownload}
+						/>
+
+						{/* Footer Actions */}
+						<div className="sticky bottom-0 z-10 -mx-2 border-t border-slate-200 bg-white p-3">
+							<AuditFooterFormItem
+								hasAOI={hasAOI}
+								isPending={isPending}
+								isReviewed={isReviewed}
+								reviewedByEmail={auditData?.reviewed_by_email}
+								nextDatasetId={nextDatasetId}
+								currentDatasetIndex={currentDatasetIndex}
+								totalCount={totalCount}
+								isSaving={isSaving}
+								navigateToNext={navigateToNext}
+								isMarkingReviewed={isMarkingReviewed}
+								onCancel={handleCancel}
+								onSave={() => form.submit()}
+								onSaveAndNext={handleSaveAndNext}
+								onMarkReviewedAndNext={handleMarkReviewedAndNext}
+							/>
+						</div>
+					</Form>
+				)}
+			</div>
+		</>
+	);
+
 	return (
 		<div className="relative flex h-screen w-full overflow-hidden bg-slate-50">
 			{/* Sidebar */}
-			<div
-				className={`absolute bottom-6 left-4 ${MAP_FLOATING_TOP_CLASS} z-10 flex ${MAP_AUDIT_SIDEBAR_WIDTH_CLASS} flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto`}
-			>
-				{/* Header - hidden when editing */}
-				{!isPolygonEditing && (
-					<AuditHeader dataset={dataset} auditData={auditData} onCancel={handleCancel} />
-				)}
-
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-2">
-					{isPolygonEditing && editingLayerType ? (
-						<EditingSidebar layerType={editingLayerType} />
-					) : (
-						<Form
-							form={form}
-							layout="vertical"
-							onFinish={handleSubmit}
-							disabled={isLoading}
-							size="small"
-							validateTrigger={["onChange", "onBlur"]}
-						>
-							<UserFlagsCard
-								flags={flags}
-								isFlagsLoading={isFlagsLoading}
-								isUpdatingFlag={isUpdatingFlag}
-								datasetId={dataset.id}
-								onUpdateFlag={updateFlagStatus}
-							/>
-
-							<GeoreferencingCard />
-
-							<AcquisitionDateCard dataset={dataset} />
-
-							<PhenologyCard
-								dataset={dataset}
-								phenologyData={phenologyData}
-								isPhenologyLoading={isPhenologyLoading}
-								onCopySeasonPrompt={handleCopySeasonPrompt}
-							/>
-
-							<PredictionQualityCard />
-
-							<COGQualityCard />
-
-							<ThumbnailCard thumbnailUrl={thumbnailUrl} />
-
-							<AOICard aoiToolbarState={aoiToolbarState} mapRef={mapRef} />
-
-							<FinalAssessmentCard
-								dataset={dataset}
-								orthoMetadata={orthoMetadata}
-								isOrthoLoading={isOrthoLoading}
-								isDownloading={isDownloading}
-								currentDownloadId={currentDownloadId}
-								onStartDownload={handleStartDownload}
-							/>
-
-							{/* Footer Actions */}
-							<div className="sticky bottom-0 z-10 -mx-2 border-t border-slate-200 bg-white p-3">
-								<AuditFooterFormItem
-									hasAOI={hasAOI}
-									isPending={isPending}
-									isReviewed={isReviewed}
-									reviewedByEmail={auditData?.reviewed_by_email}
-									nextDatasetId={nextDatasetId}
-									currentDatasetIndex={currentDatasetIndex}
-									totalCount={totalCount}
-									isSaving={isSaving}
-									navigateToNext={navigateToNext}
-									isMarkingReviewed={isMarkingReviewed}
-									onCancel={handleCancel}
-									onSave={() => form.submit()}
-									onSaveAndNext={handleSaveAndNext}
-									onMarkReviewedAndNext={handleMarkReviewedAndNext}
-								/>
-							</div>
-						</Form>
-					)}
+			{!isMobile && (
+				<div
+					className={`absolute bottom-6 left-4 ${MAP_FLOATING_TOP_CLASS} z-10 flex ${MAP_AUDIT_SIDEBAR_WIDTH_CLASS} flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto`}
+				>
+					{sidebarContent}
 				</div>
-			</div>
+			)}
 
 			{/* Map - wrapped in provider for layer controls */}
 			<DatasetDetailsMapProvider>
@@ -347,6 +358,25 @@ export default function DatasetAuditDetail({ dataset }: DatasetAuditDetailProps)
 					/>
 				</div>
 			</DatasetDetailsMapProvider>
+
+			{isMobile && (
+				<>
+					<div className="absolute left-2 top-20 z-20">
+						<Button type="primary" onClick={() => setIsMobileSidebarOpen(true)}>
+							Audit Form
+						</Button>
+					</div>
+					<Drawer
+						title="Audit form"
+						placement="left"
+						width="92vw"
+						open={isMobileSidebarOpen}
+						onClose={() => setIsMobileSidebarOpen(false)}
+					>
+						<div className="flex h-full flex-col">{sidebarContent}</div>
+					</Drawer>
+				</>
+			)}
 		</div>
 	);
 }

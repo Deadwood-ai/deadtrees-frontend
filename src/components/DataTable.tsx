@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 
 import { Button, Table, Tag, Tooltip, Dropdown, MenuProps, Modal, message } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import type { SortOrder } from "antd/es/table/interface";
 import { useNavigate } from "react-router-dom";
 import { useUserDatasets } from "../hooks/useDatasets";
@@ -25,6 +26,7 @@ import { useQueuePositions } from "../hooks/useQueuePositions";
 import { isDatasetViewable } from "../utils/datasetVisibility";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface Dataset {
   id: number;
@@ -88,6 +90,7 @@ const DataTable: React.FC<DataTableProps> = ({
 
   const nav = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Sort datasets by ID descending (newest first) for initial render
   const sortedUserData = useMemo(
@@ -335,11 +338,12 @@ const DataTable: React.FC<DataTableProps> = ({
     ];
   };
 
-  const columns = [
+  const columns: ColumnsType<Dataset> = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
+      responsive: ["xs"] as const,
       defaultSortOrder: "descend" as const,
       sortDirections: ["descend", "ascend"] as SortOrder[],
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
@@ -349,6 +353,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Date",
       dataIndex: "aquisition_day",
       key: "aquisition_day",
+      responsive: ["sm"] as const,
       width: 95,
       sorter: (a: Dataset, b: Dataset) => {
         // Create comparable date values (YYYYMMDD format for sorting)
@@ -368,6 +373,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "File Name",
       dataIndex: "file_name",
       key: "file_name",
+      responsive: ["xs"] as const,
       width: 165,
       ellipsis: true,
       sorter: (a: Dataset, b: Dataset) => {
@@ -386,6 +392,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Authors",
       dataIndex: "authors",
       key: "authors",
+      responsive: ["md"] as const,
       width: 150,
       render: (authors: string[] | undefined, record: Dataset) => {
         if (!authors || authors.length === 0) return null;
@@ -433,6 +440,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Info",
       dataIndex: "additional_information",
       key: "additional_information",
+      responsive: ["lg"] as const,
       width: 130,
       ellipsis: true,
       render: (info: string | undefined) => {
@@ -453,6 +461,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Access",
       dataIndex: "data_access",
       key: "data_access",
+      responsive: ["sm"] as const,
       width: 85,
       filters: [
         { text: "Public", value: "public" },
@@ -470,6 +479,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Publication",
       dataIndex: "freidata_doi",
       key: "publication_status",
+      responsive: ["xs"] as const,
       width: 145,
       render: (freidataDoiValue: string | undefined, record: Dataset) => {
         // Dataset has a FreiDATA DOI
@@ -554,6 +564,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Status",
       dataIndex: "current_status",
       key: "current_status",
+      responsive: ["sm"] as const,
       width: 160,
       render: (tag: string | undefined, record: Dataset) => {
         // Handle audit status separately as it's not part of the main processing pipeline
@@ -593,6 +604,7 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Actions",
       dataIndex: "id",
       key: "id",
+      responsive: ["xs"] as const,
       width: 110,
       render: (_: number, record: Dataset) => {
         return (
@@ -613,7 +625,7 @@ const DataTable: React.FC<DataTableProps> = ({
           rowKey={"id"}
           dataSource={sortedUserData}
           columns={columns}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: isMobile ? 720 : "max-content" }}
           pagination={{ pageSize: 50 }}
           loading={isLoadingData}
           rowClassName={(record) => {

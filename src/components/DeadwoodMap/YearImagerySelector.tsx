@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Segmented, Tooltip, Typography, Spin, Button } from "antd";
+import { Segmented, Tooltip, Typography, Spin, Button, Select } from "antd";
 import {
   LeftOutlined,
   RightOutlined,
@@ -88,6 +88,8 @@ interface YearImagerySelectorProps {
   showForest?: boolean;
   /** Whether standing deadwood layer is shown */
   showDeadwood?: boolean;
+  /** Compact mobile layout mode */
+  compactMode?: boolean;
 }
 
 /**
@@ -111,6 +113,7 @@ const YearImagerySelector = ({
   onAutoMatchChange,
   showForest = false,
   showDeadwood = false,
+  compactMode = false,
 }: YearImagerySelectorProps) => {
   // Determine the active product name based on which layers are shown
   const activeProductName =
@@ -229,10 +232,10 @@ const YearImagerySelector = ({
   const yearsMatch = baseMapYear?.toString() === predictionYear;
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-gray-200/60 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm pointer-events-auto">
+    <div className="pointer-events-auto flex w-[calc(100vw-1rem)] max-w-[min(42rem,calc(100vw-1rem))] flex-col items-center gap-1 overflow-hidden rounded-xl border border-gray-200/60 bg-white/95 px-2 py-2 shadow-xl backdrop-blur-sm md:gap-2 md:w-auto md:max-w-none md:rounded-2xl md:px-4 md:py-3">
       {/* Row 1: Prediction Year with label on top */}
-      <div className="flex flex-col items-center gap-1">
-        <div className="flex items-center gap-2">
+      <div className="flex w-full flex-col items-center gap-1">
+        <div className="flex w-full items-center justify-center gap-2 overflow-x-auto">
           <button
             onClick={handlePredictionPrev}
             disabled={isPredictionFirst}
@@ -240,12 +243,22 @@ const YearImagerySelector = ({
           >
             <LeftOutlined />
           </button>
-          <Segmented
-            size="small"
-            value={predictionYear}
-            onChange={(value) => onPredictionYearChange(value as string)}
-            options={predictionYearOptions}
-          />
+          {compactMode ? (
+            <Select
+              size="small"
+              value={predictionYear}
+              onChange={(value) => onPredictionYearChange(value)}
+              options={PREDICTION_YEARS.map((year) => ({ value: year, label: year }))}
+              className="min-w-24"
+            />
+          ) : (
+            <Segmented
+              size="small"
+              value={predictionYear}
+              onChange={(value) => onPredictionYearChange(value as string)}
+              options={predictionYearOptions}
+            />
+          )}
           <button
             onClick={handlePredictionNext}
             disabled={isPredictionLast}
@@ -271,9 +284,9 @@ const YearImagerySelector = ({
 
       {/* Row 2: Base Layer with label and informative message */}
       {isWaybackActive && (
-        <div className="flex flex-col items-center gap-1 border-t border-gray-100 pt-2">
+        <div className="flex w-full flex-col items-center gap-1 border-t border-gray-100 pt-2">
           {/* Informative message - always visible when imagery is loaded */}
-          {!isLoading && waybackItems.length > 0 && selectedItem && (
+          {!isLoading && waybackItems.length > 0 && selectedItem && !compactMode && (
             <div className="flex items-center gap-1.5 text-xs">
               {yearsMatch ? (
                 <CheckCircleOutlined className="text-green-500" style={{ fontSize: "12px" }} />
@@ -291,14 +304,16 @@ const YearImagerySelector = ({
                   </>
                 ) : (
                   <>
-                    {predictionYear} {activeProductName} against {baseMapYear || "unknown"} base map
+                    {compactMode
+                      ? `${predictionYear} vs ${baseMapYear || "unknown"} base map`
+                      : `${predictionYear} ${activeProductName} against ${baseMapYear || "unknown"} base map`}
                   </>
                 )}
               </Text>
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex w-full items-center justify-center gap-2 overflow-x-auto">
             {isLoading ? (
               <div className="flex items-center gap-2 text-gray-400">
                 <Spin indicator={<LoadingOutlined style={{ fontSize: 14 }} spin />} />
@@ -348,10 +363,10 @@ const YearImagerySelector = ({
                     >
                       <div className="flex cursor-help items-center gap-1.5 text-xs">
                         <span className="font-medium text-gray-700">{formatDate(selectedItem.acquisitionDate)}</span>
-                        {selectedItem.provider && <span className="text-gray-400">·</span>}
-                        {selectedItem.provider && <span className="text-gray-500">{selectedItem.provider}</span>}
-                        {selectedItem.source && <span className="text-gray-400">{selectedItem.source}</span>}
-                        {selectedItem.resolution && (
+                        {!compactMode && selectedItem.provider && <span className="text-gray-400">·</span>}
+                        {!compactMode && selectedItem.provider && <span className="text-gray-500">{selectedItem.provider}</span>}
+                        {!compactMode && selectedItem.source && <span className="text-gray-400">{selectedItem.source}</span>}
+                        {!compactMode && selectedItem.resolution && (
                           <>
                             <span className="text-gray-400">·</span>
                             <span className="text-gray-500">{formatResolution(selectedItem.resolution)}</span>

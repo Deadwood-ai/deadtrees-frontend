@@ -33,6 +33,7 @@ interface LayerControlPanelProps {
     forestPct: number;
     deadwoodPct: number;
   } | null;
+  variant?: "floating-card" | "drawer-sheet";
 }
 
 // Basemap options: Streets and Satellite
@@ -61,11 +62,15 @@ const LayerControlPanel = ({
   setShowFlagsLayer,
   flagsCount,
   clickedValues = null,
+  variant = "floating-card",
 }: LayerControlPanelProps) => {
   const [showAttributions, setShowAttributions] = useState(false);
+  const isDrawerSheet = variant === "drawer-sheet";
 
   return (
-    <div className="flex w-60 flex-col rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm pointer-events-auto overflow-hidden">
+    <div
+      className={`pointer-events-auto flex w-full flex-col p-4 ${isDrawerSheet ? "" : "w-60 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
+    >
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
       <Segmented
@@ -166,7 +171,7 @@ const LayerControlPanel = ({
       {/* Flags Section - shown to all users */}
       {showFlagsControls && (
         <>
-          <div className="-mx-4 -mb-4 mt-3 bg-[#F8FAF9] px-4 pb-4 pt-3 border-t border-gray-100">
+          <div className={`${isDrawerSheet ? "mt-3 -mx-4 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3" : "-mx-4 -mb-4 mt-3 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3"}`}>
             <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
             <p className="mb-3 text-xs text-gray-500">
               Help improve our AI by flagging incorrect predictions

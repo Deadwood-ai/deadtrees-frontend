@@ -1,6 +1,6 @@
-import { Button, Spin, message } from "antd";
+import { Button, Spin, message, Drawer } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined, InfoCircleOutlined, SlidersOutlined } from "@ant-design/icons";
 import { useState, useCallback, Suspense, lazy, useEffect } from "react";
 
 import { usePublicDatasetById } from "../hooks/useDatasets";
@@ -14,6 +14,7 @@ import { useAuth } from "../hooks/useAuthProvider";
 import { useCreateFlag } from "../hooks/useDatasetFlags";
 import { useDatasetEditing } from "../hooks/useDatasetEditing";
 import { useCanAudit } from "../hooks/useUserPrivileges";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 import DatasetLayerControlPanel from "../components/DatasetDetailsMap/DatasetLayerControlPanel";
 import EditingSidebar from "../components/DatasetDetailsMap/EditingSidebar";
@@ -48,6 +49,11 @@ export default function DatasetDetails() {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [labelsOnly, setLabelsOnly] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Mobile drawers state
+  const [mobileInfoDrawerOpen, setMobileInfoDrawerOpen] = useState(false);
+  const [mobileControlsDrawerOpen, setMobileControlsDrawerOpen] = useState(false);
 
   // Report modal state
   const [isReportModalOpen, setReportModalOpen] = useState(false);
@@ -133,49 +139,81 @@ export default function DatasetDetails() {
   const FLOAT_BUTTON_SIZE_PX = 36;
   const TOGGLE_INSET_EXPANDED_PX = 24;
 
+  const sidebarContent = (
+    <div className={`flex-1 overflow-y-auto ${isMobile ? "p-4" : "p-4 pr-5 pt-20"}`}>
+      {isEditing && editingLayerType ? (
+        <EditingSidebar layerType={editingLayerType} />
+      ) : (
+        <DatasetInfoSidebar
+          dataset={dataset}
+          phenologyData={phenologyData}
+          isPhenologyLoading={isPhenologyLoading}
+          auditInfo={auditInfo}
+          overlappingDatasets={overlappingDatasets || []}
+          isLoadingOverlapping={isLoadingOverlapping}
+        />
+      )}
+    </div>
+  );
+
+  const downloadSectionContent = !isEditing && (
+    <div className="shrink-0 border-t border-slate-300/90 bg-slate-100/95 px-4 pb-4 pt-3 shadow-[0_-10px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+      <DownloadSection
+        dataset={dataset}
+        labelsOnly={labelsOnly}
+        setLabelsOnly={setLabelsOnly}
+        hasLabels={!!labelsData}
+        isDownloading={isDownloading}
+        currentDownloadId={currentDownloadId}
+        startDownload={startDownload}
+        finishDownload={finishDownload}
+      />
+    </div>
+  );
+
   return (
     <div className="relative h-full w-full bg-slate-50 overflow-hidden">
-      {/* Collapsible Sidebar */}
+      {/* Collapsible Sidebar (Desktop) */}
       <div
-        className={`absolute left-4 top-24 bottom-6 z-10 flex flex-col rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none -translate-x-full" : "w-96 opacity-100 translate-x-0"
+        className={`hidden md:flex absolute left-4 top-24 bottom-6 z-10 flex-col rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm pointer-events-auto transition-all duration-300 ${sidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none -translate-x-full" : "w-96 opacity-100 translate-x-0"
           }`}
       >
-        <div className="flex-1 overflow-y-auto p-4 pr-5 pt-20">
-          {isEditing && editingLayerType ? (
-            <EditingSidebar layerType={editingLayerType} />
-          ) : (
-            <DatasetInfoSidebar
-              dataset={dataset}
-              phenologyData={phenologyData}
-              isPhenologyLoading={isPhenologyLoading}
-              auditInfo={auditInfo}
-              overlappingDatasets={overlappingDatasets || []}
-              isLoadingOverlapping={isLoadingOverlapping}
-            />
+        {sidebarContent}
+        {downloadSectionContent}
+      </div>
+
+      {/* Mobile Top Controls (Back + Actions) */}
+      <div className="absolute left-2 right-2 top-20 z-50 flex items-center justify-between pointer-events-none md:hidden">
+        {/* Left side: Back Button */}
+        <div className="pointer-events-auto">
+          {!isEditing && (
+             <Button shape="circle" onClick={handleBackClick} icon={<ArrowLeftOutlined />} className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900" />
           )}
         </div>
-
-        {/* Download Section - fixed footer outside scroll area */}
-        {!isEditing && (
-          <div className="shrink-0 border-t border-slate-300/90 bg-slate-100/95 px-4 pb-4 pt-3 shadow-[0_-10px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-            <DownloadSection
-              dataset={dataset}
-              labelsOnly={labelsOnly}
-              setLabelsOnly={setLabelsOnly}
-              hasLabels={!!labelsData}
-              isDownloading={isDownloading}
-              currentDownloadId={currentDownloadId}
-              startDownload={startDownload}
-              finishDownload={finishDownload}
-            />
-          </div>
-        )}
+        
+        {/* Right side: Details & Controls */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Button
+            icon={<InfoCircleOutlined />}
+            className="shadow-sm"
+            onClick={() => setMobileInfoDrawerOpen(true)}
+          >
+            Details
+          </Button>
+          <Button
+            icon={<SlidersOutlined />}
+            className="shadow-sm"
+            onClick={() => setMobileControlsDrawerOpen(true)}
+          >
+            Controls
+          </Button>
+        </div>
       </div>
 
       {/* Back Button - hidden when editing */}
-      {!isEditing && (
+      {!isEditing && !isMobile && (
         <div
-          className="absolute z-20 transition-all duration-300"
+          className="absolute z-20 transition-all duration-300 hidden md:block"
           style={{ top: `${SIDEBAR_BUTTON_TOP_PX}px`, left: sidebarCollapsed ? `${SIDEBAR_LEFT_PX}px` : `${SIDEBAR_LEFT_PX + 12}px` }}
         >
           <Button size="large" shape="circle" onClick={handleBackClick} icon={<ArrowLeftOutlined />} className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900" />
@@ -183,29 +221,31 @@ export default function DatasetDetails() {
       )}
 
       {/* Sidebar Toggle */}
-      <div
-        className="absolute z-20 transition-all duration-300"
-        style={{
-          top: `${SIDEBAR_BUTTON_TOP_PX}px`,
-          left: sidebarCollapsed
-            ? `${SIDEBAR_LEFT_PX + 56}px`
-            : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX - TOGGLE_INSET_EXPANDED_PX}px`,
-        }}
-      >
-        <Button
-          size="large"
-          shape="circle"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900"
-        />
-      </div>
+      {!isMobile && (
+        <div
+          className="absolute z-20 transition-all duration-300 hidden md:block"
+          style={{
+            top: `${SIDEBAR_BUTTON_TOP_PX}px`,
+            left: sidebarCollapsed
+              ? `${SIDEBAR_LEFT_PX + 56}px`
+              : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX - TOGGLE_INSET_EXPANDED_PX}px`,
+          }}
+        >
+          <Button
+            size="large"
+            shape="circle"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900"
+          />
+        </div>
+      )}
 
       {/* Map Column */}
       <div className="absolute inset-0 z-0">
-        {/* Layer Control Panel - hidden when editing */}
+        {/* Layer Control Panel - hidden when editing on desktop */}
         {!isEditing && (
-          <div className="absolute right-4 top-24 z-10">
+          <div className="absolute right-4 top-24 z-10 hidden md:block">
             <DatasetLayerControlPanel
               mapStyle={layerControl.mapStyle}
               onMapStyleChange={setMapStyle}
@@ -283,6 +323,56 @@ export default function DatasetDetails() {
           />
         </Suspense>
       </div>
+
+      <Drawer
+        title="Dataset Details"
+        placement="bottom"
+        height="85vh"
+        open={mobileInfoDrawerOpen}
+        onClose={() => setMobileInfoDrawerOpen(false)}
+        className="md:hidden"
+        styles={{ body: { padding: '0', display: 'flex', flexDirection: 'column' } }}
+      >
+        {sidebarContent}
+        {downloadSectionContent}
+      </Drawer>
+
+      <Drawer
+        title="Map controls"
+        placement="bottom"
+        height="auto"
+        open={mobileControlsDrawerOpen}
+        onClose={() => setMobileControlsDrawerOpen(false)}
+        className="md:hidden"
+        styles={{ body: { padding: '16px', overflowY: 'auto' } }}
+      >
+        <div className="flex justify-center w-full pb-8">
+          <DatasetLayerControlPanel
+            mapStyle={layerControl.mapStyle}
+            onMapStyleChange={setMapStyle}
+            showForestCover={layerControl.showForestCover}
+            setShowForestCover={setShowForestCover}
+            showDeadwood={layerControl.showDeadwood}
+            setShowDeadwood={setShowDeadwood}
+            showDroneImagery={layerControl.showDroneImagery}
+            setShowDroneImagery={setShowDroneImagery}
+            showAOI={layerControl.showAOI}
+            setShowAOI={setShowAOI}
+            hasForestCover={hasForestCover && !!dataset.is_forest_cover_done}
+            hasDeadwood={hasDeadwood}
+            hasAOI={true}
+            forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
+            deadwoodQuality={auditInfo?.deadwood_quality as "great" | "sentinel_ok" | "bad" | undefined}
+            canBypassQualityRestriction={canAudit}
+            opacity={layerControl.layerOpacity}
+            setOpacity={setLayerOpacity}
+            onReportClick={() => setReportModalOpen(true)}
+            onEditForestCover={() => editing.handleStartEditing("forest_cover")}
+            onEditDeadwood={() => editing.handleStartEditing("deadwood")}
+            isLoggedIn={!!user}
+          />
+        </div>
+      </Drawer>
 
       {/* Report Issue Modal */}
       <ReportIssueModal

@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Modal, Input, message } from "antd";
-import { ExperimentOutlined, FlagOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Modal, Input, message, Button, Drawer } from "antd";
+import {
+  ExperimentOutlined,
+  FlagOutlined,
+  InfoCircleOutlined,
+  SearchOutlined,
+  SlidersOutlined,
+} from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
@@ -34,6 +40,7 @@ import { useAuth } from "../../hooks/useAuthProvider";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
 import { useWaybackItemsDebounced } from "../../hooks/useWaybackItems";
 import { usePolygonAnalysis } from "../../hooks/usePolygonAnalysis";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import type { IMapFlag } from "../../types/mapFlags";
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
@@ -88,12 +95,12 @@ const getCachedForestSource = (year: string): GeoTIFF => {
 };
 
 const DeadtreesMap = () => {
-  const [map, setMap] = useState(null);
+  const [map, setMap] = useState<Map | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("2025");
-  const [bounds, setBounds] = useState([]);
+  const [bounds, setBounds] = useState<number[]>([]);
   const [sliderValue, setSliderValue] = useState<number>(1);
-  const mapContainer = useRef();
-  const mapRef = useRef(null);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<Map | null>(null);
   const forestLayerRef = useRef<TileLayerWebGL | null>(null);
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
   const hasAutoSelectedImageryRef = useRef(false); // Track if we've done initial auto-selection
@@ -148,6 +155,9 @@ const DeadtreesMap = () => {
 
   // Clicked location values (displayed in legend)
   const [clickedValues, setClickedValues] = useState<ClickedValues | null>(null);
+  const [mobileLocationDrawerOpen, setMobileLocationDrawerOpen] = useState(false);
+  const [mobileLayersDrawerOpen, setMobileLayersDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Auth and flags hooks
   const { user } = useAuth();
@@ -359,7 +369,7 @@ const DeadtreesMap = () => {
       clickedCellLayerRef.current = clickedCellLayer;
 
       const newMap = new Map({
-        target: mapContainer.current,
+        target: mapContainer.current || undefined,
         // Layer order: basemap -> forest -> deadwood -> clicked cell (on top)
         layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer],
         view: initialView,
@@ -406,10 +416,12 @@ const DeadtreesMap = () => {
         const view = newMap.getView();
         const zoom = view.getZoom();
         const center = view.getCenter();
-        setDeadwoodMapViewport({
-          center: center,
-          zoom: zoom,
-        });
+        if (center && typeof zoom === "number") {
+          setDeadwoodMapViewport({
+            center,
+            zoom,
+          });
+        }
         setCurrentZoom(zoom || 10);
 
         // Update lon/lat center for wayback queries
@@ -428,7 +440,7 @@ const DeadtreesMap = () => {
 
     return () => {
       if (map) {
-        map.setTarget(null);
+        map.setTarget(undefined);
       }
     };
   }, []);
@@ -445,7 +457,7 @@ const DeadtreesMap = () => {
   // update on mapStyle change
   useEffect(() => {
     if (map) {
-      const layer = map.getLayers().getArray()[0];
+      const layer = map.getLayers().getArray()[0] as TileLayer<XYZ>;
       const nextIsWayback = DeadwoodMapStyle === "wayback";
 
       let source: XYZ;
@@ -484,7 +496,8 @@ const DeadtreesMap = () => {
   useEffect(() => {
     if (mapRef.current) {
       // Add a new click listener with the current selectedYear
-      const clickHandler = (event) => handleClick(event, selectedYear, isDrawingFlag || polygonAnalysis.isDrawing);
+      const clickHandler = (event: { coordinate: number[] }) =>
+        handleClick(event, selectedYear, isDrawingFlag || polygonAnalysis.isDrawing);
       mapRef.current.on("click", clickHandler);
 
       // Clean up function to remove the listener
@@ -568,11 +581,11 @@ const DeadtreesMap = () => {
       mapRef.current.addLayer(flagsLayer);
 
       // Add hover handler for flags
-      mapRef.current.on("pointermove", (evt) => {
+      mapRef.current.on("pointermove", (evt: { pixel: number[]; coordinate: number[] }) => {
         if (!flagHoverOverlayRef.current || !flagsLayerRef.current) return;
 
         const pixel = evt.pixel;
-        const feature = mapRef.current?.forEachFeatureAtPixel(pixel, (f, layer) => {
+        const feature = mapRef.current?.forEachFeatureAtPixel(pixel, (f: FeatureLike, layer: unknown) => {
           if (layer === flagsLayerRef.current) return f;
           return undefined;
         });
@@ -782,13 +795,13 @@ const DeadtreesMap = () => {
         }}
         ref={mapContainer}
       >
-        {/* Top Left - Location Controls */}
-        <div className="absolute left-4 top-24 z-50">
-          <LocationControls onPlaceSelect={setBounds} />
+        {/* Top Left - Location Controls (desktop) */}
+        <div className="absolute left-4 top-24 z-50 hidden md:block">
+          <LocationControls onPlaceSelect={setBounds} variant="floating-card" />
         </div>
 
-        {/* Top Right - Layer Controls */}
-        <div className="absolute right-4 top-24 z-50">
+        {/* Top Right - Layer Controls (desktop) */}
+        <div className="absolute right-4 top-24 z-50 hidden md:block">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
@@ -809,7 +822,26 @@ const DeadtreesMap = () => {
             setShowFlagsLayer={setShowFlagsLayer}
             flagsCount={mapFlags.length}
             clickedValues={clickedValues}
+            variant="floating-card"
           />
+        </div>
+
+        {/* Mobile action buttons */}
+        <div className="absolute left-2 right-2 top-20 z-50 flex items-center justify-between md:hidden">
+          <Button
+            icon={<SearchOutlined />}
+            className="shadow-sm"
+            onClick={() => setMobileLocationDrawerOpen(true)}
+          >
+            Location
+          </Button>
+          <Button
+            icon={<SlidersOutlined />}
+            className="shadow-sm"
+            onClick={() => setMobileLayersDrawerOpen(true)}
+          >
+            Controls
+          </Button>
         </div>
 
         {/* Top Center - Processing Stats */}
@@ -818,7 +850,7 @@ const DeadtreesMap = () => {
         </div> */}
 
         {/* Bottom Center - Combined Year and Imagery Selector */}
-        <div className="absolute bottom-2 left-1/2 z-50 -translate-x-1/2">
+        <div className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto">
           <YearImagerySelector
             predictionYear={selectedYear}
             onPredictionYearChange={setSelectedYear}
@@ -831,8 +863,56 @@ const DeadtreesMap = () => {
             onAutoMatchChange={setAutoMatchImagery}
             showForest={showForest}
             showDeadwood={showDeadwood}
+            compactMode={isMobile}
           />
         </div>
+
+        <Drawer
+          title="Search location"
+          placement="bottom"
+          height="auto"
+          open={mobileLocationDrawerOpen}
+          onClose={() => setMobileLocationDrawerOpen(false)}
+          className="md:hidden"
+          styles={{ body: { padding: 16, overflowX: "hidden" } }}
+        >
+          <LocationControls onPlaceSelect={setBounds} variant="drawer-inline" />
+        </Drawer>
+
+        <Drawer
+          title="Map controls"
+          placement="bottom"
+          height="85vh"
+          open={mobileLayersDrawerOpen}
+          onClose={() => setMobileLayersDrawerOpen(false)}
+          className="md:hidden"
+          styles={{ body: { padding: 0, overflowX: "hidden", overflowY: "auto" } }}
+        >
+          <div className="flex w-full flex-col pb-6">
+            <LayerControlPanel
+            mapStyle={DeadwoodMapStyle}
+            onMapStyleChange={handleMapStyleChange}
+            showForest={showForest}
+            setShowForest={setShowForest}
+            showDeadwood={showDeadwood}
+            setShowDeadwood={setShowDeadwood}
+            opacity={sliderValue}
+            setOpacity={setSliderValue}
+            isDrawingPolygon={polygonAnalysis.isDrawing}
+            onPolygonStatsClick={polygonAnalysis.toggle}
+            showFlagsControls={true}
+            isLoggedIn={!!user}
+            isDrawingFlag={isDrawingFlag}
+            onFlagClick={handleFlagClick}
+            onLoginRequired={handleLoginRequired}
+            showFlagsLayer={showFlagsLayer}
+            setShowFlagsLayer={setShowFlagsLayer}
+            flagsCount={mapFlags.length}
+            clickedValues={clickedValues}
+            variant="drawer-sheet"
+          />
+          </div>
+        </Drawer>
 
       </div>
 

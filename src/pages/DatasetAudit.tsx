@@ -42,6 +42,7 @@ import { palette } from "../theme/palette";
 import { getBiomeEmoji, getBiomeTagColor, truncateBiomeLabel } from "../utils/biomeDisplay";
 import { useDatasetLogs, useProcessingOverview, ProcessingOverviewRow, ProcessingStatus } from "../hooks/useProcessingOverview";
 import { getAcquisitionPeriod } from "../utils/phenologyUtils";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 const { Title, Text } = Typography;
 
@@ -204,6 +205,7 @@ export default function DatasetAudit() {
 }
 
 function DatasetAuditInner() {
+	const isMobile = useIsMobile();
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -1134,14 +1136,31 @@ function DatasetAuditInner() {
 
 				{/* Tabs with badges */}
 				<div className="mb-6">
-					<Segmented
-						value={activeTab}
-						onChange={(value) => {
-							setActiveTab(value as AuditTab);
-							setStatusFilter("all");
-						}}
-						className="shadow-sm border border-gray-200/50"
-						options={[
+					{isMobile ? (
+						<Select
+							value={activeTab}
+							onChange={(value) => {
+								setActiveTab(value as AuditTab);
+								setStatusFilter("all");
+							}}
+							className="w-full"
+							options={[
+								{ label: `Pending (${pendingCount})`, value: "pending" },
+								{ label: `Completed (${completedCount})`, value: "completed" },
+								{ label: `Edits & Flags (${editsFlagsCount})`, value: "edits-flags" },
+								{ label: `Reference (${referenceCount})`, value: "reference" },
+								{ label: `Processing (${processingCount})`, value: "processing" },
+							]}
+						/>
+					) : (
+						<Segmented
+							value={activeTab}
+							onChange={(value) => {
+								setActiveTab(value as AuditTab);
+								setStatusFilter("all");
+							}}
+							className="shadow-sm border border-gray-200/50"
+							options={[
 							{
 								label: (
 									<Space size={6} className="py-1 px-2">
@@ -1187,9 +1206,10 @@ function DatasetAuditInner() {
 								),
 								value: "processing",
 							},
-						]}
-						size="large"
-					/>
+							]}
+							size="large"
+						/>
+					)}
 				</div>
 
 				<div className="rounded-2xl border border-gray-200/60 bg-white p-6 shadow-sm">
@@ -1204,7 +1224,7 @@ function DatasetAuditInner() {
 								mode="multiple"
 								allowClear
 								placeholder="Select statuses"
-								style={{ width: 360 }}
+								style={{ width: isMobile ? 280 : 360 }}
 								value={processingStatusFilters}
 								onChange={(value) => setProcessingStatusFilters(value as ProcessingStatus[])}
 								options={[
@@ -1222,7 +1242,7 @@ function DatasetAuditInner() {
 							<Select
 								allowClear
 								placeholder="All stages"
-								style={{ width: 200 }}
+								style={{ width: isMobile ? 160 : 200 }}
 								value={processingStageFilter}
 								onChange={setProcessingStageFilter}
 								options={processingStageOptions}
@@ -1236,7 +1256,7 @@ function DatasetAuditInner() {
 							<Select
 								allowClear
 								placeholder="All owners"
-								style={{ width: 260 }}
+								style={{ width: isMobile ? 220 : 260 }}
 								value={processingUserFilter}
 								onChange={setProcessingUserFilter}
 								options={processingUserOptions}
@@ -1271,14 +1291,14 @@ function DatasetAuditInner() {
 							showQuickJumper: true,
 							showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
 						}}
-						scroll={{ x: 1400 }}
+						scroll={{ x: isMobile ? 980 : 1400 }}
 					/>
 
 					<Drawer
 						title={`Dataset ${selectedProcessingDatasetId || ""} Logs`}
 						open={selectedProcessingDatasetId !== null}
 						onClose={() => setSelectedProcessingDatasetId(null)}
-						width={820}
+						width={isMobile ? "100%" : 820}
 					>
 						<div className="mb-3 flex flex-wrap items-center justify-between gap-2">
 							<Space>
@@ -1368,14 +1388,14 @@ function DatasetAuditInner() {
 										{/* Row 1: Status, ID, Biome, Country */}
 										<div className="flex flex-wrap gap-4">
 											{activeTab === "completed" && (
-												<div>
+												<div className="w-full md:w-auto">
 													<Text type="secondary" className="block mb-1 text-xs">
 														Status
 													</Text>
 													<Select
 														value={statusFilter}
 														onChange={setStatusFilter}
-														style={{ width: 150 }}
+														style={{ width: isMobile ? "100%" : 150 }}
 														options={[
 															{ label: "All", value: "all" },
 															{ label: "Ready", value: "ready" },
@@ -1388,7 +1408,7 @@ function DatasetAuditInner() {
 												</div>
 											)}
 
-											<div>
+											<div className="w-full md:w-auto">
 												<Text type="secondary" className="block mb-1 text-xs">
 													Dataset ID
 												</Text>
@@ -1397,19 +1417,19 @@ function DatasetAuditInner() {
 													prefix={<SearchOutlined />}
 													value={idFilter}
 													onChange={(e) => setIdFilter(e.target.value)}
-													style={{ width: 130 }}
+													style={{ width: isMobile ? "100%" : 130 }}
 													allowClear
 												/>
 											</div>
 
-											<div>
+											<div className="w-full md:w-auto">
 												<Text type="secondary" className="block mb-1 text-xs">
 													Biome
 												</Text>
 												<Select
 													value={biomeFilter}
 													onChange={setBiomeFilter}
-													style={{ width: 200 }}
+													style={{ width: isMobile ? "100%" : 200 }}
 													allowClear
 													placeholder="All biomes"
 													showSearch
@@ -1417,14 +1437,14 @@ function DatasetAuditInner() {
 												/>
 											</div>
 
-											<div>
+											<div className="w-full md:w-auto">
 												<Text type="secondary" className="block mb-1 text-xs">
 													Country
 												</Text>
 												<Select
 													value={countryFilter}
 													onChange={setCountryFilter}
-													style={{ width: 180 }}
+													style={{ width: isMobile ? "100%" : 180 }}
 													allowClear
 													placeholder="All countries"
 													showSearch
@@ -1433,14 +1453,14 @@ function DatasetAuditInner() {
 											</div>
 
 											{activeTab === "completed" && (
-												<div>
+												<div className="w-full md:w-auto">
 													<Text type="secondary" className="block mb-1 text-xs">
 														Auditor
 													</Text>
 													<Select
 														value={auditorFilter}
 														onChange={setAuditorFilter}
-														style={{ width: 180 }}
+														style={{ width: isMobile ? "100%" : 180 }}
 														allowClear
 														placeholder="All auditors"
 														showSearch
@@ -1449,14 +1469,14 @@ function DatasetAuditInner() {
 												</div>
 											)}
 
-											<div>
+											<div className="w-full md:w-auto">
 												<Text type="secondary" className="block mb-1 text-xs">
 													Contributor
 												</Text>
 												<Select
 													value={contributorFilter}
 													onChange={setContributorFilter}
-													style={{ width: 180 }}
+													style={{ width: isMobile ? "100%" : 180 }}
 													allowClear
 													placeholder="All contributors"
 													showSearch
@@ -1464,7 +1484,7 @@ function DatasetAuditInner() {
 												/>
 											</div>
 
-											<div>
+											<div className="w-full md:w-auto">
 												<Text type="secondary" className="block mb-1 text-xs">
 													Acquisition Month
 												</Text>
@@ -1474,7 +1494,7 @@ function DatasetAuditInner() {
 													onChange={(value) => setAcquisitionMonthRange(value as any)}
 													allowClear
 													placeholder={["From", "To"]}
-													style={{ width: 200 }}
+													style={{ width: isMobile ? "100%" : 200 }}
 												/>
 											</div>
 
@@ -1544,7 +1564,7 @@ function DatasetAuditInner() {
 							showQuickJumper: true,
 							showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} datasets`,
 						}}
-						scroll={{ x: 1000 }}
+						scroll={{ x: isMobile ? 860 : 1000 }}
 					/>
 				</>
 			)}
