@@ -1,12 +1,11 @@
 import { useState, useMemo, useCallback } from "react";
-import { Button, Input, Typography, Tag, notification } from "antd";
+import { Button, Input, Tag, notification } from "antd";
 import { useNavigate } from "react-router-dom";
 import { CalendarOutlined, ExportOutlined, FileTextOutlined } from "@ant-design/icons";
+import { useDesktopOnlyFeature } from "../../hooks/useDesktopOnlyFeature";
 import { usePresentations } from "../../hooks/usePresentations";
 import { supabase } from "../../hooks/useSupabase";
 import { Settings } from "../../config";
-
-const { Text } = Typography;
 
 interface Contribution {
 	title: string;
@@ -19,10 +18,10 @@ interface Contribution {
 const UpcomingConferences = () => {
 	const { data: presentations, isLoading } = usePresentations();
 	const navigate = useNavigate();
-	const today = new Date();
 
 	const upcomingContributions = useMemo(() => {
 		if (!presentations) return [];
+		const today = new Date();
 
 		return presentations
 			.reduce((acc: Contribution[], presentation) => {
@@ -101,6 +100,7 @@ const UpcomingConferences = () => {
 
 const GetInContact = () => {
 	const navigate = useNavigate();
+	const { runDesktopOnlyAction } = useDesktopOnlyFeature();
 	const [email, setEmail] = useState<string>("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -171,16 +171,18 @@ const GetInContact = () => {
 							<em>Labels are optional</em> — our AI handles the rest.
 						</p>
 						<div className="mt-8 flex flex-wrap items-center gap-4">
-							<Button
-								type="primary"
-								size="large"
-								onClick={() => navigate("/profile")}
-							>
+								<Button
+									type="primary"
+									size="large"
+									onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
+									className="min-h-11 px-6"
+								>
 								Start contributing
 							</Button>
 							<Button
 								size="large"
 								href="mailto:info@deadtrees.earth?subject=deadtrees.earth collaboration"
+								className="min-h-11 px-6"
 							>
 								Get in touch
 							</Button>
@@ -206,11 +208,11 @@ const GetInContact = () => {
 								onChange={(e) => setEmail(e.target.value)}
 								disabled={isSubmitting}
 								onPressEnter={addSubscriber}
-								className="border-slate-200"
+								className="min-h-11 border-slate-200"
 							/>
 							<Button
 								onClick={addSubscriber}
-								className="w-full bg-[#1B5E35] hover:bg-[#144728]"
+								className="min-h-11 w-full bg-[#1B5E35] hover:bg-[#144728]"
 								type="primary"
 								size="large"
 								loading={isSubmitting}

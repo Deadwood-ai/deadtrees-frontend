@@ -11,6 +11,7 @@ import { FileOutlined } from "@ant-design/icons";
 import PublicationModal from "../components/PublicationModal";
 import PublicationsTable from "../components/PublicationsTable";
 import { useIsMobile } from "../hooks/useIsMobile";
+import DesktopOnlyFeatureNotice from "../components/DesktopOnlyFeatureNotice";
 
 interface ProfileAvatarProps {
   email: string;
@@ -93,6 +94,41 @@ export default function ProfilePage() {
   if (!session) {
     return null;
   } else {
+    if (isMobile) {
+      return (
+        <div className="min-h-[calc(100vh-64px)] w-full bg-[#F8FAF9] pb-24 pt-24">
+          <div className="mx-auto max-w-3xl px-4">
+            <div className="mb-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <Badge count={myFlags.length} color="red">
+                <ProfileAvatar email={user?.email ?? ""} size={72} />
+              </Badge>
+              <div className="min-w-0">
+                <Typography.Title level={3} style={{ margin: 0 }}>
+                  My Account
+                </Typography.Title>
+                <Typography.Text className="break-all text-sm" type="secondary">
+                  {user?.email}
+                </Typography.Text>
+              </div>
+            </div>
+
+            <DesktopOnlyFeatureNotice
+              title="Account Tools Are Desktop Only"
+              description="Uploads, downloads, dataset publishing, and account management are currently disabled on mobile. This workspace is being simplified for small screens. Please open your account on a desktop browser for file management."
+              actions={
+                <>
+                  <Button type="primary" onClick={() => navigate("/deadtrees")}>
+                    Explore Satellite Maps
+                  </Button>
+                  <Button onClick={() => navigate("/dataset")}>Browse Dataset Archive</Button>
+                </>
+              }
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="w-full bg-[#F8FAF9] min-h-[calc(100vh-64px)] pb-24 pt-24 md:pt-28">
         <div className="mx-auto max-w-[1920px] px-4 md:px-8 xl:px-12">

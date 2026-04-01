@@ -13,6 +13,7 @@ import FilterModal, { AdvancedFilters } from "../components/FilterModal";
 import { useDatasetFilter } from "../hooks/useDatasetFilterProvider";
 import { isDatasetViewable } from "../utils/datasetVisibility";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useDesktopOnlyFeature } from "../hooks/useDesktopOnlyFeature";
 
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
 
@@ -43,6 +44,7 @@ export default function Dataset() {
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
   const colorMode: DatasetMapColorMode = "timeline";
   const isMobile = useIsMobile();
+  const { runDesktopOnlyAction } = useDesktopOnlyFeature();
   // Incremented on explicit filter actions to trigger map zoom
   const [filterZoomTrigger, setFilterZoomTrigger] = useState(0);
 
@@ -156,7 +158,7 @@ export default function Dataset() {
         <Button
           type="primary"
           icon={<UploadOutlined />}
-          onClick={() => navigate("/profile")}
+          onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
           className="shadow-sm font-medium"
         >
           Upload Data

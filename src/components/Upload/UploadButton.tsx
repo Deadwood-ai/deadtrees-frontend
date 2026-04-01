@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Button } from "antd";
 import UploadModal from "./UploadModal";
 import { UploadOutlined } from "@ant-design/icons";
+import { useDesktopOnlyFeature } from "../../hooks/useDesktopOnlyFeature";
 
 const UploadButton = () => {
   const [modals, setModals] = useState<{ key: string; isVisible: boolean }[]>([]);
+  const { runDesktopOnlyAction } = useDesktopOnlyFeature();
 
   const showModal = () => {
     const newKey = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -17,7 +19,12 @@ const UploadButton = () => {
 
   return (
     <>
-      <Button size="large" icon={<UploadOutlined />} type="primary" onClick={showModal}>
+      <Button
+        size="large"
+        icon={<UploadOutlined />}
+        type="primary"
+        onClick={() => runDesktopOnlyAction("upload", showModal)}
+      >
         Upload Data
       </Button>
       {modals.map((modal) => (

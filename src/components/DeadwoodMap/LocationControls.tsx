@@ -21,7 +21,7 @@ const LocationControls = ({
 
   return (
     <div
-      className={`pointer-events-auto flex w-full flex-col gap-2 ${isDrawerInline ? "" : "w-80 rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm"}`}
+      className={`location-controls pointer-events-auto flex w-full flex-col gap-3 ${isDrawerInline ? "" : "w-80 rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Address Search */}
       {!isDrawerInline && <div className="text-xs font-medium text-gray-500">Location</div>}

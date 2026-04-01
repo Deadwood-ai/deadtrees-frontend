@@ -6,6 +6,8 @@ import { supabase } from "../../hooks/useSupabase";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { resolveDownloadUrl } from "../../utils/downloadUrl";
 import { useEffect } from "react";
+import DesktopOnlyFeatureNotice from "../DesktopOnlyFeatureNotice";
+import { useDesktopOnlyFeature } from "../../hooks/useDesktopOnlyFeature";
 
 interface DownloadSectionProps {
   dataset: IDataset;
@@ -37,6 +39,7 @@ export default function DownloadSection({
   finishDownload,
 }: DownloadSectionProps) {
   const { session } = useAuth();
+  const { isMobile } = useDesktopOnlyFeature();
   const isViewOnlyDataset = dataset.data_access === "viewonly";
 
   useEffect(() => {
@@ -186,6 +189,15 @@ export default function DownloadSection({
       : labelsOnly
         ? "Download vector data of tree mortality predictions (GPKG format)"
         : "Download both orthophoto and tree mortality predictions";
+
+  if (isMobile) {
+    return (
+      <DesktopOnlyFeatureNotice
+        title="Desktop Required For Downloads"
+        description="Dataset downloads are currently disabled on mobile while we simplify the account and file-management flows for smaller screens. Please open this dataset on a desktop browser to download files."
+      />
+    );
+  }
 
   return (
     <div className="shrink-0">

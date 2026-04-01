@@ -4,3 +4,15 @@
 .geoapify-close-button:hover {
   color: white;
 }
+
+.location-controls .geoapify-autocomplete-input,
+.location-controls .geoapify-autocomplete-input::placeholder,
+.location-controls input[type="text"] {
+  font-size: 14px;
+}
+
+.location-controls .geoapify-autocomplete-input,
+.location-controls input[type="text"] {
+  min-height: 44px;
+  border-radius: 12px;
+}

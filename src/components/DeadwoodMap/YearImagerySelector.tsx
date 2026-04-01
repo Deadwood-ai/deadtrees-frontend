@@ -230,6 +230,10 @@ const YearImagerySelector = ({
   // Get the base map year for display
   const baseMapYear = selectedItem?.acquisitionDate?.getFullYear();
   const yearsMatch = baseMapYear?.toString() === predictionYear;
+  const compactTopButtonClass =
+    "flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300";
+  const compactBottomButtonClass =
+    "flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-200";
 
   return (
     <div className="pointer-events-auto flex w-[calc(100vw-1rem)] max-w-[min(42rem,calc(100vw-1rem))] flex-col items-center gap-1 overflow-hidden rounded-xl border border-gray-200/60 bg-white/95 px-2 py-2 shadow-xl backdrop-blur-sm md:gap-2 md:w-auto md:max-w-none md:rounded-2xl md:px-4 md:py-3">
@@ -239,7 +243,7 @@ const YearImagerySelector = ({
           <button
             onClick={handlePredictionPrev}
             disabled={isPredictionFirst}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+            className={compactTopButtonClass}
           >
             <LeftOutlined />
           </button>
@@ -262,7 +266,7 @@ const YearImagerySelector = ({
           <button
             onClick={handlePredictionNext}
             disabled={isPredictionLast}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+            className={compactTopButtonClass}
           >
             <RightOutlined />
           </button>
@@ -330,7 +334,7 @@ const YearImagerySelector = ({
                   <button
                     onClick={handleImageryPrev}
                     disabled={isImageryFirst}
-                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-200"
+                    className={compactBottomButtonClass}
                     title="Older imagery"
                   >
                     <LeftOutlined style={{ fontSize: "10px" }} />
@@ -384,7 +388,7 @@ const YearImagerySelector = ({
                   <button
                     onClick={handleImageryNext}
                     disabled={isImageryLast}
-                    className="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-200"
+                    className={compactBottomButtonClass}
                     title="Newer imagery"
                   >
                     <RightOutlined style={{ fontSize: "10px" }} />

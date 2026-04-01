@@ -202,6 +202,9 @@ export default function Navigation() {
           <Button
             aria-label="Open navigation menu"
             icon={<MenuOutlined />}
+            size="large"
+            className="flex h-11 w-11 items-center justify-center rounded-xl"
+            style={{ width: 44, minWidth: 44, height: 44 }}
             onClick={() => setMobileMenuOpen(true)}
           />
         </Header>

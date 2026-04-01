@@ -1,8 +1,11 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "antd";
 import { CloudUploadOutlined, GlobalOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { useDesktopOnlyFeature } from "../../hooks/useDesktopOnlyFeature";
 import DataGallery from "./DataGallery";
+
+const UPLOAD_VIDEO_URL = "https://data2.deadtrees.earth/assets/v1/videos/upload.mp4";
 
 const MiniSatelliteMap = lazy(() => import("./MiniSatelliteMap"));
 
@@ -41,6 +44,9 @@ const DeferredMiniSatelliteMap = () => {
 };
 
 const HowItWorks = () => {
+  const navigate = useNavigate();
+  const { runDesktopOnlyAction } = useDesktopOnlyFeature();
+
   return (
     <section className="w-full bg-[#F8FAF9] border-t border-slate-200/50 py-24 md:py-32">
       <div className="m-auto max-w-6xl px-4 md:px-8">
@@ -69,16 +75,20 @@ const HowItWorks = () => {
             <p className="mb-8 text-lg text-gray-600">
               Upload your high-resolution drone imagery of forests (resolution &lt; 10 cm) via your user profile. <strong>All forest data is valuable</strong>, whether it contains standing deadwood or healthy trees. We support direct uploads of finished <strong>orthophotos (GeoTIFF)</strong> as well as <strong>raw drone imagery (ZIP)</strong>. For raw images, our pipeline automatically generates orthomosaics using OpenDroneMap (ODM).
             </p>
-            <Link to="/profile">
-              <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<CloudUploadOutlined />}
+              className="min-h-11 px-6"
+              onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
+            >
                 Upload via Profile
-              </Button>
-            </Link>
+            </Button>
           </div>
           <div className="w-full flex-1 order-1 md:order-2">
             <div className="relative w-full overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
               <video
-                src="/assets/upload.mp4"
+                src={UPLOAD_VIDEO_URL}
                 autoPlay
                 loop
                 muted
@@ -108,7 +118,7 @@ const HowItWorks = () => {
           </div>
           <div className="flex justify-center">
             <Link to="/dataset">
-              <Button size="large" icon={<DatabaseOutlined />}>
+              <Button size="large" icon={<DatabaseOutlined />} className="min-h-11 px-6">
                 Browse Dataset Archive
               </Button>
             </Link>
@@ -133,7 +143,7 @@ const HowItWorks = () => {
               The high-resolution ground truth trains our satellite models to generate large-scale spatiotemporal maps of forest mortality at the European scale. We provide embedded visualization and download of these extensive tree mortality products.
             </p>
             <Link to="/deadtrees">
-              <Button type="primary" size="large" icon={<GlobalOutlined />}>
+              <Button type="primary" size="large" icon={<GlobalOutlined />} className="min-h-11 px-6">
                 Explore Satellite Maps
               </Button>
             </Link>

@@ -5,6 +5,7 @@ import ReactPlayer from "react-player";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuthProvider";
 import { useData } from "../../hooks/useDataProvider";
+import { useDesktopOnlyFeature } from "../../hooks/useDesktopOnlyFeature";
 import { isDatasetViewable } from "../../utils/datasetVisibility";
 import LogoBannerBand from "./LogoBanner";
 
@@ -80,6 +81,7 @@ const Hero = () => {
 	const navigate = useNavigate();
 	const { user } = useAuth();
 	const { data, authors } = useData();
+	const { isMobile, runDesktopOnlyAction } = useDesktopOnlyFeature();
 
 	const stats = useMemo(() => {
 		if (!data) return null;
@@ -93,12 +95,14 @@ const Hero = () => {
 	}, [data, authors]);
 
 	const handleContribute = useCallback(() => {
-		if (user) {
-			navigate("/profile");
-		} else {
-			navigate("/sign-in");
-		}
-	}, [navigate, user]);
+		runDesktopOnlyAction("upload", () => {
+			if (user) {
+				navigate("/profile");
+			} else {
+				navigate("/sign-in");
+			}
+		});
+	}, [navigate, runDesktopOnlyAction, user]);
 
 	const handleExploreMap = useCallback(() => {
 		navigate("/deadtrees");
@@ -129,6 +133,7 @@ const Hero = () => {
 								size="large"
 								icon={<UploadOutlined />}
 								onClick={handleContribute}
+								className="min-h-11 w-full px-6 sm:w-auto"
 							>
 								Contribute Drone Data
 							</Button>
@@ -136,16 +141,19 @@ const Hero = () => {
 								size="large"
 								icon={<SearchOutlined />}
 								onClick={handleExploreMap}
+								className="min-h-11 w-full px-6 sm:w-auto"
 							>
 								Explore Map
 							</Button>
 						</div>
 
-						{!user && (
-							<p className="m-0 mt-3 text-sm text-gray-400">
-								Sign in or create an account to start uploading.
-							</p>
-						)}
+							{!user && (
+								<p className="m-0 mt-3 text-sm text-gray-400">
+									{isMobile
+										? "Uploading is currently available on desktop browsers."
+										: "Sign in or create an account to start uploading."}
+								</p>
+							)}
 
 						<div className="mt-8 flex flex-wrap items-center justify-center gap-6 md:justify-start">
 							<AnimatedStat value={stats?.datasets ?? 6741} label="Datasets" />

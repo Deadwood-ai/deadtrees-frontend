@@ -38,6 +38,11 @@
   cursor: pointer;
   font-size: 14px;
   color: var(--dt-text-primary);
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ol-attribution ul {
@@ -111,4 +116,55 @@
 
 .ant-checkbox-disabled .ant-checkbox-inner {
   border-color: #94a3b8 !important;
+}
+
+@media (max-width: 767px) {
+  .map-controls-mobile-drawer .ant-drawer-content-wrapper {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box;
+    overflow-x: clip !important;
+  }
+
+  .map-controls-mobile-drawer .ant-drawer-content {
+    width: 100%;
+    max-height: 100dvh;
+    box-sizing: border-box;
+    overflow-x: clip !important;
+  }
+
+  .map-controls-mobile-drawer .ant-drawer-body {
+    height: auto;
+    max-height: calc(100dvh - 56px);
+    box-sizing: border-box;
+    overflow-x: clip !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .map-controls-mobile-drawer .ant-drawer-body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .map-control-panel--drawer .ant-divider {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  .map-control-panel--drawer .ant-checkbox-wrapper + .ant-checkbox-wrapper {
+    margin-top: 6px;
+  }
+
+  .map-control-panel--drawer .ant-slider {
+    margin-top: 6px;
+    margin-bottom: 6px;
+  }
 }

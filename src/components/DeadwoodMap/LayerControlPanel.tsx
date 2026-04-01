@@ -65,11 +65,15 @@ const LayerControlPanel = ({
   variant = "floating-card",
 }: LayerControlPanelProps) => {
   const [showAttributions, setShowAttributions] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   const isDrawerSheet = variant === "drawer-sheet";
+  const actionButtonSize = "small";
+  const controlButtonClass = "";
+  const shouldShowLegend = !isDrawerSheet || showLegend;
 
   return (
     <div
-      className={`pointer-events-auto flex w-full flex-col overflow-x-hidden p-4 ${isDrawerSheet ? "" : "w-60 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
+      className={`map-control-panel box-border min-w-0 pointer-events-auto flex w-full flex-col overflow-x-hidden p-4 ${isDrawerSheet ? "map-control-panel--drawer" : "w-60 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
@@ -121,7 +125,7 @@ const LayerControlPanel = ({
           size="small"
           icon={<InfoCircleOutlined />}
           onClick={() => setShowAttributions((prev) => !prev)}
-          className="m-0 w-fit p-0 text-xs"
+          className={`m-0 w-fit p-0 text-xs ${controlButtonClass}`}
         >
           {showAttributions ? "Hide Citations" : "View Citations"}
         </Button>
@@ -148,12 +152,13 @@ const LayerControlPanel = ({
           <Divider className="my-3" />
           <div className="mb-1 text-xs font-medium text-gray-500">Analytics</div>
           <Button
-            size="small"
+            size={actionButtonSize}
             type={isDrawingPolygon ? "primary" : "default"}
             danger={isDrawingPolygon}
             icon={<AreaChartOutlined />}
             onClick={onPolygonStatsClick}
             block
+            className={controlButtonClass}
             style={
               !isDrawingPolygon
                 ? { borderColor: palette.primary[500], color: palette.primary[500] }
@@ -162,7 +167,7 @@ const LayerControlPanel = ({
           >
             {isDrawingPolygon ? "Cancel Drawing" : "Analyze Area"}
           </Button>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs leading-5 text-gray-400">
             Draw a polygon to see time-series stats
           </p>
         </>
@@ -173,18 +178,19 @@ const LayerControlPanel = ({
         <>
           <div className={`${isDrawerSheet ? "mt-3 -mx-4 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3" : "-mx-4 -mb-4 mt-3 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3"}`}>
             <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
-            <p className="mb-3 text-xs text-gray-500">
+            <p className="mb-2 text-xs leading-5 text-gray-500">
               Help improve our AI by flagging incorrect predictions
             </p>
             {isLoggedIn ? (
               <>
                 <Button
-                  size="small"
+                  size={actionButtonSize}
                   type={isDrawingFlag ? "primary" : "default"}
                   danger={isDrawingFlag}
                   icon={<FlagOutlined />}
                   onClick={onFlagClick}
                   block
+                  className={controlButtonClass}
                 >
                   {isDrawingFlag ? "Cancel" : "Flag Area"}
                 </Button>
@@ -199,24 +205,38 @@ const LayerControlPanel = ({
               </>
             ) : (
               <Button
-                size="small"
+                size={actionButtonSize}
                 type="primary"
                 icon={<LoginOutlined />}
                 onClick={onLoginRequired}
                 block
+                className={controlButtonClass}
               >
                 Sign in to flag areas
               </Button>
             )}
 
-            <div className="mt-3 border-t border-gray-200/80 pt-3">
-              <MapLegend
-                clickedValues={clickedValues}
-                showForest={showForest}
-                showDeadwood={showDeadwood}
-                embedded={true}
-              />
-            </div>
+            {isDrawerSheet && (
+              <Button
+                type="link"
+                size="small"
+                className="mt-2 h-auto p-0 text-xs font-medium"
+                onClick={() => setShowLegend((prev) => !prev)}
+              >
+                {showLegend ? "Hide legend" : "Show legend"}
+              </Button>
+            )}
+
+            {shouldShowLegend && (
+              <div className="mt-3 border-t border-gray-200/80 pt-3">
+                <MapLegend
+                  clickedValues={clickedValues}
+                  showForest={showForest}
+                  showDeadwood={showDeadwood}
+                  embedded={true}
+                />
+              </div>
+            )}
           </div>
         </>
       )}
