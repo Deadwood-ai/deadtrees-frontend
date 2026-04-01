@@ -5,6 +5,9 @@ const DOI_BADGES = [
   "10.60493/0gdk6-rwg98",
 ];
 
+const ADDING_AI_VIDEO_URL = "https://data2.deadtrees.earth/assets/v1/videos/adding-ai.mp4";
+const SATELLITE_ANALYSIS_VIDEO_URL = "https://data2.deadtrees.earth/assets/v1/videos/satellite-analysis.mp4";
+
 const PlatformFeatures = () => {
   return (
     <section className="w-full bg-white py-24 md:py-32">
@@ -31,7 +34,7 @@ const PlatformFeatures = () => {
           </div>
           <div className="relative w-full px-8 pb-8 md:w-1/2 md:p-10 md:pl-0">
             <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
-              <video src="/assets/adding-ai.mp4" autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
+              <video src={ADDING_AI_VIDEO_URL} autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
             </div>
           </div>
         </div>
@@ -120,7 +123,7 @@ const PlatformFeatures = () => {
           </div>
           <div className="relative mt-2 w-full px-8 pb-8 md:mt-0 md:w-1/2 md:p-10 md:pl-0">
             <div className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
-              <video src="/assets/satellite-analysis.mp4" autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
+              <video src={SATELLITE_ANALYSIS_VIDEO_URL} autoPlay loop muted playsInline preload="metadata" className="w-full object-cover" />
             </div>
           </div>
         </div>

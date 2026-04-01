@@ -1,6 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { Button, Tag, Input, Spin, Tooltip, Checkbox, Drawer } from "antd";
-import { ArrowDownOutlined, ArrowUpOutlined, FilterOutlined, CloseOutlined, UploadOutlined, UnorderedListOutlined } from "@ant-design/icons";
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  FilterOutlined,
+  CloseOutlined,
+  UploadOutlined,
+  UnorderedListOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from "@ant-design/icons";
 
 import DataList from "../components/DataList";
 import DatasetMapOL, { type DatasetMapColorMode } from "../components/DatasetMap/DatasetMap";
@@ -16,6 +25,11 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { useDesktopOnlyFeature } from "../hooks/useDesktopOnlyFeature";
 
 type FilterTag = "platform" | "license" | "authors_image" | "admin_level_1" | "admin_level_3" | "biome";
+
+const SIDEBAR_LEFT_PX = 16;
+const SIDEBAR_WIDTH_PX = 360;
+const SIDEBAR_BUTTON_TOP_PX = 108;
+const FLOAT_BUTTON_SIZE_PX = 36;
 
 export default function Dataset() {
   const navigate = useNavigate();
@@ -42,6 +56,7 @@ export default function Dataset() {
   const [searchValue, setSearchValue] = useState("");
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [isMobileListOpen, setIsMobileListOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const colorMode: DatasetMapColorMode = "timeline";
   const isMobile = useIsMobile();
   const { runDesktopOnlyAction } = useDesktopOnlyFeature();
@@ -125,9 +140,24 @@ export default function Dataset() {
   }, [displayData]);
 
   const filterDisplay = typeof filter === "string" ? filter : String(filter);
+  const desktopTimelineStyle = isMobile
+    ? {
+      left: "50%",
+      transform: "translateX(-50%)",
+      maxWidth: "92vw",
+    }
+    : {
+      left: sidebarCollapsed
+        ? "50%"
+        : `calc(50% + ${(SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX) / 2}px)`,
+      transform: "translateX(-50%)",
+      maxWidth: sidebarCollapsed
+        ? "min(92vw, 720px)"
+        : `min(92vw, calc(100vw - ${SIDEBAR_WIDTH_PX + SIDEBAR_LEFT_PX * 2 + 24}px))`,
+    };
   const sidebarContent = (
     <div className={`flex h-full flex-col pointer-events-auto ${!isMobile ? "rounded-2xl border border-gray-200/60 bg-white/95 px-4 pb-4 pt-4 shadow-xl backdrop-blur-sm" : "px-4 pt-4 pb-16"}`}>
-      <div className="flex items-start justify-between pb-3">
+      <div className="pb-3">
         <div className="flex flex-col">
           <div className="flex items-center">
             <h4 className="m-0 pr-2 font-medium text-gray-600">Images: </h4>
@@ -159,7 +189,7 @@ export default function Dataset() {
           type="primary"
           icon={<UploadOutlined />}
           onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
-          className="shadow-sm font-medium"
+          className="mt-4 w-full shadow-sm font-medium"
         >
           Upload Data
         </Button>
@@ -209,16 +239,42 @@ export default function Dataset() {
   );
 
   return (
-    <div className="relative h-full w-full bg-slate-50">
+    <div className="relative h-full w-full overflow-hidden bg-slate-50">
       {/* Floating Sidebar */}
-      <div className="absolute left-4 top-24 bottom-6 z-10 hidden w-[380px] md:flex">
+      <div
+        className={`absolute left-4 top-24 bottom-6 z-10 hidden md:flex transition-all duration-300 ${sidebarCollapsed
+          ? "w-0 -translate-x-full overflow-hidden opacity-0 pointer-events-none"
+          : "w-[360px] translate-x-0 opacity-100"
+          }`}
+      >
         {sidebarContent}
       </div>
 
+      {!isMobile && (
+        <div
+          className="absolute z-20 hidden md:block transition-all duration-300"
+          style={{
+            top: `${SIDEBAR_BUTTON_TOP_PX}px`,
+            left: sidebarCollapsed
+              ? `${SIDEBAR_LEFT_PX + 8}px`
+              : `${SIDEBAR_LEFT_PX + SIDEBAR_WIDTH_PX - FLOAT_BUTTON_SIZE_PX / 2}px`,
+          }}
+        >
+          <Button
+            size="large"
+            shape="circle"
+            onClick={() => setSidebarCollapsed((prev) => !prev)}
+            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            className="bg-white shadow-md border-gray-200 text-gray-700 hover:text-gray-900"
+            style={{ width: FLOAT_BUTTON_SIZE_PX, minWidth: FLOAT_BUTTON_SIZE_PX, height: FLOAT_BUTTON_SIZE_PX }}
+          />
+        </div>
+      )}
+
       <div className="absolute left-2 top-20 z-20 flex items-center md:hidden">
-        <Button 
-          icon={<UnorderedListOutlined />} 
-          className="shadow-sm" 
+        <Button
+          icon={<UnorderedListOutlined />}
+          className="shadow-sm"
           onClick={() => setIsMobileListOpen(true)}
         >
           Datasets & Filters
@@ -239,7 +295,7 @@ export default function Dataset() {
 
       {/* Full Map */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 max-w-[92vw]">
+        <div className="absolute bottom-2 z-10 transition-all duration-300" style={desktopTimelineStyle}>
           {periods.length > 0 && selectedPeriod && (
             <DatasetTimelineControl
               periods={periods}
