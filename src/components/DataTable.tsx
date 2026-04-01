@@ -14,6 +14,7 @@ import {
   MinusOutlined,
   DeleteOutlined,
   EyeOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
@@ -27,6 +28,7 @@ import { isDatasetViewable } from "../utils/datasetVisibility";
 import AuditBadge from "./AuditBadge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useCanUploadPrivate } from "../hooks/useUserPrivileges";
 
 interface Dataset {
   id: number;
@@ -91,6 +93,7 @@ const DataTable: React.FC<DataTableProps> = ({
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const { canUpload: canUploadPrivate } = useCanUploadPrivate();
 
   // Sort datasets by ID descending (newest first) for initial render
   const sortedUserData = useMemo(
@@ -246,24 +249,41 @@ const DataTable: React.FC<DataTableProps> = ({
     setDatasetToArchive(null);
   };
 
-  // Make dataset public handler
-  const handleMakePublic = async (record: Dataset) => {
+  const handleUpdateVisibility = async (record: Dataset, dataAccess: "public" | "private") => {
     try {
       const { error } = await supabase
         .from("v2_datasets")
-        .update({ data_access: "public" })
+        .update({ data_access: dataAccess })
         .eq("id", record.id);
 
       if (error) throw error;
 
-      message.success("Dataset is now public");
-      // Invalidate queries to refresh the data
+      message.success(`Dataset is now ${dataAccess}`);
       await queryClient.invalidateQueries({ queryKey: ["userDatasets"] });
       await queryClient.invalidateQueries({ queryKey: ["public-datasets"] });
     } catch (error) {
-      console.error("Error making dataset public:", error);
-      message.error("Failed to make dataset public");
+      console.error(`Error updating dataset visibility to ${dataAccess}:`, error);
+      message.error(`Failed to make dataset ${dataAccess}`);
     }
+  };
+
+  const handleMakePublic = async (record: Dataset) => {
+    Modal.confirm({
+      title: "Make dataset public?",
+      content: "This dataset will become visible on the public platform once it meets the normal display requirements.",
+      okText: "Make Public",
+      onOk: () => handleUpdateVisibility(record, "public"),
+    });
+  };
+
+  const handleMakePrivate = async (record: Dataset) => {
+    Modal.confirm({
+      title: "Make dataset private?",
+      content: "This dataset will no longer be publicly visible and will remain available only to you.",
+      okText: "Make Private",
+      okButtonProps: { danger: true },
+      onOk: () => handleUpdateVisibility(record, "private"),
+    });
   };
 
   const getActionMenuItems = (record: Dataset): MenuProps["items"] => {
@@ -287,8 +307,11 @@ const DataTable: React.FC<DataTableProps> = ({
         onClick: () => handleAddToSelection(record),
       };
 
-    // Visibility action - only show "Make Public" for private datasets
+    // Visibility actions:
+    // - all owners keep the existing "Make Public" action for private datasets
+    // - only privileged users get "Make Private" for public datasets
     const isPrivate = record.data_access === "private";
+    const isPublic = record.data_access === "public";
     const visibilityAction = isPrivate
       ? {
         key: "visibility",
@@ -296,6 +319,13 @@ const DataTable: React.FC<DataTableProps> = ({
         icon: <EyeOutlined />,
         onClick: () => handleMakePublic(record),
       }
+      : canUploadPrivate && isPublic
+        ? {
+          key: "visibility",
+          label: "Make Private",
+          icon: <LockOutlined />,
+          onClick: () => handleMakePrivate(record),
+        }
       : null;
 
     // Archive action
@@ -343,7 +373,6 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "ID",
       dataIndex: "id",
       key: "id",
-      responsive: ["xs"] as const,
       defaultSortOrder: "descend" as const,
       sortDirections: ["descend", "ascend"] as SortOrder[],
       sorter: (a: Dataset, b: Dataset) => a.id - b.id,
@@ -373,7 +402,6 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "File Name",
       dataIndex: "file_name",
       key: "file_name",
-      responsive: ["xs"] as const,
       width: 165,
       ellipsis: true,
       sorter: (a: Dataset, b: Dataset) => {
@@ -479,7 +507,6 @@ const DataTable: React.FC<DataTableProps> = ({
       title: "Publication",
       dataIndex: "freidata_doi",
       key: "publication_status",
-      responsive: ["xs"] as const,
       width: 145,
       render: (freidataDoiValue: string | undefined, record: Dataset) => {
         // Dataset has a FreiDATA DOI
@@ -603,8 +630,7 @@ const DataTable: React.FC<DataTableProps> = ({
     {
       title: "Actions",
       dataIndex: "id",
-      key: "id",
-      responsive: ["xs"] as const,
+      key: "actions",
       width: 110,
       render: (_: number, record: Dataset) => {
         return (
