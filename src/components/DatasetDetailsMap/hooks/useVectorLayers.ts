@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { Map as OLMap } from "ol";
-import type VectorTileLayer from "ol/layer/VectorTile";
+import VectorTileLayer from "ol/layer/VectorTile";
+import Disposable from "ol/Disposable";
 import { Style, Stroke } from "ol/style";
 import type { FeatureLike } from "ol/Feature";
 import { palette } from "../../../theme/palette";
@@ -53,6 +54,9 @@ export interface UseVectorLayersReturn {
 	/** Set layer opacity */
 	setLayerOpacity: (opacity: number) => void;
 }
+
+const isDisposable = (value: unknown): value is Disposable =>
+	value instanceof Disposable;
 
 /**
  * Hook for managing vector tile layers (deadwood + forest cover)
@@ -114,21 +118,21 @@ export function useVectorLayers({
 		if (!map || isInitializedRef.current) return;
 
 		// Create deadwood layer
-		if (deadwoodLabelId && allowDeadwood) {
-			const deadwoodLayer = createDeadwoodVectorLayer(deadwoodLabelId, { 
-				showCorrectionStyling,
-				filterCorrectionStatus,
-			});
+			if (deadwoodLabelId && allowDeadwood) {
+				const deadwoodLayer = createDeadwoodVectorLayer(deadwoodLabelId, { 
+					showCorrectionStyling,
+					filterCorrectionStatus,
+				});
 			deadwoodLayer.setZIndex(13);
 			map.addLayer(deadwoodLayer);
-			deadwoodLayerRef.current = deadwoodLayer;
+				deadwoodLayerRef.current = deadwoodLayer;
 
-			// Create selection layer for hover (shares source with deadwood)
-			const selectionLayer = new (deadwoodLayer.constructor as any)({
-				source: deadwoodLayer.getSource()!,
-				style: (feature: FeatureLike) => {
-					if (hoveredLabelIdRef.current !== null && feature.get("id") === hoveredLabelIdRef.current) {
-						return new Style({
+				// Create selection layer for hover (shares source with deadwood)
+				const selectionLayer = new VectorTileLayer({
+					source: deadwoodLayer.getSource() ?? undefined,
+					style: (feature: FeatureLike) => {
+						if (hoveredLabelIdRef.current !== null && feature.get("id") === hoveredLabelIdRef.current) {
+							return new Style({
 							stroke: new Stroke({ color: palette.state.hover, width: 3 }),
 						});
 					}
@@ -166,18 +170,18 @@ export function useVectorLayers({
 		// Cleanup
 		return () => {
 			if (map) {
-				if (deadwoodLayerRef.current) {
-					map.removeLayer(deadwoodLayerRef.current);
-					const source = deadwoodLayerRef.current.getSource();
-					if (source && "dispose" in source) (source as any).dispose();
-					deadwoodLayerRef.current = null;
-				}
-				if (forestCoverLayerRef.current) {
-					map.removeLayer(forestCoverLayerRef.current);
-					const source = forestCoverLayerRef.current.getSource();
-					if (source && "dispose" in source) (source as any).dispose();
-					forestCoverLayerRef.current = null;
-				}
+					if (deadwoodLayerRef.current) {
+						map.removeLayer(deadwoodLayerRef.current);
+						const source = deadwoodLayerRef.current.getSource();
+						if (isDisposable(source)) source.dispose();
+						deadwoodLayerRef.current = null;
+					}
+					if (forestCoverLayerRef.current) {
+						map.removeLayer(forestCoverLayerRef.current);
+						const source = forestCoverLayerRef.current.getSource();
+						if (isDisposable(source)) source.dispose();
+						forestCoverLayerRef.current = null;
+					}
 				if (selectionLayerRef.current) {
 					map.removeLayer(selectionLayerRef.current);
 					selectionLayerRef.current = null;

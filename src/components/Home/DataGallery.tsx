@@ -1,9 +1,11 @@
 import { Button, Carousel, Tooltip, Tag } from "antd";
 import { useMemo, useRef, useCallback } from "react";
+import type { CarouselRef } from "antd/es/carousel";
 import { useNavigate } from "react-router-dom";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useData } from "../../hooks/useDataProvider";
 import { Settings } from "../../config";
+import { IDataset } from "../../types/dataset";
 import countryList from "../../utils/countryList";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import parseBBox from "../../utils/parseBBox";
@@ -43,7 +45,7 @@ const Stat = ({ title, value, unit }: { title: string; value: string; unit: stri
   );
 };
 
-const Stats = ({ datasets }: { datasets: any[] }) => {
+const Stats = ({ datasets }: { datasets: IDataset[] }) => {
   const stats = useMemo(() => {
     if (!datasets.length) return { orthophotos: 0, area: 0, countries: 0, fileSize: 0 };
 
@@ -100,7 +102,7 @@ const Stats = ({ datasets }: { datasets: any[] }) => {
 
 const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
   const { data } = useData();
-  const carouselRef = useRef<any>(null);
+  const carouselRef = useRef<CarouselRef | null>(null);
   const navigate = useNavigate();
   const { setNavigationSource } = useDatasetDetailsMap();
 
@@ -134,7 +136,7 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
     // );
 
     // Create a map to store one entry per author
-    const authorMap = new Map();
+    const authorMap = new Map<string, IDataset>();
 
     // Take only the first entry for each author in the authors array
     filtered.forEach((item) => {
@@ -222,65 +224,66 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
             />
 
             <Carousel ref={carouselRef} {...settings}>
-              {sortedUniqueData.map((item) => (
-                <div key={item.id} className="px-2 py-4">
-                  <div
-                    className="cursor-pointer rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg"
-                    onClick={() => onClickHandler(item.id)}
-                  >
-                    <div className="relative m-2 mt-2 overflow-hidden rounded-lg">
-                      <img
-                        src={
-                          item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"
-                        }
-                        className="h-36 w-48 scale-150 rounded-t-lg object-cover"
-                        loading="lazy"
-                        alt={`Dataset ${item.id}`}
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="mb-2 flex items-baseline justify-between">
-                        <Tooltip
-                          title={
-                            item.admin_level_1
-                              ? `${item.admin_level_3 || item.admin_level_2 || ""}${item.admin_level_1 ? `, ${item.admin_level_1}` : ""}`
-                              : ""
+              {sortedUniqueData.map((item) => {
+                const locationName = item.admin_level_3 || item.admin_level_2 || "";
+                const locationLabel = locationName
+                  ? `${locationName.slice(0, 10)}${locationName.length > 15 ? "..." : ""}${item.admin_level_1 ? `, ${countryList[item.admin_level_1 as keyof typeof countryList]}` : ""}`
+                  : item.admin_level_1
+                    ? countryList[item.admin_level_1 as keyof typeof countryList]
+                    : "";
+
+                return (
+                  <div key={item.id} className="px-2 py-4">
+                    <div
+                      className="cursor-pointer rounded-lg bg-white shadow-md transition-shadow duration-200 hover:shadow-lg"
+                      onClick={() => onClickHandler(item.id)}
+                    >
+                      <div className="relative m-2 mt-2 overflow-hidden rounded-lg">
+                        <img
+                          src={
+                            item.thumbnail_path ? Settings.THUMBNAIL_URL + item.thumbnail_path : "/assets/tree-icon.png"
                           }
-                        >
-                          <span className="max-w-[70%] truncate font-semibold">
-                            {item.admin_level_3 || item.admin_level_2
-                              ? // If we have level 2 or 3, show it with country
-                              `${(item.admin_level_3 || item.admin_level_2).slice(0, 10)}${(item.admin_level_3 || item.admin_level_2).length > 15 ? "..." : ""}${item.admin_level_1 ? `, ${countryList[item.admin_level_1 as keyof typeof countryList]}` : ""}`
-                              : // If we only have level 1, just show the country
-                              item.admin_level_1
-                                ? countryList[item.admin_level_1 as keyof typeof countryList]
-                                : ""}
-                          </span>
-                        </Tooltip>
-                        <span className="text-xs text-gray-500">
-                          {new Date(
-                            parseInt(item.aquisition_year),
-                            item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
-                            item.aquisition_day ? parseInt(item.aquisition_day) : 1,
-                          ).toLocaleDateString("en-GB", {
-                            year: "numeric",
-                            ...(item.aquisition_month && { month: "numeric" }),
-                            ...(item.aquisition_day && { day: "numeric" }),
-                          })}
-                        </span>
+                          className="h-36 w-48 scale-150 rounded-t-lg object-cover"
+                          loading="lazy"
+                          alt={`Dataset ${item.id}`}
+                        />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <Tooltip title={item.authors}>
-                          <span className="max-w-[70%] truncate text-sm text-gray-600">
-                            {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
+                      <div className="p-4">
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <Tooltip
+                            title={
+                              item.admin_level_1
+                                ? `${item.admin_level_3 || item.admin_level_2 || ""}${item.admin_level_1 ? `, ${item.admin_level_1}` : ""}`
+                                : ""
+                            }
+                          >
+                            <span className="max-w-[70%] truncate font-semibold">{locationLabel}</span>
+                          </Tooltip>
+                          <span className="text-xs text-gray-500">
+                            {new Date(
+                              parseInt(item.aquisition_year),
+                              item.aquisition_month ? parseInt(item.aquisition_month) - 1 : 0,
+                              item.aquisition_day ? parseInt(item.aquisition_day) : 1,
+                            ).toLocaleDateString("en-GB", {
+                              year: "numeric",
+                              ...(item.aquisition_month && { month: "numeric" }),
+                              ...(item.aquisition_day && { day: "numeric" }),
+                            })}
                           </span>
-                        </Tooltip>
-                        <Tag>{item.platform}</Tag>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Tooltip title={item.authors}>
+                            <span className="max-w-[70%] truncate text-sm text-gray-600">
+                              {item.authors && item.authors.slice(0, 18) + (item.authors.length > 18 ? "..." : "")}
+                            </span>
+                          </Tooltip>
+                          <Tag>{item.platform}</Tag>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </Carousel>
           </div>
           <Stats datasets={viewableData} />

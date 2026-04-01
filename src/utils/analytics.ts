@@ -1,7 +1,17 @@
 import { User } from "@supabase/supabase-js";
 
+interface PostHogLike {
+  has_opted_in_capturing?: boolean;
+  has_opted_out_capturing?: boolean;
+  init: (projectKey: string, options: Record<string, unknown>) => void;
+  opt_in_capturing: () => void;
+  opt_out_capturing: () => void;
+  capture: (eventName: string, properties?: Record<string, unknown>) => void;
+  identify: (distinctId: string, properties?: Record<string, unknown>) => void;
+}
+
 // Access the global posthog instance
-declare const posthog: any;
+declare const posthog: PostHogLike;
 const POSTHOG_PROJECT_KEY = import.meta.env.VITE_POSTHOG_PROJECT_KEY as string | undefined;
 
 // The current cookie consent version
@@ -148,7 +158,7 @@ export const identifyUser = (user: User | null): void => {
 // Track events with appropriate level of detail
 export const trackEvent = (
   eventName: string,
-  properties: Record<string, any> = {},
+  properties: Record<string, unknown> = {},
   isEssential: boolean = false,
 ): void => {
   if (!isPostHogAvailable()) return;

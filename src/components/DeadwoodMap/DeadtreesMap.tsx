@@ -635,6 +635,8 @@ const DeadtreesMap = () => {
         map.setTarget(undefined);
       }
     };
+  // Map initialization is intentionally one-time; viewport state is restored through OL listeners.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopOrientationTracking, stopUserLocationTracking]);
 
   // effects -----------------------------------------------------------
@@ -704,6 +706,8 @@ const DeadtreesMap = () => {
         }
       };
     }
+  // handleClick is recreated frequently and the effect intentionally rebinds only on interaction state changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, isDrawingFlag, polygonAnalysis.isDrawing]);
 
   // Update sources when year changes (use cached sources for instant switching)

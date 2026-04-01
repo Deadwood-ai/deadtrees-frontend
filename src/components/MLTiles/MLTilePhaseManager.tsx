@@ -11,6 +11,9 @@ interface Props {
   onUnsavedChanges: (hasChanges: boolean) => void;
 }
 
+const isPhaseKey = (key: string): key is "placement" | "qa" | "validation" =>
+  key === "placement" || key === "qa" || key === "validation";
+
 export default function MLTilePhaseManager({ dataset, onUnsavedChanges }: Props) {
   const [activePhase, setActivePhase] = useState<"placement" | "qa" | "validation">("placement");
   const { data: tiles20cm } = useMLTiles(dataset.id, 20);
@@ -63,7 +66,11 @@ export default function MLTilePhaseManager({ dataset, onUnsavedChanges }: Props)
 
       <Tabs
         activeKey={activePhase}
-        onChange={(key) => setActivePhase(key as any)}
+        onChange={(key) => {
+          if (isPhaseKey(key)) {
+            setActivePhase(key);
+          }
+        }}
         className="flex-1"
         items={[
           {

@@ -109,7 +109,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 		}), []);
 
 		// Handlers for correction review
-		const handleApproveCorrection = async (correctionId: number, _geometryId: number) => {
+		const handleApproveCorrection = async (correctionId: number) => {
 			try {
 				const result = await approveCorrection(correctionId);
 				if (result) {
@@ -128,7 +128,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 			}
 		};
 
-		const handleRevertCorrection = async (correctionId: number, _geometryId: number) => {
+		const handleRevertCorrection = async (correctionId: number) => {
 			try {
 				const result = await revertCorrection(correctionId);
 				if (result) {

@@ -20,7 +20,7 @@ import { ILicense, IPlatform, UploadType } from "../../types/dataset";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
-import uploadOrtho from "../../api/uploadOrtho";
+import uploadOrtho, { type UploadOrthoResponse } from "../../api/uploadOrtho";
 import { useData } from "../../hooks/useDataProvider";
 import addProcess from "../../api/addProcess";
 import uploadLabelObject from "../../api/uploadLabelObject";
@@ -31,12 +31,19 @@ import { detectUploadType, validateFileSize, validateZipCompressionMethods } fro
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
 import { RcFile } from "antd/es/upload";
+
+interface UploadDateValue {
+  year(): number;
+  month(): number;
+  date(): number;
+}
+
 // New interfaces
 interface IFormValues {
   license: ILicense;
-  platform: IPlatform;
+  platform: IPlatform | string;
   spectral_properties: string;
-  aquisition_date: any;
+  aquisition_date: UploadDateValue | null;
   author: string[];
   doi: string;
   additional_information: string;
@@ -51,10 +58,7 @@ interface UploadModalProps {
 }
 
 // Add these types near the top of the file
-interface UploadResponse {
-  id: string;
-  [key: string]: any;
-}
+type UploadMetadata = Parameters<typeof uploadOrtho>[0]["metadata"];
 
 function createLabelObjectFormData(
   datasetId: string,
@@ -126,7 +130,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     }
   };
 
-  const uploadOrthophoto = async (file: RcFile, metadata: any): Promise<UploadResponse> => {
+  const uploadOrthophoto = async (file: RcFile, metadata: UploadMetadata): Promise<UploadOrthoResponse> => {
     return new Promise((resolve, reject) => {
       // Create a new AbortController for this upload
       abortControllerRef.current = new AbortController();
@@ -196,12 +200,12 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
         upload_type: uploadType,
         project_id: undefined,
         aquisition_year: values.aquisition_date?.year(),
-        aquisition_month: values.aquisition_date?.month() + 1,
+        aquisition_month: values.aquisition_date ? values.aquisition_date.month() + 1 : undefined,
         aquisition_day: values.aquisition_date?.date(),
         additional_information: values.additional_information,
         data_access: values.is_private ? "private" : "public",
         citation_doi: values.doi,
-      };
+      } satisfies UploadMetadata;
       // console.log("metadata", metadata);
 
       // Upload orthophoto with metadata

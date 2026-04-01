@@ -1,28 +1,36 @@
-import axios from "axios";
+import axios, { type AxiosProgressEvent } from "axios";
+import type { Session } from "@supabase/supabase-js";
 import { Settings } from "../config";
 import { supabase } from "../hooks/useSupabase";
 import { isTokenExpiringSoon } from "../utils/isTokenExpiringSoon";
 
+export interface UploadMetadata {
+  license: string;
+  platform: string | number;
+  authors: string[];
+  upload_type?: string;
+  project_id?: string;
+  aquisition_year?: number;
+  aquisition_month?: number;
+  aquisition_day?: number;
+  additional_information?: string;
+  data_access?: string;
+  citation_doi?: string;
+}
+
+export interface UploadOrthoResponse {
+  id?: string | number;
+  [key: string]: unknown;
+}
+
 interface UploadOptions {
   file: File;
-  metadata: {
-    license: string;
-    platform: string;
-    authors: string[];
-    upload_type?: string;
-    project_id?: string;
-    aquisition_year?: number;
-    aquisition_month?: number;
-    aquisition_day?: number;
-    additional_information?: string;
-    data_access?: string;
-    citation_doi?: string;
-  };
+  metadata: UploadMetadata;
   onProgress: (progress: { percent: number }) => void;
-  onSuccess: (response: any) => void;
+  onSuccess: (response: UploadOrthoResponse) => void;
   onError: (error: Error) => void;
   uploadId: string;
-  session: any;
+  session: Session | null;
   signal?: AbortSignal;
 }
 
@@ -117,19 +125,7 @@ function createFormData(
   fileName: string,
   uploadId: string,
   startTime: number,
-  metadata: {
-    license: string;
-    platform: string;
-    authors: string[];
-    upload_type?: string;
-    project_id?: string;
-    aquisition_year?: number;
-    aquisition_month?: number;
-    aquisition_day?: number;
-    additional_information?: string;
-    data_access?: string;
-    citation_doi?: string;
-  },
+  metadata: UploadMetadata,
 ): FormData {
   const formData = new FormData();
   formData.append("file", chunkInfo.data, fileName);
@@ -140,7 +136,7 @@ function createFormData(
 
   // Add metadata fields
   formData.append("license", "CC BY");
-  formData.append("platform", metadata.platform);
+  formData.append("platform", String(metadata.platform));
 
   // Handle authors array
   metadata.authors.forEach((author) => {
@@ -210,8 +206,9 @@ async function uploadSingleChunk(formData: FormData, chunkInfo: ChunkInfo, fileS
   throw new Error(`Failed to upload chunk ${chunkInfo.index}: exhausted retry attempts`);
 }
 
-function calculateProgress(chunkInfo: ChunkInfo, progressEvent: any, fileSize: number): number {
-  const chunkProgress = progressEvent.loaded / progressEvent.total;
+function calculateProgress(chunkInfo: ChunkInfo, progressEvent: AxiosProgressEvent, fileSize: number): number {
+  const totalBytes = progressEvent.total ?? chunkInfo.end - chunkInfo.start;
+  const chunkProgress = progressEvent.loaded / totalBytes;
   const overallProgress = (chunkInfo.index * CHUNK_SIZE + chunkProgress * (chunkInfo.end - chunkInfo.start)) / fileSize;
   return Math.round(overallProgress * 100);
 }

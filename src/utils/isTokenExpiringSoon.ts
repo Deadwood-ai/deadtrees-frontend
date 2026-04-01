@@ -1,4 +1,8 @@
-export const isTokenExpiringSoon = (session: any, thresholdMinutes: number = 40) => {
+interface SessionLike {
+  expires_at?: number | null;
+}
+
+export const isTokenExpiringSoon = (session: SessionLike | null | undefined, thresholdMinutes: number = 40) => {
   if (!session || !session.expires_at) {
     return true; // If we don't have a session or expiration time, assume it's expiring soon
   }

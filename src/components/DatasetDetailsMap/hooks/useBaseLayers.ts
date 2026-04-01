@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import TileLayer from "ol/layer/Tile";
 import { XYZ } from "ol/source";
+import Disposable from "ol/Disposable";
 import type { Map as OLMap } from "ol";
 import type TileLayerWebGL from "ol/layer/WebGLTile.js";
 
@@ -30,6 +31,9 @@ export interface UseBaseLayersReturn {
 	/** Set drone imagery visibility */
 	setDroneImageryVisible: (visible: boolean) => void;
 }
+
+const isDisposable = (value: unknown): value is Disposable =>
+	value instanceof Disposable;
 
 /**
  * Hook for managing base layers (basemap + ortho)
@@ -73,13 +77,13 @@ export function useBaseLayers({
 		isInitializedRef.current = true;
 
 		// Cleanup
-		return () => {
-			if (basemapLayerRef.current && map) {
-				map.removeLayer(basemapLayerRef.current);
-				const source = basemapLayerRef.current.getSource();
-				if (source && "dispose" in source) (source as any).dispose();
-				basemapLayerRef.current = null;
-			}
+			return () => {
+				if (basemapLayerRef.current && map) {
+					map.removeLayer(basemapLayerRef.current);
+					const source = basemapLayerRef.current.getSource();
+					if (isDisposable(source)) source.dispose();
+					basemapLayerRef.current = null;
+				}
 			isInitializedRef.current = false;
 		};
 	}, [map, mapStyle]);
@@ -107,10 +111,8 @@ export function useBaseLayers({
 				maxZoom: isSatellite ? 18 : 19,
 				crossOrigin: "anonymous",
 			})
-		);
-		if (previousSource && "dispose" in previousSource) {
-			(previousSource as any).dispose();
-		}
+			);
+			if (isDisposable(previousSource)) previousSource.dispose();
 
 		// Restore view state
 		if (currentCenter && currentZoom) {

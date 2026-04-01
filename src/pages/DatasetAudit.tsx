@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import type { Dayjs } from "dayjs";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
 	Table,
@@ -53,6 +54,7 @@ type AuditTab = "pending" | "completed" | "reference" | "edits-flags" | "process
 type CompletedStatusFilter = "all" | "ready" | "fixable" | "excluded" | "needs-review" | "reviewed";
 
 type ProcessingStateFilterKey = "ortho" | "cog" | "thumbnail" | "deadwood" | "forestCover" | "metadata";
+type AcquisitionMonthRange = [Dayjs | null, Dayjs | null] | null;
 
 const PROCESSING_STATE_OPTIONS: Array<{ label: string; value: ProcessingStateFilterKey }> = [
 	{ label: "Ortho", value: "ortho" },
@@ -239,7 +241,7 @@ function DatasetAuditInner() {
 	const [activeTab, setActiveTab] = useState<AuditTab>(initialTab);
 	const [statusFilter, setStatusFilter] = useState<CompletedStatusFilter>(initialStatus);
 	const [idFilter, setIdFilter] = useState<string>(searchParams.get("id") || "");
-	const [acquisitionMonthRange, setAcquisitionMonthRange] = useState<unknown>(null);
+	const [acquisitionMonthRange, setAcquisitionMonthRange] = useState<AcquisitionMonthRange>(null);
 	const [biomeFilter, setBiomeFilter] = useState<string>(initialBiome);
 	const [countryFilter, setCountryFilter] = useState<string>(initialCountry);
 	const [auditorFilter, setAuditorFilter] = useState<string>(initialAuditor);
@@ -423,8 +425,8 @@ function DatasetAuditInner() {
 			}
 		}
 
-		const acquisitionStart = (acquisitionMonthRange as any)?.[0] ?? null;
-		const acquisitionEnd = (acquisitionMonthRange as any)?.[1] ?? null;
+		const acquisitionStart = acquisitionMonthRange?.[0] ?? null;
+		const acquisitionEnd = acquisitionMonthRange?.[1] ?? null;
 		const acquisitionStartIndex =
 			acquisitionStart && typeof acquisitionStart.year === "function" && typeof acquisitionStart.month === "function"
 				? acquisitionStart.year() * 12 + acquisitionStart.month()
@@ -493,10 +495,11 @@ function DatasetAuditInner() {
 		countryFilter,
 		auditorFilter,
 		contributorFilter,
-		hasFlagsFilter,
-		hasProcessingStates,
-		inSeasonOnly,
-		auditMap,
+			hasFlagsFilter,
+			hasProcessingStates,
+			inSeasonOnly,
+			correctionsMap,
+			auditMap,
 		contributorMap,
 		flaggedAgg,
 		hasAboveMinId,
@@ -1104,7 +1107,7 @@ function DatasetAuditInner() {
 
 	const hasActiveFilters =
 		idFilter ||
-		Boolean((acquisitionMonthRange as any)?.[0] || (acquisitionMonthRange as any)?.[1]) ||
+			Boolean(acquisitionMonthRange?.[0] || acquisitionMonthRange?.[1]) ||
 		biomeFilter ||
 		countryFilter ||
 		auditorFilter ||
@@ -1488,11 +1491,11 @@ function DatasetAuditInner() {
 												<Text type="secondary" className="block mb-1 text-xs">
 													Acquisition Month
 												</Text>
-												<DatePicker.RangePicker
-													picker="month"
-													value={acquisitionMonthRange as any}
-													onChange={(value) => setAcquisitionMonthRange(value as any)}
-													allowClear
+													<DatePicker.RangePicker
+														picker="month"
+														value={acquisitionMonthRange}
+														onChange={(value) => setAcquisitionMonthRange(value)}
+														allowClear
 													placeholder={["From", "To"]}
 													style={{ width: isMobile ? "100%" : 200 }}
 												/>

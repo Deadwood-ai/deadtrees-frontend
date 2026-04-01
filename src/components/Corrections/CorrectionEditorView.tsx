@@ -196,6 +196,8 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       deadwoodLayerRef.current = null;
       forestCoverLayerRef.current = null;
     };
+  // Viewport is intentionally read only during map bootstrapping for this editor instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataset.cog_path, dataset.is_forest_cover_done, deadwood.data?.id, forestCover.data?.id]);
 
   // Start editing

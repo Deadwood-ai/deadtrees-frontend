@@ -217,7 +217,7 @@ export function useDatasetEditing({ datasetId, user }: UseDatasetEditingOptions)
     } finally {
       setIsSaving(false);
     }
-  }, [predictionLabel?.id, editingLayerType, user?.id, datasetId, editor, initialFeatures, geoJson, saveCorrections]);
+  }, [predictionLabel?.id, editingLayerType, user?.id, datasetId, editor, initialFeatures, geoJson, saveCorrections, emitDebugEvent]);
 
   // Load geometries into editor when editing starts
   useEffect(() => {

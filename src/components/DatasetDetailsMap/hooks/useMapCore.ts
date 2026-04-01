@@ -3,7 +3,8 @@ import { Map, View, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
-import type { Layer } from "ol/layer";
+import type BaseLayer from "ol/layer/Base";
+import Disposable from "ol/Disposable";
 
 import { Settings } from "../../../config";
 
@@ -44,9 +45,9 @@ export interface UseMapCoreReturn {
 	/** GeoTIFF extent (for fit view) */
 	extent: number[] | null;
 	/** Add a layer to the map */
-	addLayer: (layer: Layer) => void;
+	addLayer: (layer: BaseLayer) => void;
 	/** Remove a layer from the map */
-	removeLayer: (layer: Layer) => void;
+	removeLayer: (layer: BaseLayer) => void;
 	/** Add an overlay to the map */
 	addOverlay: (overlay: Overlay) => void;
 	/** Remove an overlay from the map */
@@ -54,6 +55,12 @@ export interface UseMapCoreReturn {
 	/** Fit view to extent */
 	fitToExtent: (extent?: number[]) => void;
 }
+
+const isDisposable = (value: unknown): value is Disposable =>
+	value instanceof Disposable;
+
+const hasSource = (layer: BaseLayer): layer is BaseLayer & { getSource: () => unknown } =>
+	typeof (layer as BaseLayer & { getSource?: () => unknown }).getSource === "function";
 
 /**
  * Core map initialization hook
@@ -94,11 +101,11 @@ export function useMapCore({
 	});
 
 	// Layer management
-	const addLayer = useCallback((layer: Layer) => {
+	const addLayer = useCallback((layer: BaseLayer) => {
 		mapRef.current?.addLayer(layer);
 	}, []);
 
-	const removeLayer = useCallback((layer: Layer) => {
+	const removeLayer = useCallback((layer: BaseLayer) => {
 		mapRef.current?.removeLayer(layer);
 	}, []);
 
@@ -148,13 +155,13 @@ export function useMapCore({
 		const orthoCogSource = orthoCogLayer.getSource();
 		if (!orthoCogSource) return;
 
-		orthoCogSource.getView().then((viewOptions) => {
-			if (cancelled) {
-				const source = orthoCogLayer.getSource();
-				if (source && "dispose" in source) (source as any).dispose();
-				if ("dispose" in orthoCogLayer) (orthoCogLayer as any).dispose();
-				return;
-			}
+			orthoCogSource.getView().then((viewOptions) => {
+				if (cancelled) {
+					const source = orthoCogLayer.getSource();
+					if (isDisposable(source)) source.dispose();
+					if (isDisposable(orthoCogLayer)) orthoCogLayer.dispose();
+					return;
+				}
 
 			if (!viewOptions?.extent || !containerRef.current) return;
 
@@ -212,21 +219,22 @@ export function useMapCore({
 		return () => {
 			cancelled = true;
 
-			if (mapRef.current) {
-				if (moveEndHandlerRef.current) {
-					mapRef.current.un("moveend", moveEndHandlerRef.current);
-					moveEndHandlerRef.current = null;
-				}
-
-				// Remove all layers
-				mapRef.current.getLayers().forEach((layer) => {
-					const source = (layer as any).getSource?.();
-					if (source) {
-						if ("clear" in source) source.clear();
-						if ("dispose" in source) source.dispose();
+				if (mapRef.current) {
+					if (moveEndHandlerRef.current) {
+						mapRef.current.un("moveend", moveEndHandlerRef.current);
+						moveEndHandlerRef.current = null;
 					}
-					if ("dispose" in layer) (layer as any).dispose();
-				});
+
+					// Remove all layers
+					const layers = mapRef.current.getLayers().getArray().slice();
+					layers.forEach((layer) => {
+						const source = hasSource(layer) ? layer.getSource() : null;
+						if (typeof source === "object" && source !== null && "clear" in source && typeof source.clear === "function") {
+							source.clear();
+						}
+						if (isDisposable(source)) source.dispose();
+						if (isDisposable(layer)) layer.dispose();
+					});
 
 				mapRef.current.setTarget(undefined);
 				mapRef.current.dispose();

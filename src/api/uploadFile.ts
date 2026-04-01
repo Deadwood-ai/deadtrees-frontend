@@ -1,6 +1,10 @@
 import { Settings } from "../config";
 
-const uploadFile = async (file: any, token: string) => {
+interface UploadFileInput {
+  originFileObj: Blob;
+}
+
+const uploadFile = async (file: UploadFileInput, token: string) => {
   // console.log("file in uploadFile", file);
   const formData = new FormData();
   formData.append("file", file.originFileObj);

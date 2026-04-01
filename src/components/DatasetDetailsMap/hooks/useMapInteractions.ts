@@ -3,6 +3,8 @@ import type { Map as OLMap, MapBrowserEvent } from "ol";
 import type VectorTileLayer from "ol/layer/VectorTile";
 import type { Coordinate } from "ol/coordinate";
 
+type InteractionEvent = MapBrowserEvent<UIEvent>;
+
 export interface HoverInfo {
 	featureId: number;
 	layerType: string;
@@ -66,7 +68,7 @@ export function useMapInteractions({
 	const clickRequestIdRef = useRef(0);
 
 	// Hover handler
-	const handlePointerMove = useCallback((event: MapBrowserEvent<PointerEvent>) => {
+	const handlePointerMove = useCallback((event: InteractionEvent) => {
 		if (!enabled || !map) {
 			// Reset cursor when disabled
 			const targetElement = map?.getTargetElement();
@@ -124,7 +126,7 @@ export function useMapInteractions({
 	}, [enabled, map, deadwoodLayer, forestCoverLayer, minZoom, onHover]);
 
 	// Click handler
-	const handleClick = useCallback((event: MapBrowserEvent<PointerEvent>) => {
+	const handleClick = useCallback((event: InteractionEvent) => {
 		if (!enabled || !map) {
 			onClick?.(null);
 			return;
@@ -180,15 +182,15 @@ export function useMapInteractions({
 		if (!map || handlersAttachedRef.current) return;
 		if (!deadwoodLayer && !forestCoverLayer) return;
 
-		map.on("pointermove", handlePointerMove as any);
-		map.on("click", handleClick as any);
+			map.on("pointermove", handlePointerMove);
+			map.on("click", handleClick);
 		handlersAttachedRef.current = true;
 
 		return () => {
 			hoverRequestIdRef.current += 1;
 			clickRequestIdRef.current += 1;
-			map.un("pointermove", handlePointerMove as any);
-			map.un("click", handleClick as any);
+				map.un("pointermove", handlePointerMove);
+				map.un("click", handleClick);
 			handlersAttachedRef.current = false;
 		};
 	}, [map, deadwoodLayer, forestCoverLayer, handlePointerMove, handleClick]);

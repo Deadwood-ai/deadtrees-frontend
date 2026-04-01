@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { Map, View } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
+import type { MapBrowserEvent } from "ol";
 import { XYZ } from "ol/source";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
@@ -18,12 +19,14 @@ import Stroke from "ol/style/Stroke";
 import Circle from "ol/style/Circle";
 import Overlay from "ol/Overlay";
 import Select from "ol/interaction/Select.js";
+import type { SelectEvent } from "ol/interaction/Select";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import "./tooltip.css";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { palette } from "../../theme/palette";
 
 export type DatasetMapColorMode = "quality" | "labels" | "year" | "timeline";
+type DatasetMapEvent = MapBrowserEvent<UIEvent>;
 
 type DatasetVisualSpec = {
   fill: string;
@@ -198,9 +201,9 @@ const buildTooltipTitle = (dataset: IDataset): string => {
 
 interface MapRef extends Map {
   moveEndListener?: () => void;
-  pointerMoveListener?: (evt: any) => void;
+  pointerMoveListener?: (evt: DatasetMapEvent) => void;
   selectOnClick?: Select;
-  selectListener?: (e: any) => void;
+  selectListener?: (e: SelectEvent) => void;
   tooltip?: Overlay;
 }
 
@@ -225,9 +228,16 @@ const DatasetMapOL = ({
   const vectorLayerMarkerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const { DatasetViewport, setDatasetViewport } = useDatasetMap();
+  const datasetViewportRef = useRef(DatasetViewport);
+  const setDatasetViewportRef = useRef(setDatasetViewport);
   // Track previous trigger value to only zoom on explicit filter actions
   const prevZoomTriggerRef = useRef(filterZoomTrigger);
   const { setNavigationSource } = useDatasetDetailsMap();
+
+  useEffect(() => {
+    datasetViewportRef.current = DatasetViewport;
+    setDatasetViewportRef.current = setDatasetViewport;
+  }, [DatasetViewport, setDatasetViewport]);
 
   const updateVisibleFeatures = useCallback(() => {
     if (!mapRef.current || !vectorLayerExtendRef.current) return;
@@ -250,8 +260,8 @@ const DatasetMapOL = ({
     // console.log("initial map useEffect");
     if (!mapRef.current && mapContainer.current) {
       const initialView = new View({
-        center: DatasetViewport.center,
-        zoom: DatasetViewport.zoom,
+        center: datasetViewportRef.current.center,
+        zoom: datasetViewportRef.current.zoom,
       });
 
       const basemapLayer = new TileLayer({
@@ -308,7 +318,7 @@ const DatasetMapOL = ({
           center: map.getView().getCenter() as number[],
           zoom: map.getView().getZoom() as number,
         };
-        setDatasetViewport(newViewport);
+        setDatasetViewportRef.current(newViewport);
         updateVisibleFeatures();
       };
       map.on("moveend", moveEndListener);
@@ -318,7 +328,7 @@ const DatasetMapOL = ({
       mapRef.current.moveEndListener = moveEndListener;
       mapRef.current.tooltip = tooltip;
 
-      const pointerMoveListener = (evt: any) => {
+      const pointerMoveListener = (evt: DatasetMapEvent) => {
         if (evt.dragging) return;
         const pixel = map.getEventPixel(evt.originalEvent);
 
@@ -374,7 +384,7 @@ const DatasetMapOL = ({
 
       map.addInteraction(selectOnClick);
       map.selectOnClick = selectOnClick;
-      const selectListener = (e: any) => {
+      const selectListener = (e: SelectEvent) => {
         const selectedFeatures = e.selected;
         if (selectedFeatures.length > 0) {
           const feature = selectedFeatures[0];

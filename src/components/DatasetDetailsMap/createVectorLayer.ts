@@ -1,11 +1,11 @@
 import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
+import type VectorTile from "ol/VectorTile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Fill, Stroke, Style } from "ol/style";
 import MVT from "ol/format/MVT";
 import GeoJSON from "ol/format/GeoJSON";
-import type { Extent } from "ol/extent";
 import { Polygon } from "ol/geom";
 import Feature from "ol/Feature";
 import { supabase } from "../../hooks/useSupabase";
@@ -28,20 +28,15 @@ interface VectorLayerConfig {
 }
 
 const createVectorLayer = (config: VectorLayerConfig) => {
-  const vectorSource = new VectorTileSource({
+  const vectorSource = new VectorTileSource<Feature>({
     // Keep OL vector-tile features as full Feature instances.
     // Some dataset-details map interaction paths are sensitive to this runtime behavior.
-    format: new MVT({
-      featureClass: Feature as any,
+    format: new MVT<Feature>({
+      featureClass: Feature,
       geometryName: "geom",
     }),
     tileLoadFunction: async (rawTile, url) => {
-      const tile = rawTile as unknown as {
-        extent: Extent;
-        getFormat: () => MVT;
-        setFeatures: (features: FeatureLike[]) => void;
-        setState: (state: number) => void;
-      };
+      const tile = rawTile as VectorTile<Feature>;
       const [z, x, y] = url.split("/").slice(-3).map(Number);
       // console.log(`[Tile Request] z=${z}, x=${x}, y=${y}`);
       // Skip API call completely if no labelId is provided
@@ -131,7 +126,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
     }
 
     // Default style values - keep original fill, only change border for corrections
-    let fillColor = config.style.fillColor;
+    const fillColor = config.style.fillColor;
     let strokeColor = config.style.strokeColor;
     let strokeWidth = config.style.strokeWidth;
 
@@ -179,8 +174,8 @@ interface LayerOptions {
 export const createDeadwoodVectorLayer = (labelId?: number | null, options?: LayerOptions) =>
   createVectorLayer({
     // Use original perf function for default, corrections-aware function when styling requested
-    rpcFunctionName: options?.showCorrectionStyling 
-      ? "get_deadwood_tiles_with_corrections" 
+    rpcFunctionName: options?.showCorrectionStyling
+      ? "get_deadwood_tiles_with_corrections"
       : "get_deadwood_vector_tiles_perf1",
     className: "deadwood-vector",
     style: {
@@ -196,8 +191,8 @@ export const createDeadwoodVectorLayer = (labelId?: number | null, options?: Lay
 export const createForestCoverVectorLayer = (labelId?: number, options?: LayerOptions) =>
   createVectorLayer({
     // Use original perf function for default, corrections-aware function when styling requested
-    rpcFunctionName: options?.showCorrectionStyling 
-      ? "get_forest_cover_tiles_with_corrections" 
+    rpcFunctionName: options?.showCorrectionStyling
+      ? "get_forest_cover_tiles_with_corrections"
       : "get_forest_cover_vector_tiles_perf",
     className: "forest-cover-vector",
     style: {
