@@ -22,11 +22,14 @@ import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import View from "ol/View";
 import Feature from "ol/Feature";
 import { Polygon, Point } from "ol/geom";
+import Geometry from "ol/geom/Geometry";
+import { circular as circularPolygon } from "ol/geom/Polygon";
 import { getCenter } from "ol/extent";
 import { Draw } from "ol/interaction";
 import { createBox } from "ol/interaction/Draw";
-import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
+import { Style, Fill, Stroke, Circle as CircleStyle, Icon } from "ol/style";
 import type { FeatureLike } from "ol/Feature";
+import createKompas from "kompas";
 
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
@@ -45,9 +48,62 @@ import type { IMapFlag } from "../../types/mapFlags";
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
 
+const PREVIEW_WARNING_STORAGE_KEY = "deadtrees-preview-warning-shown";
+const PREVIEW_WARNING_EVENT = "deadtrees:preview-warning-visibility";
+const LOCATION_HEADING_ICON_SRC = "/assets/location-heading.svg";
+
 interface ClickedValues {
   forestPct: number;
   deadwoodPct: number;
+}
+
+type DeviceOrientationWithPermission = typeof DeviceOrientationEvent & {
+  requestPermission?: () => Promise<"granted" | "denied">;
+};
+
+const userAccuracyStyle = new Style({
+  fill: new Fill({ color: "rgba(59, 130, 246, 0.16)" }),
+  stroke: new Stroke({ color: "rgba(59, 130, 246, 0.32)", width: 1.5 }),
+});
+
+const userLocationStyle = (feature: FeatureLike) => {
+  const geometryType = feature.getGeometry()?.getType();
+  if (geometryType === "Polygon") {
+    return userAccuracyStyle;
+  }
+
+  const heading = feature.get("heading");
+  const rotation =
+    typeof heading === "number" && Number.isFinite(heading) ? (heading * Math.PI) / 180 : 0;
+
+  return [
+    new Style({
+      image: new Icon({
+        src: LOCATION_HEADING_ICON_SRC,
+        anchor: [0.5, 0.5],
+        anchorXUnits: "fraction",
+        anchorYUnits: "fraction",
+        rotateWithView: true,
+        rotation,
+        scale: 0.9,
+      }),
+      zIndex: 61,
+    }),
+    new Style({
+      image: new CircleStyle({
+        radius: 5.5,
+        fill: new Fill({ color: "rgba(37, 99, 235, 0.98)" }),
+        stroke: new Stroke({ color: "rgba(255,255,255,0.96)", width: 2.5 }),
+      }),
+      zIndex: 62,
+    }),
+  ];
+};
+
+interface KompasTracker {
+  watch(): KompasTracker;
+  clear(): KompasTracker;
+  on(eventName: "heading", callback: (heading: number) => void): KompasTracker;
 }
 
 // Helper to create GeoTIFF source for deadwood
@@ -118,6 +174,12 @@ const DeadtreesMap = () => {
   const flagHoverOverlayRef = useRef<Overlay | null>(null);
   const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
+  const userLocationLayerRef = useRef<VectorLayer<VectorSource<Feature<Geometry>>> | null>(null);
+  const userLocationFeatureRef = useRef<Feature<Point> | null>(null);
+  const userAccuracyFeatureRef = useRef<Feature<Polygon> | null>(null);
+  const compassTrackerRef = useRef<KompasTracker | null>(null);
+  const geolocationWatchIdRef = useRef<number | null>(null);
+  const shouldAnimateToUserRef = useRef(false);
 
   // Layer visibility state - both layers visible by default
   const [showForest, setShowForest] = useState(true);
@@ -171,6 +233,120 @@ const DeadtreesMap = () => {
     // Pass current path as returnTo so user comes back to map after sign-in
     navigate("/sign-in?returnTo=/deadtrees");
   }, [navigate]);
+
+  const updateUserLocationFeature = useCallback(
+    (coordinates: number[], accuracyInMeters?: number | null, heading?: number | null) => {
+      const userLocationSource = userLocationLayerRef.current?.getSource();
+      if (!userLocationSource) return;
+
+      let userFeature = userLocationFeatureRef.current;
+      if (!userFeature) {
+        userFeature = new Feature({ geometry: new Point(coordinates) });
+        userLocationFeatureRef.current = userFeature;
+        userLocationSource.addFeature(userFeature);
+      } else {
+        userFeature.setGeometry(new Point(coordinates));
+      }
+
+      let accuracyFeature = userAccuracyFeatureRef.current;
+      if (typeof accuracyInMeters === "number" && Number.isFinite(accuracyInMeters) && accuracyInMeters > 0) {
+        const geographicCoordinates = toLonLat(coordinates);
+        const accuracyGeometry = circularPolygon(geographicCoordinates, accuracyInMeters, 64);
+        accuracyGeometry.transform(
+          "EPSG:4326",
+          mapRef.current?.getView().getProjection() ?? "EPSG:3857",
+        );
+
+        if (!accuracyFeature) {
+          accuracyFeature = new Feature({ geometry: accuracyGeometry });
+          userAccuracyFeatureRef.current = accuracyFeature;
+          userLocationSource.addFeature(accuracyFeature);
+        } else {
+          accuracyFeature.setGeometry(accuracyGeometry);
+        }
+        accuracyFeature.changed();
+      } else if (accuracyFeature) {
+        userLocationSource.removeFeature(accuracyFeature);
+        userAccuracyFeatureRef.current = null;
+      }
+
+      if (typeof heading === "number" && Number.isFinite(heading)) {
+        userFeature.set("heading", heading);
+      }
+
+      userFeature.changed();
+    },
+    [],
+  );
+  const updateUserHeading = useCallback((heading: number | null) => {
+    const userFeature = userLocationFeatureRef.current;
+    if (!userFeature || typeof heading !== "number" || !Number.isFinite(heading)) return;
+
+    userFeature.set("heading", heading);
+    userFeature.changed();
+  }, []);
+
+  const animateToUserLocation = useCallback((coordinates: number[]) => {
+    const view = mapRef.current?.getView();
+    if (!view) return;
+
+    view.animate({
+      center: coordinates,
+      zoom: Math.max(view.getZoom() || 0, 13),
+      duration: 700,
+    });
+  }, []);
+
+  const handleHeadingChange = useCallback(
+    (heading: number) => {
+      updateUserHeading(heading);
+    },
+    [updateUserHeading],
+  );
+
+  const stopOrientationTracking = useCallback(() => {
+    if (!compassTrackerRef.current) return;
+
+    compassTrackerRef.current.clear();
+    compassTrackerRef.current = null;
+  }, []);
+
+  const startOrientationTracking = useCallback(
+    async (requestPermission: boolean) => {
+      if (typeof window === "undefined" || typeof DeviceOrientationEvent === "undefined") return;
+
+      const OrientationEventWithPermission =
+        DeviceOrientationEvent as DeviceOrientationWithPermission;
+
+      if (requestPermission && typeof OrientationEventWithPermission.requestPermission === "function") {
+        try {
+          const permission = await OrientationEventWithPermission.requestPermission();
+          if (permission !== "granted") return;
+        } catch {
+          return;
+        }
+      } else if (
+        !requestPermission &&
+        typeof OrientationEventWithPermission.requestPermission === "function"
+      ) {
+        // On iOS, orientation access must be requested from a user gesture.
+        return;
+      }
+
+      if (compassTrackerRef.current) return;
+
+      const tracker = createKompas().on("heading", handleHeadingChange).watch();
+      compassTrackerRef.current = tracker;
+    },
+    [handleHeadingChange],
+  );
+
+  const stopUserLocationTracking = useCallback(() => {
+    if (geolocationWatchIdRef.current === null) return;
+
+    navigator.geolocation.clearWatch(geolocationWatchIdRef.current);
+    geolocationWatchIdRef.current = null;
+  }, []);
 
   // handler functions
   const handleClick = async (event: { coordinate: number[] }, year: string, skipIfDrawing: boolean) => {
@@ -369,13 +545,26 @@ const DeadtreesMap = () => {
       });
       clickedCellLayerRef.current = clickedCellLayer;
 
+      // Create a dedicated user-location marker layer.
+      const userLocationSource = new VectorSource<Feature<Geometry>>();
+      const userLocationLayer = new VectorLayer({
+        source: userLocationSource,
+        style: userLocationStyle,
+        zIndex: 60,
+      });
+      userLocationLayerRef.current = userLocationLayer;
+
       const newMap = new Map({
         target: mapContainer.current || undefined,
-        // Layer order: basemap -> forest -> deadwood -> clicked cell (on top)
-        layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer],
+        // Layer order: basemap -> forest -> deadwood -> clicked cell -> user location
+        layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer, userLocationLayer],
         view: initialView,
         overlays: [],
-        interactions: defaultInteractions({ doubleClickZoom: false }),
+        interactions: defaultInteractions({
+          doubleClickZoom: false,
+          pinchRotate: !isMobile,
+          altShiftDragRotate: !isMobile,
+        }),
         controls: [
           new Attribution({
             collapsible: true,
@@ -440,11 +629,13 @@ const DeadtreesMap = () => {
     }
 
     return () => {
+      stopUserLocationTracking();
+      stopOrientationTracking();
       if (map) {
         map.setTarget(undefined);
       }
     };
-  }, []);
+  }, [stopOrientationTracking, stopUserLocationTracking]);
 
   // effects -----------------------------------------------------------
 
@@ -454,6 +645,11 @@ const DeadtreesMap = () => {
       map.getView().fit(transformExtent(bounds, "EPSG:4326", "EPSG:3857"));
     }
   }, [bounds, map]);
+
+  useEffect(() => {
+    if (!map || !isMobile) return;
+    map.getView().setRotation(0);
+  }, [isMobile, map]);
 
   // update on mapStyle change
   useEffect(() => {
@@ -665,11 +861,27 @@ const DeadtreesMap = () => {
 
   // Show preview warning modal on initial load (once per browser session)
   useEffect(() => {
-    const hasSeenWarning = sessionStorage.getItem("deadtrees-preview-warning-shown");
+    const hasSeenWarning = sessionStorage.getItem(PREVIEW_WARNING_STORAGE_KEY);
     if (!hasSeenWarning) {
       setDeadwoodWarningModalOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(PREVIEW_WARNING_EVENT, {
+        detail: { open: deadwoodWarningModalOpen },
+      }),
+    );
+
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent(PREVIEW_WARNING_EVENT, {
+          detail: { open: false },
+        }),
+      );
+    };
+  }, [deadwoodWarningModalOpen]);
 
   // Start drawing flag bbox
   const startFlagDrawing = useCallback(() => {
@@ -767,7 +979,7 @@ const DeadtreesMap = () => {
   // Handle preview warning modal close
   const handleDeadwoodWarningClose = useCallback(() => {
     setDeadwoodWarningModalOpen(false);
-    sessionStorage.setItem("deadtrees-preview-warning-shown", "true");
+    sessionStorage.setItem(PREVIEW_WARNING_STORAGE_KEY, "true");
   }, []);
 
   // Handle map style change
@@ -787,24 +999,39 @@ const DeadtreesMap = () => {
     }
   }, [isDrawingFlag, cancelFlagDrawing, startFlagDrawing]);
 
-  const locateUser = useCallback(() => {
+  const locateUser = useCallback((requestOrientationPermission = false) => {
     if (!navigator.geolocation) {
       message.error("Geolocation is not supported by this browser");
       return;
     }
 
+    void startOrientationTracking(requestOrientationPermission);
+    shouldAnimateToUserRef.current = true;
     setIsLocatingUser(true);
-    navigator.geolocation.getCurrentPosition(
+
+    const existingCoordinates = userLocationFeatureRef.current?.getGeometry()?.getCoordinates();
+    if (existingCoordinates) {
+      animateToUserLocation(existingCoordinates);
+      shouldAnimateToUserRef.current = false;
+      setIsLocatingUser(false);
+    }
+
+    if (geolocationWatchIdRef.current !== null) {
+      return;
+    }
+
+    geolocationWatchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         const center = fromLonLat([longitude, latitude]);
-        const view = mapRef.current?.getView();
-        if (view) {
-          view.animate({
-            center,
-            zoom: Math.max(view.getZoom() || 0, 13),
-            duration: 700,
-          });
+        const heading =
+          typeof position.coords.heading === "number" && Number.isFinite(position.coords.heading)
+            ? position.coords.heading
+            : null;
+        updateUserLocationFeature(center, position.coords.accuracy, heading);
+        if (shouldAnimateToUserRef.current) {
+          animateToUserLocation(center);
+          shouldAnimateToUserRef.current = false;
         }
         setIsLocatingUser(false);
       },
@@ -814,6 +1041,8 @@ const DeadtreesMap = () => {
         } else {
           message.error("Could not get your current location");
         }
+        stopUserLocationTracking();
+        shouldAnimateToUserRef.current = false;
         setIsLocatingUser(false);
       },
       {
@@ -822,11 +1051,11 @@ const DeadtreesMap = () => {
         maximumAge: 120000,
       },
     );
-  }, []);
+  }, [animateToUserLocation, startOrientationTracking, stopUserLocationTracking, updateUserLocationFeature]);
 
   useEffect(() => {
     if (!map) return;
-    locateUser();
+    locateUser(false);
   }, [map, locateUser]);
 
   return (
@@ -843,7 +1072,7 @@ const DeadtreesMap = () => {
           <LocationControls
             onPlaceSelect={setBounds}
             variant="floating-card"
-            onLocateMe={locateUser}
+            onLocateMe={() => locateUser(true)}
             isLocating={isLocatingUser}
           />
         </div>
@@ -927,7 +1156,7 @@ const DeadtreesMap = () => {
           <LocationControls
             onPlaceSelect={setBounds}
             variant="drawer-inline"
-            onLocateMe={locateUser}
+            onLocateMe={() => locateUser(true)}
             isLocating={isLocatingUser}
           />
         </Drawer>
@@ -935,38 +1164,41 @@ const DeadtreesMap = () => {
         <Drawer
           title="Map controls"
           placement="bottom"
-          height="85vh"
+          height="auto"
           open={mobileLayersDrawerOpen}
           onClose={() => setMobileLayersDrawerOpen(false)}
           className="md:hidden"
-          styles={{ body: { padding: 0, overflowX: "hidden", overflowY: "auto" } }}
+          rootClassName="map-controls-mobile-drawer"
+          styles={{
+            header: { padding: "12px 16px" },
+            body: { padding: 0, overflowX: "hidden", overflowY: "auto", overscrollBehavior: "contain" },
+          }}
         >
-          <div className="flex w-full flex-col pb-6">
+          <div className="flex min-w-0 w-full flex-col pb-6">
             <LayerControlPanel
-            mapStyle={DeadwoodMapStyle}
-            onMapStyleChange={handleMapStyleChange}
-            showForest={showForest}
-            setShowForest={setShowForest}
-            showDeadwood={showDeadwood}
-            setShowDeadwood={setShowDeadwood}
-            opacity={sliderValue}
-            setOpacity={setSliderValue}
-            isDrawingPolygon={polygonAnalysis.isDrawing}
-            onPolygonStatsClick={polygonAnalysis.toggle}
-            showFlagsControls={true}
-            isLoggedIn={!!user}
-            isDrawingFlag={isDrawingFlag}
-            onFlagClick={handleFlagClick}
-            onLoginRequired={handleLoginRequired}
-            showFlagsLayer={showFlagsLayer}
-            setShowFlagsLayer={setShowFlagsLayer}
-            flagsCount={mapFlags.length}
-            clickedValues={clickedValues}
-            variant="drawer-sheet"
-          />
+              mapStyle={DeadwoodMapStyle}
+              onMapStyleChange={handleMapStyleChange}
+              showForest={showForest}
+              setShowForest={setShowForest}
+              showDeadwood={showDeadwood}
+              setShowDeadwood={setShowDeadwood}
+              opacity={sliderValue}
+              setOpacity={setSliderValue}
+              isDrawingPolygon={polygonAnalysis.isDrawing}
+              onPolygonStatsClick={polygonAnalysis.toggle}
+              showFlagsControls={true}
+              isLoggedIn={!!user}
+              isDrawingFlag={isDrawingFlag}
+              onFlagClick={handleFlagClick}
+              onLoginRequired={handleLoginRequired}
+              showFlagsLayer={showFlagsLayer}
+              setShowFlagsLayer={setShowFlagsLayer}
+              flagsCount={mapFlags.length}
+              clickedValues={clickedValues}
+              variant="drawer-sheet"
+            />
           </div>
         </Drawer>
-
       </div>
 
       {/* Flag description modal */}
@@ -1007,7 +1239,18 @@ const DeadtreesMap = () => {
         onCancel={handleDeadwoodWarningClose}
         okText="I Understand"
         cancelButtonProps={{ style: { display: "none" } }}
-        width={480}
+        okButtonProps={{
+          size: "large",
+          className: "min-h-11 px-5",
+        }}
+        centered={!isMobile}
+        width={isMobile ? "calc(100vw - 24px)" : 480}
+        styles={{
+          body: {
+            maxHeight: isMobile ? "70vh" : undefined,
+            overflowY: isMobile ? "auto" : undefined,
+          },
+        }}
       >
         <div className="mt-4 flex flex-col gap-4">
           {/* Alpha Warning */}
