@@ -9,20 +9,22 @@
  */
 export function applyCanvasOptimization() {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function (
+  HTMLCanvasElement.prototype.getContext = (function (
+    this: HTMLCanvasElement,
     contextType: string,
-    contextAttributes?: CanvasRenderingContext2DSettings,
+    contextAttributes?: unknown,
   ) {
     // Only modify 2d context
     if (contextType === "2d") {
       // Create attributes object if it doesn't exist
-      contextAttributes = contextAttributes || {};
+      const nextAttributes = (contextAttributes as CanvasRenderingContext2DSettings | undefined) || {};
       // Set willReadFrequently to true for all 2d contexts
-      contextAttributes.willReadFrequently = true;
+      nextAttributes.willReadFrequently = true;
+      contextAttributes = nextAttributes;
     }
     // Call the original method with our modified attributes
-    return originalGetContext.call(this, contextType, contextAttributes);
-  };
+    return originalGetContext.call(this, contextType as never, contextAttributes as never);
+  }) as HTMLCanvasElement["getContext"];
 
   console.debug("[Canvas Optimization] Applied willReadFrequently=true to all 2D canvas contexts");
 }

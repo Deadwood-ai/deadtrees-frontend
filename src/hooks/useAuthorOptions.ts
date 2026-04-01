@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useData } from "../hooks/useDataProvider";
-import { useSupabase } from "../useSupabase";
 
 interface AuthorOption {
   label: string;
@@ -13,14 +12,8 @@ export const useAuthorOptions = () => {
 
   useEffect(() => {
     if (authors) {
-      const authorsUnique = [...new Set(authors)];
-
-      const newOptions = authorsUnique.map((author) => ({
-        label: author,
-        value: author,
-      }));
-
-      setOptions(newOptions);
+      const authorsUnique = Array.from(new Map(authors.map((author) => [author.value, author])).values());
+      setOptions(authorsUnique);
     }
   }, [authors]);
 

@@ -94,6 +94,7 @@ export function useBaseLayers({
 		const currentZoom = currentView.getZoom();
 
 		const isSatellite = mapStyle === "satellite-streets-v12";
+		const previousSource = basemapLayerRef.current.getSource();
 		basemapLayerRef.current.setSource(
 			new XYZ({
 				url: isSatellite
@@ -107,6 +108,9 @@ export function useBaseLayers({
 				crossOrigin: "anonymous",
 			})
 		);
+		if (previousSource && "dispose" in previousSource) {
+			(previousSource as any).dispose();
+		}
 
 		// Restore view state
 		if (currentCenter && currentZoom) {

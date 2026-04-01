@@ -77,6 +77,7 @@ export function useMapCore({
 }: UseMapCoreOptions): UseMapCoreReturn {
 	const mapRef = useRef<Map | null>(null);
 	const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
+	const moveEndHandlerRef = useRef<(() => void) | null>(null);
 	const [isMapReady, setIsMapReady] = useState(false);
 	const [extent, setExtent] = useState<number[] | null>(null);
 
@@ -119,6 +120,8 @@ export function useMapCore({
 
 	// Main map initialization
 	useEffect(() => {
+		let cancelled = false;
+
 		// Skip if already initialized, not ready, or missing required data
 		if (mapRef.current || !isReady || !cogPath || !containerRef.current) {
 			return;
@@ -146,6 +149,13 @@ export function useMapCore({
 		if (!orthoCogSource) return;
 
 		orthoCogSource.getView().then((viewOptions) => {
+			if (cancelled) {
+				const source = orthoCogLayer.getSource();
+				if (source && "dispose" in source) (source as any).dispose();
+				if ("dispose" in orthoCogLayer) (orthoCogLayer as any).dispose();
+				return;
+			}
+
 			if (!viewOptions?.extent || !containerRef.current) return;
 
 			const cogExtent = viewOptions.extent as number[];
@@ -174,14 +184,16 @@ export function useMapCore({
 
 			// Viewport change handler - use "moveend" to only fire when movement stops
 			// (using "change" fires on every frame during pan/zoom, causing excessive re-renders)
-			newMap.on("moveend", () => {
+			const handleMoveEnd = () => {
 				const view = newMap.getView();
 				onViewportChangeRef.current?.({
 					center: (view.getCenter() as number[]) || [0, 0],
 					zoom: view.getZoom() || 2,
 					extent: view.calculateExtent(newMap.getSize() || [0, 0]) as number[],
 				});
-			});
+			};
+			moveEndHandlerRef.current = handleMoveEnd;
+			newMap.on("moveend", handleMoveEnd);
 
 			// Fit to extent if no saved viewport
 			if (!hasValidViewport) {
@@ -198,7 +210,14 @@ export function useMapCore({
 
 		// Cleanup
 		return () => {
+			cancelled = true;
+
 			if (mapRef.current) {
+				if (moveEndHandlerRef.current) {
+					mapRef.current.un("moveend", moveEndHandlerRef.current);
+					moveEndHandlerRef.current = null;
+				}
+
 				// Remove all layers
 				mapRef.current.getLayers().forEach((layer) => {
 					const source = (layer as any).getSource?.();

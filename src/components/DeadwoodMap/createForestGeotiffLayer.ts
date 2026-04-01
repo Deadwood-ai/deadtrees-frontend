@@ -44,12 +44,6 @@ const createForestGeotiffLayer = (year: string) => {
     visible: year === "2025",
   });
 
-  layer.cleanup = () => {
-    source.clear();
-    source.dispose();
-    layer.dispose();
-  };
-
   return layer;
 };
 

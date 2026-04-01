@@ -23,6 +23,7 @@ export interface IReferencePatch {
   aoi_coverage_percent: number | null;
   deadwood_prediction_coverage_percent: number | null;
   forest_cover_prediction_coverage_percent: number | null;
+  status: PatchStatus;
 
   // Reference label links
   reference_deadwood_label_id?: number | null;
@@ -34,6 +35,28 @@ export interface IReferencePatch {
 
   created_at: string;
   updated_at: string;
+}
+
+export interface ReferencePatchDraft {
+  dataset_id: number;
+  resolution_cm: PatchResolution;
+  geometry: GeoJSON.Polygon;
+  parent_tile_id: number | null;
+  patch_index: string;
+  utm_zone?: string;
+  epsg_code?: number;
+  bbox_minx: number;
+  bbox_miny: number;
+  bbox_maxx: number;
+  bbox_maxy: number;
+  aoi_coverage_percent: number | null;
+  deadwood_prediction_coverage_percent: number | null;
+  forest_cover_prediction_coverage_percent: number | null;
+  status?: PatchStatus;
+  reference_deadwood_label_id?: number | null;
+  reference_forest_cover_label_id?: number | null;
+  deadwood_validated?: boolean | null;
+  forest_cover_validated?: boolean | null;
 }
 
 export interface IPatchSession {

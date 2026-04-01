@@ -5,10 +5,12 @@ import VectorSource from "ol/source/Vector";
 import { Fill, Stroke, Style } from "ol/style";
 import MVT from "ol/format/MVT";
 import GeoJSON from "ol/format/GeoJSON";
+import type { Extent } from "ol/extent";
 import { Polygon } from "ol/geom";
+import Feature from "ol/Feature";
 import { supabase } from "../../hooks/useSupabase";
 import { base64ToArrayBuffer } from "../../utils/base64ToArrayBuffer";
-import Feature from "ol/Feature";
+import type { FeatureLike } from "ol/Feature";
 import { palette } from "../../theme/palette";
 import { mapColors } from "../../theme/mapColors";
 
@@ -27,11 +29,19 @@ interface VectorLayerConfig {
 
 const createVectorLayer = (config: VectorLayerConfig) => {
   const vectorSource = new VectorTileSource({
+    // Keep OL vector-tile features as full Feature instances.
+    // Some dataset-details map interaction paths are sensitive to this runtime behavior.
     format: new MVT({
-      featureClass: Feature,
+      featureClass: Feature as any,
       geometryName: "geom",
     }),
-    tileLoadFunction: async (tile, url) => {
+    tileLoadFunction: async (rawTile, url) => {
+      const tile = rawTile as unknown as {
+        extent: Extent;
+        getFormat: () => MVT;
+        setFeatures: (features: FeatureLike[]) => void;
+        setState: (state: number) => void;
+      };
       const [z, x, y] = url.split("/").slice(-3).map(Number);
       // console.log(`[Tile Request] z=${z}, x=${x}, y=${y}`);
       // Skip API call completely if no labelId is provided
@@ -42,7 +52,6 @@ const createVectorLayer = (config: VectorLayerConfig) => {
       }
 
       try {
-        const startTime = performance.now();
         const rpcParams: Record<string, unknown> = {
           z,
           x,
@@ -98,7 +107,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   });
 
   // Create style function for correction-aware styling
-  const getFeatureStyle = (feature: Feature) => {
+  const getFeatureStyle = (feature: FeatureLike) => {
     // Get correction status from feature properties (only available with corrections-aware MVT)
     const correctionStatus = feature.get("correction_status") as string | undefined;
     const correctionOperation = feature.get("correction_operation") as string | undefined;

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import type { UploadFile } from "antd";
+import type { UploadFile, UploadProps } from "antd";
+import type { RcFile } from "antd/es/upload";
 
 export const useFileUpload = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [fileNameFull, setFileNameFull] = useState<string>("");
-  const onFileChange = ({ fileList: newFileList }) => {
+  const onFileChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // console.log("newFileList", newFileList);
     setFileList(newFileList.slice(-1));
     if (newFileList.length > 0) {
@@ -18,7 +19,7 @@ export const useFileUpload = () => {
     }
   };
 
-  const beforeUpload = (file) => {
+  const beforeUpload = (file: RcFile) => {
     setFileList([file]);
     return false;
   };

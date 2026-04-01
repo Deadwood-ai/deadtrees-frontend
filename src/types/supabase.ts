@@ -1,4 +1,4 @@
-interface Dataset {
+export interface DatasetRecord {
   aquisition_date: string;
   bbox: unknown | null;
   compress_time: number | null;
@@ -9,10 +9,10 @@ interface Dataset {
   file_name: string;
   file_size: number;
   id: number;
-  license: Dataset["public"]["Enums"]["License"];
-  platform: Dataset["public"]["Enums"]["Platform"];
+  license: string;
+  platform: string;
   sha256: string;
-  status: Dataset["public"]["Enums"]["Status"];
+  status: string;
   target_path: string;
   upload_date: string;
   user_id: string;

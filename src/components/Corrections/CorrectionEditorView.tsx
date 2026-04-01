@@ -47,7 +47,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
   const [layerSelection, setLayerSelection] = useState<LayerSelection>(initialLayerType || "deadwood");
   const [isEditing, setIsEditing] = useState(false);
   const [initialFeatures, setInitialFeatures] = useState<Feature<Geometry>[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
   const geoJson = useMemo(() => new GeoJSON(), []);
@@ -173,13 +173,14 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       if (mapRef.current) {
         // Properly dispose layers and sources before disposing map
         mapRef.current.getLayers().forEach((layer) => {
-          const source = layer.getSource?.();
-          if (source) {
-            if ("clear" in source && typeof source.clear === "function") {
-              source.clear();
+          const source = (layer as BaseLayer & { getSource?: () => unknown }).getSource?.();
+          if (source && typeof source === "object") {
+            const sourceRecord = source as { clear?: () => void; dispose?: () => void };
+            if (typeof sourceRecord.clear === "function") {
+              sourceRecord.clear();
             }
-            if ("dispose" in source && typeof source.dispose === "function") {
-              source.dispose();
+            if (typeof sourceRecord.dispose === "function") {
+              sourceRecord.dispose();
             }
           }
           if ("dispose" in layer && typeof layer.dispose === "function") {

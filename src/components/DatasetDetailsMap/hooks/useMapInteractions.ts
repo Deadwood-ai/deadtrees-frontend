@@ -62,6 +62,8 @@ export function useMapInteractions({
 }: UseMapInteractionsOptions): UseMapInteractionsReturn {
 	const isOverFeatureRef = useRef(false);
 	const handlersAttachedRef = useRef(false);
+	const hoverRequestIdRef = useRef(0);
+	const clickRequestIdRef = useRef(0);
 
 	// Hover handler
 	const handlePointerMove = useCallback((event: MapBrowserEvent<PointerEvent>) => {
@@ -101,7 +103,9 @@ export function useMapInteractions({
 		isOverFeatureRef.current = !!hitLayer;
 
 		if (hitLayer) {
+			const requestId = ++hoverRequestIdRef.current;
 			hitLayer.getFeatures(pixel).then((features) => {
+				if (!handlersAttachedRef.current || requestId !== hoverRequestIdRef.current) return;
 				if (features.length > 0) {
 					const feature = features[0];
 					onHover?.({
@@ -148,7 +152,9 @@ export function useMapInteractions({
 		}
 
 		if (hitLayer) {
+			const requestId = ++clickRequestIdRef.current;
 			hitLayer.getFeatures(pixel).then((features) => {
+				if (!handlersAttachedRef.current || requestId !== clickRequestIdRef.current) return;
 				if (features.length > 0) {
 					const feature = features[0];
 					onClick?.({
@@ -179,6 +185,8 @@ export function useMapInteractions({
 		handlersAttachedRef.current = true;
 
 		return () => {
+			hoverRequestIdRef.current += 1;
+			clickRequestIdRef.current += 1;
 			map.un("pointermove", handlePointerMove as any);
 			map.un("click", handleClick as any);
 			handlersAttachedRef.current = false;

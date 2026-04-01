@@ -7,7 +7,7 @@ import { useAuth } from "../../hooks/useAuthProvider";
 import { palette } from "../../theme/palette";
 
 const SignIn = () => {
-  const { session, user } = useAuth();
+  const { session } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/profile";

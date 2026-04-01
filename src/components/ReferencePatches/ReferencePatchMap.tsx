@@ -190,7 +190,7 @@ export default function ReferencePatchMap({
       style: (feature) => {
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = palette.state.pending;
+        let strokeColor: string = palette.state.pending;
         let strokeWidth = 3; // Thicker borders for better visibility
 
         if (status === "good") {
@@ -265,7 +265,7 @@ export default function ReferencePatchMap({
         // Use the same style as the vector layer (no fill, just stroke)
         const status = feature.get("status") as string;
         const isSelected = feature.get("isSelected") as boolean;
-        let strokeColor = palette.state.pending;
+        let strokeColor: string = palette.state.pending;
         let strokeWidth = 3;
 
         if (status === "good") {

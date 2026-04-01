@@ -1,13 +1,14 @@
 import { useState } from "react";
-import type { UploadFile } from "antd";
+import type { UploadFile, UploadProps } from "antd";
+import type { RcFile } from "antd/es/upload";
 
 const useLabelsFileUpload = () => {
   const [labelsFileList, setLabelsFileList] = useState<UploadFile[]>([]);
-  const onLabelsFileChange = ({ fileList: newFileList }) => {
+  const onLabelsFileChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     setLabelsFileList(newFileList.slice(-1));
   };
 
-  const beforeLabelsUpload = (file) => {
+  const beforeLabelsUpload = (file: RcFile) => {
     setLabelsFileList([file]);
     return false;
   };

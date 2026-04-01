@@ -7,6 +7,7 @@ import {
   PatchStatus,
   IPatchSession,
   IPatchGenerationProgress,
+  ReferencePatchDraft,
 } from "../types/referencePatches";
 
 // Fetch all patches for a dataset
@@ -154,12 +155,15 @@ export function useCreateReferencePatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (patch: Omit<IReferencePatch, "id" | "created_at" | "updated_at" | "user_id">) => {
+    mutationFn: async (patch: ReferencePatchDraft) => {
       const { data, error } = await supabase
         .from("reference_patches")
         .insert({
           ...patch,
           user_id: user?.id,
+          status: patch.status ?? "pending",
+          deadwood_validated: patch.deadwood_validated ?? null,
+          forest_cover_validated: patch.forest_cover_validated ?? null,
         })
         .select()
         .single();
@@ -471,7 +475,7 @@ export function useGenerateNestedPatches() {
   return useMutation({
     mutationFn: async (parentPatch: IReferencePatch) => {
       const childResolution: PatchResolution = parentPatch.resolution_cm === 20 ? 10 : 5;
-      const childPatches: Omit<IReferencePatch, "id" | "created_at" | "updated_at" | "user_id">[] = [];
+      const childPatches: ReferencePatchDraft[] = [];
 
       const { bbox_minx, bbox_miny, bbox_maxx, bbox_maxy } = parentPatch;
       const midX = (bbox_minx + bbox_maxx) / 2;
@@ -513,6 +517,7 @@ export function useGenerateNestedPatches() {
           aoi_coverage_percent: null,
           deadwood_prediction_coverage_percent: null,
           forest_cover_prediction_coverage_percent: null,
+          status: "pending",
           reference_deadwood_label_id: null,
           reference_forest_cover_label_id: null,
           deadwood_validated: null,

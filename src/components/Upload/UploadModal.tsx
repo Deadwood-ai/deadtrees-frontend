@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   Button,
   Form,
@@ -6,20 +6,17 @@ import {
   Space,
   Upload,
   Modal,
-  Alert,
   Input,
   Select,
   Tooltip,
-  Divider,
   Checkbox,
   Typography,
   Collapse,
   message,
 } from "antd";
-import { InfoCircleOutlined, UploadOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, InboxOutlined, LockOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuthProvider";
-import addMetadata from "../../api/addMetadata";
-import { IDataAccess, ILabelObject, ILicense, IPlatform, UploadType } from "../../types/dataset";
+import { ILicense, IPlatform, UploadType } from "../../types/dataset";
 import { useFileUpload } from "../../hooks/useFileUpload";
 import { useUploadNotification } from "../../hooks/useUploadNotification";
 import PickerWithType from "./PickerWithType";
@@ -34,7 +31,6 @@ import { detectUploadType, validateFileSize, validateZipCompressionMethods } fro
 import { isTokenExpiringSoon } from "../../utils/isTokenExpiringSoon";
 import { supabase } from "../../hooks/useSupabase";
 import { RcFile } from "antd/es/upload";
-import Marquee from "react-fast-marquee";
 // New interfaces
 interface IFormValues {
   license: ILicense;
@@ -58,69 +54,6 @@ interface UploadModalProps {
 interface UploadResponse {
   id: string;
   [key: string]: any;
-}
-
-interface MetadataPayload {
-  dataset_id: string;
-  user_id: string;
-  name: string;
-  license: ILicense;
-  data_access: IDataAccess;
-  platform: IPlatform;
-  spectral_properties: string;
-  aquisition_year: number;
-  aquisition_month: number | null;
-  aquisition_day: number | null;
-  authors: string[];
-  citation_doi: string;
-  additional_information: string;
-}
-
-// Add these utility functions before the component
-function createMetadataPayload(
-  datasetId: string,
-  userId: string,
-  values: IFormValues,
-  fileName: string,
-  pickerType: string,
-): MetadataPayload {
-  let year = null;
-  let month = null;
-  let day = null;
-
-  if (values.aquisition_date) {
-    // Handle different picker types
-    switch (pickerType) {
-      case "Year":
-        year = values.aquisition_date.year();
-        break;
-      case "Year/Month":
-        year = values.aquisition_date.year();
-        month = values.aquisition_date.month() + 1; // Adding 1 because months are 0-based
-        break;
-      case "Year/Month/Day":
-        year = values.aquisition_date.year();
-        month = values.aquisition_date.month() + 1;
-        day = values.aquisition_date.date();
-        break;
-    }
-  }
-
-  return {
-    dataset_id: datasetId,
-    user_id: userId,
-    name: fileName,
-    data_access: IDataAccess.public,
-    license: ILicense["CC BY"],
-    platform: values.platform,
-    spectral_properties: "RGB",
-    aquisition_year: year,
-    aquisition_month: month,
-    aquisition_day: day,
-    authors: values.author,
-    citation_doi: values.doi,
-    additional_information: values.additional_information,
-  };
 }
 
 function createLabelObjectFormData(
@@ -156,7 +89,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
   const [form] = Form.useForm();
   const agreementAccepted = Form.useWatch("agreement", form);
 
-  const { fileList, fileName, fileNameFull, onFileChange, beforeUpload } = useFileUpload();
+  const { fileList, fileName, onFileChange, beforeUpload } = useFileUpload();
   const { labelsFileList, onLabelsFileChange, beforeLabelsUpload } = useLabelsFileUpload();
 
   const { session } = useAuth();
@@ -173,8 +106,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
     showErrorNotification,
     closeNotification,
   } = useUploadNotification(uploadKey, fileName);
-
-  const [enableLabelUpload, setEnableLabelUpload] = useState(false);
 
   const { canUpload: canUploadPrivate } = useCanUploadPrivate();
 
@@ -522,7 +453,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                         name="labels_description"
                         className="mb-0"
                         rules={[
-                          ({ getFieldValue }) => ({
+                          () => ({
                             validator(_, value) {
                               if (labelsFileList.length > 0 && !value) {
                                 return Promise.reject("Please provide a description for the uploaded labels");

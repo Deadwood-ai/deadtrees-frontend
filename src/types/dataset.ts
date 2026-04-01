@@ -1,10 +1,5 @@
 import { FeatureCollection } from "geojson";
 
-interface ICentroid {
-  lng: number;
-  lat: number;
-}
-
 export interface IThumbnail {
   file_name: string;
   url: string;
@@ -158,4 +153,3 @@ export interface IStats {
   countries_count: number;
   contributors_count: number;
 }
-

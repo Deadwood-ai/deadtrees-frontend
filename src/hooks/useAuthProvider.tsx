@@ -11,12 +11,14 @@ interface AuthProviderProps {
 type AuthContextType = {
   session: Session | null;
   user: User | null;
+  loading: boolean;
   signOut: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
+  loading: true,
   signOut: async () => {
     await supabase.auth.signOut();
   },
@@ -25,11 +27,13 @@ const AuthContext = createContext<AuthContextType>({
 const AuthProvider = (props: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user || null);
+      setLoading(false);
 
       // Identify user in PostHog when auth state changes
       identifyUser(session?.user || null);
@@ -46,6 +50,7 @@ const AuthProvider = (props: AuthProviderProps) => {
 
       setSession(session);
       setUser(session?.user || null);
+      setLoading(false);
 
       // Identify user in PostHog when component mounts
       identifyUser(session?.user || null);
@@ -61,6 +66,7 @@ const AuthProvider = (props: AuthProviderProps) => {
   const value = {
     session,
     user,
+    loading,
     signOut: async () => {
       await supabase.auth.signOut();
     },
