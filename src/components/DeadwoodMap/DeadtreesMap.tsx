@@ -1239,10 +1239,7 @@ const DeadtreesMap = () => {
         onCancel={handleDeadwoodWarningClose}
         okText="I Understand"
         cancelButtonProps={{ style: { display: "none" } }}
-        okButtonProps={{
-          size: "large",
-          className: "min-h-11 px-5",
-        }}
+        okButtonProps={{ size: "middle" }}
         centered={!isMobile}
         width={isMobile ? "calc(100vw - 24px)" : 480}
         styles={{

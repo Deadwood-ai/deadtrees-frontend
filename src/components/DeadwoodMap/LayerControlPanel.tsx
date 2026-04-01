@@ -73,7 +73,7 @@ const LayerControlPanel = ({
 
   return (
     <div
-      className={`map-control-panel box-border min-w-0 pointer-events-auto flex w-full flex-col overflow-x-hidden p-4 ${isDrawerSheet ? "map-control-panel--drawer" : "w-60 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
+      className={`map-control-panel box-border min-w-0 pointer-events-auto flex flex-col overflow-x-hidden p-4 ${isDrawerSheet ? "map-control-panel--drawer w-full" : "w-52 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Basemap Selection */}
       <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
