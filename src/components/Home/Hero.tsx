@@ -181,14 +181,15 @@ const Hero = () => {
 							)}
 						</div>
 
-						<button
-							type="button"
+						<Button
+							type="link"
+							size="small"
+							icon={<DatabaseOutlined />}
 							onClick={handleExploreDatasets}
-							className="mt-3 inline-flex items-center gap-2 self-center border-none bg-transparent p-0 text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800 lg:self-start"
+							className="mt-3 inline-flex h-auto self-center p-0 text-sm font-medium text-emerald-700 hover:text-emerald-800 lg:self-start"
 						>
-							<DatabaseOutlined />
-							<span>Browse drone datasets in the archive</span>
-						</button>
+							Browse drone datasets in the archive
+						</Button>
 
 						{!user && !isMobile && (
 							<p className="m-0 mt-3 text-sm text-gray-400">
