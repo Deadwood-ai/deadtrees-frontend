@@ -3,6 +3,7 @@ import { Button } from "antd";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import "@geoapify/geocoder-autocomplete/styles/round-borders.css";
 import "../DeadwoodMap/geocoder.css";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 interface LocationControlsProps {
   onPlaceSelect: React.Dispatch<React.SetStateAction<number[]>>;
@@ -18,6 +19,7 @@ const LocationControls = ({
   isLocating = false,
 }: LocationControlsProps) => {
   const isDrawerInline = variant === "drawer-inline";
+  const isMobile = useIsMobile();
 
   return (
     <div
@@ -31,7 +33,7 @@ const LocationControls = ({
           placeSelect={(place) => place?.bbox && onPlaceSelect(place.bbox)}
         />
       </GeoapifyContext>
-      {onLocateMe && (
+      {isMobile && onLocateMe && (
         <Button
           icon={<EnvironmentOutlined />}
           onClick={onLocateMe}
