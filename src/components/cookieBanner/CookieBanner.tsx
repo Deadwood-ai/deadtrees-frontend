@@ -77,10 +77,10 @@ export function CookieBanner() {
             </Text>
           </div>
           <Space wrap>
-            <Button onClick={handleReject} type="default" size="large" className="min-h-11 px-4">
+            <Button onClick={handleReject} type="default" className="h-9 rounded-xl px-3 text-sm shadow-sm">
               Reject
             </Button>
-            <Button onClick={handleAccept} type="primary" size="large" className="min-h-11 px-4">
+            <Button onClick={handleAccept} type="primary" className="h-9 rounded-xl px-3 text-sm shadow-sm">
               Accept
             </Button>
           </Space>
