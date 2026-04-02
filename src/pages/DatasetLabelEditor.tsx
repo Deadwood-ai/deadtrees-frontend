@@ -5,9 +5,8 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import Map from "ol/Map";
 import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import View from "ol/View";
-import TileLayer from "ol/layer/Tile";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
-import { XYZ, GeoTIFF } from "ol/source";
+import { GeoTIFF } from "ol/source";
 import { Settings } from "../config";
 import { useDatasets } from "../hooks/useDatasets";
 import { useDatasetLabelTypes } from "../hooks/useDatasetLabelTypes";
@@ -24,6 +23,7 @@ import { Style, Stroke, Fill } from "ol/style";
 import type { StyleFunction as OLStyleFunction } from "ol/style/Style";
 import type { IDataset } from "../types/dataset";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
+import { createOpenFreeMapLibertyLayerGroup } from "../utils/basemaps";
 import { palette } from "../theme/palette";
 
 type StyleFn = (f: Feature<Geometry>) => Style | null | undefined;
@@ -70,15 +70,7 @@ export default function DatasetLabelEditor() {
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || !dataset) return;
 
-    const basemapLayer = new TileLayer({
-      preload: 0,
-      source: new XYZ({
-        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        attributions: "© OpenStreetMap contributors",
-        maxZoom: 19,
-        tileSize: 256,
-      }),
-    });
+    const basemapLayer = createOpenFreeMapLibertyLayerGroup();
 
     let orthoCogLayer: TileLayerWebGL | undefined;
     if (dataset?.cog_path) {

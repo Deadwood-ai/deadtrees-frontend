@@ -11,8 +11,8 @@ import {
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction";
-import { Attribution } from "ol/control";
 import { fromLonLat, transformExtent, toLonLat } from "ol/proj";
+import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -33,7 +33,12 @@ import createKompas from "kompas";
 
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
 import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
-import { getWaybackTileUrl } from "../../utils/waybackVersions";
+import {
+    createOpenFreeMapLibertyLayerGroup,
+    createStandardMapControls,
+    createWaybackSource,
+    createWaybackTileLayer,
+  } from "../../utils/basemaps";
 import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
 import YearImagerySelector from "./YearImagerySelector";
@@ -157,6 +162,8 @@ const DeadtreesMap = () => {
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const libertyBasemapLayerRef = useRef<LayerGroup | null>(null);
+  const waybackBasemapLayerRef = useRef<TileLayer<XYZ> | null>(null);
   const forestLayerRef = useRef<TileLayerWebGL | null>(null);
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
   const hasAutoSelectedImageryRef = useRef(false); // Track if we've done initial auto-selection
@@ -452,16 +459,14 @@ const DeadtreesMap = () => {
         center: DeadwoodMapViewport.center,
         zoom: DeadwoodMapViewport.zoom,
       });
+      const libertyBasemapLayer = createOpenFreeMapLibertyLayerGroup();
+      libertyBasemapLayer.setVisible(DeadwoodMapStyle !== "wayback");
+
       // Initialize with Wayback satellite imagery directly (using default release)
-      const basemapLayer = new TileLayer({
-        preload: 0,
-        source: new XYZ({
-          url: getWaybackTileUrl(DEFAULT_WAYBACK_RELEASE),
-          attributions: "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics",
-          maxZoom: 19,
-          crossOrigin: "anonymous",
-        }),
-      });
+      const waybackBasemapLayer = createWaybackTileLayer(DEFAULT_WAYBACK_RELEASE);
+      waybackBasemapLayer.setVisible(DeadwoodMapStyle === "wayback");
+      libertyBasemapLayerRef.current = libertyBasemapLayer;
+      waybackBasemapLayerRef.current = waybackBasemapLayer;
       // Create only 2 layers - one for forest, one for deadwood (for current year)
       // Forest layer: Light green → Dark green gradient based on cover intensity
       const forestLayer = new TileLayerWebGL({
@@ -557,7 +562,14 @@ const DeadtreesMap = () => {
       const newMap = new Map({
         target: mapContainer.current || undefined,
         // Layer order: basemap -> forest -> deadwood -> clicked cell -> user location
-        layers: [basemapLayer, forestLayer, deadwoodLayer, clickedCellLayer, userLocationLayer],
+        layers: [
+          libertyBasemapLayer,
+          waybackBasemapLayer,
+          forestLayer,
+          deadwoodLayer,
+          clickedCellLayer,
+          userLocationLayer,
+        ],
         view: initialView,
         overlays: [],
         interactions: defaultInteractions({
@@ -565,12 +577,7 @@ const DeadtreesMap = () => {
           pinchRotate: !isMobile,
           altShiftDragRotate: !isMobile,
         }),
-        controls: [
-          new Attribution({
-            collapsible: true,
-            collapsed: true,
-          }),
-        ],
+        controls: createStandardMapControls({ includeAttribution: true }),
       });
 
       // Create flag hover overlay
@@ -653,29 +660,12 @@ const DeadtreesMap = () => {
 
   // update on mapStyle change
   useEffect(() => {
-    if (map) {
-      const layer = map.getLayers().getArray()[0] as TileLayer<XYZ>;
-      const nextIsWayback = DeadwoodMapStyle === "wayback";
+    const nextIsWayback = DeadwoodMapStyle === "wayback";
+    libertyBasemapLayerRef.current?.setVisible(!nextIsWayback);
+    waybackBasemapLayerRef.current?.setVisible(nextIsWayback);
 
-      let source: XYZ;
-      if (nextIsWayback && selectedReleaseNum) {
-        source = new XYZ({
-          url: getWaybackTileUrl(selectedReleaseNum),
-          attributions: "Imagery © Esri World Imagery Wayback, Maxar, Earthstar Geographics",
-          maxZoom: 19,
-          crossOrigin: "anonymous",
-        });
-      } else {
-        // Streets basemap (OpenStreetMap)
-        source = new XYZ({
-          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attributions: "© OpenStreetMap contributors",
-          maxZoom: 19,
-          crossOrigin: "anonymous",
-        });
-      }
-
-      layer.setSource(source);
+    if (selectedReleaseNum && waybackBasemapLayerRef.current) {
+      waybackBasemapLayerRef.current.setSource(createWaybackSource(selectedReleaseNum));
     }
   }, [DeadwoodMapStyle, map, selectedReleaseNum]);
 
@@ -1231,7 +1221,7 @@ const DeadtreesMap = () => {
         title={
           <div className="flex items-center gap-2">
             <ExperimentOutlined className="text-orange-500" />
-            <span>Preview Visualization Notice</span>
+            <span>{isMobile ? "Preview Notice" : "Preview Visualization Notice"}</span>
           </div>
         }
         open={deadwoodWarningModalOpen}
@@ -1249,27 +1239,24 @@ const DeadtreesMap = () => {
           },
         }}
       >
-        <div className="mt-4 flex flex-col gap-4">
-          {/* Alpha Warning */}
-          <div className="flex gap-3 rounded-lg bg-orange-50 p-3">
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="flex gap-2.5 rounded-lg bg-orange-50 p-3">
             <InfoCircleOutlined className="mt-0.5 text-lg text-orange-500" />
             <div className="text-gray-700">
-              <p className="mb-2 font-medium text-orange-700">Alpha Stage Product</p>
-              <p className="text-sm">
-                This is a preview visualization, not a final product. This map will evolve, improve, and expand in the
-                coming months and years. In its current form, this preview map should not be used to draw conclusions.
+              <p className="mb-1 font-medium text-orange-700">Alpha preview</p>
+              <p className="text-sm leading-6">
+                This map is still evolving. Use it to explore patterns, not to draw final conclusions.
               </p>
             </div>
           </div>
 
-          {/* Call to Action */}
-          <div className="flex gap-3 rounded-lg bg-blue-50 p-3">
+          <div className="flex gap-2.5 rounded-lg bg-blue-50 p-3">
             <FlagOutlined className="mt-0.5 text-lg text-blue-500" />
             <div className="text-gray-700">
-              <p className="mb-2 font-medium text-blue-700">Help Us Improve</p>
-              <p className="text-sm">
-                Consider checking your local forest or study area and reporting feedback after logging in with the{" "}
-                <span className="font-semibold text-blue-600">'Flag Area'</span> feature.
+              <p className="mb-1 font-medium text-blue-700">Share feedback</p>
+              <p className="text-sm leading-6">
+                After signing in, use <span className="font-semibold text-blue-600">Flag Area</span> to report issues
+                in your forest or study area.
               </p>
             </div>
           </div>

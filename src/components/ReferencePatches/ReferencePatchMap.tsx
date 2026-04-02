@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { Map, View } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction/defaults";
-import TileLayer from "ol/layer/Tile";
-import { XYZ } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile";
 import { GeoTIFF } from "ol/source";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import VectorTileLayer from "ol/layer/VectorTile";
-import type Layer from "ol/layer/Layer";
+import type BaseLayer from "ol/layer/Base";
 import { Style, Stroke, Fill, Circle as CircleStyle } from "ol/style";
 import Feature from "ol/Feature";
 import { Polygon, LineString } from "ol/geom";
@@ -40,6 +38,7 @@ import {
   createUtmSquare,
   getTargetGroundSize,
 } from "../../utils/utm";
+import { createOpenFreeMapLibertyLayerGroup } from "../../utils/basemaps";
 import { palette } from "../../theme/palette";
 import { mapColors } from "../../theme/mapColors";
 import { getLayerVisibilityState } from "./utils/layerVisibilityState";
@@ -178,12 +177,7 @@ export default function ReferencePatchMap({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const basemap = new TileLayer({
-      source: new XYZ({
-        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        maxZoom: 19, // OSM only provides tiles up to zoom 19
-      }),
-    });
+    const basemap = createOpenFreeMapLibertyLayerGroup();
 
     const vector = new VectorLayer({
       source: new VectorSource(),
@@ -218,7 +212,7 @@ export default function ReferencePatchMap({
       projection: "EPSG:3857",
     });
 
-    const layers: (TileLayer<XYZ> | TileLayerWebGL | VectorLayer<VectorSource> | VectorTileLayer)[] = [basemap];
+    const layers: BaseLayer[] = [basemap];
     if (cogPath) {
       const ortho = new TileLayerWebGL({
         source: new GeoTIFF({
@@ -260,7 +254,7 @@ export default function ReferencePatchMap({
 
     const select = new Select({
       condition: click,
-      layers: [vector] as Layer[],
+      layers: [vector],
       style: (feature) => {
         // Use the same style as the vector layer (no fill, just stroke)
         const status = feature.get("status") as string;
@@ -301,7 +295,7 @@ export default function ReferencePatchMap({
 
     // Only enable translation if explicitly allowed and only for base patches (20cm) with pending status
     const translate = new Translate({
-      layers: [vector] as Layer[],
+      layers: [vector],
       filter: (feature) => {
         if (!enableTranslation) return false;
         // Use patchesRef.current to access the latest patches array

@@ -8,11 +8,11 @@
 .location-controls .geoapify-autocomplete-input,
 .location-controls .geoapify-autocomplete-input::placeholder,
 .location-controls input[type="text"] {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .location-controls .geoapify-autocomplete-input,
 .location-controls input[type="text"] {
-  min-height: 44px;
-  border-radius: 12px;
+  min-height: 40px;
+  border-radius: 10px;
 }
