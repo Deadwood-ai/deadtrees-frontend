@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Button } from "antd";
-import { UploadOutlined, SearchOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, SearchOutlined, UploadOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuthProvider";
@@ -30,34 +30,41 @@ const heroVideoConfig = {
 	},
 };
 
-// Prevent duplicate count-up in React StrictMode remounts (dev)
-const animatedStatKeys = new Set<string>();
-
-const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
-	const [displayValue, setDisplayValue] = useState(0);
-	const duration = 2000; // 2 seconds animation
+const AnimatedStat = ({ value, label }: { value: number | null; label: string }) => {
+	const [displayValue, setDisplayValue] = useState<number | null>(null);
+	const lastRenderedValueRef = useRef(0);
+	const isInitializedRef = useRef(false);
+	const duration = 1600;
 
 	useEffect(() => {
-		if (animatedStatKeys.has(label)) {
+		if (value === null) return;
+
+		const startValue = isInitializedRef.current ? lastRenderedValueRef.current : 0;
+		isInitializedRef.current = true;
+
+		if (value === startValue) {
+			lastRenderedValueRef.current = value;
 			setDisplayValue(value);
 			return;
 		}
-		animatedStatKeys.add(label);
 
+		const delta = value - startValue;
 		let startTime: number | null = null;
-		let animationFrame: number;
+		let animationFrame = 0;
 
 		const animate = (timestamp: number) => {
-			if (!startTime) startTime = timestamp;
-			const progress = timestamp - startTime;
+			if (startTime === null) startTime = timestamp;
+			const progress = Math.min((timestamp - startTime) / duration, 1);
+			const easedProgress = 1 - Math.pow(1 - progress, 3);
+			const nextValue = Math.round(startValue + delta * easedProgress);
 
-			// Easing function (easeOutExpo)
-			const easeProgress = 1 - Math.pow(2, -10 * (progress / duration));
+			lastRenderedValueRef.current = nextValue;
+			setDisplayValue(nextValue);
 
-			if (progress < duration) {
-				setDisplayValue(Math.floor(easeProgress * value));
+			if (progress < 1) {
 				animationFrame = requestAnimationFrame(animate);
 			} else {
+				lastRenderedValueRef.current = value;
 				setDisplayValue(value);
 			}
 		};
@@ -65,12 +72,12 @@ const AnimatedStat = ({ value, label }: { value: number; label: string }) => {
 		animationFrame = requestAnimationFrame(animate);
 
 		return () => cancelAnimationFrame(animationFrame);
-	}, [value, label]);
+	}, [value]);
 
 	return (
 		<div className="flex items-baseline gap-1.5">
-			<span className="text-xl font-bold text-[#FFB31C]">
-				{displayValue.toLocaleString()}
+			<span className="min-w-[3ch] text-xl font-bold tabular-nums text-[#FFB31C]">
+				{displayValue === null ? "..." : displayValue.toLocaleString()}
 			</span>
 			<span className="text-sm font-medium text-gray-500">{label}</span>
 		</div>
@@ -108,6 +115,10 @@ const Hero = () => {
 		navigate("/deadtrees");
 	}, [navigate]);
 
+	const handleExploreDatasets = useCallback(() => {
+		navigate("/dataset");
+	}, [navigate]);
+
 	return (
 		<section className="relative flex w-full flex-col overflow-hidden min-h-screen pt-24 md:pt-28">
 			<div className="absolute inset-0 hidden bg-[radial-gradient(1000px_at_25%_35%,_var(--tw-gradient-stops))] from-emerald-100/60 via-green-50/30 to-white md:block"></div>
@@ -129,15 +140,16 @@ const Hero = () => {
 
 						<div className="mt-10 flex flex-col gap-4 sm:flex-row">
 							<Button
-								type="primary"
+								type={isMobile ? "default" : "primary"}
 								size="large"
 								icon={<UploadOutlined />}
 								onClick={handleContribute}
-								className="min-h-11 w-full px-6 sm:w-auto"
+								className={`min-h-11 w-full px-6 sm:w-auto ${isMobile ? "hidden" : ""}`}
 							>
 								Contribute Drone Data
 							</Button>
 							<Button
+								type={isMobile ? "primary" : "default"}
 								size="large"
 								icon={<SearchOutlined />}
 								onClick={handleExploreMap}
@@ -145,20 +157,28 @@ const Hero = () => {
 							>
 								Explore Map
 							</Button>
+							{isMobile && (
+								<Button
+									size="large"
+									icon={<DatabaseOutlined />}
+									onClick={handleExploreDatasets}
+									className="min-h-11 w-full px-6 sm:w-auto"
+								>
+									Explore Drone Data
+								</Button>
+							)}
 						</div>
 
-							{!user && (
-								<p className="m-0 mt-3 text-sm text-gray-400">
-									{isMobile
-										? "Uploading is currently available on desktop browsers."
-										: "Sign in or create an account to start uploading."}
-								</p>
-							)}
+						{!user && !isMobile && (
+							<p className="m-0 mt-3 text-sm text-gray-400">
+								Sign in or create an account to start uploading.
+							</p>
+						)}
 
 						<div className="mt-8 flex flex-wrap items-center justify-center gap-6 md:justify-start">
-							<AnimatedStat value={stats?.datasets ?? 6741} label="Datasets" />
-							<AnimatedStat value={stats?.countries ?? 127} label="Countries" />
-							<AnimatedStat value={stats?.contributors ?? 668} label="Contributors" />
+							<AnimatedStat value={stats?.datasets ?? null} label="Datasets" />
+							<AnimatedStat value={stats?.countries ?? null} label="Countries" />
+							<AnimatedStat value={stats?.contributors ?? null} label="Contributors" />
 						</div>
 					</div>
 

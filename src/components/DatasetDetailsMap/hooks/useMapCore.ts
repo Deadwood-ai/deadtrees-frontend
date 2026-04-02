@@ -1,11 +1,13 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Map, View, Overlay } from "ol";
 import { defaults as defaultInteractions } from "ol/interaction/defaults";
+import type BaseLayer from "ol/layer/Base";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import type { Layer } from "ol/layer";
 
 import { Settings } from "../../../config";
+import { createStandardMapControls } from "../../../utils/basemaps";
 
 export interface Viewport {
 	center: number[];
@@ -54,6 +56,16 @@ export interface UseMapCoreReturn {
 	/** Fit view to extent */
 	fitToExtent: (extent?: number[]) => void;
 }
+
+type DisposableSource = {
+	clear?: () => void;
+	dispose?: () => void;
+};
+
+type DisposableLayer = BaseLayer & {
+	getSource?: () => DisposableSource | null | undefined;
+	dispose?: () => void;
+};
 
 /**
  * Core map initialization hook
@@ -164,13 +176,13 @@ export function useMapCore({
 			});
 
 			// Create map with only the ortho layer (others added by consuming code)
-			const newMap = new Map({
-				target: containerRef.current,
-				layers: [orthoCogLayer],
-				view: mapView,
-				controls: [],
-				interactions: defaultInteractions({ doubleClickZoom: false }),
-			});
+				const newMap = new Map({
+					target: containerRef.current,
+					layers: [orthoCogLayer],
+					view: mapView,
+					controls: createStandardMapControls(),
+					interactions: defaultInteractions({ doubleClickZoom: false }),
+				});
 
 			// Viewport change handler - use "moveend" to only fire when movement stops
 			// (using "change" fires on every frame during pan/zoom, causing excessive re-renders)
@@ -200,14 +212,15 @@ export function useMapCore({
 		return () => {
 			if (mapRef.current) {
 				// Remove all layers
-				mapRef.current.getLayers().forEach((layer) => {
-					const source = (layer as any).getSource?.();
-					if (source) {
-						if ("clear" in source) source.clear();
-						if ("dispose" in source) source.dispose();
-					}
-					if ("dispose" in layer) (layer as any).dispose();
-				});
+					mapRef.current.getLayers().forEach((layer) => {
+						const disposableLayer = layer as DisposableLayer;
+						const source = disposableLayer.getSource?.();
+						if (source) {
+							if ("clear" in source) source.clear();
+							if ("dispose" in source) source.dispose();
+						}
+						disposableLayer.dispose?.();
+					});
 
 				mapRef.current.setTarget(undefined);
 				mapRef.current.dispose();

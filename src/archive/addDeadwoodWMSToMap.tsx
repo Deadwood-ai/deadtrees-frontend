@@ -1,4 +1,9 @@
-const addDeadwoodWMSLayers = (map: mapboxgl.Map) => {
+type LegacyMapboxMap = {
+  addSource: (id: string, source: unknown) => void;
+  addLayer: (layer: unknown) => void;
+};
+
+const addDeadwoodWMSLayers = (map: LegacyMapboxMap) => {
   const baseURL =
     "https://data.waldklick.de/geoserver/waldklick/wms?&service=WMS&request=GetMap&format=image/png&version=1.1.1&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&width=256&HEIGHT=256&transparent=true&authkey=eedde8df-05df-48c5-864e-c571ba188f64";
   const wmsURL2021 = `${baseURL}&layers=waldklick:deadwood-de-2021`;

@@ -69,14 +69,14 @@ const LayerControlPanel = ({
   const isDrawerSheet = variant === "drawer-sheet";
   const actionButtonSize = "small";
   const controlButtonClass = "";
-  const shouldShowLegend = !isDrawerSheet || showLegend;
+  const shouldShowLegend = showLegend;
 
   return (
     <div
-      className={`map-control-panel box-border min-w-0 pointer-events-auto flex flex-col overflow-x-hidden p-4 ${isDrawerSheet ? "map-control-panel--drawer w-full" : "w-52 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
+      className={`map-control-panel box-border min-w-0 pointer-events-auto flex flex-col overflow-x-hidden p-3 ${isDrawerSheet ? "map-control-panel--drawer w-full" : "w-52 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Basemap Selection */}
-      <div className="mb-2 text-xs font-medium text-gray-500">Basemap</div>
+      <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Basemap</div>
       <Segmented
         size="small"
         block
@@ -85,10 +85,10 @@ const LayerControlPanel = ({
         options={basemapOptions}
       />
 
-      <Divider className="my-3" />
+      <Divider className="my-2.5" />
 
       {/* Data Layers - independent toggles, 0/1/2 layers can be active */}
-      <div className="mb-2 text-xs font-medium text-gray-500">Data Layers</div>
+      <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Data Layers</div>
       <div className="flex flex-col gap-1">
         <Checkbox checked={showForest} onChange={(e) => setShowForest(e.target.checked)}>
           <span className="flex items-center gap-2">
@@ -104,10 +104,10 @@ const LayerControlPanel = ({
         </Checkbox>
       </div>
 
-      <Divider className="my-3" />
+      <Divider className="my-2.5" />
 
       {/* Opacity */}
-      <div className="mb-1 text-xs font-medium text-gray-500">Layer Opacity</div>
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Layer Opacity</div>
       <Slider
         min={0}
         max={1}
@@ -117,8 +117,8 @@ const LayerControlPanel = ({
         tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%`, placement: "left" }}
       />
 
-      <Divider className="my-3" />
-      <div className="mb-1 text-xs font-medium text-gray-500">Model Info</div>
+      <Divider className="my-2.5" />
+      <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Model Info</div>
       <Tooltip title="View model attributions and papers">
         <Button
           type="link"
@@ -149,8 +149,8 @@ const LayerControlPanel = ({
       {/* Polygon Stats Section */}
       {onPolygonStatsClick && (
         <>
-          <Divider className="my-3" />
-          <div className="mb-1 text-xs font-medium text-gray-500">Analytics</div>
+          <Divider className="my-2.5" />
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Analytics</div>
           <Button
             size={actionButtonSize}
             type={isDrawingPolygon ? "primary" : "default"}
@@ -167,8 +167,8 @@ const LayerControlPanel = ({
           >
             {isDrawingPolygon ? "Cancel Drawing" : "Analyze Area"}
           </Button>
-          <p className="mt-1 text-xs leading-5 text-gray-400">
-            Draw a polygon to see time-series stats
+          <p className="mt-1 text-xs leading-4 text-gray-400">
+            Draw a polygon for time-series stats
           </p>
         </>
       )}
@@ -176,9 +176,9 @@ const LayerControlPanel = ({
       {/* Flags Section - shown to all users */}
       {showFlagsControls && (
         <>
-          <div className={`${isDrawerSheet ? "mt-3 -mx-4 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3" : "-mx-4 -mb-4 mt-3 border-t border-gray-100 bg-[#F8FAF9] px-4 pb-4 pt-3"}`}>
-            <div className="mb-1 text-xs font-medium text-gray-500">Feedback</div>
-            <p className="mb-2 text-xs leading-5 text-gray-500">
+          <div className={`${isDrawerSheet ? "mt-2.5 -mx-3 border-t border-gray-100 bg-[#F8FAF9] px-3 pb-3 pt-2.5" : "-mx-3 -mb-3 mt-2.5 border-t border-gray-100 bg-[#F8FAF9] px-3 pb-3 pt-2.5"}`}>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Feedback</div>
+            <p className="mb-2 text-xs leading-4 text-gray-500">
               Help improve our AI by flagging incorrect predictions
             </p>
             {isLoggedIn ? (
@@ -216,19 +216,17 @@ const LayerControlPanel = ({
               </Button>
             )}
 
-            {isDrawerSheet && (
-              <Button
-                type="link"
-                size="small"
-                className="mt-2 h-auto p-0 text-xs font-medium"
-                onClick={() => setShowLegend((prev) => !prev)}
-              >
-                {showLegend ? "Hide legend" : "Show legend"}
-              </Button>
-            )}
+            <Button
+              type="link"
+              size="small"
+              className="mt-2 h-auto p-0 text-xs font-medium"
+              onClick={() => setShowLegend((prev) => !prev)}
+            >
+              {showLegend ? "Hide legend" : "Show legend"}
+            </Button>
 
             {shouldShowLegend && (
-              <div className="mt-3 border-t border-gray-200/80 pt-3">
+              <div className="mt-2 border-t border-gray-200/80 pt-2">
                 <MapLegend
                   clickedValues={clickedValues}
                   showForest={showForest}

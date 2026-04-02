@@ -21,10 +21,10 @@ const LocationControls = ({
 
   return (
     <div
-      className={`location-controls pointer-events-auto flex w-full flex-col gap-3 ${isDrawerInline ? "" : "w-80 rounded-2xl border border-gray-200/60 bg-white/95 p-4 shadow-xl backdrop-blur-sm"}`}
+      className={`location-controls pointer-events-auto flex w-full flex-col gap-2.5 ${isDrawerInline ? "" : "w-64 rounded-2xl border border-gray-200/60 bg-white/95 p-3.5 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Address Search */}
-      {!isDrawerInline && <div className="text-xs font-medium text-gray-500">Location</div>}
+      {!isDrawerInline && <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Location</div>}
       <GeoapifyContext apiKey={import.meta.env.VITE_GEOPIFY_KEY}>
         <GeoapifyGeocoderAutocomplete
           placeholder="Search location..."
@@ -36,7 +36,7 @@ const LocationControls = ({
           icon={<EnvironmentOutlined />}
           onClick={onLocateMe}
           loading={isLocating}
-          className="w-fit"
+          className="w-fit rounded-lg px-3 shadow-sm"
         >
           Use current location
         </Button>

@@ -185,14 +185,16 @@ export default function Dataset() {
             </div>
           )}
         </div>
-        <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
-          className="mt-4 w-full shadow-sm font-medium"
-        >
-          Upload Data
-        </Button>
+        {!isMobile && (
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={() => runDesktopOnlyAction("upload", () => navigate("/profile"))}
+            className="mt-4 w-full shadow-sm font-medium"
+          >
+            Upload Data
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 pb-4">

@@ -3,8 +3,6 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { message, Button, Spin, Alert } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Map as OLMap, View } from "ol";
-import TileLayer from "ol/layer/Tile";
-import { XYZ } from "ol/source";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
 import Feature from "ol/Feature";
@@ -28,6 +26,7 @@ import { useAuth } from "../../hooks/useAuthProvider";
 import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../DatasetDetailsMap/createVectorLayer";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
+import { createOpenFreeMapLibertyLayerGroup, createStandardMapControls } from "../../utils/basemaps";
 
 interface Props {
   dataset: IDataset;
@@ -47,7 +46,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
   const [layerSelection, setLayerSelection] = useState<LayerSelection>(initialLayerType || "deadwood");
   const [isEditing, setIsEditing] = useState(false);
   const [initialFeatures, setInitialFeatures] = useState<Feature<Geometry>[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
   const geoJson = useMemo(() => new GeoJSON(), []);
@@ -108,14 +107,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
 
     orthoLayerRef.current = orthoCogLayer;
 
-    const basemapLayer = new TileLayer({
-      preload: 0,
-      source: new XYZ({
-        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        attributions: "© OpenStreetMap contributors",
-        maxZoom: 19,
-      }),
-    });
+    const basemapLayer = createOpenFreeMapLibertyLayerGroup();
 
     // Create vector layers for visualization (read-only when not editing)
     // Enable correction styling to show pending/approved/deleted with different colors
@@ -157,7 +149,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
           target: mapContainerRef.current,
           layers,
           view: mapView,
-          controls: [],
+          controls: createStandardMapControls(),
         });
 
         // Only fit to extent if no viewport from context

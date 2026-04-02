@@ -193,8 +193,8 @@ export default function DownloadSection({
   if (isMobile) {
     return (
       <DesktopOnlyFeatureNotice
-        title="Desktop Required For Downloads"
-        description="Dataset downloads are currently disabled on mobile while we simplify the account and file-management flows for smaller screens. Please open this dataset on a desktop browser to download files."
+        title="Desktop Only"
+        description="Open on desktop to download files."
       />
     );
   }
