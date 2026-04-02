@@ -148,15 +148,27 @@ const Hero = () => {
 							>
 								Contribute Drone Data
 							</Button>
-							<Button
-								type={isMobile ? "primary" : "default"}
-								size="large"
-								icon={<SearchOutlined />}
-								onClick={handleExploreMap}
-								className="min-h-11 w-full px-6 sm:w-auto"
-							>
-								Explore Map
-							</Button>
+							{isMobile ? (
+								<Button
+									type="primary"
+									size="large"
+									icon={<SearchOutlined />}
+									onClick={handleExploreMap}
+									className="min-h-11 w-full px-6 sm:w-auto"
+								>
+									Explore Map
+								</Button>
+							) : (
+								<Button
+									type="default"
+									size="large"
+									onClick={handleExploreMap}
+									icon={<SearchOutlined />}
+									className="min-h-11 w-full px-6 sm:w-auto"
+								>
+									Explore Map
+								</Button>
+							)}
 							{isMobile && (
 								<Button
 									size="large"
@@ -168,6 +180,15 @@ const Hero = () => {
 								</Button>
 							)}
 						</div>
+
+						<button
+							type="button"
+							onClick={handleExploreDatasets}
+							className="mt-3 inline-flex items-center gap-2 self-center border-none bg-transparent p-0 text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800 lg:self-start"
+						>
+							<DatabaseOutlined />
+							<span>Browse drone datasets in the archive</span>
+						</button>
 
 						{!user && !isMobile && (
 							<p className="m-0 mt-3 text-sm text-gray-400">
