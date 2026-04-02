@@ -1044,9 +1044,9 @@ const DeadtreesMap = () => {
   }, [animateToUserLocation, startOrientationTracking, stopUserLocationTracking, updateUserLocationFeature]);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || !isMobile) return;
     locateUser(false);
-  }, [map, locateUser]);
+  }, [isMobile, map, locateUser]);
 
   return (
     <div className="h-full w-full">
