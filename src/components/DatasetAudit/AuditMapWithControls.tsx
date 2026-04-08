@@ -193,7 +193,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 			<div className="relative h-full w-full flex-1">
 				{/* Correction Stats Indicator */}
 				{!isEditing && correctionStats && correctionStats.total > 0 && (
-					<div className="absolute left-3 top-3 z-50 pointer-events-auto">
+					<div className="absolute left-3 top-3 z-50 pointer-events-auto md:left-[calc(420px+2rem)] md:top-24">
 						<div className="flex flex-col gap-1.5 rounded-lg bg-white/95 p-2.5 shadow-lg backdrop-blur-sm">
 							<div className="text-xs font-medium text-gray-600 mb-1">Edit Review Progress</div>
 							{correctionStats.pending > 0 ? (
