@@ -181,20 +181,16 @@ const Hero = () => {
 							)}
 						</div>
 
-						<Button
-							type="link"
-							size="small"
-							icon={<DatabaseOutlined />}
-							onClick={handleExploreDatasets}
-							className="mt-3 inline-flex h-auto self-center p-0 text-sm font-medium text-emerald-700 hover:text-emerald-800 lg:self-start"
-						>
-							Browse drone datasets in the archive
-						</Button>
-
-						{!user && !isMobile && (
-							<p className="m-0 mt-3 text-sm text-gray-400">
-								Sign in or create an account to start uploading.
-							</p>
+						{!isMobile && (
+							<Button
+								type="link"
+								size="small"
+								icon={<DatabaseOutlined />}
+								onClick={handleExploreDatasets}
+								className="mt-4 inline-flex h-auto self-center p-0 text-sm font-medium text-emerald-700 hover:text-emerald-800 lg:self-start"
+							>
+								Browse drone datasets in the archive
+							</Button>
 						)}
 
 						<div className="mt-8 flex flex-wrap items-center justify-center gap-6 md:justify-start">
