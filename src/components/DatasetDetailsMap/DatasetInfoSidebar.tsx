@@ -92,7 +92,6 @@ const assessmentConfig = {
 const tooltips = {
   forestCover: "Quality of the AI forest cover segmentation. Great = highly accurate boundaries.",
   deadwood: "Quality of the AI deadwood detection. Great = dead trees accurately identified.",
-  inSeason: "Whether the imagery was captured during the growing season when leaves are present.",
   finalAssessment: "Overall quality assessment. Ready = suitable for analysis, Fixable = has correctable issues, Excluded = not suitable.",
 };
 
@@ -164,9 +163,6 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
         </InfoRow>
         <InfoRow label="Deadwood Prediction" tooltip={tooltips.deadwood}>
           <QualityValue quality={audit.deadwood_quality} />
-        </InfoRow>
-        <InfoRow label="In Growing Season" tooltip={tooltips.inSeason}>
-          <BooleanValue value={audit.has_valid_phenology} />
         </InfoRow>
         <InfoRow label="Final Assessment" tooltip={tooltips.finalAssessment}>
           <span className="flex items-center gap-1.5">
