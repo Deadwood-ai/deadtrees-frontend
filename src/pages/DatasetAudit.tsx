@@ -246,7 +246,7 @@ function DatasetAuditInner() {
 	const [contributorFilter, setContributorFilter] = useState<string>(initialContributor);
 	const [hasFlagsFilter, setHasFlagsFilter] = useState<boolean>(initialHasFlags);
 	const [hasProcessingStates, setHasProcessingStates] = useState<ProcessingStateFilterKey[]>(DEFAULT_PROCESSING_STATE_FILTERS);
-	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(true);
+	const [inSeasonOnly, setInSeasonOnly] = useState<boolean>(false);
 	const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
 	const [processingStatusFilters, setProcessingStatusFilters] = useState<ProcessingStatus[]>(
 		DEFAULT_PROCESSING_STATUS_FILTERS
