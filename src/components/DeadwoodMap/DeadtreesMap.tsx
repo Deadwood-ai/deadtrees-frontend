@@ -1403,9 +1403,9 @@ const DeadtreesMap = () => {
         </div>
 
         {activeMobileDrawMode && (
-          <div className="pointer-events-none absolute inset-x-2 bottom-24 z-[55] flex justify-center md:hidden">
-            <div className="pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/95 p-2 shadow-xl backdrop-blur-sm">
-              <div className="min-w-0 flex-1 px-1">
+          <div className="pointer-events-none absolute bottom-3 right-3 z-[60] md:hidden">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/95 p-2 shadow-xl backdrop-blur-sm">
+              <div className="hidden min-w-0 flex-1 px-1 sm:block">
                 <div className="text-xs font-semibold text-gray-700">
                   {activeMobileDrawMode === "analysis"
                     ? "Analyze Area"
@@ -1417,7 +1417,7 @@ const DeadtreesMap = () => {
                     : "Tap the map to outline the flagged area"}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <Button
                   size="small"
                   icon={<CloseOutlined />}
