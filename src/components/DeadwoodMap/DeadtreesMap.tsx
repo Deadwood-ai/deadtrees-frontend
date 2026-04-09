@@ -212,6 +212,7 @@ const DeadtreesMap = () => {
   const userAccuracyFeatureRef = useRef<Feature<Polygon> | null>(null);
   const compassTrackerRef = useRef<KompasTracker | null>(null);
   const geolocationWatchIdRef = useRef<number | null>(null);
+  const hasRequestedMobileOrientationRef = useRef(false);
   const shouldAnimateToUserRef = useRef(false);
 
   // Layer visibility state - both layers visible by default
@@ -1304,6 +1305,16 @@ const DeadtreesMap = () => {
     locateUser(false);
   }, [isMobile, map, locateUser]);
 
+  const maybeStartMobileOrientationTracking = useCallback(() => {
+    if (!isMobile) return;
+    if (compassTrackerRef.current) return;
+    if (geolocationWatchIdRef.current === null) return;
+    if (hasRequestedMobileOrientationRef.current) return;
+
+    hasRequestedMobileOrientationRef.current = true;
+    void startOrientationTracking(true);
+  }, [isMobile, startOrientationTracking]);
+
   const activeMobileDrawMode = isMobile
     ? isDrawingFlag
       ? "flag"
@@ -1315,9 +1326,14 @@ const DeadtreesMap = () => {
     activeMobileDrawMode === "analysis"
       ? polygonAnalysis.canFinish
       : flagCanFinish;
+  const shouldHideYearImagerySelector =
+    isDrawingFlag || polygonAnalysis.isDrawing;
 
   return (
-    <div className="h-full w-full">
+    <div
+      className="h-full w-full"
+      onPointerDownCapture={maybeStartMobileOrientationTracking}
+    >
       <div
         style={{
           width: "100%",
@@ -1385,22 +1401,24 @@ const DeadtreesMap = () => {
         </div> */}
 
         {/* Bottom Center - Combined Year and Imagery Selector */}
-        <div className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto">
-          <YearImagerySelector
-            predictionYear={selectedYear}
-            onPredictionYearChange={setSelectedYear}
-            selectedReleaseNum={selectedReleaseNum}
-            onImageryChange={setSelectedReleaseNum}
-            waybackItems={localWaybackItems}
-            isLoading={isWaybackLoading}
-            isWaybackActive={DeadwoodMapStyle === "wayback"}
-            autoMatchImagery={autoMatchImagery}
-            onAutoMatchChange={setAutoMatchImagery}
-            showForest={showForest}
-            showDeadwood={showDeadwood}
-            compactMode={isMobile}
-          />
-        </div>
+        {!shouldHideYearImagerySelector && (
+          <div className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto">
+            <YearImagerySelector
+              predictionYear={selectedYear}
+              onPredictionYearChange={setSelectedYear}
+              selectedReleaseNum={selectedReleaseNum}
+              onImageryChange={setSelectedReleaseNum}
+              waybackItems={localWaybackItems}
+              isLoading={isWaybackLoading}
+              isWaybackActive={DeadwoodMapStyle === "wayback"}
+              autoMatchImagery={autoMatchImagery}
+              onAutoMatchChange={setAutoMatchImagery}
+              showForest={showForest}
+              showDeadwood={showDeadwood}
+              compactMode={isMobile}
+            />
+          </div>
+        )}
 
         {activeMobileDrawMode && (
           <div className="pointer-events-none absolute bottom-3 right-3 z-[60] md:hidden">

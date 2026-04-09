@@ -97,12 +97,12 @@
 @media (max-width: 767px) {
   .dt-map-zoom-control {
     right: 12px !important;
-    bottom: 12px !important;
+    bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .dt-map-attribution-control {
     left: 12px;
-    bottom: 12px;
+    bottom: calc(104px + env(safe-area-inset-bottom, 0px));
   }
 }
 
