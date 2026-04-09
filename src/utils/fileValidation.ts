@@ -1,5 +1,6 @@
 import { UploadType } from "../types/dataset";
 import { unzipRaw } from "unzipit";
+import { fromBlob } from "geotiff";
 
 export const detectUploadType = (fileName: string): UploadType => {
   const ext = fileName.toLowerCase().split(".").pop();
@@ -22,6 +23,113 @@ export const validateFileSize = (file: File, uploadType: UploadType): boolean =>
     throw new Error("GeoTIFF files must be smaller than 20GB");
   }
   return true;
+};
+
+const RGB_PHOTOMETRIC_INTERPRETATION = 2;
+const YCBCR_PHOTOMETRIC_INTERPRETATION = 6;
+
+const getNumericTagValue = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (ArrayBuffer.isView(value) && value.byteLength > 0 && "0" in value) {
+    return Number(value[0]);
+  }
+
+  return null;
+};
+
+const describeColorModel = (samplesPerPixel: number, photometricInterpretation: number | null): string => {
+  if (photometricInterpretation === RGB_PHOTOMETRIC_INTERPRETATION && samplesPerPixel === 3) {
+    return "RGB";
+  }
+
+  if (photometricInterpretation === RGB_PHOTOMETRIC_INTERPRETATION && samplesPerPixel >= 4) {
+    return "RGBA";
+  }
+
+  if (photometricInterpretation === YCBCR_PHOTOMETRIC_INTERPRETATION && samplesPerPixel >= 3) {
+    return "RGB-compatible YCbCr";
+  }
+
+  if (photometricInterpretation === 1 && samplesPerPixel === 1) {
+    return "single-band grayscale";
+  }
+
+  if (photometricInterpretation === 1 && samplesPerPixel === 2) {
+    return "single-band imagery with alpha";
+  }
+
+  return `${samplesPerPixel}-sample imagery`;
+};
+
+const getBandDescriptions = (image: {
+  getGDALMetadata?: (sample?: number | null) => Record<string, string> | null;
+}, samplesPerPixel: number): string[] => {
+  const descriptions: string[] = [];
+
+  if (!image.getGDALMetadata) {
+    return descriptions;
+  }
+
+  for (let sampleIndex = 0; sampleIndex < samplesPerPixel; sampleIndex += 1) {
+    const metadata = image.getGDALMetadata(sampleIndex);
+    const description = metadata?.DESCRIPTION ?? metadata?.COLORINTERP;
+    if (description) {
+      descriptions.push(description.trim().toLowerCase());
+    }
+  }
+
+  return descriptions;
+};
+
+export interface GeoTiffAiEligibility {
+  supportsAiSegmentation: boolean;
+  samplesPerPixel: number;
+  photometricInterpretation: number | null;
+  colorModel: string;
+}
+
+export const inspectGeoTiffAiEligibility = async (file: Blob): Promise<GeoTiffAiEligibility> => {
+  try {
+    // This inspects TIFF header/IFD metadata only. It does not read raster pixels into memory.
+    const tiff = await fromBlob(file);
+    const image = await tiff.getImage();
+    const samplesPerPixel = image.getSamplesPerPixel();
+    const photometricInterpretation = getNumericTagValue(image.fileDirectory.PhotometricInterpretation);
+    const bandDescriptions = getBandDescriptions(image, samplesPerPixel);
+    const hasRgbBandDescriptions =
+      bandDescriptions[0] === "red" && bandDescriptions[1] === "green" && bandDescriptions[2] === "blue";
+    const supportsAiSegmentation =
+      samplesPerPixel >= 3 &&
+      (
+        photometricInterpretation === RGB_PHOTOMETRIC_INTERPRETATION ||
+        photometricInterpretation === YCBCR_PHOTOMETRIC_INTERPRETATION ||
+        hasRgbBandDescriptions
+      );
+
+    return {
+      supportsAiSegmentation,
+      samplesPerPixel,
+      photometricInterpretation,
+      colorModel: describeColorModel(samplesPerPixel, photometricInterpretation),
+    };
+  } catch {
+    throw new Error("We could not inspect this GeoTIFF. Please choose a valid GeoTIFF file.");
+  }
+};
+
+export const validateGeoTiffAiEligibility = async (file: Blob): Promise<GeoTiffAiEligibility> => {
+  const inspection = await inspectGeoTiffAiEligibility(file);
+
+  if (!inspection.supportsAiSegmentation) {
+    throw new Error(
+      `We cannot process this dataset yet. Deadwood and tree cover currently require an RGB orthomosaic, but this file looks like ${inspection.colorModel}.`,
+    );
+  }
+
+  return inspection;
 };
 
 const ALLOWED_ZIP_METHODS = new Set([0, 8]); // stored, deflate
