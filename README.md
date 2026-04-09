@@ -58,6 +58,36 @@ npm run build
 npm run preview
 ```
 
+## Production Deploys
+
+The frontend can deploy automatically to Firebase Hosting from GitHub Actions whenever `main` changes.
+
+Workflow files:
+- `.github/workflows/firebase-hosting-merge.yml`
+- `.github/workflows/firebase-hosting-pull-request.yml`
+
+These workflows intentionally let Firebase's framework-aware Hosting deploy perform the Vite build. That matches local `firebase deploy --only hosting` behavior and avoids blocking deploys on the repo's current standalone TypeScript check failures from `tsc && vite build`.
+
+Required GitHub repository secrets:
+- `FIREBASE_SERVICE_ACCOUNT_DEADWOOD_D4A4B`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_SENTINEL_PROCESSING_URL`
+- `VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY`
+- `VITE_GEOPIFY_KEY`
+
+Optional GitHub repository secrets:
+- `VITE_SAM_API_URL` if you want to override the built-in default
+- `VITE_POSTHOG_PROJECT_KEY` if PostHog should be enabled in production
+
+The quickest way to provision the Firebase deploy credential is to run:
+
+```bash
+firebase init hosting:github
+```
+
+Firebase's official Hosting docs say this command creates the deploy service account, stores its JSON key as a GitHub secret, and writes the workflow files for you. In this repo it created the secret `FIREBASE_SERVICE_ACCOUNT_DEADWOOD_D4A4B` and the two Firebase Hosting workflow files above.
+
 ## Environment Variables
 
 Create a `.env.local` file (or equivalent environment setup) and provide the values your deployment mode needs:
