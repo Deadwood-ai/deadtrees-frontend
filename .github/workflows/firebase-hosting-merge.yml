@@ -20,6 +20,7 @@ jobs:
       VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY: ${{ secrets.VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
+      - run: npm ci
       - uses: FirebaseExtended/action-hosting-deploy@v0
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
