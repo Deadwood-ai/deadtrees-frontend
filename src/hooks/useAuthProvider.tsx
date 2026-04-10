@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { identifyUser } from "../utils/analytics";
 
@@ -11,7 +11,7 @@ interface AuthProviderProps {
 type AuthContextType = {
   session: Session | null;
   user: User | null;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +25,16 @@ const AuthContext = createContext<AuthContextType>({
 const AuthProvider = (props: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+
+  const signOut = useCallback(async () => {
+    // Clear local auth state immediately so route guards and auth pages
+    // cannot briefly see a stale signed-in session during sign-out.
+    setSession(null);
+    setUser(null);
+    identifyUser(null);
+
+    await supabase.auth.signOut();
+  }, []);
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -61,9 +71,7 @@ const AuthProvider = (props: AuthProviderProps) => {
   const value = {
     session,
     user,
-    signOut: async () => {
-      await supabase.auth.signOut();
-    },
+    signOut,
   };
 
   return <AuthContext.Provider value={value}> {props.children} </AuthContext.Provider>;

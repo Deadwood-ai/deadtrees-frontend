@@ -25,6 +25,12 @@ const SignUp = () => {
                   defaultButtonBackground: palette.primary[500],
                   defaultButtonBackgroundHover: palette.primary[600],
                 },
+                fontSizes: {
+                  baseBodySize: "16px",
+                  baseInputSize: "16px",
+                  baseLabelSize: "16px",
+                  baseButtonSize: "16px",
+                },
               },
             },
           }}

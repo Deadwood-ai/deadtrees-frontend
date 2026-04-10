@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Map, View, Overlay } from "ol";
-import { defaults as defaultInteractions } from "ol/interaction/defaults";
 import type BaseLayer from "ol/layer/Base";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import { GeoTIFF } from "ol/source";
@@ -8,6 +7,7 @@ import type { Layer } from "ol/layer";
 
 import { Settings } from "../../../config";
 import { createStandardMapControls } from "../../../utils/basemaps";
+import { createMapInteractions } from "../../../utils/mapInteractions";
 
 export interface Viewport {
 	center: number[];
@@ -34,6 +34,8 @@ export interface UseMapCoreOptions {
 	maxZoom?: number;
 	/** Whether to wait for external dependencies before initializing */
 	isReady?: boolean;
+	/** Disable rotation interactions such as pinch rotate */
+	disableRotation?: boolean;
 }
 
 export interface UseMapCoreReturn {
@@ -86,6 +88,7 @@ export function useMapCore({
 	minZoom = 2,
 	maxZoom = 23,
 	isReady = true,
+	disableRotation = false,
 }: UseMapCoreOptions): UseMapCoreReturn {
 	const mapRef = useRef<Map | null>(null);
 	const orthoLayerRef = useRef<TileLayerWebGL | null>(null);
@@ -181,7 +184,10 @@ export function useMapCore({
 					layers: [orthoCogLayer],
 					view: mapView,
 					controls: createStandardMapControls(),
-					interactions: defaultInteractions({ doubleClickZoom: false }),
+					interactions: createMapInteractions({
+						doubleClickZoom: false,
+						disableRotation,
+					}),
 				});
 
 			// Viewport change handler - use "moveend" to only fire when movement stops
@@ -232,7 +238,7 @@ export function useMapCore({
 		};
 	// Note: callbacks are accessed via refs to avoid triggering re-runs
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [isReady, cogPath, containerRef]);
+	}, [isReady, cogPath, containerRef, disableRotation]);
 
 	return {
 		mapRef,

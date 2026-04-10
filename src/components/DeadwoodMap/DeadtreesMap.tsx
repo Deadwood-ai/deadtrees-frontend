@@ -2,11 +2,14 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Input, message, Button, Drawer } from "antd";
 import {
+  CheckOutlined,
+  CloseOutlined,
   ExperimentOutlined,
   FlagOutlined,
   InfoCircleOutlined,
   SearchOutlined,
   SlidersOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import "ol/ol.css";
 import { Map, Overlay } from "ol";
@@ -32,13 +35,16 @@ import type { FeatureLike } from "ol/Feature";
 import createKompas from "kompas";
 
 import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
-import { getDeadwoodCOGUrl, getForestCOGUrl } from "../../utils/getDeadwoodCOGUrl";
 import {
-    createOpenFreeMapLibertyLayerGroup,
-    createStandardMapControls,
-    createWaybackSource,
-    createWaybackTileLayer,
-  } from "../../utils/basemaps";
+  getDeadwoodCOGUrl,
+  getForestCOGUrl,
+} from "../../utils/getDeadwoodCOGUrl";
+import {
+  createOpenFreeMapLibertyLayerGroup,
+  createStandardMapControls,
+  createWaybackSource,
+  createWaybackTileLayer,
+} from "../../utils/basemaps";
 import LayerControlPanel from "./LayerControlPanel";
 import LocationControls from "./LocationControls";
 import YearImagerySelector from "./YearImagerySelector";
@@ -56,6 +62,7 @@ import { palette } from "../../theme/palette";
 const PREVIEW_WARNING_STORAGE_KEY = "deadtrees-preview-warning-shown";
 const PREVIEW_WARNING_EVENT = "deadtrees:preview-warning-visibility";
 const LOCATION_HEADING_ICON_SRC = "/assets/location-heading.svg";
+type FlagDrawMode = "bbox" | "polygon";
 
 interface ClickedValues {
   forestPct: number;
@@ -79,7 +86,9 @@ const userLocationStyle = (feature: FeatureLike) => {
 
   const heading = feature.get("heading");
   const rotation =
-    typeof heading === "number" && Number.isFinite(heading) ? (heading * Math.PI) / 180 : 0;
+    typeof heading === "number" && Number.isFinite(heading)
+      ? (heading * Math.PI) / 180
+      : 0;
 
   return [
     new Style({
@@ -167,31 +176,52 @@ const DeadtreesMap = () => {
   const forestLayerRef = useRef<TileLayerWebGL | null>(null);
   const deadwoodLayerRef = useRef<TileLayerWebGL | null>(null);
   const hasAutoSelectedImageryRef = useRef(false); // Track if we've done initial auto-selection
-  const { DeadwoodMapViewport, setDeadwoodMapViewport, DeadwoodMapStyle, setDeadwoodMapStyle } = useDatasetMap();
+  const {
+    DeadwoodMapViewport,
+    setDeadwoodMapViewport,
+    DeadwoodMapStyle,
+    setDeadwoodMapStyle,
+  } = useDatasetMap();
 
   // Flag feature state
   const [isDrawingFlag, setIsDrawingFlag] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
-  const [pendingFlagBbox, setPendingFlagBbox] = useState<[number, number, number, number] | null>(null);
+  const [pendingFlagBbox, setPendingFlagBbox] = useState<
+    [number, number, number, number] | null
+  >(null);
   const [flagDescription, setFlagDescription] = useState("");
   const [showFlagsLayer, setShowFlagsLayer] = useState(true);
-  const [currentZoom, setCurrentZoom] = useState<number>(DeadwoodMapViewport.zoom || 10);
-  const flagsLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number>(
+    DeadwoodMapViewport.zoom || 10,
+  );
+  const [flagCanFinish, setFlagCanFinish] = useState(false);
+  const flagsLayerRef = useRef<VectorLayer<
+    VectorSource<Feature<Polygon>>
+  > | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
+  const flagDrawModeRef = useRef<FlagDrawMode | null>(null);
   const flagHoverOverlayRef = useRef<Overlay | null>(null);
-  const clickedCellLayerRef = useRef<VectorLayer<VectorSource<Feature<Polygon>>> | null>(null);
+  const clickedCellLayerRef = useRef<VectorLayer<
+    VectorSource<Feature<Polygon>>
+  > | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
-  const userLocationLayerRef = useRef<VectorLayer<VectorSource<Feature<Geometry>>> | null>(null);
+  const yearSelectorContainerRef = useRef<HTMLDivElement | null>(null);
+  const userLocationLayerRef = useRef<VectorLayer<
+    VectorSource<Feature<Geometry>>
+  > | null>(null);
   const userLocationFeatureRef = useRef<Feature<Point> | null>(null);
   const userAccuracyFeatureRef = useRef<Feature<Polygon> | null>(null);
   const compassTrackerRef = useRef<KompasTracker | null>(null);
   const geolocationWatchIdRef = useRef<number | null>(null);
+  const hasRequestedMobileOrientationRef = useRef(false);
   const shouldAnimateToUserRef = useRef(false);
+  const [mobileBottomUiOffset, setMobileBottomUiOffset] = useState(104);
 
   // Layer visibility state - both layers visible by default
   const [showForest, setShowForest] = useState(true);
   const [showDeadwood, setShowDeadwood] = useState(true);
-  const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] = useState(false);
+  const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] =
+    useState(false);
 
   // Polygon analysis (drawing + stats)
   const polygonAnalysis = usePolygonAnalysis(mapRef);
@@ -200,11 +230,16 @@ const DeadtreesMap = () => {
   // Default to a recent Wayback release (31144 = 2024) for immediate satellite display
   // This gets updated when location-specific wayback items load
   const DEFAULT_WAYBACK_RELEASE = 31144;
-  const [selectedReleaseNum, setSelectedReleaseNum] = useState<number | null>(DEFAULT_WAYBACK_RELEASE);
+  const [selectedReleaseNum, setSelectedReleaseNum] = useState<number | null>(
+    DEFAULT_WAYBACK_RELEASE,
+  );
   const [autoMatchImagery, setAutoMatchImagery] = useState(true); // Auto-match imagery to prediction year
 
   // Track map center in lon/lat for location-specific wayback queries
-  const [mapCenterLonLat, setMapCenterLonLat] = useState<{ lon: number; lat: number } | null>(() => {
+  const [mapCenterLonLat, setMapCenterLonLat] = useState<{
+    lon: number;
+    lat: number;
+  } | null>(() => {
     // Convert initial center from EPSG:3857 to EPSG:4326
     if (DeadwoodMapViewport.center) {
       const [lon, lat] = toLonLat(DeadwoodMapViewport.center);
@@ -215,19 +250,24 @@ const DeadtreesMap = () => {
 
   // Fetch wayback items with actual imagery changes at current location (fast, no metadata)
   // Uses debouncing: only re-fetches when user moves > 2km or zoom changes > 3 levels
-  const { data: localWaybackItems = [], isLoading: isWaybackLoading } = useWaybackItemsDebounced(
-    mapCenterLonLat?.lon,
-    mapCenterLonLat?.lat,
-    currentZoom,
-    DeadwoodMapStyle === "wayback", // Only fetch when wayback basemap is active
-  );
+  const { data: localWaybackItems = [], isLoading: isWaybackLoading } =
+    useWaybackItemsDebounced(
+      mapCenterLonLat?.lon,
+      mapCenterLonLat?.lat,
+      currentZoom,
+      DeadwoodMapStyle === "wayback", // Only fetch when wayback basemap is active
+    );
 
   // Clicked location values (displayed in legend)
-  const [clickedValues, setClickedValues] = useState<ClickedValues | null>(null);
-  const [mobileLocationDrawerOpen, setMobileLocationDrawerOpen] = useState(false);
+  const [clickedValues, setClickedValues] = useState<ClickedValues | null>(
+    null,
+  );
+  const [mobileLocationDrawerOpen, setMobileLocationDrawerOpen] =
+    useState(false);
   const [mobileLayersDrawerOpen, setMobileLayersDrawerOpen] = useState(false);
   const [isLocatingUser, setIsLocatingUser] = useState(false);
   const isMobile = useIsMobile();
+  const pendingMobileDrawActionRef = useRef<(() => void) | null>(null);
 
   // Auth and flags hooks
   const { user } = useAuth();
@@ -242,7 +282,11 @@ const DeadtreesMap = () => {
   }, [navigate]);
 
   const updateUserLocationFeature = useCallback(
-    (coordinates: number[], accuracyInMeters?: number | null, heading?: number | null) => {
+    (
+      coordinates: number[],
+      accuracyInMeters?: number | null,
+      heading?: number | null,
+    ) => {
       const userLocationSource = userLocationLayerRef.current?.getSource();
       if (!userLocationSource) return;
 
@@ -256,9 +300,17 @@ const DeadtreesMap = () => {
       }
 
       let accuracyFeature = userAccuracyFeatureRef.current;
-      if (typeof accuracyInMeters === "number" && Number.isFinite(accuracyInMeters) && accuracyInMeters > 0) {
+      if (
+        typeof accuracyInMeters === "number" &&
+        Number.isFinite(accuracyInMeters) &&
+        accuracyInMeters > 0
+      ) {
         const geographicCoordinates = toLonLat(coordinates);
-        const accuracyGeometry = circularPolygon(geographicCoordinates, accuracyInMeters, 64);
+        const accuracyGeometry = circularPolygon(
+          geographicCoordinates,
+          accuracyInMeters,
+          64,
+        );
         accuracyGeometry.transform(
           "EPSG:4326",
           mapRef.current?.getView().getProjection() ?? "EPSG:3857",
@@ -287,7 +339,12 @@ const DeadtreesMap = () => {
   );
   const updateUserHeading = useCallback((heading: number | null) => {
     const userFeature = userLocationFeatureRef.current;
-    if (!userFeature || typeof heading !== "number" || !Number.isFinite(heading)) return;
+    if (
+      !userFeature ||
+      typeof heading !== "number" ||
+      !Number.isFinite(heading)
+    )
+      return;
 
     userFeature.set("heading", heading);
     userFeature.changed();
@@ -320,14 +377,22 @@ const DeadtreesMap = () => {
 
   const startOrientationTracking = useCallback(
     async (requestPermission: boolean) => {
-      if (typeof window === "undefined" || typeof DeviceOrientationEvent === "undefined") return;
+      if (
+        typeof window === "undefined" ||
+        typeof DeviceOrientationEvent === "undefined"
+      )
+        return;
 
       const OrientationEventWithPermission =
         DeviceOrientationEvent as DeviceOrientationWithPermission;
 
-      if (requestPermission && typeof OrientationEventWithPermission.requestPermission === "function") {
+      if (
+        requestPermission &&
+        typeof OrientationEventWithPermission.requestPermission === "function"
+      ) {
         try {
-          const permission = await OrientationEventWithPermission.requestPermission();
+          const permission =
+            await OrientationEventWithPermission.requestPermission();
           if (permission !== "granted") return;
         } catch {
           return;
@@ -356,7 +421,11 @@ const DeadtreesMap = () => {
   }, []);
 
   // handler functions
-  const handleClick = async (event: { coordinate: number[] }, year: string, skipIfDrawing: boolean) => {
+  const handleClick = async (
+    event: { coordinate: number[] },
+    year: string,
+    skipIfDrawing: boolean,
+  ) => {
     // Skip click handling when drawing flag bbox
     if (skipIfDrawing) return;
     if (mapRef.current) {
@@ -463,7 +532,9 @@ const DeadtreesMap = () => {
       libertyBasemapLayer.setVisible(DeadwoodMapStyle !== "wayback");
 
       // Initialize with Wayback satellite imagery directly (using default release)
-      const waybackBasemapLayer = createWaybackTileLayer(DEFAULT_WAYBACK_RELEASE);
+      const waybackBasemapLayer = createWaybackTileLayer(
+        DEFAULT_WAYBACK_RELEASE,
+      );
       waybackBasemapLayer.setVisible(DeadwoodMapStyle === "wayback");
       libertyBasemapLayerRef.current = libertyBasemapLayer;
       waybackBasemapLayerRef.current = waybackBasemapLayer;
@@ -665,7 +736,9 @@ const DeadtreesMap = () => {
     waybackBasemapLayerRef.current?.setVisible(nextIsWayback);
 
     if (selectedReleaseNum && waybackBasemapLayerRef.current) {
-      waybackBasemapLayerRef.current.setSource(createWaybackSource(selectedReleaseNum));
+      waybackBasemapLayerRef.current.setSource(
+        createWaybackSource(selectedReleaseNum),
+      );
     }
   }, [DeadwoodMapStyle, map, selectedReleaseNum]);
 
@@ -684,7 +757,11 @@ const DeadtreesMap = () => {
     if (mapRef.current) {
       // Add a new click listener with the current selectedYear
       const clickHandler = (event: { coordinate: number[] }) =>
-        handleClick(event, selectedYear, isDrawingFlag || polygonAnalysis.isDrawing);
+        handleClick(
+          event,
+          selectedYear,
+          isDrawingFlag || polygonAnalysis.isDrawing,
+        );
       mapRef.current.on("click", clickHandler);
 
       // Clean up function to remove the listener
@@ -768,32 +845,38 @@ const DeadtreesMap = () => {
       mapRef.current.addLayer(flagsLayer);
 
       // Add hover handler for flags
-      mapRef.current.on("pointermove", (evt: { pixel: number[]; coordinate: number[] }) => {
-        if (!flagHoverOverlayRef.current || !flagsLayerRef.current) return;
+      mapRef.current.on(
+        "pointermove",
+        (evt: { pixel: number[]; coordinate: number[] }) => {
+          if (!flagHoverOverlayRef.current || !flagsLayerRef.current) return;
 
-        const pixel = evt.pixel;
-        const feature = mapRef.current?.forEachFeatureAtPixel(pixel, (f: FeatureLike, layer: unknown) => {
-          if (layer === flagsLayerRef.current) return f;
-          return undefined;
-        });
+          const pixel = evt.pixel;
+          const feature = mapRef.current?.forEachFeatureAtPixel(
+            pixel,
+            (f: FeatureLike, layer: unknown) => {
+              if (layer === flagsLayerRef.current) return f;
+              return undefined;
+            },
+          );
 
-        if (feature) {
-          const flagId = feature.get("flagId");
-          const description = feature.get("description");
-          const popupElement = flagHoverOverlayRef.current.getElement();
-          if (popupElement) {
-            popupElement.innerHTML = `
+          if (feature) {
+            const flagId = feature.get("flagId");
+            const description = feature.get("description");
+            const popupElement = flagHoverOverlayRef.current.getElement();
+            if (popupElement) {
+              popupElement.innerHTML = `
               <div style="font-family: system-ui, sans-serif;">
                 <div style="font-weight: 600; color: ${mapColors.flag.stroke}; margin-bottom: 4px;">Flag #${flagId}</div>
                 <div style="color: ${palette.neutral[800]}; line-height: 1.4;">${description}</div>
               </div>
             `;
+            }
+            flagHoverOverlayRef.current.setPosition(evt.coordinate);
+          } else {
+            flagHoverOverlayRef.current.setPosition(undefined);
           }
-          flagHoverOverlayRef.current.setPosition(evt.coordinate);
-        } else {
-          flagHoverOverlayRef.current.setPosition(undefined);
-        }
-      });
+        },
+      );
     } else {
       // Update style when zoom changes
       flagsLayerRef.current.setStyle(getFlagStyle);
@@ -806,7 +889,11 @@ const DeadtreesMap = () => {
       mapFlags.forEach((flag: IMapFlag) => {
         const [minLon, minLat, maxLon, maxLat] = flag.bbox;
         // Create polygon from bbox in EPSG:3857
-        const extent = transformExtent([minLon, minLat, maxLon, maxLat], "EPSG:4326", "EPSG:3857");
+        const extent = transformExtent(
+          [minLon, minLat, maxLon, maxLat],
+          "EPSG:4326",
+          "EPSG:3857",
+        );
         const polygon = new Polygon([
           [
             [extent[0], extent[1]],
@@ -873,11 +960,60 @@ const DeadtreesMap = () => {
     };
   }, [deadwoodWarningModalOpen]);
 
-  // Start drawing flag bbox
-  const startFlagDrawing = useCallback(() => {
+  const queuePendingMobileDrawAction = useCallback(
+    (action: () => void) => {
+      if (!isMobile || !mobileLayersDrawerOpen) {
+        action();
+        return;
+      }
+      pendingMobileDrawActionRef.current = action;
+      setMobileLayersDrawerOpen(false);
+    },
+    [isMobile, mobileLayersDrawerOpen],
+  );
+
+  const openFlagModalForGeometry = useCallback((geometry: Polygon) => {
+    const extent = geometry.getExtent();
+    const [minLon, minLat, maxLon, maxLat] = transformExtent(
+      extent,
+      "EPSG:3857",
+      "EPSG:4326",
+    );
+    setPendingFlagBbox([minLon, minLat, maxLon, maxLat]);
+    setFlagModalOpen(true);
+  }, []);
+
+  const cleanupFlagDrawing = useCallback(
+    (drawToRemove: Draw | null, defer = false) => {
+      const cleanup = () => {
+        const map = mapRef.current;
+        if (map && drawToRemove) {
+          map.removeInteraction(drawToRemove);
+        }
+        if (map) {
+          const mapElement = map.getTargetElement();
+          if (mapElement) {
+            mapElement.style.cursor = "";
+          }
+        }
+        drawInteractionRef.current = null;
+        flagDrawModeRef.current = null;
+        setIsDrawingFlag(false);
+        setFlagCanFinish(false);
+      };
+
+      if (defer) {
+        queueMicrotask(cleanup);
+      } else {
+        cleanup();
+      }
+    },
+    [],
+  );
+
+  const startDesktopFlagDrawing = useCallback(() => {
     if (!mapRef.current || isDrawingFlag) return;
 
-    // Set crosshair cursor
     const mapElement = mapRef.current.getTargetElement();
     if (mapElement) {
       mapElement.style.cursor = "crosshair";
@@ -890,51 +1026,112 @@ const DeadtreesMap = () => {
       geometryFunction: createBox(),
       style: new Style({
         fill: new Fill({ color: mapColors.aoi.fill }),
-        stroke: new Stroke({ color: mapColors.flag.stroke, width: 2, lineDash: [5, 5] }),
+        stroke: new Stroke({
+          color: mapColors.flag.stroke,
+          width: 2,
+          lineDash: [5, 5],
+        }),
       }),
     });
 
+    flagDrawModeRef.current = "bbox";
     draw.on("drawend", (event) => {
-      const geometry = event.feature.getGeometry() as Polygon;
-      const extent = geometry.getExtent();
-      // Convert extent to EPSG:4326 for storage
-      const [minLon, minLat, maxLon, maxLat] = transformExtent(extent, "EPSG:3857", "EPSG:4326");
-      setPendingFlagBbox([minLon, minLat, maxLon, maxLat]);
-      setFlagModalOpen(true);
-
-      // Remove draw interaction and reset cursor
-      if (mapRef.current && drawInteractionRef.current) {
-        mapRef.current.removeInteraction(drawInteractionRef.current);
-        drawInteractionRef.current = null;
-        const mapEl = mapRef.current.getTargetElement();
-        if (mapEl) {
-          mapEl.style.cursor = "";
-        }
-      }
-      setIsDrawingFlag(false);
+      openFlagModalForGeometry(event.feature.getGeometry() as Polygon);
+      const drawToRemove = drawInteractionRef.current;
+      cleanupFlagDrawing(drawToRemove, true);
     });
 
     mapRef.current.addInteraction(draw);
     drawInteractionRef.current = draw;
     setIsDrawingFlag(true);
+    setFlagCanFinish(false);
     message.info("Click and drag to draw a rectangle on the map");
-  }, [isDrawingFlag]);
+  }, [cleanupFlagDrawing, isDrawingFlag, openFlagModalForGeometry]);
+
+  const startMobileFlagDrawing = useCallback(() => {
+    if (!mapRef.current || isDrawingFlag) return;
+
+    const mapElement = mapRef.current.getTargetElement();
+    if (mapElement) {
+      mapElement.style.cursor = "crosshair";
+    }
+
+    const source = new VectorSource<Feature<Polygon>>();
+    const draw = new Draw({
+      source,
+      type: "Polygon",
+      style: [
+        new Style({
+          fill: new Fill({ color: mapColors.aoi.fill }),
+          stroke: new Stroke({
+            color: mapColors.flag.stroke,
+            width: 2,
+            lineDash: [6, 4],
+          }),
+        }),
+        new Style({
+          image: new CircleStyle({
+            radius: 5,
+            fill: new Fill({ color: mapColors.flag.stroke }),
+            stroke: new Stroke({ color: "#fff", width: 1.5 }),
+          }),
+        }),
+      ],
+    });
+
+    flagDrawModeRef.current = "polygon";
+    draw.on("drawstart", (event) => {
+      const geometry = event.feature.getGeometry() as Polygon;
+      setFlagCanFinish(false);
+
+      geometry.on("change", () => {
+        const coords = geometry.getCoordinates()[0];
+        setFlagCanFinish(coords.length >= 4);
+      });
+    });
+
+    draw.on("drawend", (event) => {
+      openFlagModalForGeometry(event.feature.getGeometry() as Polygon);
+      const drawToRemove = drawInteractionRef.current;
+      cleanupFlagDrawing(drawToRemove, true);
+    });
+
+    mapRef.current.addInteraction(draw);
+    drawInteractionRef.current = draw;
+    setIsDrawingFlag(true);
+    setFlagCanFinish(false);
+    message.info(
+      "Tap or click on the map to draw a polygon. Use Done to finish.",
+    );
+  }, [cleanupFlagDrawing, isDrawingFlag, openFlagModalForGeometry]);
+
+  const startFlagDrawing = useCallback(() => {
+    if (isMobile) {
+      startMobileFlagDrawing();
+    } else {
+      startDesktopFlagDrawing();
+    }
+  }, [isMobile, startDesktopFlagDrawing, startMobileFlagDrawing]);
 
   // Cancel flag drawing
   const cancelFlagDrawing = useCallback(() => {
-    if (mapRef.current) {
-      if (drawInteractionRef.current) {
-        mapRef.current.removeInteraction(drawInteractionRef.current);
-        drawInteractionRef.current = null;
-      }
-      // Reset cursor
-      const mapElement = mapRef.current.getTargetElement();
-      if (mapElement) {
-        mapElement.style.cursor = "";
-      }
+    const draw = drawInteractionRef.current;
+    if (draw) {
+      draw.abortDrawing();
     }
-    setIsDrawingFlag(false);
+    cleanupFlagDrawing(draw);
+  }, [cleanupFlagDrawing]);
+
+  const undoFlagPoint = useCallback(() => {
+    if (flagDrawModeRef.current !== "polygon") return;
+    drawInteractionRef.current?.removeLastPoint();
   }, []);
+
+  const finishFlagDrawing = useCallback(() => {
+    if (flagDrawModeRef.current !== "polygon") return;
+    if (!flagCanFinish) return;
+    drawInteractionRef.current?.finishDrawing();
+  }, [flagCanFinish]);
 
   // Submit flag
   const handleFlagSubmit = useCallback(async () => {
@@ -980,76 +1177,191 @@ const DeadtreesMap = () => {
     [setDeadwoodMapStyle],
   );
 
+  const handleAnalysisClick = useCallback(() => {
+    if (isDrawingFlag) {
+      cancelFlagDrawing();
+    }
+    if (polygonAnalysis.isDrawing) {
+      polygonAnalysis.cancel();
+    } else {
+      polygonAnalysis.start();
+    }
+  }, [cancelFlagDrawing, isDrawingFlag, polygonAnalysis]);
+
+  const handleMobileAnalysisClick = useCallback(() => {
+    queuePendingMobileDrawAction(() => {
+      if (isDrawingFlag) {
+        cancelFlagDrawing();
+      }
+      if (polygonAnalysis.isDrawing) {
+        polygonAnalysis.cancel();
+      } else {
+        polygonAnalysis.start();
+      }
+    });
+  }, [
+    cancelFlagDrawing,
+    isDrawingFlag,
+    polygonAnalysis,
+    queuePendingMobileDrawAction,
+  ]);
+
   // Handle flag button click
   const handleFlagClick = useCallback(() => {
+    if (polygonAnalysis.isDrawing) {
+      polygonAnalysis.cancel();
+    }
     if (isDrawingFlag) {
       cancelFlagDrawing();
     } else {
       startFlagDrawing();
     }
-  }, [isDrawingFlag, cancelFlagDrawing, startFlagDrawing]);
+  }, [cancelFlagDrawing, isDrawingFlag, polygonAnalysis, startFlagDrawing]);
 
-  const locateUser = useCallback((requestOrientationPermission = false) => {
-    if (!navigator.geolocation) {
-      message.error("Geolocation is not supported by this browser");
-      return;
-    }
+  const handleMobileFlagClick = useCallback(() => {
+    queuePendingMobileDrawAction(() => {
+      if (polygonAnalysis.isDrawing) {
+        polygonAnalysis.cancel();
+      }
+      if (isDrawingFlag) {
+        cancelFlagDrawing();
+      } else {
+        startFlagDrawing();
+      }
+    });
+  }, [
+    cancelFlagDrawing,
+    isDrawingFlag,
+    polygonAnalysis,
+    queuePendingMobileDrawAction,
+    startFlagDrawing,
+  ]);
 
-    void startOrientationTracking(requestOrientationPermission);
-    shouldAnimateToUserRef.current = true;
-    setIsLocatingUser(true);
+  const locateUser = useCallback(
+    (requestOrientationPermission = false) => {
+      if (!navigator.geolocation) {
+        message.error("Geolocation is not supported by this browser");
+        return;
+      }
 
-    const existingCoordinates = userLocationFeatureRef.current?.getGeometry()?.getCoordinates();
-    if (existingCoordinates) {
-      animateToUserLocation(existingCoordinates);
-      shouldAnimateToUserRef.current = false;
-      setIsLocatingUser(false);
-    }
+      void startOrientationTracking(requestOrientationPermission);
+      shouldAnimateToUserRef.current = true;
+      setIsLocatingUser(true);
 
-    if (geolocationWatchIdRef.current !== null) {
-      return;
-    }
-
-    geolocationWatchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const center = fromLonLat([longitude, latitude]);
-        const heading =
-          typeof position.coords.heading === "number" && Number.isFinite(position.coords.heading)
-            ? position.coords.heading
-            : null;
-        updateUserLocationFeature(center, position.coords.accuracy, heading);
-        if (shouldAnimateToUserRef.current) {
-          animateToUserLocation(center);
-          shouldAnimateToUserRef.current = false;
-        }
-        setIsLocatingUser(false);
-      },
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          message.warning("Location permission denied");
-        } else {
-          message.error("Could not get your current location");
-        }
-        stopUserLocationTracking();
+      const existingCoordinates = userLocationFeatureRef.current
+        ?.getGeometry()
+        ?.getCoordinates();
+      if (existingCoordinates) {
+        animateToUserLocation(existingCoordinates);
         shouldAnimateToUserRef.current = false;
         setIsLocatingUser(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 120000,
-      },
-    );
-  }, [animateToUserLocation, startOrientationTracking, stopUserLocationTracking, updateUserLocationFeature]);
+      }
+
+      if (geolocationWatchIdRef.current !== null) {
+        return;
+      }
+
+      geolocationWatchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const center = fromLonLat([longitude, latitude]);
+          const heading =
+            typeof position.coords.heading === "number" &&
+            Number.isFinite(position.coords.heading)
+              ? position.coords.heading
+              : null;
+          updateUserLocationFeature(center, position.coords.accuracy, heading);
+          if (shouldAnimateToUserRef.current) {
+            animateToUserLocation(center);
+            shouldAnimateToUserRef.current = false;
+          }
+          setIsLocatingUser(false);
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) {
+            message.warning("Location permission denied");
+          } else {
+            message.error("Could not get your current location");
+          }
+          stopUserLocationTracking();
+          shouldAnimateToUserRef.current = false;
+          setIsLocatingUser(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 120000,
+        },
+      );
+    },
+    [
+      animateToUserLocation,
+      startOrientationTracking,
+      stopUserLocationTracking,
+      updateUserLocationFeature,
+    ],
+  );
 
   useEffect(() => {
     if (!map || !isMobile) return;
     locateUser(false);
   }, [isMobile, map, locateUser]);
 
+  const maybeStartMobileOrientationTracking = useCallback(() => {
+    if (!isMobile) return;
+    if (compassTrackerRef.current) return;
+    if (geolocationWatchIdRef.current === null) return;
+    if (hasRequestedMobileOrientationRef.current) return;
+
+    hasRequestedMobileOrientationRef.current = true;
+    void startOrientationTracking(true);
+  }, [isMobile, startOrientationTracking]);
+
+  const activeMobileDrawMode = isMobile
+    ? isDrawingFlag
+      ? "flag"
+      : polygonAnalysis.isDrawing
+        ? "analysis"
+        : null
+    : null;
+  const mobileCanFinish =
+    activeMobileDrawMode === "analysis"
+      ? polygonAnalysis.canFinish
+      : flagCanFinish;
+  const shouldHideYearImagerySelector =
+    isDrawingFlag || polygonAnalysis.isDrawing;
+
+  useEffect(() => {
+    if (!isMobile || shouldHideYearImagerySelector) {
+      setMobileBottomUiOffset(12);
+      return;
+    }
+
+    const yearSelectorContainer = yearSelectorContainerRef.current;
+    if (!yearSelectorContainer) return;
+
+    const updateOffset = () => {
+      setMobileBottomUiOffset(yearSelectorContainer.offsetHeight + 24);
+    };
+
+    updateOffset();
+
+    const resizeObserver = new ResizeObserver(updateOffset);
+    resizeObserver.observe(yearSelectorContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isMobile, shouldHideYearImagerySelector]);
+
   return (
-    <div className="h-full w-full">
+    <div
+      className="h-full w-full"
+      onPointerDownCapture={maybeStartMobileOrientationTracking}
+      style={{
+        ["--dt-mobile-bottom-ui-offset" as string]: `${mobileBottomUiOffset}px`,
+      }}
+    >
       <div
         style={{
           width: "100%",
@@ -1079,7 +1391,7 @@ const DeadtreesMap = () => {
             opacity={sliderValue}
             setOpacity={setSliderValue}
             isDrawingPolygon={polygonAnalysis.isDrawing}
-            onPolygonStatsClick={polygonAnalysis.toggle}
+            onPolygonStatsClick={handleAnalysisClick}
             showFlagsControls={true}
             isLoggedIn={!!user}
             isDrawingFlag={isDrawingFlag}
@@ -1117,22 +1429,83 @@ const DeadtreesMap = () => {
         </div> */}
 
         {/* Bottom Center - Combined Year and Imagery Selector */}
-        <div className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto">
-          <YearImagerySelector
-            predictionYear={selectedYear}
-            onPredictionYearChange={setSelectedYear}
-            selectedReleaseNum={selectedReleaseNum}
-            onImageryChange={setSelectedReleaseNum}
-            waybackItems={localWaybackItems}
-            isLoading={isWaybackLoading}
-            isWaybackActive={DeadwoodMapStyle === "wayback"}
-            autoMatchImagery={autoMatchImagery}
-            onAutoMatchChange={setAutoMatchImagery}
-            showForest={showForest}
-            showDeadwood={showDeadwood}
-            compactMode={isMobile}
-          />
-        </div>
+        {!shouldHideYearImagerySelector && (
+          <div
+            ref={yearSelectorContainerRef}
+            className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto"
+          >
+            <YearImagerySelector
+              predictionYear={selectedYear}
+              onPredictionYearChange={setSelectedYear}
+              selectedReleaseNum={selectedReleaseNum}
+              onImageryChange={setSelectedReleaseNum}
+              waybackItems={localWaybackItems}
+              isLoading={isWaybackLoading}
+              isWaybackActive={DeadwoodMapStyle === "wayback"}
+              autoMatchImagery={autoMatchImagery}
+              onAutoMatchChange={setAutoMatchImagery}
+              showForest={showForest}
+              showDeadwood={showDeadwood}
+              compactMode={isMobile}
+            />
+          </div>
+        )}
+
+        {activeMobileDrawMode && (
+          <div className="pointer-events-none absolute bottom-3 right-3 z-[60] md:hidden">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/95 p-2 shadow-xl backdrop-blur-sm">
+              <div className="hidden min-w-0 flex-1 px-1 sm:block">
+                <div className="text-xs font-semibold text-gray-700">
+                  {activeMobileDrawMode === "analysis"
+                    ? "Analyze Area"
+                    : "Flag Area"}
+                </div>
+                <div className="text-[11px] text-gray-500">
+                  {activeMobileDrawMode === "analysis"
+                    ? "Tap the map to add points"
+                    : "Tap the map to outline the flagged area"}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  size="small"
+                  icon={<CloseOutlined />}
+                  onClick={
+                    activeMobileDrawMode === "analysis"
+                      ? polygonAnalysis.cancel
+                      : cancelFlagDrawing
+                  }
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="small"
+                  icon={<UndoOutlined />}
+                  onClick={
+                    activeMobileDrawMode === "analysis"
+                      ? polygonAnalysis.undoLastPoint
+                      : undoFlagPoint
+                  }
+                >
+                  Undo
+                </Button>
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  disabled={!mobileCanFinish}
+                  onClick={
+                    activeMobileDrawMode === "analysis"
+                      ? polygonAnalysis.finish
+                      : finishFlagDrawing
+                  }
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Drawer
           title="Search location"
@@ -1157,11 +1530,23 @@ const DeadtreesMap = () => {
           height="auto"
           open={mobileLayersDrawerOpen}
           onClose={() => setMobileLayersDrawerOpen(false)}
+          afterOpenChange={(open) => {
+            if (!open && pendingMobileDrawActionRef.current) {
+              const action = pendingMobileDrawActionRef.current;
+              pendingMobileDrawActionRef.current = null;
+              action();
+            }
+          }}
           className="md:hidden"
           rootClassName="map-controls-mobile-drawer"
           styles={{
             header: { padding: "12px 16px" },
-            body: { padding: 0, overflowX: "hidden", overflowY: "auto", overscrollBehavior: "contain" },
+            body: {
+              padding: 0,
+              overflowX: "hidden",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
+            },
           }}
         >
           <div className="flex min-w-0 w-full flex-col pb-6">
@@ -1175,11 +1560,11 @@ const DeadtreesMap = () => {
               opacity={sliderValue}
               setOpacity={setSliderValue}
               isDrawingPolygon={polygonAnalysis.isDrawing}
-              onPolygonStatsClick={polygonAnalysis.toggle}
+              onPolygonStatsClick={handleMobileAnalysisClick}
               showFlagsControls={true}
               isLoggedIn={!!user}
               isDrawingFlag={isDrawingFlag}
-              onFlagClick={handleFlagClick}
+              onFlagClick={handleMobileFlagClick}
               onLoginRequired={handleLoginRequired}
               showFlagsLayer={showFlagsLayer}
               setShowFlagsLayer={setShowFlagsLayer}
@@ -1202,7 +1587,8 @@ const DeadtreesMap = () => {
       >
         <div className="flex flex-col gap-4">
           <p className="text-gray-600">
-            Describe what you noticed in this area (e.g., incorrect prediction, missing deadwood, etc.)
+            Describe what you noticed in this area (e.g., incorrect prediction,
+            missing deadwood, etc.)
           </p>
           <Input.TextArea
             value={flagDescription}
@@ -1221,7 +1607,9 @@ const DeadtreesMap = () => {
         title={
           <div className="flex items-center gap-2">
             <ExperimentOutlined className="text-orange-500" />
-            <span>{isMobile ? "Preview Notice" : "Preview Visualization Notice"}</span>
+            <span>
+              {isMobile ? "Preview Notice" : "Preview Visualization Notice"}
+            </span>
           </div>
         }
         open={deadwoodWarningModalOpen}
@@ -1245,7 +1633,8 @@ const DeadtreesMap = () => {
             <div className="text-gray-700">
               <p className="mb-1 font-medium text-orange-700">Alpha preview</p>
               <p className="text-sm leading-6">
-                This map is still evolving. Use it to explore patterns, not to draw final conclusions.
+                This map is still evolving. Use it to explore patterns, not to
+                draw final conclusions.
               </p>
             </div>
           </div>
@@ -1255,8 +1644,9 @@ const DeadtreesMap = () => {
             <div className="text-gray-700">
               <p className="mb-1 font-medium text-blue-700">Share feedback</p>
               <p className="text-sm leading-6">
-                After signing in, use <span className="font-semibold text-blue-600">Flag Area</span> to report issues
-                in your forest or study area.
+                After signing in, use{" "}
+                <span className="font-semibold text-blue-600">Flag Area</span>{" "}
+                to report issues in your forest or study area.
               </p>
             </div>
           </div>

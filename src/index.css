@@ -96,13 +96,11 @@
 
 @media (max-width: 767px) {
   .dt-map-zoom-control {
-    right: 12px !important;
-    bottom: 12px !important;
+    display: none !important;
   }
 
   .dt-map-attribution-control {
-    left: 12px;
-    bottom: 12px;
+    display: none !important;
   }
 }
 
@@ -215,5 +213,13 @@
   .map-control-panel--drawer .ant-slider {
     margin-top: 6px;
     margin-bottom: 6px;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-affix-wrapper input,
+  .ant-input-textarea textarea,
+  textarea.ant-input {
+    font-size: 16px !important;
   }
 }
