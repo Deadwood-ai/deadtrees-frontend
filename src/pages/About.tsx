@@ -27,15 +27,15 @@ export default function About() {
     {
       name: "Clemens Mosig",
       role: "Machine Learning Lead",
-      institution: "RSC4Earth / ScaDS.AI",
-      institutionLink: "https://rsc4earth.de/",
+      institution: "Leipzig University",
+      institutionLink: "https://www.uni-leipzig.de/",
       image: "/assets/team/clemens.png",
     },
     {
       name: "Prof. Dr. Miguel Mahecha",
       role: "Scientific Lead",
       institution: "Leipzig University",
-      institutionLink: "https://rsc4earth.de/",
+      institutionLink: "https://www.uni-leipzig.de/",
       image: "/assets/team/miguel.png",
     },
   ];
@@ -420,9 +420,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                   </div>
                   <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
                     {pub.data_url && (
-                      <Button 
-                        icon={<DownloadOutlined />} 
-                        href={pub.data_url} 
+                      <Button
+                        icon={<DownloadOutlined />}
+                        href={pub.data_url}
                         target="_blank"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -444,7 +444,7 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
         {/* Conference Contributions */}
         <div className="mx-auto mb-24 max-w-4xl">
           <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900">Conference Contributions</h2>
-          <Tabs 
+          <Tabs
             defaultActiveKey="upcoming"
             items={[
               {

@@ -143,7 +143,7 @@ const DatasetLayerControlPanel = ({
             >
               <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                 <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-                <span className="text-xs text-gray-600">Deadwood</span>
+                <span className="text-xs text-gray-600">Standing Deadwood</span>
               </span>
             </Checkbox>
             <div className="flex items-center gap-1">
