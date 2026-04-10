@@ -100,11 +100,7 @@
   }
 
   .dt-map-attribution-control {
-    left: 12px;
-    bottom: calc(
-      var(--dt-mobile-bottom-ui-offset, 104px) +
-        env(safe-area-inset-bottom, 0px)
-    );
+    display: none !important;
   }
 }
 
