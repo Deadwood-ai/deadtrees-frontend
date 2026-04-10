@@ -77,6 +77,11 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
     const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
     const patchGeometry = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
+    if (patches.length > 0) {
+      message.info("This dataset already has a base patch.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       await createPatch({
@@ -86,7 +91,6 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
         utm_zone: utmZone,
         epsg_code: epsgCode,
         parent_tile_id: null,
-        status: "pending",
         patch_index: `20_${Date.now()}`,
         bbox_minx: patchGeometry.coordinates[0][0][0],
         bbox_miny: patchGeometry.coordinates[0][0][1],
@@ -129,7 +133,14 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
           </Typography.Text>
         </div>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreatePatch} loading={isSaving}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreatePatch}
+            loading={isSaving}
+            disabled={patches.length > 0}
+            title={patches.length > 0 ? "This dataset already has a base patch." : undefined}
+          >
             Add Base Patch
           </Button>
           <Button disabled={patches.length === 0} onClick={onNavigateToQA}>
@@ -163,7 +174,9 @@ export default function PatchPlacementPhase({ dataset, onUnsavedChanges, onNavig
                 <Space>
                   <span className="font-medium">{patch.patch_index}</span>
                   <Tag color="blue">{patch.resolution_cm} cm</Tag>
-                  <Tag>{patch.status}</Tag>
+                  <Tag>
+                    {patch.deadwood_validated === null && patch.forest_cover_validated === null ? "pending" : "reviewed"}
+                  </Tag>
                 </Space>
               }
               description={

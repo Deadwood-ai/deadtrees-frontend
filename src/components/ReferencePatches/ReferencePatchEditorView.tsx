@@ -118,6 +118,10 @@ export default function ReferencePatchEditorView({
     () => allPatches.find((p) => p.id === selectedPatchId) || null,
     [allPatches, selectedPatchId],
   );
+  const hasBasePatch = useMemo(
+    () => allPatches.some((patch) => patch.resolution_cm === 20 && patch.parent_tile_id === null),
+    [allPatches],
+  );
 
   // In non-edit mode, default to a 5cm patch when available (QA-first workflow).
   // Fallback to a base patch if no 5cm patches exist yet.
@@ -225,6 +229,11 @@ export default function ReferencePatchEditorView({
     const targetGroundSize = getTargetGroundSize(20); // 204.8m for 20cm resolution
     const patchGeometry = createUtmSquare(centerUtmX, centerUtmY, targetGroundSize);
 
+    if (hasBasePatch) {
+      message.info("This dataset already has a base patch.");
+      return;
+    }
+
     try {
       // Create base patch in pending state (user will position it, then generate children)
       const newPatch = await createPatch({
@@ -261,7 +270,7 @@ export default function ReferencePatchEditorView({
       console.error(error);
       message.error("Failed to create base patch");
     }
-  }, [aoiCentroid, dataset.id, createPatch, onUnsavedChanges, refetchPatches]);
+  }, [aoiCentroid, hasBasePatch, dataset.id, createPatch, onUnsavedChanges, refetchPatches]);
 
   // Handle patch selection
   const handlePatchSelected = useCallback((patch: IReferencePatch | null) => {
@@ -766,7 +775,13 @@ export default function ReferencePatchEditorView({
         {/* Add Base Patch Button (overlay) */}
         {!selectedPatch && !isCompleted && !editingMode && (
           <div className={`absolute left-4 ${MAP_FLOATING_CHILD_TOP_CLASS} z-10 pointer-events-auto`}>
-            <Button icon={<PlusOutlined />} onClick={handleAddBasePatch} className="shadow-lg">
+            <Button
+              icon={<PlusOutlined />}
+              onClick={handleAddBasePatch}
+              className="shadow-lg"
+              disabled={hasBasePatch}
+              title={hasBasePatch ? "This dataset already has a base patch." : undefined}
+            >
               Add Base Patch
             </Button>
           </div>
