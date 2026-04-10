@@ -11,7 +11,6 @@ interface LogoBannerProps {
 
 export default function LogoBannerBand({ logos, title, compact }: LogoBannerProps) {
   const logoHeight = compact ? "h-10" : "h-16";
-  const rscHeight = compact ? "h-10 text-base" : "h-16 text-xl";
 
   return (
     <div className={compact ? "py-0" : "py-4 md:py-8"}>
@@ -33,31 +32,18 @@ export default function LogoBannerBand({ logos, title, compact }: LogoBannerProp
               }}
             >
               <div className="group transition-all duration-200 ease-in-out hover:scale-105">
-                {logo.path !== "RSC4Earth" ? (
-                  <>
-                    <img
-                      src={logo.path}
-                      alt={logo.text || "Partner logo"}
-                      className={`${compact ? (logo.height ? "h-14" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-all duration-300 group-hover:opacity-100 grayscale opacity-90 group-hover:grayscale-0`}
-                    />
-                    {logo.text && (
-                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                        {logo.text}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className={`flex ${rscHeight} w-full items-center justify-center font-bold text-slate-700 transition-all duration-300 group-hover:text-blue-800`}>
-                      RSC4Earth
-                    </div>
-                    {logo.text && (
-                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                        {logo.text}
-                      </p>
-                    )}
-                  </>
-                )}
+                <>
+                  <img
+                    src={logo.path}
+                    alt={logo.text || "Partner logo"}
+                    className={`${compact ? (logo.height ? "h-14" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-all duration-300 group-hover:opacity-100 grayscale opacity-90 group-hover:grayscale-0`}
+                  />
+                  {logo.text && (
+                    <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                      {logo.text}
+                    </p>
+                  )}
+                </>
               </div>
             </a>
           ))}
@@ -76,31 +62,18 @@ export default function LogoBannerBand({ logos, title, compact }: LogoBannerProp
               }}
             >
               <div className="group transition-all duration-200 ease-in-out hover:scale-105">
-                {logo.path !== "RSC4Earth" ? (
-                  <>
-                    <img
-                      src={logo.path}
-                      alt={logo.text || "Partner logo"}
-                      className={`${compact ? (logo.height ? "h-14" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-all duration-300 group-hover:opacity-100 grayscale opacity-90 group-hover:grayscale-0`}
-                    />
-                    {logo.text && (
-                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                        {logo.text}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className={`flex ${rscHeight} w-full items-center justify-center font-bold text-slate-700 transition-all duration-300 group-hover:text-blue-800`}>
-                      RSC4Earth
-                    </div>
-                    {logo.text && (
-                      <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
-                        {logo.text}
-                      </p>
-                    )}
-                  </>
-                )}
+                <>
+                  <img
+                    src={logo.path}
+                    alt={logo.text || "Partner logo"}
+                    className={`${compact ? (logo.height ? "h-14" : logoHeight) : (logo.height || "h-16")} w-full object-contain transition-all duration-300 group-hover:opacity-100 grayscale opacity-90 group-hover:grayscale-0`}
+                  />
+                  {logo.text && (
+                    <p className="mt-2 text-center text-sm text-gray-600 transition-colors duration-200 group-hover:text-blue-600">
+                      {logo.text}
+                    </p>
+                  )}
+                </>
               </div>
             </a>
           ))}

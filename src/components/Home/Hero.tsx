@@ -13,7 +13,7 @@ const logos = [
 	{ path: "assets/logos/esa.jpg" },
 	{ path: "assets/logos/dfg.jpeg" },
 	{ path: "assets/logos/uni-freiburg.png" },
-	{ path: "RSC4Earth" },
+	{ path: "assets/logos/leipzig.png", url: "https://www.uni-leipzig.de/" },
 	{ path: "assets/logos/NFDI4Earth_logo.jpg" },
 	{ path: "assets/logos/scads.png" },
 	{ path: "assets/logos/MLR.png" },

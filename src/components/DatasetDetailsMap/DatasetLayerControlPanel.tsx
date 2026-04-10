@@ -9,6 +9,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { mapColors } from "../../theme/mapColors";
+import { standingDeadwoodLayerExplanation } from "../../utils/standingDeadwoodInfo";
 
 type QualityRating = "great" | "sentinel_ok" | "bad" | null | undefined;
 
@@ -145,7 +146,12 @@ const DatasetLayerControlPanel = ({
                 <span className="text-xs text-gray-600">Deadwood</span>
               </span>
             </Checkbox>
-            <QualityIcon quality={deadwoodQuality} />
+            <div className="flex items-center gap-1">
+              <Tooltip title={<div className="max-w-xs text-xs leading-relaxed">{standingDeadwoodLayerExplanation}</div>} placement="left">
+                <InfoCircleOutlined className="cursor-help text-xs text-gray-400 hover:text-gray-600" />
+              </Tooltip>
+              <QualityIcon quality={deadwoodQuality} />
+            </div>
           </div>
         )}
         <Checkbox
