@@ -96,13 +96,15 @@
 
 @media (max-width: 767px) {
   .dt-map-zoom-control {
-    right: 12px !important;
-    bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+    display: none !important;
   }
 
   .dt-map-attribution-control {
     left: 12px;
-    bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(
+      var(--dt-mobile-bottom-ui-offset, 104px) +
+        env(safe-area-inset-bottom, 0px)
+    );
   }
 }
 
@@ -215,5 +217,13 @@
   .map-control-panel--drawer .ant-slider {
     margin-top: 6px;
     margin-bottom: 6px;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-affix-wrapper input,
+  .ant-input-textarea textarea,
+  textarea.ant-input {
+    font-size: 16px !important;
   }
 }

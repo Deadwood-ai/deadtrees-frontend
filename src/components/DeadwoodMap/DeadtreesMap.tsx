@@ -205,6 +205,7 @@ const DeadtreesMap = () => {
     VectorSource<Feature<Polygon>>
   > | null>(null);
   const clickedCellTooltipRef = useRef<Overlay | null>(null);
+  const yearSelectorContainerRef = useRef<HTMLDivElement | null>(null);
   const userLocationLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
@@ -214,6 +215,7 @@ const DeadtreesMap = () => {
   const geolocationWatchIdRef = useRef<number | null>(null);
   const hasRequestedMobileOrientationRef = useRef(false);
   const shouldAnimateToUserRef = useRef(false);
+  const [mobileBottomUiOffset, setMobileBottomUiOffset] = useState(104);
 
   // Layer visibility state - both layers visible by default
   const [showForest, setShowForest] = useState(true);
@@ -1329,10 +1331,36 @@ const DeadtreesMap = () => {
   const shouldHideYearImagerySelector =
     isDrawingFlag || polygonAnalysis.isDrawing;
 
+  useEffect(() => {
+    if (!isMobile || shouldHideYearImagerySelector) {
+      setMobileBottomUiOffset(12);
+      return;
+    }
+
+    const yearSelectorContainer = yearSelectorContainerRef.current;
+    if (!yearSelectorContainer) return;
+
+    const updateOffset = () => {
+      setMobileBottomUiOffset(yearSelectorContainer.offsetHeight + 24);
+    };
+
+    updateOffset();
+
+    const resizeObserver = new ResizeObserver(updateOffset);
+    resizeObserver.observe(yearSelectorContainer);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isMobile, shouldHideYearImagerySelector]);
+
   return (
     <div
       className="h-full w-full"
       onPointerDownCapture={maybeStartMobileOrientationTracking}
+      style={{
+        ["--dt-mobile-bottom-ui-offset" as string]: `${mobileBottomUiOffset}px`,
+      }}
     >
       <div
         style={{
@@ -1402,7 +1430,10 @@ const DeadtreesMap = () => {
 
         {/* Bottom Center - Combined Year and Imagery Selector */}
         {!shouldHideYearImagerySelector && (
-          <div className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto">
+          <div
+            ref={yearSelectorContainerRef}
+            className="absolute bottom-2 left-1/2 z-50 w-[calc(100vw-1rem)] -translate-x-1/2 md:w-auto"
+          >
             <YearImagerySelector
               predictionYear={selectedYear}
               onPredictionYearChange={setSelectedYear}

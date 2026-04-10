@@ -7,7 +7,7 @@ import { useAuth } from "../../hooks/useAuthProvider";
 import { palette } from "../../theme/palette";
 
 const SignIn = () => {
-  const { session, user } = useAuth();
+  const { session } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/profile";
@@ -34,6 +34,12 @@ const SignIn = () => {
                   brandAccent: palette.primary[600],
                   defaultButtonBackground: palette.primary[500],
                   defaultButtonBackgroundHover: palette.primary[600],
+                },
+                fontSizes: {
+                  baseBodySize: "16px",
+                  baseInputSize: "16px",
+                  baseLabelSize: "16px",
+                  baseButtonSize: "16px",
                 },
               },
             },

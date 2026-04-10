@@ -5,6 +5,7 @@ import { IDataset } from "../../types/dataset";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { FeatureTooltip, FeaturePopover, ClickedPolygonInfo } from "./overlays";
 import {
 	useMapInstance,
@@ -82,6 +83,7 @@ export default function BaseMap({
 	// Context
 	const { setMap, layerRefs } = useMapInstance();
 	const { viewport, navigatedFrom, setViewport, layerControl } = useDatasetDetailsMap();
+	const isMobile = useIsMobile();
 
 	// Fetch label data
 	const { deadwood, forestCover, isLoading: isLoadingLabels } = useDatasetLabelTypes({
@@ -108,6 +110,7 @@ export default function BaseMap({
 		},
 		onOrthoLayerReady,
 		isReady: !isLoadingLabels && !isAOILoading && !!data?.file_name,
+		disableRotation: isMobile,
 	});
 
 	// Basemap layer
