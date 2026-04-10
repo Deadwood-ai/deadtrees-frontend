@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, ExportOutlined, CopyOutlined, DownloadOutlined, BookOutlined, CalendarOutlined, FileTextOutlined } from "@ant-design/icons";
 import { usePresentations } from "../hooks/usePresentations";
 import { usePublications } from "../hooks/usePublications";
-import { useMemo } from "react";
+import { ReactNode, useMemo } from "react";
 import LogoBannerBand from "../components/Home/LogoBanner";
 import { useData } from "../hooks/useDataProvider";
 import ReactPlayer from "react-player";
@@ -27,15 +27,15 @@ export default function About() {
     {
       name: "Clemens Mosig",
       role: "Machine Learning Lead",
-      institution: "RSC4Earth / ScaDS.AI",
-      institutionLink: "https://rsc4earth.de/",
+      institution: "Leipzig University",
+      institutionLink: "https://www.uni-leipzig.de/",
       image: "/assets/team/clemens.png",
     },
     {
       name: "Prof. Dr. Miguel Mahecha",
       role: "Scientific Lead",
       institution: "Leipzig University",
-      institutionLink: "https://rsc4earth.de/",
+      institutionLink: "https://www.uni-leipzig.de/",
       image: "/assets/team/miguel.png",
     },
   ];
@@ -114,6 +114,26 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
 
   const apaCitation = `Mosig, C., Vajna-Jehle, J., Mahecha, M. D., Cheng, Y., Hartmann, H., Montero, D., Junttila, S., Horion, S., Schwenke, M. B, ... & Kattenborn, T. (2026). deadtrees. earth - An open-access and interactive database for centimeter-scale aerial imagery to uncover global tree mortality dynamics. Remote Sensing of Environment, 332, 115027.`;
 
+  const segmentationBibtex = String.raw`@article{mohring2025global,
+  title={Global, multi-scale standing deadwood segmentation in centimeter-scale aerial images},
+  author={Jakobus Möhring and Teja Kattenborn and Miguel D. Mahecha and Yan Cheng and Mirela {Beloiu Schwenke} and Myriam Cloutier and Martin Denter and Julian Frey and Matthias Gassilloud and Anna Göritz and Jan Hempel and Stéphanie Horion and Tommaso Jucker and Samuli Junttila and Pratima Khatri-Chhetri and Kirill Korznikov and Stefan Kruse and Etienne Laliberté and Michael Maroschek and Paul Neumeier and Oscar Pérez-Priego and Alastair Potts and Felix Schiefer and Rupert Seidl and Janusch Vajna-Jehle and Katarzyna Zielewska-Büttner and Clemens Mosig},
+  journal={ISPRS Open Journal of Photogrammetry and Remote Sensing},
+  pages={100104},
+  year={2025},
+  publisher={Elsevier}
+}`;
+
+  const segmentationApa = `Möhring, J., Kattenborn, T., Mahecha, M. D., Cheng, Y., Schwenke, M. B., Cloutier, M., ... & Mosig, C. (2025). Global, multi-scale standing deadwood segmentation in centimeter-scale aerial images. ISPRS Open Journal of Photogrammetry and Remote Sensing, 100104.`;
+
+  const satelliteBibtex = String.raw`@article{mosig2026sub,
+  title={Sub-pixel mapping of disturbance and tree mortality dynamics from Sentinel-2 time series around the globe},
+  author={Clemens Mosig, Teja Kattenborn, David Montero Loaiza, Janusch Vanja-Jehle, John Brandt, Nathan Jacobs, Subash Khanal, Eric Xing, Martin Schwartz, Helene C. Muller-Landau, Mirela Beloiu, Aurora Bozzini, Yan Cheng, Keenan Ganz, Björn Grüning, Henrik Hartmann, Jan Hempel, Stéphanie Horion, Samuli Junttila, Kirill Korznikov, Guido Kraemer, Milena Mönks, Davide Nardi, Paul Neumeier, Jonathan Schmid, Salim Soltani, Marie Therese-Schmehl, Josh Veitch-Michaelis, Miguel Mahecha},
+  year={2026},
+  publisher={EarthArXiv}
+}`;
+
+  const satelliteApa = `Mosig, C., Kattenborn, T., Loaiza, D. M., Vanja-Jehle, J., Brandt, J., Jacobs, N., ... & Mahecha, M. (2026). Sub-pixel mapping of disturbance and tree mortality dynamics from Sentinel-2 time series around the globe.`;
+
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -122,6 +142,54 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
       message.error("Copy failed");
     }
   };
+
+  const renderCitationPanel = ({
+    intro,
+    bibtex,
+    apa,
+  }: {
+    intro?: ReactNode;
+    bibtex: string;
+    apa: string;
+  }) => (
+    <div className="rounded-b-2xl rounded-tr-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+      {intro ? <div className="mb-8 text-base leading-relaxed text-gray-600">{intro}</div> : null}
+
+      <div className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-bold uppercase tracking-wider text-gray-500">BibTeX</span>
+          <Tooltip title="Copy BibTeX">
+            <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(bibtex)}>
+              Copy
+            </Button>
+          </Tooltip>
+        </div>
+        <Input.TextArea
+          readOnly
+          value={bibtex}
+          autoSize={{ minRows: 4, maxRows: 12 }}
+          className="custom-scrollbar rounded-lg bg-slate-50 p-4 font-mono text-xs text-slate-700"
+        />
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-bold uppercase tracking-wider text-gray-500">APA</span>
+          <Tooltip title="Copy APA">
+            <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(apa)}>
+              Copy
+            </Button>
+          </Tooltip>
+        </div>
+        <Input.TextArea
+          readOnly
+          value={apa}
+          autoSize={{ minRows: 2, maxRows: 8 }}
+          className="custom-scrollbar rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700"
+        />
+      </div>
+    </div>
+  );
 
   type ContributionItem = { title: string; speaker?: string | null; event: string; date: string; link: string };
   const contributions = useMemo(() => {
@@ -271,51 +339,15 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
             items={[
               {
                 key: "database",
-                label: "1) Database (drone products)",
-                children: (
-                  <div className="rounded-b-2xl rounded-tr-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-                    <div className="mb-8">
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="text-sm font-bold uppercase tracking-wider text-gray-500">BibTeX</span>
-                        <Tooltip title="Copy BibTeX">
-                          <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(bibtexPreprint)}>
-                            Copy
-                          </Button>
-                        </Tooltip>
-                      </div>
-                      <Input.TextArea
-                        readOnly
-                        value={bibtexPreprint}
-                        autoSize={{ minRows: 4, maxRows: 12 }}
-                        className="font-mono text-xs bg-slate-50 text-slate-700 rounded-lg p-4 custom-scrollbar"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="text-sm font-bold uppercase tracking-wider text-gray-500">APA</span>
-                        <Tooltip title="Copy APA">
-                          <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopy(apaCitation)}>
-                            Copy
-                          </Button>
-                        </Tooltip>
-                      </div>
-                      <Input.TextArea
-                        readOnly
-                        value={apaCitation}
-                        autoSize={{ minRows: 2, maxRows: 6 }}
-                        className="font-mono text-sm bg-slate-50 text-slate-700 rounded-lg p-4 custom-scrollbar"
-                      />
-                    </div>
-                  </div>
-                )
+                label: "1) Database",
+                children: renderCitationPanel({ bibtex: bibtexPreprint, apa: apaCitation })
               },
               {
                 key: "segmentation",
                 label: "2) Segmentation model",
-                children: (
-                  <div className="rounded-b-2xl rounded-tr-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-                    <p className="text-base text-gray-600 m-0">
+                children: renderCitationPanel({
+                  intro: (
+                    <p className="m-0">
                       For deadwood segmentation predictions, please cite{" "}
                       <a
                         href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
@@ -323,27 +355,36 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                         rel="noopener noreferrer"
                         className="font-medium text-[#1B5E35] hover:underline"
                       >
-                        Mohring et al., 2025 (ISPRS Open Journal of Photogrammetry and Remote Sensing)
+                        Möhring et al., 2025 (ISPRS Open Journal of Photogrammetry and Remote Sensing)
                       </a>
                       .
                     </p>
-                  </div>
-                )
+                  ),
+                  bibtex: segmentationBibtex,
+                  apa: segmentationApa,
+                })
               },
               {
                 key: "satellite",
-                label: "3) Satellite products (Sentinel maps)",
-                children: (
-                  <div className="rounded-b-2xl rounded-tr-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
-                    <p className="text-base text-gray-600 m-0">
-                      For the satellite products shown in the DeadTrees map, please cite{" "}
-                      <a href="https://eartharxiv.org/repository/view/11912/" target="_blank" rel="noopener noreferrer" className="font-medium text-[#1B5E35] hover:underline">
+                label: "3) Satellite products",
+                children: renderCitationPanel({
+                  intro: (
+                    <p className="m-0">
+                      For the satellite products shown in the deadtrees.earth map, please cite{" "}
+                      <a
+                        href="https://eartharxiv.org/repository/view/11912/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-[#1B5E35] hover:underline"
+                      >
                         Mosig et al., 2026 (EarthArXiv preprint)
                       </a>
                       .
                     </p>
-                  </div>
-                )
+                  ),
+                  bibtex: satelliteBibtex,
+                  apa: satelliteApa,
+                })
               }
             ]}
           />
@@ -379,9 +420,9 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
                   </div>
                   <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
                     {pub.data_url && (
-                      <Button 
-                        icon={<DownloadOutlined />} 
-                        href={pub.data_url} 
+                      <Button
+                        icon={<DownloadOutlined />}
+                        href={pub.data_url}
                         target="_blank"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -403,7 +444,7 @@ abstract = {Excessive tree mortality is a global concern and remains poorly unde
         {/* Conference Contributions */}
         <div className="mx-auto mb-24 max-w-4xl">
           <h2 className="mb-8 text-3xl font-bold tracking-tight text-gray-900">Conference Contributions</h2>
-          <Tabs 
+          <Tabs
             defaultActiveKey="upcoming"
             items={[
               {

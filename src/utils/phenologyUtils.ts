@@ -109,15 +109,16 @@ export function generatePhenologyGradient(phenologyCurve: number[]): string {
  */
 export function formatPhenologyTooltip(dayOfYear: number, phenologyValue: number): string {
   const date = dayOfYearToDate(dayOfYear);
+  const probabilityPercent = Math.round((Math.max(0, Math.min(255, phenologyValue)) / 255) * 100);
 
   return `Day ${dayOfYear} (${date})
-Value: ${phenologyValue}/255
+Probability to be in Maximum Greenness Period: ${probabilityPercent}%
 
-Gap-filled VIIRS phenology data (VNP22Q2v001)
-10km pixel, growing season probability 2013-2022
+Ecosystems without annual seasonal dynamics or large interspecies phenological variability may show incorrect dynamics.
 
-Source: NASA VIIRS Land Phenology ESDR
-Paper: deadtrees.earth bioRxiv preprint`;
+Based on gap-filled VIIRS phenology data (VNP22Q2v001), averaged at 10 km and across years (2013-2022).
+
+Source: NASA VIIRS Land Phenology ESDR & Mosig et al. 2026 deadtrees.earth, RSE.`;
 }
 
 /**

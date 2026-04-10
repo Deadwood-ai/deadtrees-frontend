@@ -4,6 +4,7 @@ import { AreaChartOutlined, FlagOutlined, LoginOutlined, InfoCircleOutlined } fr
 import { mapColors } from "../../theme/mapColors";
 import { palette } from "../../theme/palette";
 import MapLegend from "./MapLegend";
+import { standingDeadwoodLayerExplanation } from "../../utils/standingDeadwoodInfo";
 
 interface LayerControlPanelProps {
   // Basemap
@@ -96,12 +97,17 @@ const LayerControlPanel = ({
             <span className="text-xs text-gray-600">Tree</span>
           </span>
         </Checkbox>
-        <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-            <span className="text-xs text-gray-600">Standing Deadwood</span>
-          </span>
-        </Checkbox>
+        <div className="flex items-center justify-between">
+          <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
+              <span className="text-xs text-gray-600">Standing Deadwood</span>
+            </span>
+          </Checkbox>
+          <Tooltip title={<div className="max-w-xs text-xs leading-relaxed">{standingDeadwoodLayerExplanation}</div>} placement="left">
+            <InfoCircleOutlined className="cursor-help text-xs text-gray-400 hover:text-gray-600" />
+          </Tooltip>
+        </div>
       </div>
 
       <Divider className="my-2.5" />
